@@ -55,3 +55,17 @@ npm run db:generate
 Content settings are stored in D1. Local development uses the project-local
 Miniflare database; hosted deployments use the logical `DB` binding declared in
 `.openai/hosting.json`.
+
+## Private repository publishing
+
+The Windows publishing script creates the private GitHub repository, verifies
+that every required template branch exists, runs the private-asset gate, pushes
+the V1 and all template branches individually, and makes
+`codex/template-gallery` the default branch:
+
+```powershell
+.\scripts\publish-private-repo.ps1
+```
+
+It requires an authenticated GitHub CLI session for the `Brilliant666`
+account. Never add photographs to Git to make the remote preview self-contained.
