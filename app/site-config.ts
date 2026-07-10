@@ -1,10 +1,7 @@
-export const templateCatalog = [
-  { id: "cinematic-light", name: "明亮电影感", description: "白底、橙色强调、电影取景框" },
-  { id: "noir-archive", name: "暗色档案感", description: "黑底、暖橙信号、夜景氛围" },
-  { id: "minimal-editorial", name: "极简画册感", description: "留白、克制排版、作品优先" },
-] as const;
+import { isTemplateId, templateCatalog, type TemplateId } from "./templates/catalog";
 
-export type TemplateId = (typeof templateCatalog)[number]["id"];
+export { isTemplateId, templateCatalog };
+export type { TemplateId };
 
 export type Work = {
   code: string;
@@ -243,8 +240,6 @@ export const siteConfig: SiteContent = {
   },
 };
 
-const templateIds = new Set<TemplateId>(templateCatalog.map((template) => template.id));
-
 export function cloneSiteContent(content: SiteContent = siteConfig): SiteContent {
   return JSON.parse(JSON.stringify(content)) as SiteContent;
 }
@@ -262,8 +257,8 @@ export function normalizeSiteContent(value: unknown): SiteContent {
     }
   };
 
-  if (typeof incoming.activeTemplate === "string" && templateIds.has(incoming.activeTemplate as TemplateId)) {
-    normalized.activeTemplate = incoming.activeTemplate as TemplateId;
+  if (typeof incoming.activeTemplate === "string" && isTemplateId(incoming.activeTemplate)) {
+    normalized.activeTemplate = incoming.activeTemplate;
   }
   copyStringFields(normalized.profile, incoming.profile);
   copyStringFields(normalized.hero, incoming.hero);

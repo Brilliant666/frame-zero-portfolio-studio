@@ -134,7 +134,7 @@ export default function AdminEditor({ editorLabel }: { editorLabel: string }) {
         </div>
         <div className="admin-header-actions">
           <span className="admin-mode">● {editorLabel}</span>
-          <a href="/" target="_blank" rel="noreferrer">打开主页 ↗</a>
+          <a href={`/?template=${content.activeTemplate}`} target="_blank" rel="noreferrer">预览当前模板 ↗</a>
           <button type="button" className="admin-save" onClick={save} disabled={state === "saving" || state === "loading"}>
             {state === "saving" ? "保存中…" : "保存全部修改"}
           </button>

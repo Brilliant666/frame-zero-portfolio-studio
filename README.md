@@ -23,6 +23,7 @@ Photography assets are intentionally excluded from Git and GitHub:
 
 For local testing, place the generated WebP variants in `public/photos/`. The
 repository contains layout code and image metadata only, never the photographs.
+`npm run check:assets` also fails if these paths ever enter a reachable Git commit.
 
 ## Useful commands
 

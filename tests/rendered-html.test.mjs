@@ -42,9 +42,11 @@ test("server-renders the finished photography portfolio", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|Codex is working/i);
 });
 
-test("keeps editable content and template choices in one configuration", async () => {
-  const [config, page, layout, admin, api, schema, hosting] = await Promise.all([
+test("keeps editable content and eleven lazy template choices in one configuration", async () => {
+  const [config, catalog, renderer, page, layout, admin, api, schema, hosting] = await Promise.all([
     readFile(new URL("../app/site-config.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/templates/catalog.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/templates/template-renderer.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/admin/admin-editor.tsx", import.meta.url), "utf8"),
@@ -54,12 +56,27 @@ test("keeps editable content and template choices in one configuration", async (
   ]);
 
   assert.match(config, /templateCatalog/);
-  assert.match(config, /cinematic-light/);
-  assert.match(config, /noir-archive/);
-  assert.match(config, /minimal-editorial/);
+  for (const templateId of [
+    "cinematic-light",
+    "neon-hud",
+    "film-rail",
+    "manga-panels",
+    "prism-liquid",
+    "orbital-portal",
+    "archive-os",
+    "editorial-duet",
+    "polaroid-field",
+    "character-select",
+    "museum-depth",
+  ]) {
+    assert.match(catalog, new RegExp(`id: "${templateId}"`));
+    assert.match(renderer, new RegExp(`"${templateId}": \\(\\) => import`));
+  }
   assert.match(config, /deliverables/);
   assert.match(config, /bookingFields/);
-  assert.match(page, /data-template=\{content\.activeTemplate\}/);
+  assert.match(renderer, /lazy\(loader\)/);
+  assert.match(page, /<TemplateRenderer/);
+  assert.match(page, /previewTemplate \?\? content\.activeTemplate/);
   assert.match(page, /fetch\("\/api\/site-content"/);
   assert.match(admin, /摄影主页后台/);
   assert.match(admin, /保存全部修改/);

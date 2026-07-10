@@ -10,8 +10,9 @@
     "build": "vinext build",
     "preview": "vinext dev --hostname 127.0.0.1 --port 3001",
     "start": "vinext start",
-    "test": "npm run build && node --test tests/rendered-html.test.mjs",
+    "test": "npm run check:assets && npm run build && node --test tests/rendered-html.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "check:assets": "node scripts/check-private-assets.mjs",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
