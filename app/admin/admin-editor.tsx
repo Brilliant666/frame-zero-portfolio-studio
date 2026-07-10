@@ -158,21 +158,25 @@ export default function AdminEditor({ editorLabel }: { editorLabel: string }) {
         <section id="template" className="admin-panel admin-panel-wide">
           <div className="admin-panel-title">
             <div><small>01</small><h2>页面模板</h2></div>
-            <p>切换后主页内容不变，只改变视觉气质。</p>
+            <p>每套都是独立布局与交互；资料、作品和套餐保持一致。</p>
           </div>
           <div className="template-picker">
-            {templateCatalog.map((template) => (
-              <label key={template.id} className={`template-option is-${template.id}`}>
-                <input
-                  type="radio"
-                  name="active-template"
-                  checked={content.activeTemplate === template.id}
-                  onChange={() => setContent((current) => ({ ...current, activeTemplate: template.id }))}
-                />
-                <span className="template-swatch"><i /><b /></span>
-                <strong>{template.name}</strong>
-                <small>{template.description}</small>
-              </label>
+            {templateCatalog.map((template, index) => (
+              <div key={template.id} className={`template-option-wrap is-${template.id}`}>
+                <label className="template-option">
+                  <input
+                    type="radio"
+                    name="active-template"
+                    checked={content.activeTemplate === template.id}
+                    onChange={() => setContent((current) => ({ ...current, activeTemplate: template.id }))}
+                  />
+                  <span className="template-swatch"><i /><b /></span>
+                  <span className="template-state">READY · {String(index + 1).padStart(2, "0")}</span>
+                  <strong>{template.name}</strong>
+                  <small>{template.description}</small>
+                </label>
+                <a className="template-card-preview" href={`/?template=${template.id}`} target="_blank" rel="noreferrer">独立预览 ↗</a>
+              </div>
             ))}
           </div>
         </section>

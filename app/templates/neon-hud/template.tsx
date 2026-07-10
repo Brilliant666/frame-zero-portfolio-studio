@@ -45,7 +45,7 @@ export default function NeonHudTemplate({
   const progress = works.length === 0 ? "0%" : `${((safeIndex + 1) / works.length) * 100}%`;
 
   return (
-    <main className={styles.root}>
+    <main className={styles.root} data-template="neon-hud">
       <div className={`${styles.boot} ${booted ? styles.bootComplete : ""}`} aria-hidden="true">
         <div className={styles.bootReticle}><span /></div>
         <p>{content.profile.mark} / OPTICAL LINK</p>

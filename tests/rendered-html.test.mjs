@@ -75,6 +75,7 @@ test("keeps editable content and eleven lazy template choices in one configurati
   assert.match(config, /deliverables/);
   assert.match(config, /bookingFields/);
   assert.match(renderer, /lazy\(loader\)/);
+  assert.doesNotMatch(catalog, /scaffold/);
   assert.match(page, /<TemplateRenderer/);
   assert.match(page, /previewTemplate \?\? content\.activeTemplate/);
   assert.match(page, /fetch\("\/api\/site-content"/);

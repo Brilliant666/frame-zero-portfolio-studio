@@ -2,6 +2,24 @@
 
 A multi-template Cosplay photography portfolio with a shared content admin.
 
+## Included templates
+
+1. Bright Cinematic
+2. Neon HUD
+3. Infinite Film Rail
+4. Manga Panels
+5. Prism Liquid
+6. Orbital Portal
+7. Photography Archive OS
+8. Editorial Duet
+9. Polaroid Field
+10. Character Select
+11. Museum Depth
+
+Every template is a separate lazy-loaded React entry. They share one D1-backed
+content document, so switching the layout never duplicates profile, package,
+contact, or work metadata.
+
 ## Local development
 
 Requires Node.js `>=22.13.0`.

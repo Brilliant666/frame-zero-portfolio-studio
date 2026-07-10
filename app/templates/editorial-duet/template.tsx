@@ -45,7 +45,7 @@ export default function EditorialDuetTemplate({
   }, [works.length]);
 
   return (
-    <main ref={rootRef} className={styles.root}>
+    <main ref={rootRef} className={styles.root} data-template="editorial-duet">
       <div className={`${styles.curtain} ${booted ? styles.curtainDone : ""}`} aria-hidden="true">
         <span>{content.profile.brand}</span>
         <i />
