@@ -3,11 +3,12 @@
 /* eslint-disable @next/next/no-img-element -- the portfolio supplies local responsive WebP derivatives. */
 
 import { useRef } from "react";
+import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import type { TemplateProps } from "../types";
 import styles from "./film-rail.module.css";
 
-const filmRatios = Array.from({ length: 9 }, () => "3:2" as const);
+const filmRatios = getTemplateSlotRatios("film-rail");
 
 export default function FilmRailTemplate({
   templateId,
@@ -20,10 +21,7 @@ export default function FilmRailTemplate({
   onOpenWork,
 }: TemplateProps) {
   const railRef = useRef<HTMLDivElement>(null);
-  const filmSlots = buildPhotoSlots(
-    works.filter((work) => work.previewWidth >= work.previewHeight),
-    filmRatios,
-  );
+  const filmSlots = buildPhotoSlots(works, filmRatios);
   const leadSlot = filmSlots.find((slot) => slot.work) ?? filmSlots[0];
   const leadWork = leadSlot.work;
 

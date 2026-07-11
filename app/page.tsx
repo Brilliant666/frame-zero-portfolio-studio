@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { isTemplateId, normalizeSiteContent, siteConfig, type SiteContent, type TemplateId, type Work } from "./site-config";
+import { getTemplateCatalogItem } from "./templates/catalog";
 import Lightbox from "./templates/shared/lightbox";
+import { buildPhotoSlots } from "./templates/shared/photo-slots";
 import TemplateRenderer from "./templates/template-renderer";
 
 export default function Home() {
@@ -14,7 +16,22 @@ export default function Home() {
   const lightboxRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const isLightboxOpen = activeWork !== null;
-  const works = useMemo(() => content.works.filter((work) => work.enabled), [content.works]);
+  const templateId = previewTemplate ?? content.activeTemplate;
+  const templatePlan = getTemplateCatalogItem(templateId);
+  const works = useMemo(() => {
+    const selected = content.templateWorks[templateId];
+    if (selected !== undefined) {
+      return selected
+        .filter((work) => work.enabled)
+        .sort((left, right) => (left.slotIndex ?? 999) - (right.slotIndex ?? 999))
+        .slice(0, templatePlan.photoSlots);
+    }
+
+    return buildPhotoSlots(
+      content.works.filter((work) => work.enabled),
+      templatePlan.slotRatios,
+    ).flatMap((slot) => slot.work ? [{ ...slot.work, slotIndex: slot.index }] : []);
+  }, [content.templateWorks, content.works, templateId, templatePlan.photoSlots, templatePlan.slotRatios]);
   const packages = useMemo(() => content.packages.filter((item) => item.enabled), [content.packages]);
   const bookingTemplate = useMemo(
     () => ["【约拍任务申请】", ...content.bookingFields].join("\n"),
@@ -148,8 +165,6 @@ export default function Home() {
       return works[(index + direction + works.length) % works.length];
     });
   };
-
-  const templateId = previewTemplate ?? content.activeTemplate;
 
   return (
     <>

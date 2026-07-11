@@ -3,12 +3,13 @@
 /* eslint-disable @next/next/no-img-element -- local portfolio assets provide responsive WebP derivatives. */
 
 import type { CSSProperties } from "react";
+import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import type { TemplateProps } from "../types";
 import styles from "./manga-panels.module.css";
 
 const panelSfx = ["咔嚓!", "显影", "CUT!", "登场", "瞬间", "锁定", "光!", "定格", "续章"];
-const mangaRatios = ["2:3", "3:2", "16:9", "3:2", "3:2", "3:2", "16:9", "3:2", "3:2"] as const;
+const mangaRatios = getTemplateSlotRatios("manga-panels");
 
 export default function MangaPanelsTemplate({
   templateId,

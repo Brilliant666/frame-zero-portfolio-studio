@@ -1,3 +1,15 @@
+export type PhotoRatio = "3:2" | "2:3" | "16:9";
+
+type TemplateCatalogDefinition = {
+  id: string;
+  name: string;
+  description: string;
+  status: "ready";
+  photoSlots: number;
+  photoRatios: string;
+  slotRatios: readonly PhotoRatio[];
+};
+
 export const templateCatalog = [
   {
     id: "cinematic-light",
@@ -6,6 +18,7 @@ export const templateCatalog = [
     status: "ready",
     photoSlots: 9,
     photoRatios: "16:9 × 3 · 3:2 × 5 · 2:3 × 1",
+    slotRatios: ["16:9", "3:2", "2:3", "3:2", "3:2", "16:9", "3:2", "3:2", "16:9"],
   },
   {
     id: "neon-hud",
@@ -14,6 +27,7 @@ export const templateCatalog = [
     status: "ready",
     photoSlots: 9,
     photoRatios: "16:9 × 3 · 3:2 × 5 · 2:3 × 1",
+    slotRatios: ["16:9", "3:2", "2:3", "3:2", "3:2", "16:9", "3:2", "3:2", "16:9"],
   },
   {
     id: "film-rail",
@@ -22,6 +36,7 @@ export const templateCatalog = [
     status: "ready",
     photoSlots: 9,
     photoRatios: "3:2 × 9",
+    slotRatios: ["3:2", "3:2", "3:2", "3:2", "3:2", "3:2", "3:2", "3:2", "3:2"],
   },
   {
     id: "manga-panels",
@@ -30,6 +45,7 @@ export const templateCatalog = [
     status: "ready",
     photoSlots: 9,
     photoRatios: "16:9 × 2 · 3:2 × 6 · 2:3 × 1",
+    slotRatios: ["2:3", "3:2", "16:9", "3:2", "3:2", "3:2", "16:9", "3:2", "3:2"],
   },
   {
     id: "prism-liquid",
@@ -38,6 +54,7 @@ export const templateCatalog = [
     status: "ready",
     photoSlots: 9,
     photoRatios: "16:9 × 1 · 3:2 × 7 · 2:3 × 1",
+    slotRatios: ["3:2", "2:3", "3:2", "3:2", "3:2", "16:9", "3:2", "3:2", "3:2"],
   },
   {
     id: "orbital-portal",
@@ -46,6 +63,7 @@ export const templateCatalog = [
     status: "ready",
     photoSlots: 8,
     photoRatios: "2:3 × 8 · 主视觉 3:2",
+    slotRatios: ["2:3", "2:3", "2:3", "2:3", "2:3", "2:3", "2:3", "2:3"],
   },
   {
     id: "archive-os",
@@ -54,6 +72,7 @@ export const templateCatalog = [
     status: "ready",
     photoSlots: 12,
     photoRatios: "16:9 × 3 · 3:2 × 8 · 2:3 × 1",
+    slotRatios: ["3:2", "3:2", "16:9", "3:2", "2:3", "3:2", "16:9", "3:2", "3:2", "3:2", "16:9", "3:2"],
   },
   {
     id: "editorial-duet",
@@ -62,6 +81,7 @@ export const templateCatalog = [
     status: "ready",
     photoSlots: 9,
     photoRatios: "16:9 × 3 · 3:2 × 5 · 2:3 × 1",
+    slotRatios: ["2:3", "3:2", "16:9", "3:2", "3:2", "16:9", "3:2", "3:2", "16:9"],
   },
   {
     id: "polaroid-field",
@@ -70,6 +90,7 @@ export const templateCatalog = [
     status: "ready",
     photoSlots: 9,
     photoRatios: "16:9 × 2 · 3:2 × 6 · 2:3 × 1",
+    slotRatios: ["3:2", "16:9", "3:2", "3:2", "2:3", "3:2", "16:9", "3:2", "3:2"],
   },
   {
     id: "character-select",
@@ -78,6 +99,7 @@ export const templateCatalog = [
     status: "ready",
     photoSlots: 9,
     photoRatios: "16:9 × 2 · 3:2 × 6 · 2:3 × 1",
+    slotRatios: ["3:2", "3:2", "16:9", "3:2", "2:3", "3:2", "16:9", "3:2", "3:2"],
   },
   {
     id: "museum-depth",
@@ -86,8 +108,9 @@ export const templateCatalog = [
     status: "ready",
     photoSlots: 7,
     photoRatios: "16:9 × 2 · 3:2 × 4 · 2:3 × 1",
+    slotRatios: ["3:2", "3:2", "2:3", "16:9", "3:2", "3:2", "16:9"],
   },
-] as const;
+] as const satisfies readonly TemplateCatalogDefinition[];
 
 export type TemplateId = (typeof templateCatalog)[number]["id"];
 export type TemplateCatalogItem = (typeof templateCatalog)[number];
@@ -100,4 +123,8 @@ export function isTemplateId(value: string | null): value is TemplateId {
 
 export function getTemplateCatalogItem(id: TemplateId): TemplateCatalogItem {
   return templateCatalog.find((template) => template.id === id) ?? templateCatalog[0];
+}
+
+export function getTemplateSlotRatios(id: TemplateId): readonly PhotoRatio[] {
+  return getTemplateCatalogItem(id).slotRatios;
 }

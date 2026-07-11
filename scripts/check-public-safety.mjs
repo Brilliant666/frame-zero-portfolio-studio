@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 const MAX_GIT_OUTPUT = 64 * 1024 * 1024;
 const forbiddenRasterExtension = /\.(?:jpe?g|png|webp|avif|gif|tiff?|heic|heif|dng|raw|cr2|cr3|nef|arw)$/i;
 const forbiddenPhotoDirectory = /^public\/photos(?:\/|$)/i;
+const forbiddenLocalStateDirectory = /^\.frame-zero(?:\/|$)/i;
 const embeddedRasterData = /data\s*:\s*image(?:\/[a-z0-9.+-]+)?\s*;\s*base64\s*,?/i;
 const windowsAbsolutePath = /(^|[^a-z0-9+.-])[a-z]:[\\/]{1,2}/im;
 const localWechatPath = /(?:Tencent[\\/]WeChat Files|FileStorage[\\/](?:Temp|Image)|wxid_[a-z0-9_-]{4,})/i;
@@ -42,6 +43,9 @@ function lineNumberAt(text, offset) {
 }
 
 const violations = new Set();
+const indexPaths = gitText("ls-files", "--cached", "-z")
+  .split("\0")
+  .filter(Boolean);
 const candidatePaths = gitText("ls-files", "--cached", "--others", "--exclude-standard", "-z")
   .split("\0")
   .filter(Boolean);
@@ -54,6 +58,10 @@ function inspectPath(filePath, source) {
 
   if (forbiddenPhotoDirectory.test(normalized)) {
     violations.add(`${source}: local photo directory: ${normalized}`);
+  }
+
+  if (forbiddenLocalStateDirectory.test(normalized)) {
+    violations.add(`${source}: local import state directory: ${normalized}`);
   }
 
   if (forbiddenRasterExtension.test(normalized)) {
@@ -85,6 +93,17 @@ function inspectText(text, source) {
     if (!allowedEmails.some((allowed) => allowed.test(match[0]))) {
       violations.add(`${source}: non-placeholder email ${match[0]} at line ${lineNumberAt(text, match.index)}`);
     }
+  }
+}
+
+for (const filePath of indexPaths) {
+  inspectPath(filePath, "index");
+
+  try {
+    const content = gitBuffer("show", `:${filePath}`);
+    if (!content.includes(0)) inspectText(content.toString("utf8"), `index blob ${filePath}`);
+  } catch {
+    violations.add(`index: unable to inspect staged blob: ${filePath}`);
   }
 }
 
@@ -126,5 +145,5 @@ if (violations.size > 0) {
 }
 
 console.log(
-  `Public repository safety check passed: inspected ${candidatePaths.length} candidate paths and ${reachableEntries.length} reachable Git objects.`,
+  `Public repository safety check passed: inspected ${indexPaths.length} index paths, ${candidatePaths.length} worktree candidates, and ${reachableEntries.length} reachable Git objects.`,
 );

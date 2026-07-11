@@ -3,11 +3,12 @@
 /* eslint-disable @next/next/no-img-element -- portfolio assets include local responsive WebP derivatives. */
 
 import { useCallback, useEffect, useState } from "react";
+import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import type { TemplateProps } from "../types";
 import styles from "./template.module.css";
 
-const neonRatios = ["16:9", "3:2", "2:3", "3:2", "3:2", "16:9", "3:2", "3:2", "16:9"] as const;
+const neonRatios = getTemplateSlotRatios("neon-hud");
 
 export default function NeonHudTemplate({
   content,
@@ -24,6 +25,8 @@ export default function NeonHudTemplate({
   const safeIndex = Math.min(Math.max(activeIndex, 0), photoSlots.length - 1);
   const activeSlot = photoSlots[safeIndex];
   const activeWork = activeSlot.work;
+  const manifestoSlot = photoSlots[photoSlots.length - 1];
+  const manifestoWork = manifestoSlot.work;
 
   const move = useCallback((direction: -1 | 1) => {
     setActiveIndex((index) => (index + direction + photoSlots.length) % photoSlots.length);
@@ -327,18 +330,26 @@ export default function NeonHudTemplate({
       </section>
 
       <section className={styles.manifesto}>
-        {works[1] && (
+        {manifestoWork ? (
           <img
-            src={works[1].preview}
-            srcSet={`${works[1].preview} ${works[1].previewWidth}w, ${works[1].image} ${works[1].fullWidth}w`}
+            src={manifestoWork.preview}
+            srcSet={`${manifestoWork.preview} ${manifestoWork.previewWidth}w, ${manifestoWork.image} ${manifestoWork.fullWidth}w`}
             sizes="100vw"
-            width={works[1].previewWidth}
-            height={works[1].previewHeight}
+            width={manifestoWork.previewWidth}
+            height={manifestoWork.previewHeight}
             alt=""
             loading="lazy"
             decoding="async"
-            style={{ objectPosition: works[1].position }}
+            style={{ objectPosition: manifestoWork.position }}
           />
+        ) : (
+          <div
+            data-photo-slot={manifestoSlot.index + 1}
+            data-photo-ratio={manifestoSlot.ratio}
+            style={{ position: "absolute", inset: 0, zIndex: -2 }}
+          >
+            <PhotoPlaceholder slot={manifestoSlot} label="MANIFESTO SIGNAL PENDING" />
+          </div>
         )}
         <div className={styles.manifestoGrid} aria-hidden="true" />
         <div className={styles.manifestoCopy}>

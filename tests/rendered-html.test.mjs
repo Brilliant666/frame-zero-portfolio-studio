@@ -75,11 +75,14 @@ test("keeps editable content and eleven lazy template choices in one configurati
   }
   assert.match(config, /deliverables/);
   assert.match(config, /bookingFields/);
+  assert.match(config, /templateWorks/);
   assert.match(renderer, /lazy\(loader\)/);
   assert.doesNotMatch(catalog, /scaffold/);
   assert.match(page, /<TemplateRenderer/);
   assert.match(page, /previewTemplate \?\? content\.activeTemplate/);
   assert.match(page, /fetch\("\/api\/site-content"/);
+  assert.match(page, /const selected = content\.templateWorks\[templateId\]/);
+  assert.match(page, /buildPhotoSlots\(/);
   assert.match(admin, /摄影主页后台/);
   assert.match(admin, /保存全部修改/);
   assert.match(admin, /moveWork/);
@@ -109,18 +112,27 @@ test("keeps every template on a fixed photo-slot contract with missing-image pla
     "museum-depth",
   ];
 
-  const [catalog, admin, sharedSlots, ...templateSources] = await Promise.all([
+  const [catalog, admin, sharedSlots, libraryEditor, libraryModel, ...templateSources] = await Promise.all([
     readFile(new URL("../app/templates/catalog.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/admin/admin-editor.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/templates/shared/photo-slots.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/admin/photo-library-editor.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/photo-library.ts", import.meta.url), "utf8"),
     ...templateIds.map((id) => readFile(new URL(`../app/templates/${id}/template.tsx`, import.meta.url), "utf8")),
   ]);
 
-  assert.equal(catalog.match(/photoSlots:/g)?.length, templateIds.length);
-  assert.equal(catalog.match(/photoRatios:/g)?.length, templateIds.length);
+  assert.equal(catalog.match(/photoSlots: \d+/g)?.length, templateIds.length);
+  assert.equal(catalog.match(/photoRatios: "/g)?.length, templateIds.length);
+  assert.equal(catalog.match(/slotRatios: \[/g)?.length, templateIds.length);
   assert.match(admin, /template-photo-plan/);
+  assert.match(admin, /PhotoLibraryEditor/);
   assert.match(sharedSlots, /export function buildPhotoSlots/);
   assert.match(sharedSlots, /export function PhotoPlaceholder/);
+  assert.match(sharedSlots, /Math\.abs\(Math\.log\(actualRatio \/ targetRatio\)\)/);
+  assert.match(libraryEditor, /一键智能排版/);
+  assert.match(libraryEditor, /重新读取素材库/);
+  assert.match(libraryModel, /parsePhotoLibraryManifest/);
+  assert.match(libraryModel, /autoComposeTemplateWorks/);
 
   templateSources.forEach((source, index) => {
     assert.match(source, /buildPhotoSlots\(/, `${templateIds[index]} must use fixed photo slots`);

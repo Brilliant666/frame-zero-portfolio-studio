@@ -5,10 +5,11 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import type { Work } from "../../site-config";
 import type { TemplateProps } from "../types";
+import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import styles from "./archive-os.module.css";
 
-const ARCHIVE_RATIOS = ["3:2", "3:2", "16:9", "3:2", "2:3", "3:2", "16:9", "3:2", "3:2", "3:2", "16:9", "3:2"] as const;
+const ARCHIVE_RATIOS = getTemplateSlotRatios("archive-os");
 
 const FILTERS = [
   { id: "all", label: "全部档案", marker: "◎" },

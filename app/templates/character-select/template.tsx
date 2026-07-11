@@ -4,10 +4,11 @@
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { TemplateProps } from "../types";
-import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoRatio } from "../shared/photo-slots";
+import { getTemplateSlotRatios } from "../catalog";
+import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import styles from "./template.module.css";
 
-const CHARACTER_RATIOS = ["3:2", "3:2", "16:9", "3:2", "2:3", "3:2", "16:9", "3:2", "3:2"] as const satisfies readonly PhotoRatio[];
+const CHARACTER_RATIOS = getTemplateSlotRatios("character-select");
 
 export default function CharacterSelectTemplate({ content, works, packages, bookingTemplate, copiedKey, onCopy, onOpenWork }: TemplateProps) {
   const [activeIndex, setActiveIndex] = useState(0);
