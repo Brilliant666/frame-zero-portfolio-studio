@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
-import PhotoFallbackController from "./photo-fallback-controller";
 import { siteConfig } from "./site-config";
 
 const geistSans = Geist({
@@ -53,7 +52,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="zh-CN">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <PhotoFallbackController />
         {children}
       </body>
     </html>

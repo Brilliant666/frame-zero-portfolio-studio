@@ -91,7 +91,12 @@ test("keeps editable content and eleven lazy template choices in one configurati
   assert.match(hosting, /"d1": "DB"/);
   assert.match(layout, /generateMetadata/);
   assert.match(layout, /colorScheme: "light"/);
-  assert.match(layout, /PhotoFallbackController/);
+  assert.doesNotMatch(layout, /PhotoFallbackController/);
+  assert.match(renderer, /PhotoFallbackController/);
+  assert.ok(
+    renderer.indexOf("<Template key=") < renderer.indexOf("<PhotoFallbackController"),
+    "the missing-photo controller must mount inside Suspense after the hydrated template",
+  );
   assert.doesNotMatch(layout, /\/og\.png/);
   assert.match(photoFallback, /IMAGE PENDING/);
   assert.match(photoFallback, /addEventListener\("error"/);
