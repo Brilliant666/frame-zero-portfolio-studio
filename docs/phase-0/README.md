@@ -55,7 +55,7 @@ D1 或本地照片兼容能力的前提下，建立版本化内容、稳定标�
 
 ### Epic 01：版本化内容与稳定标识
 
-- **决策门：ADR-0002（Proposed）** — 明确 Site 租户边界、SiteDocumentV1 的可移植内容边界
+- **决策门：ADR-0002（Accepted）** — 明确 Site 租户边界、SiteDocumentV1 的可移植内容边界
   和单站点迁移约束。
 - **PR-01A：SiteDocumentV1 契约** — 增加 `schemaVersion`、站点 ID 和资源引用规则，保持
   当前页面行为不变。
