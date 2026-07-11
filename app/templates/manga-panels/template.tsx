@@ -3,10 +3,12 @@
 /* eslint-disable @next/next/no-img-element -- local portfolio assets provide responsive WebP derivatives. */
 
 import type { CSSProperties } from "react";
+import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import type { TemplateProps } from "../types";
 import styles from "./manga-panels.module.css";
 
 const panelSfx = ["咔嚓!", "显影", "CUT!", "登场", "瞬间", "锁定", "光!", "定格", "续章"];
+const mangaRatios = ["2:3", "3:2", "16:9", "3:2", "3:2", "3:2", "16:9", "3:2", "3:2"] as const;
 
 export default function MangaPanelsTemplate({
   templateId,
@@ -20,8 +22,9 @@ export default function MangaPanelsTemplate({
   onCopy,
   onOpenWork,
 }: TemplateProps) {
-  const storyboardWorks = works.slice(0, 9);
-  const leadWork = storyboardWorks[0];
+  const storyboardSlots = buildPhotoSlots(works, mangaRatios);
+  const leadSlot = storyboardSlots[0];
+  const leadWork = leadSlot.work;
 
   return (
     <main
@@ -90,7 +93,9 @@ export default function MangaPanelsTemplate({
                 </span>
               </button>
             ) : (
-              <div className={styles.emptyPanel}>NO FRAME</div>
+              <div className={`${styles.leadPanel} ${styles.leadPlaceholder}`}>
+                <PhotoPlaceholder slot={leadSlot} tone="light" label="待补充封面" />
+              </div>
             )}
             <span className={styles.coverSfx} aria-hidden="true">破!</span>
           </div>
@@ -120,40 +125,63 @@ export default function MangaPanelsTemplate({
           number="01"
           eyebrow="第一话 / SELECTED STORYBOARD"
           title="角色分镜"
-          note={`全 ${String(storyboardWorks.length).padStart(2, "0")} 格 · 点击画格展开原片`}
+          note={`全 ${String(storyboardSlots.length).padStart(2, "0")} 格 · 点击画格展开原片`}
         />
 
         <div className={styles.storyboard}>
-          {storyboardWorks.map((work, index) => (
-            <button
-              type="button"
-              className={styles.panel}
-              data-panel={String(index + 1)}
-              key={`${work.code}-${index}`}
-              onClick={() => onOpenWork(work)}
-              aria-label={`打开作品 ${work.title}`}
-              style={{ "--panel-index": index } as CSSProperties}
-            >
-              <img
-                src={work.preview}
-                srcSet={`${work.preview} ${work.previewWidth}w, ${work.image} ${work.fullWidth}w`}
-                sizes="(max-width: 720px) 92vw, (max-width: 1100px) 48vw, 36vw"
-                width={work.previewWidth}
-                height={work.previewHeight}
-                alt={work.subtitle || work.title}
-                loading={index < 2 ? "eager" : "lazy"}
-                decoding="async"
-                style={{ objectPosition: work.position }}
-              />
-              <span className={styles.dotScreen} aria-hidden="true" />
-              <span className={styles.panelNumber}>{String(index + 1).padStart(2, "0")}</span>
-              <span className={styles.panelMeta}>
-                <small>{work.code} / {work.subtitle}</small>
-                <strong>{work.title}</strong>
-              </span>
-              <span className={styles.panelSfx} aria-hidden="true">{panelSfx[index]}</span>
-            </button>
-          ))}
+          {storyboardSlots.map((slot, index) => {
+            const work = slot.work;
+            const slotStyle = { "--panel-index": index, ...getPhotoSlotStyle(slot) } as CSSProperties;
+
+            if (!work) {
+              return (
+                <div
+                  className={`${styles.panel} ${styles.panelPlaceholder}`}
+                  data-panel={String(index + 1)}
+                  data-photo-slot={index + 1}
+                  data-photo-ratio={slot.ratio}
+                  key={`manga-placeholder-${index}`}
+                  style={slotStyle}
+                >
+                  <PhotoPlaceholder slot={slot} tone="light" label="待续分镜" />
+                  <span className={styles.panelSfx} aria-hidden="true">{panelSfx[index]}</span>
+                </div>
+              );
+            }
+
+            return (
+              <button
+                type="button"
+                className={styles.panel}
+                data-panel={String(index + 1)}
+                data-photo-slot={index + 1}
+                data-photo-ratio={slot.ratio}
+                key={`${work.code}-${index}`}
+                onClick={() => onOpenWork(work)}
+                aria-label={`打开作品 ${work.title}`}
+                style={slotStyle}
+              >
+                <img
+                  src={work.preview}
+                  srcSet={`${work.preview} ${work.previewWidth}w, ${work.image} ${work.fullWidth}w`}
+                  sizes={slot.ratio === "16:9" ? "(max-width: 720px) 92vw, 92vw" : "(max-width: 720px) 92vw, 41vw"}
+                  width={work.previewWidth}
+                  height={work.previewHeight}
+                  alt={work.subtitle || work.title}
+                  loading={index < 2 ? "eager" : "lazy"}
+                  decoding="async"
+                  style={{ objectPosition: work.position }}
+                />
+                <span className={styles.dotScreen} aria-hidden="true" />
+                <span className={styles.panelNumber}>{String(index + 1).padStart(2, "0")}</span>
+                <span className={styles.panelMeta}>
+                  <small>{work.code} / {work.subtitle}</small>
+                  <strong>{work.title}</strong>
+                </span>
+                <span className={styles.panelSfx} aria-hidden="true">{panelSfx[index]}</span>
+              </button>
+            );
+          })}
         </div>
 
         <aside className={styles.interlude}>

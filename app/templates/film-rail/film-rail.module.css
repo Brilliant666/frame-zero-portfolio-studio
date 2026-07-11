@@ -104,13 +104,13 @@
 .heroFilm::before { content: "FRAME//ZERO  35MM  001"; position: absolute; top: .65rem; left: 1.3rem; color: #d6b98e; font: .52rem var(--font-geist-mono), monospace; letter-spacing: .15em; }
 .filmEdge { position: absolute; z-index: 2; top: 0; right: .8rem; bottom: 0; width: .6rem; background: repeating-linear-gradient(to bottom, var(--paper) 0 .65rem, transparent .65rem 1.25rem); opacity: .9; }
 .heroFilm > button { display: block; width: 100%; padding: 0; overflow: hidden; border: 0; background: #080706; cursor: zoom-in; }
-.heroFilm img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; transition: filter .35s ease, transform .6s cubic-bezier(.2,.8,.2,1); }
+.heroFilm img { display: block; width: 100%; aspect-ratio: 3 / 2; object-fit: cover; transition: filter .35s ease, transform .6s cubic-bezier(.2,.8,.2,1); }
 .heroFilm button:hover img,
 .heroFilm button:focus-visible img { filter: saturate(1.08) contrast(1.03); transform: scale(1.015); }
 .heroCaption { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; padding: 1rem .2rem 0; color: #d6c3a4; font: .5rem var(--font-geist-mono), monospace; letter-spacing: .08em; }
 .heroCaption strong { color: #fff4e1; font-size: .62rem; text-align: center; }
 .heroCaption span:last-child { text-align: right; }
-.emptyFrame { display: grid; place-items: center; min-height: 32rem; color: #d6c3a4; font: .7rem var(--font-geist-mono), monospace; }
+.emptyFrame { min-height: 0; aspect-ratio: 3 / 2; }
 .reelMark { position: absolute; right: -2.8rem; bottom: -2.8rem; display: grid; place-items: center; width: 7rem; height: 7rem; border: 1px solid var(--red); border-radius: 50%; color: var(--red); transform: rotate(-12deg); }
 .reelMark::before,
 .reelMark::after,
@@ -139,7 +139,8 @@
 .frameTopline span:nth-child(2) { color: #fff0d8; }
 .frameTopline span:last-child { text-align: right; }
 .frameImage { position: relative; display: block; width: 100%; padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,.24); background: #090807; cursor: zoom-in; }
-.frameImage img { display: block; width: 100%; aspect-ratio: 21 / 9; object-fit: cover; transition: transform .65s cubic-bezier(.2,.8,.2,1), filter .3s ease; }
+.frameImage img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .65s cubic-bezier(.2,.8,.2,1), filter .3s ease; }
+.framePlaceholder { min-height: 0; aspect-ratio: 3 / 2; }
 .frameImage > span { position: absolute; right: .8rem; bottom: .8rem; padding: .45rem .65rem; background: rgba(18,15,12,.82); color: #fff0d8; font: .52rem var(--font-geist-mono), monospace; opacity: 0; transform: translateY(.4rem); transition: opacity .2s ease, transform .2s ease; }
 .frameImage:hover img,
 .frameImage:focus-visible img { filter: saturate(1.08); transform: scale(1.015); }
@@ -155,10 +156,12 @@
 .timeline { display: grid; grid-template-columns: auto 1fr auto; gap: 1.5rem; align-items: center; width: min(calc(100% - 2.4rem), 92rem); margin: 2rem auto 0; font: .5rem var(--font-geist-mono), monospace; letter-spacing: .1em; }
 .timeline > div { display: grid; grid-template-columns: repeat(9, 1fr); position: relative; }
 .timeline > div::before { content: ""; position: absolute; top: .24rem; right: 0; left: 0; border-top: 1px solid var(--line); }
-.timeline a { position: relative; z-index: 1; display: grid; justify-items: center; gap: .45rem; }
-.timeline a i { width: .52rem; height: .52rem; border: 1px solid var(--ink); border-radius: 50%; background: var(--paper); transition: background .2s ease, transform .2s ease; }
+.timelineFrame { position: relative; z-index: 1; display: grid; justify-items: center; gap: .45rem; }
+.timelineFrame i { width: .52rem; height: .52rem; border: 1px solid var(--ink); border-radius: 50%; background: var(--paper); transition: background .2s ease, transform .2s ease; }
 .timeline a:hover i,
 .timeline a:focus-visible i { background: var(--red); transform: scale(1.5); }
+.timelinePlaceholder { color: rgba(25,22,19,.36); }
+.timelinePlaceholder i { border-style: dashed; background: #d8cdb9; }
 .timeline small { opacity: .55; }
 
 .intertitle { display: grid; place-items: center; min-height: 70svh; padding: 7rem 1.2rem; background: var(--red); color: #fff2dd; text-align: center; }
@@ -212,7 +215,7 @@
   .reelStatus { display: none; }
   .hero { grid-template-columns: 1fr; }
   .heroVisual { width: min(100%, 45rem); margin: 0 auto; }
-  .heroFilm img { aspect-ratio: 16 / 11; }
+  .heroFilm img { aspect-ratio: 3 / 2; }
   .sectionHeading { grid-template-columns: 1fr auto; }
   .sectionHeading > p { grid-row: 2; }
   .railControls { grid-row: 1 / 3; grid-column: 2; }
@@ -242,7 +245,6 @@
   .filmStock { padding-block: 2.8rem; }
   .rail { gap: .65rem; padding-inline: 7vw; scroll-padding-inline: 7vw; }
   .frame { flex-basis: 86vw; }
-  .frameImage img { aspect-ratio: 16 / 10; }
   .frameImage > span { display: none; }
   .frameCaption { grid-template-columns: 1fr; gap: .4rem; }
   .endLeader { flex-basis: 45vw; }

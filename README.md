@@ -32,7 +32,10 @@ npm run dev
 The local preview runs at `http://127.0.0.1:3001/`; the content admin is at
 `http://127.0.0.1:3001/admin`.
 
-## Private image workflow
+## Public-safe demo data
+
+The repository contains fictional profile, pricing, and contact placeholders.
+Replace them locally through `/admin`; never commit real contact details.
 
 Photography assets are intentionally excluded from Git and GitHub:
 
@@ -41,7 +44,12 @@ Photography assets are intentionally excluded from Git and GitHub:
 
 For local testing, place the generated WebP variants in `public/photos/`. The
 repository contains layout code and image metadata only, never the photographs.
-`npm run check:assets` also fails if these paths ever enter a reachable Git commit.
+When photos are absent, every template keeps its intended composition with
+designed text placeholders.
+
+`npm run check:public` fails if photographs, local Windows paths, WeChat storage
+identifiers, non-placeholder email addresses, Chinese mobile numbers, or common
+credential formats appear in the worktree, index, or reachable Git history.
 
 ## Useful commands
 
@@ -49,6 +57,8 @@ repository contains layout code and image metadata only, never the photographs.
 npm run lint
 npm test
 npm run build
+npm run check:bundle
+npm run check:public
 npm run db:generate
 ```
 
@@ -56,16 +66,27 @@ Content settings are stored in D1. Local development uses the project-local
 Miniflare database; hosted deployments use the logical `DB` binding declared in
 `.openai/hosting.json`.
 
-## Private repository publishing
+## Admin security assumptions
 
-The Windows publishing script creates the private GitHub repository, verifies
-that every required template branch exists, runs the private-asset gate, pushes
+The homepage content API is public by design, so anything entered in `/admin`
+must be suitable for public display. The hosted admin trusts the
+`oai-authenticated-user-*` headers injected by ChatGPT Sites. If you deploy this
+repository behind another proxy, protect `/admin` and `PUT /api/site-content`
+with your own authentication and strip any client-supplied headers using that
+prefix. Local write access is intended only for a loopback-only development
+server bound to `127.0.0.1`.
+
+## Public repository publishing
+
+The Windows publishing script creates the public GitHub repository, verifies
+that every required template branch exists, runs the public-safety gate, pushes
 the V1 and all template branches individually, and makes
 `codex/template-gallery` the default branch:
 
 ```powershell
-.\scripts\publish-private-repo.ps1
+.\scripts\publish-public-repo.ps1
 ```
 
 It requires an authenticated GitHub CLI session for the `Brilliant666`
-account. Never add photographs to Git to make the remote preview self-contained.
+account. Never add photographs or real personal information to make the remote
+preview self-contained.

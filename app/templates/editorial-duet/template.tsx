@@ -2,9 +2,12 @@
 
 /* eslint-disable @next/next/no-img-element -- portfolio assets include local responsive WebP derivatives. */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { TemplateProps } from "../types";
+import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoRatio } from "../shared/photo-slots";
 import styles from "./template.module.css";
+
+const EDITORIAL_RATIOS = ["2:3", "3:2", "16:9", "3:2", "3:2", "16:9", "3:2", "3:2", "16:9"] as const satisfies readonly PhotoRatio[];
 
 export default function EditorialDuetTemplate({
   content,
@@ -18,13 +21,17 @@ export default function EditorialDuetTemplate({
 }: TemplateProps) {
   const rootRef = useRef<HTMLElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-  const safeIndex = works.length === 0 ? 0 : activeIndex % works.length;
-  const activeWork = works[safeIndex];
-  const coverWork = works[0];
+  const photoSlots = useMemo(() => buildPhotoSlots(works, EDITORIAL_RATIOS), [works]);
+  const coverSlot = photoSlots[0];
+  const chapterSlots = photoSlots.slice(1);
+  const safeIndex = Math.min(activeIndex, chapterSlots.length - 1);
+  const activeSlot = chapterSlots[safeIndex];
+  const activeWork = activeSlot?.work;
+  const coverWork = coverSlot.work;
 
   useEffect(() => {
     const root = rootRef.current;
-    if (!root || works.length === 0 || typeof IntersectionObserver === "undefined") return;
+    if (!root || typeof IntersectionObserver === "undefined") return;
 
     const chapters = Array.from(root.querySelectorAll<HTMLElement>("[data-editorial-work]"));
     const observer = new IntersectionObserver((entries) => {
@@ -42,7 +49,7 @@ export default function EditorialDuetTemplate({
 
     chapters.forEach((chapter) => observer.observe(chapter));
     return () => observer.disconnect();
-  }, [works.length]);
+  }, [chapterSlots.length]);
 
   return (
     <main ref={rootRef} className={styles.root} data-template="editorial-duet">
@@ -77,7 +84,15 @@ export default function EditorialDuetTemplate({
 
         <div className={styles.coverVisual}>
           {coverWork ? (
-            <button type="button" onClick={() => onOpenWork(coverWork)} aria-label={`打开封面作品 ${coverWork.title}`}>
+            <button
+              type="button"
+              data-ratio={coverSlot.ratio}
+              data-photo-slot={coverSlot.index}
+              data-photo-ratio={coverSlot.ratio}
+              style={getPhotoSlotStyle(coverSlot)}
+              onClick={() => onOpenWork(coverWork)}
+              aria-label={`打开封面作品 ${coverWork.title}`}
+            >
               <img
                 src={coverWork.preview}
                 srcSet={`${coverWork.preview} ${coverWork.previewWidth}w, ${coverWork.image} ${coverWork.fullWidth}w`}
@@ -92,7 +107,9 @@ export default function EditorialDuetTemplate({
               <span>OPEN COVER ↗</span>
             </button>
           ) : (
-            <div className={styles.coverEmpty}>NO COVER SELECTED</div>
+            <div className={styles.coverEmpty} data-ratio={coverSlot.ratio} data-photo-slot={coverSlot.index} data-photo-ratio={coverSlot.ratio} style={getPhotoSlotStyle(coverSlot)}>
+              <PhotoPlaceholder slot={coverSlot} tone="light" label="COVER IMAGE PENDING" />
+            </div>
           )}
           <div className={styles.coverCaption}>
             <span>01 / COVER STORY</span>
@@ -101,14 +118,14 @@ export default function EditorialDuetTemplate({
           <div className={styles.coverStamp}>NEW<br />VISUAL<br />STORY</div>
         </div>
 
-        <div className={styles.coverFolio} aria-hidden="true">FOLIO · {String(works.length).padStart(2, "0")}</div>
+        <div className={styles.coverFolio} aria-hidden="true">FOLIO · {String(photoSlots.length).padStart(2, "0")}</div>
       </section>
 
       <section id="editorial-folio" className={styles.folio}>
         <aside className={styles.stickyPage} aria-label="当前作品章节">
           <div className={styles.stickyKicker}>
             <span>SELECTED WORKS</span>
-            <span>{String(safeIndex + 1).padStart(2, "0")} / {String(works.length).padStart(2, "0")}</span>
+            <span>{String(safeIndex + 1).padStart(2, "0")} / {String(chapterSlots.length).padStart(2, "0")}</span>
           </div>
 
           <div className={styles.chapterCopy} aria-live="polite" aria-atomic="true">
@@ -124,12 +141,12 @@ export default function EditorialDuetTemplate({
           </div>
 
           <nav className={styles.chapterNav} aria-label="作品章节跳转">
-            {works.map((work, index) => (
+            {chapterSlots.map((slot, index) => (
               <a
-                key={work.code}
+                key={`editorial-nav-${slot.index}`}
                 className={index === safeIndex ? styles.chapterActive : ""}
                 href={`#editorial-work-${index}`}
-                aria-label={`跳转到作品 ${work.title}`}
+                aria-label={`跳转到作品 ${slot.work?.title ?? `PHOTO SLOT ${slot.index + 1}`}`}
                 aria-current={index === safeIndex ? "true" : undefined}
               >
                 <span>{String(index + 1).padStart(2, "0")}</span>
@@ -140,35 +157,47 @@ export default function EditorialDuetTemplate({
         </aside>
 
         <div className={styles.photoScroll}>
-          {works.map((work, index) => (
+          {chapterSlots.map((slot, index) => {
+            const work = slot.work;
+            return (
             <article
               id={`editorial-work-${index}`}
               className={styles.photoChapter}
-              key={work.code}
+              key={`editorial-slot-${slot.index}`}
               data-editorial-work={index}
+              data-ratio={slot.ratio}
+              data-photo-slot={slot.index}
+              data-photo-ratio={slot.ratio}
             >
-              <button type="button" onClick={() => onOpenWork(work)} aria-label={`打开作品 ${work.title}`}>
-                <img
-                  src={work.preview}
-                  srcSet={`${work.preview} ${work.previewWidth}w, ${work.image} ${work.fullWidth}w`}
-                  sizes="(max-width: 760px) 100vw, 56vw"
-                  width={work.previewWidth}
-                  height={work.previewHeight}
-                  alt={work.subtitle}
-                  loading={index < 2 ? "eager" : "lazy"}
-                  decoding="async"
-                  style={{ objectPosition: work.position }}
-                />
-                <span className={styles.photoIndex}>{String(index + 1).padStart(2, "0")}</span>
-                <span className={styles.photoExpand}>VIEW FULL FRAME ↗</span>
-              </button>
+              {work ? (
+                <button type="button" style={getPhotoSlotStyle(slot)} onClick={() => onOpenWork(work)} aria-label={`打开作品 ${work.title}`}>
+                  <img
+                    src={work.preview}
+                    srcSet={`${work.preview} ${work.previewWidth}w, ${work.image} ${work.fullWidth}w`}
+                    sizes="(max-width: 760px) 100vw, 56vw"
+                    width={work.previewWidth}
+                    height={work.previewHeight}
+                    alt={work.subtitle}
+                    loading={index < 2 ? "eager" : "lazy"}
+                    decoding="async"
+                    style={{ objectPosition: work.position }}
+                  />
+                  <span className={styles.photoIndex}>{String(index + 1).padStart(2, "0")}</span>
+                  <span className={styles.photoExpand}>VIEW FULL FRAME ↗</span>
+                </button>
+              ) : (
+                <div className={styles.photoPlaceholderFrame} style={getPhotoSlotStyle(slot)}>
+                  <PhotoPlaceholder slot={slot} tone="light" label="CHAPTER IMAGE PENDING" />
+                </div>
+              )}
               <div className={styles.mobileChapterCopy}>
-                <span>{work.code} / {String(index + 1).padStart(2, "0")}</span>
-                <h2>{work.title}</h2>
-                <p>{work.subtitle}</p>
+                <span>{work?.code ?? "PENDING"} / {String(index + 1).padStart(2, "0")}</span>
+                <h2>{work?.title ?? `CHAPTER ${String(index + 1).padStart(2, "0")}`}</h2>
+                <p>{work?.subtitle ?? "IMAGE PENDING / WAITING FOR THE NEXT VISUAL STORY."}</p>
               </div>
             </article>
-          ))}
+            );
+          })}
           <div className={styles.endMark}>
             <span>END OF EDITION 01</span>
             <a href="#editorial-rates">CONTINUE TO COMMISSION ↓</a>

@@ -2,8 +2,9 @@
 
 /* eslint-disable @next/next/no-img-element -- local portfolio assets provide responsive WebP derivatives. */
 
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import type { TemplateProps } from "../types";
+import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoRatio } from "../shared/photo-slots";
 import styles from "./polaroid-field.module.css";
 
 type ViewState = { x: number; y: number; scale: number };
@@ -13,6 +14,7 @@ type PolaroidStyle = CSSProperties & { "--rotation": string; "--delay": string }
 const INITIAL_VIEW: ViewState = { x: 0, y: 0, scale: 1 };
 const MIN_SCALE = 0.72;
 const MAX_SCALE = 1.28;
+const POLAROID_RATIOS = ["3:2", "16:9", "3:2", "3:2", "2:3", "3:2", "16:9", "3:2", "3:2"] as const satisfies readonly PhotoRatio[];
 
 const placements = [
   { left: "6%", top: "8%", width: "25rem", rotation: "-7deg", z: 5, tone: "coral" },
@@ -55,7 +57,7 @@ export default function PolaroidFieldTemplate({
   onCopy,
   onOpenWork,
 }: TemplateProps) {
-  const fieldWorks = works.slice(0, 9);
+  const fieldSlots = useMemo(() => buildPhotoSlots(works, POLAROID_RATIOS), [works]);
   const viewportRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const viewRef = useRef<ViewState>(INITIAL_VIEW);
@@ -246,7 +248,7 @@ export default function PolaroidFieldTemplate({
           <a href="#polaroid-field">进入影像星野 <b>↓</b></a>
         </div>
         <div className={styles.heroSeal} aria-hidden="true">
-          <span>{String(fieldWorks.length).padStart(2, "0")}</span>
+          <span>{String(fieldSlots.length).padStart(2, "0")}</span>
           <small>MEMORIES<br />IN ORBIT</small>
         </div>
       </section>
@@ -314,28 +316,59 @@ export default function PolaroidFieldTemplate({
               />
             ))}
 
-            {fieldWorks.map((work, index) => {
+            {fieldSlots.map((slot, index) => {
               const placement = placements[index];
+              const work = slot.work;
+              const placementStyle = {
+                left: placement.left,
+                top: placement.top,
+                width: placement.width,
+                zIndex: placement.z,
+                "--rotation": placement.rotation,
+                "--delay": `${index * 65}ms`,
+              } as PolaroidStyle;
+
+              if (!work) {
+                return (
+                  <article
+                    className={`${styles.polaroid} ${styles.polaroidPlaceholder}`}
+                    data-polaroid={String(index + 1)}
+                    data-tone={placement.tone}
+                    data-ratio={slot.ratio}
+                    data-photo-slot={slot.index}
+                    data-photo-ratio={slot.ratio}
+                    key={`polaroid-slot-${slot.index}`}
+                    style={placementStyle}
+                  >
+                    <span className={styles.tape} aria-hidden="true" />
+                    <span className={styles.photoFrame} style={getPhotoSlotStyle(slot)}>
+                      <PhotoPlaceholder slot={slot} tone="light" compact label="MEMORY PENDING" />
+                    </span>
+                    <span className={styles.polaroidCaption}>
+                      <small>PHOTO SLOT / {slot.ratio}</small>
+                      <strong>等待下一段记忆</strong>
+                      <em>image pending</em>
+                    </span>
+                  </article>
+                );
+              }
+
               return (
                 <button
                   type="button"
                   className={styles.polaroid}
                   data-polaroid={String(index + 1)}
                   data-tone={placement.tone}
-                  key={`${work.code}-${index}`}
+                  data-ratio={slot.ratio}
+                  data-photo-slot={slot.index}
+                  data-photo-ratio={slot.ratio}
+                  key={`polaroid-slot-${slot.index}`}
                   onClick={() => onOpenWork(work)}
                   aria-label={`打开作品 ${work.title}`}
-                  style={{
-                    left: placement.left,
-                    top: placement.top,
-                    width: placement.width,
-                    zIndex: placement.z,
-                    "--rotation": placement.rotation,
-                    "--delay": `${index * 65}ms`,
-                  } as PolaroidStyle}
+                  style={placementStyle}
                 >
                   <span className={styles.tape} aria-hidden="true" />
-                  <span className={styles.photoFrame}>
+                  <span className={styles.photoFrame} style={getPhotoSlotStyle(slot)}>
                     <img
                       src={work.preview}
                       srcSet={`${work.preview} ${work.previewWidth}w, ${work.image} ${work.fullWidth}w`}

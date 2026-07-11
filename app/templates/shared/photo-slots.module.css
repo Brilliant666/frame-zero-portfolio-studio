@@ -1,0 +1,108 @@
+.placeholder {
+  --slot-bg: #151515;
+  --slot-ink: rgba(255, 255, 255, .9);
+  --slot-muted: rgba(255, 255, 255, .48);
+  --slot-line: rgba(255, 255, 255, .18);
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  min-height: 12rem;
+  overflow: hidden;
+  padding: clamp(.8rem, 2vw, 1.4rem);
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto 1fr auto;
+  background:
+    linear-gradient(135deg, transparent 0 49.7%, var(--slot-line) 50%, transparent 50.3%),
+    linear-gradient(45deg, transparent 0 49.7%, var(--slot-line) 50%, transparent 50.3%),
+    var(--slot-bg);
+  color: var(--slot-ink);
+  text-align: left;
+}
+
+.placeholder::before,
+.placeholder::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.placeholder::before {
+  inset: .45rem;
+  border: 1px solid var(--slot-line);
+}
+
+.placeholder::after {
+  top: 50%;
+  left: 50%;
+  width: clamp(3.2rem, 10vw, 6rem);
+  aspect-ratio: 1;
+  border: 1px solid var(--slot-line);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.placeholder[data-tone="light"] {
+  --slot-bg: #eeeae4;
+  --slot-ink: rgba(20, 18, 16, .9);
+  --slot-muted: rgba(20, 18, 16, .48);
+  --slot-line: rgba(20, 18, 16, .18);
+}
+
+.index,
+.corner,
+.copy {
+  position: relative;
+  z-index: 1;
+}
+
+.index {
+  font: 600 .62rem/1 var(--font-geist-mono), monospace;
+  letter-spacing: .12em;
+}
+
+.copy {
+  align-self: center;
+  grid-column: 1 / -1;
+  display: grid;
+  justify-items: center;
+  gap: .4rem;
+  text-align: center;
+}
+
+.copy strong {
+  font-size: clamp(.82rem, 1.5vw, 1.1rem);
+  letter-spacing: .08em;
+}
+
+.copy small,
+.corner {
+  color: var(--slot-muted);
+  font: .5rem/1.2 var(--font-geist-mono), monospace;
+  letter-spacing: .12em;
+}
+
+.corner {
+  align-self: end;
+  grid-column: 2;
+  white-space: nowrap;
+}
+
+.compact {
+  min-height: 0;
+  padding: .45rem;
+}
+
+.compact .copy strong {
+  font-size: .62rem;
+}
+
+.compact .copy small,
+.compact .corner {
+  font-size: .4rem;
+}
+
+@media (max-width: 640px) {
+  .placeholder { min-height: 9rem; }
+  .compact { min-height: 0; }
+}

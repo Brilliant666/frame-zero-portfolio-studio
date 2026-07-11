@@ -300,10 +300,12 @@
 
 .leadPanel {
   position: absolute;
-  inset: 2% 4% 5% 3%;
+  top: 50%;
+  left: 50%;
   display: block;
-  width: 93%;
-  height: 90%;
+  width: min(76%, 31rem);
+  height: auto;
+  aspect-ratio: 2 / 3;
   padding: 0;
   overflow: hidden;
   border: 7px solid var(--ink);
@@ -311,7 +313,7 @@
   box-shadow: 13px 15px 0 var(--vermilion), 18px 20px 0 var(--ink);
   cursor: zoom-in;
   clip-path: polygon(7% 0, 100% 0, 94% 100%, 0 94%);
-  transform: rotate(1.5deg);
+  transform: translate(-50%, -50%) rotate(1.5deg);
 }
 
 .leadPanel::after {
@@ -337,6 +339,15 @@
 .leadPanel:focus-visible img {
   filter: grayscale(0) contrast(1.05) saturate(1.08);
   transform: scale(1.07);
+}
+
+.leadPlaceholder {
+  cursor: default;
+}
+
+.leadPlaceholder > div {
+  height: 100%;
+  min-height: 0;
 }
 
 .leadCaption {
@@ -547,14 +558,15 @@
 }
 
 .storyboard {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  grid-template-rows: repeat(16, clamp(2.65rem, 4vw, 4.8rem));
-  gap: clamp(.55rem, 1.2vw, 1rem);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1rem;
 }
 
 .panel {
   position: relative;
+  flex: 0 0 calc(40.909% - .818rem);
   min-width: 0;
   padding: 0;
   overflow: hidden;
@@ -575,15 +587,24 @@
   animation-delay: calc(var(--panel-index) * 55ms);
 }
 
-.panel[data-panel="1"] { grid-column: 1 / 8; grid-row: 1 / 6; }
-.panel[data-panel="2"] { grid-column: 8 / 13; grid-row: 1 / 4; }
-.panel[data-panel="3"] { grid-column: 8 / 13; grid-row: 4 / 7; }
-.panel[data-panel="4"] { grid-column: 1 / 5; grid-row: 6 / 11; }
-.panel[data-panel="5"] { grid-column: 5 / 10; grid-row: 7 / 12; }
-.panel[data-panel="6"] { grid-column: 10 / 13; grid-row: 7 / 12; }
-.panel[data-panel="7"] { grid-column: 1 / 5; grid-row: 11 / 17; }
-.panel[data-panel="8"] { grid-column: 5 / 9; grid-row: 12 / 17; }
-.panel[data-panel="9"] { grid-column: 9 / 13; grid-row: 12 / 17; }
+.panel[data-photo-slot="1"] { flex-basis: calc(18.182% - .364rem); order: 1; }
+.panel[data-photo-slot="2"] { order: 2; }
+.panel[data-photo-slot="4"] { order: 3; }
+.panel[data-photo-slot="3"] { flex-basis: 100%; order: 4; }
+.panel[data-photo-slot="5"] { flex-basis: calc(33.333% - .667rem); order: 5; }
+.panel[data-photo-slot="6"] { flex-basis: calc(33.333% - .667rem); order: 6; }
+.panel[data-photo-slot="8"] { flex-basis: calc(33.333% - .667rem); order: 7; }
+.panel[data-photo-slot="7"] { flex-basis: 100%; order: 8; }
+.panel[data-photo-slot="9"] { flex-basis: 100%; order: 9; }
+
+.panelPlaceholder {
+  cursor: default;
+}
+
+.panelPlaceholder > div {
+  height: 100%;
+  min-height: 0;
+}
 
 .panel img {
   display: block;
@@ -595,15 +616,15 @@
   transition: filter .45s ease, transform .65s cubic-bezier(.2, .75, .2, 1);
 }
 
-.panel:hover,
-.panel:focus-visible {
+.panel:not(.panelPlaceholder):hover,
+.panel:not(.panelPlaceholder):focus-visible {
   z-index: 5;
   box-shadow: 8px 8px 0 var(--vermilion);
   transform: translate(-2px, -2px);
 }
 
-.panel:hover img,
-.panel:focus-visible img {
+.panel:not(.panelPlaceholder):hover img,
+.panel:not(.panelPlaceholder):focus-visible img {
   filter: grayscale(0) contrast(1.02) saturate(1.06);
   transform: scale(1.065);
 }
@@ -618,8 +639,8 @@
   transition: opacity .35s ease;
 }
 
-.panel:hover .dotScreen,
-.panel:focus-visible .dotScreen {
+.panel:not(.panelPlaceholder):hover .dotScreen,
+.panel:not(.panelPlaceholder):focus-visible .dotScreen {
   opacity: .04;
 }
 
@@ -1289,11 +1310,13 @@
   }
 
   .leadPanel {
-    inset: 4% 3% 8%;
-    width: 92%;
-    height: 86%;
+    top: 50%;
+    left: 50%;
+    width: 82%;
+    height: auto;
     border-width: 5px;
     box-shadow: 8px 9px 0 var(--vermilion), 12px 13px 0 var(--ink);
+    transform: translate(-50%, -50%) rotate(1deg);
   }
 
   .coverSfx {
@@ -1352,23 +1375,14 @@
   }
 
   .storyboard {
-    grid-template-columns: 1fr;
-    grid-template-rows: none;
     gap: 1rem;
   }
 
   .panel,
-  .panel[data-panel] {
-    grid-column: 1;
-    grid-row: auto;
+  .panel[data-photo-slot] {
+    flex-basis: 100%;
+    order: initial;
     min-height: 0;
-    aspect-ratio: 4 / 3;
-  }
-
-  .panel[data-panel="1"],
-  .panel[data-panel="4"],
-  .panel[data-panel="7"] {
-    aspect-ratio: 3 / 4;
   }
 
   .panelMeta strong {

@@ -271,12 +271,13 @@
 .viewportBody {
   display: grid;
   grid-template-columns: minmax(0, 1fr) clamp(17rem, 21vw, 23rem);
-  min-height: min(66vw, 45rem);
+  align-items: stretch;
 }
 
 .stage {
   position: relative;
   min-width: 0;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   border-right: 1px solid var(--line);
   background: #02050a;
@@ -329,12 +330,9 @@
 .stageButton:focus-visible .stageOpen { border-color: var(--electric); color: var(--electric); opacity: 1; }
 
 .emptyStage {
-  display: grid;
+  position: absolute;
+  inset: 0;
   height: 100%;
-  place-items: center;
-  color: var(--muted);
-  font: .7rem var(--font-geist-mono), monospace;
-  letter-spacing: .14em;
 }
 
 .reticle {
@@ -494,9 +492,10 @@
   scrollbar-color: var(--line-strong) transparent;
 }
 
-.dock button {
+.dockItem,
+.dockPlaceholder {
   position: relative;
-  flex: 0 0 5.3rem;
+  flex: 0 0 auto;
   height: 3.2rem;
   padding: 0;
   overflow: hidden;
@@ -507,11 +506,13 @@
   transition: opacity .2s ease, border-color .2s ease, transform .2s ease;
 }
 
-.dock button:hover,
-.dock button:focus-visible,
+.dockItem:hover,
+.dockItem:focus-visible,
 .dock .dockActive { border-color: var(--electric); opacity: 1; transform: translateY(-2px); }
-.dock button img { width: 100%; height: 100%; object-fit: cover; }
-.dock button span { position: absolute; right: .18rem; bottom: .15rem; padding: .1rem .2rem; background: rgba(5, 9, 20, .84); color: var(--white); font: .45rem var(--font-geist-mono), monospace; }
+.dockItem img { width: 100%; height: 100%; object-fit: cover; }
+.dockItem span { position: absolute; right: .18rem; bottom: .15rem; padding: .1rem .2rem; background: rgba(5, 9, 20, .84); color: var(--white); font: .45rem var(--font-geist-mono), monospace; }
+.dockPlaceholder { cursor: default; opacity: .7; }
+.dockPlaceholder > div { height: 100%; min-height: 0; }
 .dockArea > p { align-self: center; margin: 0; color: var(--muted); font: .5rem var(--font-geist-mono), monospace; letter-spacing: .09em; white-space: nowrap; }
 
 .telemetryStrip {
@@ -578,15 +579,15 @@
 .sectionSummary p { margin: .9rem 0 0; color: var(--muted); font-size: .82rem; line-height: 1.85; }
 
 .archiveGrid {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: .8rem;
 }
 
 .archiveCard {
   position: relative;
-  grid-column: span 4;
-  aspect-ratio: 4 / 5;
+  flex: 0 0 calc(40.909% - .655rem);
   min-width: 0;
   padding: 0;
   overflow: hidden;
@@ -598,8 +599,17 @@
   contain: layout paint style;
 }
 
-.archiveCard:nth-child(5n + 1),
-.archiveCard:nth-child(5n + 5) { grid-column: span 8; aspect-ratio: 16 / 9; }
+.archiveCard[data-photo-slot="1"] { flex-basis: 100%; order: 1; }
+.archiveCard[data-photo-slot="2"] { order: 2; }
+.archiveCard[data-photo-slot="3"] { flex-basis: calc(18.182% - .291rem); order: 3; }
+.archiveCard[data-photo-slot="4"] { order: 4; }
+.archiveCard[data-photo-slot="6"] { flex-basis: 100%; order: 5; }
+.archiveCard[data-photo-slot="5"] { flex-basis: calc(33.333% - .534rem); order: 6; }
+.archiveCard[data-photo-slot="7"] { flex-basis: calc(33.333% - .534rem); order: 7; }
+.archiveCard[data-photo-slot="8"] { flex-basis: calc(33.333% - .534rem); order: 8; }
+.archiveCard[data-photo-slot="9"] { flex-basis: 100%; order: 9; }
+.archivePlaceholder { cursor: default; }
+.archivePlaceholder > div { height: 100%; min-height: 0; }
 .archiveCard img { display: block; width: 100%; height: 100%; object-fit: cover; filter: saturate(.9) contrast(1.02); transform: scale(1.01); transition: transform .45s cubic-bezier(.2, .7, .2, 1), filter .35s ease; }
 .archiveCard:hover img,
 .archiveCard:focus-visible img { filter: saturate(1.08) contrast(1.03); transform: scale(1.045); }
@@ -762,11 +772,8 @@
 @media (max-width: 1080px) {
   .header { grid-template-columns: 1fr auto; }
   .header nav { display: none; }
-  .viewportBody { grid-template-columns: minmax(0, 1fr) 17rem; min-height: 38rem; }
+  .viewportBody { grid-template-columns: minmax(0, 1fr) 17rem; }
   .targetCode { font-size: 4rem; }
-  .archiveCard { grid-column: span 6; aspect-ratio: 16 / 11; }
-  .archiveCard:nth-child(5n + 1),
-  .archiveCard:nth-child(5n + 5) { grid-column: span 6; aspect-ratio: 16 / 11; }
   .packageGrid { grid-template-columns: 1fr; }
   .packageCard { min-height: 0; }
   .packageCard > p:not(.packageDescription) { margin-top: 2rem; }
@@ -785,7 +792,7 @@
   .viewportShell { clip-path: polygon(0 0, calc(100% - 1rem) 0, 100% 1rem, 100% 100%, 1rem 100%, 0 calc(100% - 1rem)); }
   .viewportTopbar span:nth-child(3) { display: none; }
   .viewportBody { display: block; min-height: 0; }
-  .stage { height: min(116vw, 35rem); border-right: 0; border-bottom: 1px solid var(--line); }
+  .stage { border-right: 0; border-bottom: 1px solid var(--line); }
   .reticle { width: 5.5rem; height: 5.5rem; }
   .arrow { width: 2.35rem; height: 3.5rem; }
   .arrowLeft { left: .45rem; }
@@ -800,7 +807,8 @@
   .missionButton { grid-column: 1 / -1; margin-top: 0; }
   .dockArea { grid-template-columns: 1fr; padding: .7rem; }
   .dockArea > p { display: none; }
-  .dock button { flex-basis: 4.5rem; height: 2.8rem; }
+  .dockItem,
+  .dockPlaceholder { height: 2.8rem; }
   .telemetryStrip { grid-template-columns: 1fr 1fr; padding-inline: .65rem; }
   .telemetryStrip > div:nth-child(odd) { border-left: 1px solid var(--line); }
   .sectionHead,
@@ -813,10 +821,8 @@
   .archive,
   .services,
   .booking { padding: 6rem .65rem; }
-  .archiveGrid { grid-template-columns: 1fr; }
   .archiveCard,
-  .archiveCard:nth-child(5n + 1),
-  .archiveCard:nth-child(5n + 5) { grid-column: 1; aspect-ratio: 16 / 11; }
+  .archiveCard[data-photo-slot] { flex-basis: 100%; order: initial; }
   .cardOpen { opacity: 1; transform: none; }
   .packageGrid { gap: .65rem; }
   .manifesto { min-height: 78svh; }
@@ -850,7 +856,6 @@
 }
 
 @media (max-width: 430px) {
-  .stage { height: 132vw; }
   .stageOpen { right: .6rem; bottom: .6rem; }
   .stageTelemetry span:nth-child(2) { display: none; }
   .hudPanel { grid-template-columns: 1fr; }

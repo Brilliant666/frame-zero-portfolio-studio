@@ -1,4 +1,4 @@
-name: Asset safety
+name: Public repository safety
 
 on:
   push:
@@ -9,8 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  private-assets:
-    name: Reject private photography assets
+  public-safety:
+    name: Reject photos, private data, and credentials
     runs-on: ubuntu-latest
     steps:
       - name: Check out complete history
@@ -27,5 +27,5 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Check private assets
-        run: npm run check:assets
+      - name: Check public repository safety
+        run: npm run check:public

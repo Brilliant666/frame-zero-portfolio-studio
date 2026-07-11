@@ -2,19 +2,33 @@
 
 /* eslint-disable @next/next/no-img-element -- local portfolio assets already provide responsive derivatives. */
 
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { TemplateProps } from "../types";
+import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoRatio } from "../shared/photo-slots";
 import styles from "./template.module.css";
+
+const CHARACTER_RATIOS = ["3:2", "3:2", "16:9", "3:2", "2:3", "3:2", "16:9", "3:2", "3:2"] as const satisfies readonly PhotoRatio[];
 
 export default function CharacterSelectTemplate({ content, works, packages, bookingTemplate, copiedKey, onCopy, onOpenWork }: TemplateProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedPackage, setSelectedPackage] = useState(0);
-  const activeWork = works[activeIndex] ?? works[0];
+  const photoSlots = useMemo(() => buildPhotoSlots(works, CHARACTER_RATIOS), [works]);
+  const availableIndexes = useMemo(() => photoSlots.filter((slot) => slot.work).map((slot) => slot.index), [photoSlots]);
+  const clampedActiveIndex = Math.min(Math.max(activeIndex, 0), photoSlots.length - 1);
+  const safeActiveIndex = photoSlots[clampedActiveIndex]?.work || availableIndexes.length === 0
+    ? clampedActiveIndex
+    : availableIndexes[0];
+  const activeSlot = photoSlots[safeActiveIndex] ?? photoSlots[0];
+  const activeWork = activeSlot.work;
   const activePackage = packages[selectedPackage] ?? packages[0];
   const move = useCallback((direction: -1 | 1) => {
-    if (works.length === 0) return;
-    setActiveIndex((index) => (index + direction + works.length) % works.length);
-  }, [works.length]);
+    if (availableIndexes.length === 0) return;
+    setActiveIndex((index) => {
+      const currentPosition = availableIndexes.indexOf(index);
+      const normalizedPosition = currentPosition < 0 ? 0 : currentPosition;
+      return availableIndexes[(normalizedPosition + direction + availableIndexes.length) % availableIndexes.length];
+    });
+  }, [availableIndexes]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -38,25 +52,48 @@ export default function CharacterSelectTemplate({ content, works, packages, book
         <div className={styles.heroTopline}><span>PLAYER 01 / {content.profile.photographer}</span><strong>SELECT YOUR CHARACTER</strong><span>{content.profile.city}</span></div>
 
         <div className={styles.roster} id="select-roster" aria-label="选择角色作品">
-          {works.map((work, index) => (
-            <button
-              type="button"
-              key={work.code}
-              className={index === activeIndex ? styles.rosterActive : ""}
-              onClick={() => setActiveIndex(index)}
-              aria-label={`选择 ${work.title}`}
-              aria-pressed={index === activeIndex}
-            >
-              <img src={work.preview} width={work.previewWidth} height={work.previewHeight} alt="" style={{ objectPosition: work.position }} />
-              <span>{work.code}</span>
-            </button>
-          ))}
+          {photoSlots.map((slot, index) => {
+            const work = slot.work;
+            if (!work) {
+              return (
+                <div className={`${styles.rosterItem} ${styles.rosterPlaceholder}`} key={`roster-slot-${slot.index}`} data-photo-slot={slot.index} data-photo-ratio={slot.ratio} style={getPhotoSlotStyle(slot)}>
+                  <PhotoPlaceholder slot={slot} compact label="LOCKED" />
+                  <span>--</span>
+                </div>
+              );
+            }
+
+            return (
+              <button
+                type="button"
+                key={`roster-slot-${slot.index}`}
+                className={`${styles.rosterItem} ${index === safeActiveIndex ? styles.rosterActive : ""}`}
+                data-photo-slot={slot.index}
+                data-photo-ratio={slot.ratio}
+                style={getPhotoSlotStyle(slot)}
+                onClick={() => setActiveIndex(index)}
+                aria-label={`选择 ${work.title}`}
+                aria-pressed={index === safeActiveIndex}
+              >
+                <img src={work.preview} width={work.previewWidth} height={work.previewHeight} alt="" style={{ objectPosition: work.position }} />
+                <span>{work.code}</span>
+              </button>
+            );
+          })}
         </div>
 
-        {activeWork && (
-          <div className={styles.fighterStage}>
-            <div className={styles.fighterName} aria-hidden="true">{activeWork.title}</div>
-            <button type="button" className={styles.fighterImage} onClick={() => onOpenWork(activeWork)} aria-label={`查看 ${activeWork.title} 完整作品`}>
+        <div className={styles.fighterStage}>
+            <div className={styles.fighterName} aria-hidden="true">{activeWork?.title ?? "LOCKED"}</div>
+            {activeWork ? (
+            <button
+              type="button"
+              className={styles.fighterImage}
+              data-photo-slot={activeSlot.index}
+              data-photo-ratio={activeSlot.ratio}
+              style={getPhotoSlotStyle(activeSlot)}
+              onClick={() => onOpenWork(activeWork)}
+              aria-label={`查看 ${activeWork.title} 完整作品`}
+            >
               <img
                 key={activeWork.image}
                 src={activeWork.preview}
@@ -69,22 +106,26 @@ export default function CharacterSelectTemplate({ content, works, packages, book
                 fetchPriority="high"
               />
             </button>
+            ) : (
+              <div className={`${styles.fighterImage} ${styles.fighterPlaceholder}`} data-photo-slot={activeSlot.index} data-photo-ratio={activeSlot.ratio} style={getPhotoSlotStyle(activeSlot)}>
+                <PhotoPlaceholder slot={activeSlot} label="SELECT A CHARACTER" />
+              </div>
+            )}
             <span className={styles.slash} aria-hidden="true" />
           </div>
-        )}
 
         <aside className={styles.profileCard}>
-          <span>SELECTED / {String(activeIndex + 1).padStart(2, "0")}</span>
-          <h1>{activeWork?.title}</h1>
-          <p>{activeWork?.subtitle}</p>
+          <span>SELECTED / {String(safeActiveIndex + 1).padStart(2, "0")}</span>
+          <h1>{activeWork?.title ?? "CHARACTER LOCKED"}</h1>
+          <p>{activeWork?.subtitle ?? "UPLOAD A PHOTO TO UNLOCK THIS CHARACTER SLOT."}</p>
           <div className={styles.stats}>
             {content.trustItems.map((item, index) => (
               <div key={item.label}><small>{item.label}</small><i><b style={{ width: `${52 + index * 12}%` }} /></i><strong>{item.value}</strong></div>
             ))}
           </div>
           <div className={styles.arrowControls}>
-            <button type="button" onClick={() => move(-1)} aria-label="上一个角色">← PREV</button>
-            <button type="button" onClick={() => move(1)} aria-label="下一个角色">NEXT →</button>
+            <button type="button" disabled={availableIndexes.length < 2} onClick={() => move(-1)} aria-label="上一个角色">← PREV</button>
+            <button type="button" disabled={availableIndexes.length < 2} onClick={() => move(1)} aria-label="下一个角色">NEXT →</button>
           </div>
           <a href="#select-loadout" className={styles.confirm}>确认角色 / 选择拍摄 <span>START</span></a>
         </aside>
@@ -121,12 +162,23 @@ export default function CharacterSelectTemplate({ content, works, packages, book
       <section className={styles.archive}>
         <div className={styles.sectionTitle}><span>BONUS STAGE</span><h2>完整角色图鉴</h2><p>选择任意画面进入全屏查看。</p></div>
         <div className={styles.archiveGrid}>
-          {works.map((work, index) => (
-            <button type="button" key={work.code} onClick={() => onOpenWork(work)} style={{ "--card-index": index } as CSSProperties}>
-              <img src={work.preview} width={work.previewWidth} height={work.previewHeight} loading="lazy" alt={work.subtitle} style={{ objectPosition: work.position }} />
-              <span><b>{work.code}</b><strong>{work.title}</strong><small>{work.subtitle}</small></span>
-            </button>
-          ))}
+          {photoSlots.map((slot, index) => {
+            const work = slot.work;
+            const slotStyle = { ...getPhotoSlotStyle(slot), "--card-index": index } as CSSProperties;
+            if (!work) {
+              return (
+                <div className={`${styles.archiveCard} ${styles.archivePlaceholder}`} key={`archive-slot-${slot.index}`} data-photo-slot={slot.index} data-photo-ratio={slot.ratio} style={slotStyle}>
+                  <PhotoPlaceholder slot={slot} label="ARCHIVE SLOT PENDING" />
+                </div>
+              );
+            }
+            return (
+              <button type="button" className={styles.archiveCard} key={`archive-slot-${slot.index}`} data-photo-slot={slot.index} data-photo-ratio={slot.ratio} onClick={() => onOpenWork(work)} style={slotStyle}>
+                <img src={work.preview} width={work.previewWidth} height={work.previewHeight} loading="lazy" alt={work.subtitle} style={{ objectPosition: work.position }} />
+                <span><b>{work.code}</b><strong>{work.title}</strong><small>{work.subtitle}</small></span>
+              </button>
+            );
+          })}
         </div>
       </section>
 

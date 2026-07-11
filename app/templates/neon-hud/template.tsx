@@ -3,8 +3,11 @@
 /* eslint-disable @next/next/no-img-element -- portfolio assets include local responsive WebP derivatives. */
 
 import { useCallback, useEffect, useState } from "react";
+import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import type { TemplateProps } from "../types";
 import styles from "./template.module.css";
+
+const neonRatios = ["16:9", "3:2", "2:3", "3:2", "3:2", "16:9", "3:2", "3:2", "16:9"] as const;
 
 export default function NeonHudTemplate({
   content,
@@ -17,13 +20,14 @@ export default function NeonHudTemplate({
   onOpenWork,
 }: TemplateProps) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const safeIndex = works.length === 0 ? 0 : activeIndex % works.length;
-  const activeWork = works[safeIndex];
+  const photoSlots = buildPhotoSlots(works, neonRatios);
+  const safeIndex = Math.min(Math.max(activeIndex, 0), photoSlots.length - 1);
+  const activeSlot = photoSlots[safeIndex];
+  const activeWork = activeSlot.work;
 
   const move = useCallback((direction: -1 | 1) => {
-    if (works.length === 0) return;
-    setActiveIndex((index) => (index + direction + works.length) % works.length);
-  }, [works.length]);
+    setActiveIndex((index) => (index + direction + photoSlots.length) % photoSlots.length);
+  }, [photoSlots.length]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -41,8 +45,8 @@ export default function NeonHudTemplate({
   }, [move]);
 
   const frameNumber = String(safeIndex + 1).padStart(2, "0");
-  const frameTotal = String(works.length).padStart(2, "0");
-  const progress = works.length === 0 ? "0%" : `${((safeIndex + 1) / works.length) * 100}%`;
+  const frameTotal = String(photoSlots.length).padStart(2, "0");
+  const progress = `${((safeIndex + 1) / photoSlots.length) * 100}%`;
 
   return (
     <main className={styles.root} data-template="neon-hud">
@@ -115,7 +119,7 @@ export default function NeonHudTemplate({
                   <span className={styles.stageOpen}>OPEN FULL FRAME ↗</span>
                 </button>
               ) : (
-                <div className={styles.emptyStage}>NO VISUAL FILES ONLINE</div>
+                <PhotoPlaceholder slot={activeSlot} className={styles.emptyStage} tone="dark" label="信号位待接入" />
               )}
 
               <div className={styles.reticle} aria-hidden="true">
@@ -128,8 +132,8 @@ export default function NeonHudTemplate({
                 <span>AF-C</span>
                 <span>+0.3 EV</span>
               </div>
-              <button className={`${styles.arrow} ${styles.arrowLeft}`} type="button" onClick={() => move(-1)} disabled={works.length < 2} aria-label="上一张作品">←</button>
-              <button className={`${styles.arrow} ${styles.arrowRight}`} type="button" onClick={() => move(1)} disabled={works.length < 2} aria-label="下一张作品">→</button>
+              <button className={`${styles.arrow} ${styles.arrowLeft}`} type="button" onClick={() => move(-1)} aria-label="上一张作品">←</button>
+              <button className={`${styles.arrow} ${styles.arrowRight}`} type="button" onClick={() => move(1)} aria-label="下一张作品">→</button>
             </div>
 
             <aside className={styles.hudPanel} aria-label="当前作品信息">
@@ -169,28 +173,40 @@ export default function NeonHudTemplate({
 
           <div className={styles.dockArea}>
             <div className={styles.progressTrack} aria-hidden="true"><span style={{ width: progress }} /></div>
-            <div className={styles.dock} role="tablist" aria-label="选择主作品">
-              {works.map((work, index) => (
+            <div className={styles.dock} aria-label="选择主作品">
+              {photoSlots.map((slot, index) => slot.work ? (
                 <button
-                  key={work.code}
-                  className={index === safeIndex ? styles.dockActive : ""}
+                  key={slot.work.code}
+                  className={`${styles.dockItem} ${index === safeIndex ? styles.dockActive : ""}`}
+                  data-photo-slot={index + 1}
+                  data-photo-ratio={slot.ratio}
+                  style={getPhotoSlotStyle(slot)}
                   type="button"
-                  role="tab"
-                  aria-selected={index === safeIndex}
-                  aria-label={`${index + 1}：${work.title}`}
+                  aria-pressed={index === safeIndex}
+                  aria-label={`${index + 1}：${slot.work.title}`}
                   onClick={() => setActiveIndex(index)}
                 >
                   <img
-                    src={work.preview}
-                    width={work.previewWidth}
-                    height={work.previewHeight}
+                    src={slot.work.preview}
+                    width={slot.work.previewWidth}
+                    height={slot.work.previewHeight}
                     alt=""
                     loading={index < 5 ? "eager" : "lazy"}
                     decoding="async"
-                    style={{ objectPosition: work.position }}
+                    style={{ objectPosition: slot.work.position }}
                   />
                   <span>{String(index + 1).padStart(2, "0")}</span>
                 </button>
+              ) : (
+                <div
+                  className={styles.dockPlaceholder}
+                  data-photo-slot={index + 1}
+                  data-photo-ratio={slot.ratio}
+                  key={`hud-dock-placeholder-${index}`}
+                  style={getPhotoSlotStyle(slot)}
+                >
+                  <PhotoPlaceholder slot={slot} compact tone="dark" label="OFFLINE" />
+                </div>
               ))}
             </div>
             <p>← / → KEYBOARD CONTROL</p>
@@ -221,35 +237,55 @@ export default function NeonHudTemplate({
         </div>
 
         <div className={styles.archiveGrid}>
-          {works.map((work, index) => (
-            <button
-              className={styles.archiveCard}
-              key={work.code}
-              type="button"
-              onClick={() => onOpenWork(work)}
-              aria-label={`查看作品 ${work.title}`}
-            >
-              <img
-                src={work.preview}
-                srcSet={`${work.preview} ${work.previewWidth}w, ${work.image} ${work.fullWidth}w`}
-                sizes="(max-width: 680px) 94vw, (max-width: 1080px) 47vw, 32vw"
-                width={work.previewWidth}
-                height={work.previewHeight}
-                alt={work.subtitle}
-                loading="lazy"
-                decoding="async"
-                style={{ objectPosition: work.position }}
-              />
-              <span className={styles.cardShade} />
-              <span className={styles.cardIndex}>{String(index + 1).padStart(2, "0")}</span>
-              <span className={styles.cardInfo}>
-                <small>{work.code} / TARGET LOCK</small>
-                <strong>{work.title}</strong>
-                <em>{work.subtitle}</em>
-              </span>
-              <span className={styles.cardOpen}>EXPAND ↗</span>
-            </button>
-          ))}
+          {photoSlots.map((slot, index) => {
+            const work = slot.work;
+            if (!work) {
+              return (
+                <div
+                  className={`${styles.archiveCard} ${styles.archivePlaceholder}`}
+                  data-photo-slot={index + 1}
+                  data-photo-ratio={slot.ratio}
+                  key={`hud-archive-placeholder-${index}`}
+                  style={getPhotoSlotStyle(slot)}
+                >
+                  <PhotoPlaceholder slot={slot} tone="dark" label="等待角色信号" />
+                </div>
+              );
+            }
+
+            return (
+              <button
+                className={styles.archiveCard}
+                data-photo-slot={index + 1}
+                data-photo-ratio={slot.ratio}
+                key={work.code}
+                style={getPhotoSlotStyle(slot)}
+                type="button"
+                onClick={() => onOpenWork(work)}
+                aria-label={`查看作品 ${work.title}`}
+              >
+                <img
+                  src={work.preview}
+                  srcSet={`${work.preview} ${work.previewWidth}w, ${work.image} ${work.fullWidth}w`}
+                  sizes={slot.ratio === "16:9" ? "(max-width: 1080px) 94vw, 94vw" : "(max-width: 1080px) 94vw, 41vw"}
+                  width={work.previewWidth}
+                  height={work.previewHeight}
+                  alt={work.subtitle}
+                  loading="lazy"
+                  decoding="async"
+                  style={{ objectPosition: work.position }}
+                />
+                <span className={styles.cardShade} />
+                <span className={styles.cardIndex}>{String(index + 1).padStart(2, "0")}</span>
+                <span className={styles.cardInfo}>
+                  <small>{work.code} / TARGET LOCK</small>
+                  <strong>{work.title}</strong>
+                  <em>{work.subtitle}</em>
+                </span>
+                <span className={styles.cardOpen}>EXPAND ↗</span>
+              </button>
+            );
+          })}
         </div>
       </section>
 

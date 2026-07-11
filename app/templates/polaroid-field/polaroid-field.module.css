@@ -372,11 +372,11 @@
   width: 132rem;
   height: 82rem;
   transform-origin: center;
-  will-change: transform;
   transition: transform .16s ease-out;
 }
 
 .dragging .fieldCanvas {
+  will-change: transform;
   transition: none;
 }
 
@@ -481,14 +481,16 @@
   pointer-events: none;
 }
 
-.polaroid:hover,
-.polaroid:focus-visible {
+.polaroid:not(.polaroidPlaceholder):hover,
+.polaroid:not(.polaroidPlaceholder):focus-visible {
   z-index: 20 !important;
   outline: 3px solid var(--coral);
   outline-offset: 5px;
   box-shadow: 0 2rem 3.8rem rgba(24,34,39,.28), 0 6px 8px rgba(24,34,39,.22);
   transform: rotate(0deg) translateY(-.7rem) scale(1.025);
 }
+
+.polaroidPlaceholder { cursor: default; }
 
 .tape {
   position: absolute;
@@ -509,6 +511,7 @@
 .photoFrame {
   position: relative;
   display: block;
+  width: 100%;
   overflow: hidden;
   background: #d9d2c5;
 }
@@ -524,14 +527,14 @@
 .photoFrame img {
   display: block;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  height: 100%;
   object-fit: cover;
   filter: saturate(.86) contrast(1.03);
   transition: filter .35s ease, transform .55s cubic-bezier(.2,.8,.2,1);
 }
 
-.polaroid:hover img,
-.polaroid:focus-visible img {
+.polaroid:not(.polaroidPlaceholder):hover img,
+.polaroid:not(.polaroidPlaceholder):focus-visible img {
   filter: saturate(1.08) contrast(1.02);
   transform: scale(1.04);
 }
@@ -1193,11 +1196,12 @@
     position: relative;
     top: auto;
     left: auto;
-    display: flex;
+    display: grid;
     width: 100%;
     height: auto;
-    flex-direction: column;
-    gap: 1.75rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.1rem .75rem;
+    align-items: start;
     padding: 1rem 0;
     transform: none !important;
     transition: none;
@@ -1216,36 +1220,25 @@
     position: relative;
     top: auto !important;
     left: auto !important;
-    width: min(84vw, 25rem) !important;
+    width: 100% !important;
     max-width: none;
-    flex: none;
     opacity: 1;
     transform: rotate(var(--rotation));
     animation: none;
   }
 
-  .polaroid[data-polaroid="1"],
-  .polaroid[data-polaroid="3"],
-  .polaroid[data-polaroid="6"],
-  .polaroid[data-polaroid="8"] {
-    align-self: flex-start;
-    margin-left: .15rem;
-  }
+  .polaroid[data-polaroid="1"] { grid-column: 1; grid-row: 1; }
+  .polaroid[data-polaroid="2"] { grid-column: 1 / -1; grid-row: 2; }
+  .polaroid[data-polaroid="3"] { grid-column: 2; grid-row: 1; }
+  .polaroid[data-polaroid="4"] { grid-column: 1; grid-row: 3; }
+  .polaroid[data-polaroid="5"] { grid-column: 2; grid-row: 3 / span 2; }
+  .polaroid[data-polaroid="6"] { grid-column: 1; grid-row: 4; }
+  .polaroid[data-polaroid="7"] { grid-column: 1 / -1; grid-row: 5; }
+  .polaroid[data-polaroid="8"] { grid-column: 1; grid-row: 6; }
+  .polaroid[data-polaroid="9"] { grid-column: 2; grid-row: 6; }
 
-  .polaroid[data-polaroid="2"],
-  .polaroid[data-polaroid="4"],
-  .polaroid[data-polaroid="7"],
-  .polaroid[data-polaroid="9"] {
-    align-self: flex-end;
-    margin-right: .15rem;
-  }
-
-  .polaroid[data-polaroid="5"] {
-    align-self: center;
-  }
-
-  .polaroid:hover,
-  .polaroid:focus-visible {
+  .polaroid:not(.polaroidPlaceholder):hover,
+  .polaroid:not(.polaroidPlaceholder):focus-visible {
     transform: rotate(0) translateY(-.25rem) scale(1.01);
   }
 

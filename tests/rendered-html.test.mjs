@@ -43,12 +43,13 @@ test("server-renders the finished photography portfolio", async () => {
 });
 
 test("keeps editable content and eleven lazy template choices in one configuration", async () => {
-  const [config, catalog, renderer, page, layout, admin, api, schema, hosting] = await Promise.all([
+  const [config, catalog, renderer, page, layout, photoFallback, admin, api, schema, hosting] = await Promise.all([
     readFile(new URL("../app/site-config.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/templates/catalog.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/templates/template-renderer.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/photo-fallback-controller.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/admin/admin-editor.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/site-content/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
@@ -87,4 +88,43 @@ test("keeps editable content and eleven lazy template choices in one configurati
   assert.match(hosting, /"d1": "DB"/);
   assert.match(layout, /generateMetadata/);
   assert.match(layout, /colorScheme: "light"/);
+  assert.match(layout, /PhotoFallbackController/);
+  assert.doesNotMatch(layout, /\/og\.png/);
+  assert.match(photoFallback, /IMAGE PENDING/);
+  assert.match(photoFallback, /addEventListener\("error"/);
+});
+
+test("keeps every template on a fixed photo-slot contract with missing-image placeholders", async () => {
+  const templateIds = [
+    "cinematic-light",
+    "neon-hud",
+    "film-rail",
+    "manga-panels",
+    "prism-liquid",
+    "orbital-portal",
+    "archive-os",
+    "editorial-duet",
+    "polaroid-field",
+    "character-select",
+    "museum-depth",
+  ];
+
+  const [catalog, admin, sharedSlots, ...templateSources] = await Promise.all([
+    readFile(new URL("../app/templates/catalog.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/admin/admin-editor.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/templates/shared/photo-slots.tsx", import.meta.url), "utf8"),
+    ...templateIds.map((id) => readFile(new URL(`../app/templates/${id}/template.tsx`, import.meta.url), "utf8")),
+  ]);
+
+  assert.equal(catalog.match(/photoSlots:/g)?.length, templateIds.length);
+  assert.equal(catalog.match(/photoRatios:/g)?.length, templateIds.length);
+  assert.match(admin, /template-photo-plan/);
+  assert.match(sharedSlots, /export function buildPhotoSlots/);
+  assert.match(sharedSlots, /export function PhotoPlaceholder/);
+
+  templateSources.forEach((source, index) => {
+    assert.match(source, /buildPhotoSlots\(/, `${templateIds[index]} must use fixed photo slots`);
+    assert.match(source, /PhotoPlaceholder/, `${templateIds[index]} must preserve layout when a photo is missing`);
+    assert.match(source, /data-photo-ratio/, `${templateIds[index]} must expose its ratio contract for QA`);
+  });
 });

@@ -3,7 +3,10 @@
 /* eslint-disable @next/next/no-img-element -- responsive WebP variants are generated locally for this portfolio. */
 
 import type { CSSProperties } from "react";
+import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import type { TemplateProps } from "../types";
+
+const cinematicRatios = ["16:9", "3:2", "2:3", "3:2", "3:2", "16:9", "3:2", "3:2", "16:9"] as const;
 
 export default function CinematicLightTemplate({
   templateId,
@@ -18,6 +21,7 @@ export default function CinematicLightTemplate({
 }: TemplateProps) {
   const heroTitle = content.hero.title.trim().split(/\s+/);
   const heroTitleLead = heroTitle.shift() ?? "";
+  const photoSlots = buildPhotoSlots(works, cinematicRatios);
 
   return (
     <main className="site-shell" data-template={templateId}>
@@ -123,20 +127,36 @@ export default function CinematicLightTemplate({
         </div>
 
         <div className="work-grid">
-          {works.map((work, index) => {
-            const isWide = index === 0 || index === 5 || index === 8;
+          {photoSlots.map((slot, index) => {
+            const work = slot.work;
+            if (!work) {
+              return (
+                <div
+                  className="work-card work-card-placeholder"
+                  data-photo-slot={index + 1}
+                  data-photo-ratio={slot.ratio}
+                  key={`cinematic-placeholder-${index}`}
+                  style={{ "--index": index, ...getPhotoSlotStyle(slot) } as CSSProperties}
+                >
+                  <PhotoPlaceholder slot={slot} tone="light" label="待补充电影画面" />
+                </div>
+              );
+            }
+
             return (
               <button
                 className="work-card"
+                data-photo-slot={index + 1}
+                data-photo-ratio={slot.ratio}
                 key={work.code}
                 onClick={() => onOpenWork(work)}
-                style={{ "--index": index } as CSSProperties}
+                style={{ "--index": index, ...getPhotoSlotStyle(slot) } as CSSProperties}
                 aria-label={`查看作品 ${work.title}`}
               >
                 <img
                   src={work.preview}
                   srcSet={`${work.preview} ${work.previewWidth}w, ${work.image} ${work.fullWidth}w`}
-                  sizes={isWide ? "(max-width: 900px) 92vw, 92vw" : "(max-width: 560px) 92vw, 46vw"}
+                  sizes={slot.ratio === "16:9" ? "(max-width: 900px) 92vw, 92vw" : "(max-width: 900px) 92vw, 41vw"}
                   width={work.previewWidth}
                   height={work.previewHeight}
                   alt={work.subtitle}
@@ -157,7 +177,7 @@ export default function CinematicLightTemplate({
         </div>
 
         <div className="archive-footer">
-          <span>{works.length} SELECTED FRAMES</span>
+          <span>{photoSlots.length} CURATED FRAMES</span>
           <span>COLOR PROFILE / CUSTOM</span>
           <span>STATUS / EXPANDING</span>
         </div>

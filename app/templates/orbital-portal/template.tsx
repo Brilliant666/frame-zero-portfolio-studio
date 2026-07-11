@@ -2,17 +2,30 @@
 
 /* eslint-disable @next/next/no-img-element -- local portfolio assets already provide responsive derivatives. */
 
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { TemplateProps } from "../types";
+import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import styles from "./template.module.css";
+
+const ORBIT_RATIOS = ["2:3", "2:3", "2:3", "2:3", "2:3", "2:3", "2:3", "2:3"] as const;
 
 export default function OrbitalPortalTemplate({ content, works, packages, bookingTemplate, copiedKey, onCopy, onOpenWork }: TemplateProps) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const activeWork = works[activeIndex] ?? works[0];
+  const orbitSlots = useMemo(() => {
+    const preferredSlots = buildPhotoSlots(works, ORBIT_RATIOS);
+    const assignedCodes = new Set(preferredSlots.flatMap((slot) => slot.work ? [slot.work.code] : []));
+    const fallbackWorks = works.filter((work) => !assignedCodes.has(work.code)).slice(0, ORBIT_RATIOS.length);
+
+    return preferredSlots.map((slot) => slot.work ? slot : { ...slot, work: fallbackWorks.shift() ?? null });
+  }, [works]);
+  const orbitWorks = useMemo(() => orbitSlots.flatMap((slot) => slot.work ? [slot.work] : []), [orbitSlots]);
+  const safeActiveIndex = orbitWorks.length === 0 ? 0 : Math.min(activeIndex, orbitWorks.length - 1);
+  const activeWork = orbitWorks[safeActiveIndex] ?? orbitWorks[0];
+  const heroSlot = { index: 0, ratio: "3:2" as const, work: activeWork ?? null };
   const move = useCallback((direction: -1 | 1) => {
-    if (works.length === 0) return;
-    setActiveIndex((index) => (index + direction + works.length) % works.length);
-  }, [works.length]);
+    if (orbitWorks.length === 0) return;
+    setActiveIndex((index) => (Math.min(index, orbitWorks.length - 1) + direction + orbitWorks.length) % orbitWorks.length);
+  }, [orbitWorks.length]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -34,7 +47,7 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
       <section id="portal-top" className={styles.hero}>
         <div className={styles.stars} aria-hidden="true" />
         <div className={styles.heroCopy}>
-          <small>VISUAL GATE / 00—{String(works.length).padStart(2, "0")}</small>
+          <small>VISUAL GATE / 00—{String(ORBIT_RATIOS.length).padStart(2, "0")}</small>
           <h1>ENTER<br /><em>THE ROLE</em></h1>
           <p>{content.profile.photographer} · {content.profile.role}</p>
           <p>{content.profile.intro} {content.hero.services}</p>
@@ -43,7 +56,7 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
 
         <div className={styles.portalStage}>
           <div className={styles.aperture} aria-hidden="true"><i /><i /><i /></div>
-          {activeWork && (
+          {activeWork ? (
             <button type="button" className={styles.portalImage} onClick={() => onOpenWork(activeWork)} aria-label={`打开作品 ${activeWork.title}`}>
               <img
                 key={activeWork.image}
@@ -57,17 +70,21 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
                 fetchPriority="high"
               />
             </button>
+          ) : (
+            <div className={`${styles.portalImage} ${styles.portalImagePlaceholder}`}>
+              <PhotoPlaceholder slot={heroSlot} label="AWAITING SIGNAL" compact />
+            </div>
           )}
           <div className={styles.coordinate} aria-hidden="true"><span>AZ {activeIndex * 37 + 12}°</span><span>EL 42°</span><span>DST 0.{activeIndex + 3} AU</span></div>
           <div className={styles.portalControls}>
-            <button type="button" onClick={() => move(-1)} aria-label="上一张作品">←</button>
-            <span>{String(activeIndex + 1).padStart(2, "0")} / {String(works.length).padStart(2, "0")}</span>
-            <button type="button" onClick={() => move(1)} aria-label="下一张作品">→</button>
+            <button type="button" onClick={() => move(-1)} aria-label="上一张作品" disabled={orbitWorks.length < 2}>←</button>
+            <span>{orbitWorks.length ? String(safeActiveIndex + 1).padStart(2, "0") : "00"} / {String(ORBIT_RATIOS.length).padStart(2, "0")}</span>
+            <button type="button" onClick={() => move(1)} aria-label="下一张作品" disabled={orbitWorks.length < 2}>→</button>
           </div>
         </div>
 
         <aside className={styles.activeMeta}>
-          <span>{activeWork?.code}</span><strong>{activeWork?.title}</strong><small>{activeWork?.subtitle}</small>
+          <span>{activeWork?.code ?? "SIGNAL 00"}</span><strong>{activeWork?.title ?? "AWAITING IMAGE"}</strong><small>{activeWork?.subtitle ?? "Upload a 3:2 photograph in Admin"}</small>
           <div>{content.trustItems.map((item) => <p key={item.label}><b>{item.label}</b>{item.value}</p>)}</div>
         </aside>
       </section>
@@ -80,19 +97,39 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
         </div>
         <div className={styles.orbitScene}>
           <div className={styles.orbitCore}><span>{content.profile.mark}</span><small>SELECT A SIGNAL</small></div>
-          {works.map((work, index) => (
-            <button
-              type="button"
-              key={work.code}
-              className={styles.orbitCard}
-              style={{ "--orbit-index": index, "--orbit-count": works.length } as CSSProperties}
-              onClick={() => onOpenWork(work)}
-              aria-label={`查看 ${work.title}`}
-            >
-              <img src={work.preview} width={work.previewWidth} height={work.previewHeight} alt={work.subtitle} loading="lazy" style={{ objectPosition: work.position }} />
-              <span><b>{work.code}</b><strong>{work.title}</strong></span>
-            </button>
-          ))}
+          {orbitSlots.map((slot) => {
+            const slotStyle = {
+              "--orbit-index": slot.index,
+              "--orbit-count": ORBIT_RATIOS.length,
+              ...getPhotoSlotStyle(slot),
+            } as CSSProperties;
+
+            return slot.work ? (
+              <button
+                type="button"
+                key={slot.work.code}
+                className={styles.orbitCard}
+                data-photo-slot={slot.index + 1}
+                data-photo-ratio={slot.ratio}
+                style={slotStyle}
+                onClick={() => onOpenWork(slot.work!)}
+                aria-label={`查看 ${slot.work.title}`}
+              >
+                <img src={slot.work.preview} width={slot.work.previewWidth} height={slot.work.previewHeight} alt={slot.work.subtitle} loading="lazy" style={{ objectPosition: slot.work.position }} />
+                <span><b>{slot.work.code}</b><strong>{slot.work.title}</strong></span>
+              </button>
+            ) : (
+              <div
+                key={`empty-${slot.index}`}
+                className={`${styles.orbitCard} ${styles.orbitPlaceholder}`}
+                data-photo-slot={slot.index + 1}
+                data-photo-ratio={slot.ratio}
+                style={slotStyle}
+              >
+                <PhotoPlaceholder slot={slot} label="NO SIGNAL" compact />
+              </div>
+            );
+          })}
         </div>
       </section>
 

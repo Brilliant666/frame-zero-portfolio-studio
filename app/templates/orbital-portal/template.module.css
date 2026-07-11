@@ -35,11 +35,14 @@
 .aperture::after { inset: 22%; border: 1px solid rgba(142,234,255,.25); box-shadow: inset 0 0 3rem rgba(0,0,0,.8); }
 .aperture i { position: absolute; top: 50%; left: 50%; width: 50%; height: 1px; background: linear-gradient(90deg, transparent, rgba(142,234,255,.45)); transform-origin: left; }
 .aperture i:nth-child(1) { transform: rotate(20deg); }.aperture i:nth-child(2) { transform: rotate(140deg); }.aperture i:nth-child(3) { transform: rotate(260deg); }
-.portalImage { position: relative; z-index: 2; width: min(34vw,29rem); aspect-ratio: 1; overflow: hidden; border: 1px solid rgba(255,255,255,.38); border-radius: 50%; background: #11151d; box-shadow: 0 0 5rem rgba(31,168,216,.25); cursor: zoom-in; }
+.portalImage { position: relative; z-index: 2; width: min(38vw,32rem); aspect-ratio: 3 / 2; overflow: hidden; border: 1px solid rgba(255,255,255,.38); border-radius: .35rem; background: #11151d; box-shadow: 0 0 5rem rgba(31,168,216,.25); cursor: zoom-in; clip-path: polygon(2.5% 0, 100% 0, 97.5% 100%, 0 100%); }
 .portalImage img { width: 100%; height: 100%; object-fit: cover; animation: portal-arrive .6s ease both; }
+.portalImagePlaceholder { cursor: default; }
+.portalImagePlaceholder > * { min-height: 0; }
 .coordinate { position: absolute; top: 17%; right: 2%; display: grid; gap: .35rem; color: rgba(142,234,255,.55); font: .52rem var(--font-geist-mono), monospace; }
 .portalControls { position: absolute; z-index: 4; bottom: 8%; display: flex; align-items: center; gap: 1rem; padding: .4rem; border: 1px solid rgba(255,255,255,.16); border-radius: 2rem; background: rgba(5,8,13,.82); font: .6rem var(--font-geist-mono), monospace; }
 .portalControls button { display: grid; width: 2.25rem; height: 2.25rem; place-items: center; border-radius: 50%; background: var(--orange); color: #1b0801; cursor: pointer; }
+.portalControls button:disabled { cursor: default; opacity: .35; }
 
 .activeMeta { align-self: end; padding-bottom: 5vh; }
 .activeMeta > span { color: var(--orange); font: .62rem var(--font-geist-mono), monospace; }
@@ -59,12 +62,15 @@
 .orbitCore { z-index: 2; display: grid; width: 10rem; height: 10rem; place-items: center; border: 1px solid var(--orange); border-radius: 50%; background: radial-gradient(circle, rgba(255,107,33,.28), rgba(5,7,11,.95) 70%); box-shadow: 0 0 4rem rgba(255,107,33,.18); text-align: center; }
 .orbitCore span { align-self: end; color: var(--orange); font: 800 1.6rem var(--font-geist-mono), monospace; }
 .orbitCore small { align-self: start; color: rgba(255,255,255,.4); font-size: .5rem; }
-.orbitCard { --angle: calc(360deg / var(--orbit-count) * var(--orbit-index)); position: absolute; width: clamp(7rem,13vw,12rem); aspect-ratio: 4/5; overflow: hidden; border: 1px solid rgba(255,255,255,.23); background: #121721; box-shadow: 0 1rem 3rem rgba(0,0,0,.35); cursor: zoom-in; transform: rotate(var(--angle)) translateX(clamp(13rem,32vw,31rem)) rotate(calc(-1 * var(--angle))); transition: transform .35s ease, border-color .25s ease; }
-.orbitCard:hover { border-color: var(--orange); transform: rotate(var(--angle)) translateX(clamp(13rem,32vw,31rem)) rotate(calc(-1 * var(--angle))) scale(1.08) translateZ(2rem); }
+.orbitCard { --angle: calc(360deg / var(--orbit-count) * var(--orbit-index)); position: absolute; width: clamp(6.5rem,9vw,9rem); overflow: hidden; border: 1px solid rgba(255,255,255,.23); background: #121721; box-shadow: 0 1rem 3rem rgba(0,0,0,.35); cursor: zoom-in; transform: rotate(var(--angle)) translateX(clamp(13rem,32vw,31rem)) rotate(calc(-1 * var(--angle))); transition: transform .35s ease, border-color .25s ease; }
+.orbitCard:hover { border-color: var(--orange); transform: rotate(var(--angle)) translateX(clamp(13rem,32vw,31rem)) rotate(calc(-1 * var(--angle))) scale(1.06) translateZ(2rem); }
 .orbitCard img { width: 100%; height: 100%; object-fit: cover; }
 .orbitCard > span { position: absolute; inset: auto .4rem .4rem; display: grid; padding: .45rem; background: rgba(4,7,11,.78); text-align: left; backdrop-filter: blur(8px); }
 .orbitCard b { color: var(--orange); font: .48rem var(--font-geist-mono), monospace; }
 .orbitCard strong { overflow: hidden; font-size: .62rem; text-overflow: ellipsis; white-space: nowrap; }
+.orbitPlaceholder { cursor: default; }
+.orbitPlaceholder:hover { border-color: rgba(255,255,255,.23); transform: rotate(var(--angle)) translateX(clamp(13rem,32vw,31rem)) rotate(calc(-1 * var(--angle))); }
+.orbitPlaceholder > * { min-height: 0; }
 
 .missions { background: #eef3f3; color: #10151a; }
 .missions .sectionHead > span { color: #0b6473; }
@@ -103,16 +109,17 @@
 @media (max-width: 1000px) {
   .header { grid-template-columns: 1fr auto; padding: 0 1rem; }.header nav { display: none; }
   .hero { grid-template-columns: 1fr 1.2fr; padding-inline: 1rem; }.activeMeta { grid-column: 1/-1; display: grid; grid-template-columns: auto 1fr; gap: 1rem; padding: 0 0 2rem; }.activeMeta > div { grid-column: 1/-1; display: grid; grid-template-columns: 1fr 1fr; }
-  .portalImage { width: min(42vw,25rem); }.aperture { width: min(52vw,32rem); }
+  .portalImage { width: min(46vw,27rem); }.aperture { width: min(52vw,32rem); }
   .sectionHead { grid-template-columns: 1fr; gap: .7rem; }
-  .orbitScene { border-radius: 0; aspect-ratio: auto; min-height: 48rem; }
-  .orbitCard { transform: rotate(var(--angle)) translateX(clamp(11rem,30vw,19rem)) rotate(calc(-1 * var(--angle))); }.orbitCard:hover { transform: rotate(var(--angle)) translateX(clamp(11rem,30vw,19rem)) rotate(calc(-1 * var(--angle))) scale(1.04); }
+  .orbitScene { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; width: min(92vw, 54rem); aspect-ratio: auto; min-height: 0; padding: 1rem; border-radius: 1rem; }
+  .orbitScene::before,.orbitScene::after,.orbitCore { display: none; }
+  .orbitCard,.orbitCard:hover,.orbitPlaceholder:hover { position: relative; width: 100%; transform: none; }
   .contact { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 650px) {
-  .status { max-width: 8rem; text-align: right; }.hero { grid-template-columns: 1fr; padding-top: 6.5rem; }.heroCopy h1 { font-size: 17vw; }.portalStage { min-height: 28rem; }.portalImage { width: 72vw; }.aperture { width: 88vw; }.activeMeta { display: block; }.activeMeta > div { display: block; }
-  .orbitSection, .missions { padding: 5rem 1rem; }.orbitScene { display: flex; width: auto; min-height: 0; margin: 0; padding: 1rem 0 1.5rem; overflow-x: auto; border: 0; border-radius: 0; scroll-snap-type: x mandatory; }.orbitScene::before,.orbitScene::after,.orbitCore { display: none; }.orbitCard,.orbitCard:hover { position: relative; flex: 0 0 76vw; width: auto; transform: none; scroll-snap-align: center; }.orbitCard > span { padding: .75rem; }.missionGrid { grid-template-columns: 1fr; }.contact { padding: 6rem 1rem; }.contactCopy h2 { font-size: 15vw; }.console pre { min-height: 18rem; }.footer { grid-template-columns: 1fr; gap: .5rem; }
+  .status { max-width: 8rem; text-align: right; }.hero { grid-template-columns: 1fr; padding-top: 6.5rem; }.heroCopy h1 { font-size: 17vw; }.portalStage { min-height: 28rem; }.portalImage { width: 82vw; }.aperture { width: 92vw; }.activeMeta { display: block; }.activeMeta > div { display: block; }
+  .orbitSection, .missions { padding: 5rem 1rem; }.orbitScene { display: flex; width: auto; min-height: 0; margin: 0; padding: 1rem max(0rem, calc((100vw - 84vw) / 2)) 1.5rem; gap: .8rem; overflow-x: auto; border: 0; border-radius: 0; scroll-padding-inline: 8vw; scroll-snap-type: x mandatory; }.orbitCard,.orbitCard:hover,.orbitPlaceholder:hover { position: relative; flex: 0 0 76vw; width: auto; transform: none; scroll-snap-align: center; scroll-snap-stop: always; }.orbitCard > span { padding: .75rem; }.missionGrid { grid-template-columns: 1fr; }.contact { padding: 6rem 1rem; }.contactCopy h2 { font-size: 15vw; }.console pre { min-height: 18rem; }.footer { grid-template-columns: 1fr; gap: .5rem; }
 }
 
 @media (prefers-reduced-motion: reduce) { .aperture,.aperture::before,.portalImage img { animation: none; }.orbitCard { transition: none; } }

@@ -5,7 +5,10 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import type { Work } from "../../site-config";
 import type { TemplateProps } from "../types";
+import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import styles from "./archive-os.module.css";
+
+const ARCHIVE_RATIOS = ["3:2", "3:2", "16:9", "3:2", "2:3", "3:2", "16:9", "3:2", "3:2", "3:2", "16:9", "3:2"] as const;
 
 const FILTERS = [
   { id: "all", label: "全部档案", marker: "◎" },
@@ -71,7 +74,10 @@ export default function ArchiveOsTemplate({
     });
   }, [filter, query, works]);
 
-  const selectedWork = filteredWorks.find((work) => work.code === selectedCode) ?? filteredWorks[0];
+  const archiveSlots = useMemo(() => buildPhotoSlots(filteredWorks, ARCHIVE_RATIOS), [filteredWorks]);
+  const visibleWorks = useMemo(() => archiveSlots.flatMap((slot) => slot.work ? [slot.work] : []), [archiveSlots]);
+  const selectedWork = visibleWorks.find((work) => work.code === selectedCode) ?? visibleWorks[0];
+  const showSearchEmpty = filteredWorks.length === 0 && (filter !== "all" || query.trim().length > 0);
 
   const collectionCount = (id: FilterId) => id === "all"
     ? works.length
@@ -79,20 +85,20 @@ export default function ArchiveOsTemplate({
 
   const moveSelection = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     let nextIndex = index;
-    if (event.key === "ArrowRight" || event.key === "ArrowDown") nextIndex = Math.min(filteredWorks.length - 1, index + 1);
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") nextIndex = Math.min(visibleWorks.length - 1, index + 1);
     if (event.key === "ArrowLeft" || event.key === "ArrowUp") nextIndex = Math.max(0, index - 1);
     if (event.key === "Home") nextIndex = 0;
-    if (event.key === "End") nextIndex = filteredWorks.length - 1;
+    if (event.key === "End") nextIndex = visibleWorks.length - 1;
 
-    if (event.key === "Enter" && filteredWorks[index]) {
+    if (event.key === "Enter" && visibleWorks[index]) {
       event.preventDefault();
-      onOpenWork(filteredWorks[index]);
+      onOpenWork(visibleWorks[index]);
       return;
     }
 
     if (nextIndex === index) return;
     event.preventDefault();
-    const nextWork = filteredWorks[nextIndex];
+    const nextWork = visibleWorks[nextIndex];
     if (!nextWork) return;
     setSelectedCode(nextWork.code);
     document.getElementById(`archive-asset-${nextIndex}`)?.focus();
@@ -172,35 +178,42 @@ export default function ArchiveOsTemplate({
               <span>{content.hero.eyebrow}</span>
             </div>
 
-            {filteredWorks.length > 0 ? (
+            {!showSearchEmpty ? (
               <div className={viewMode === "grid" ? styles.assetGrid : styles.assetList} role="listbox" aria-label="作品列表">
-                {filteredWorks.map((work, index) => {
-                  const selected = selectedWork?.code === work.code;
-                  return (
+                {archiveSlots.map((slot) => {
+                  const work = slot.work;
+                  if (work) {
+                    const workIndex = visibleWorks.findIndex((entry) => entry.code === work.code);
+                    const selected = selectedWork?.code === work.code;
+                    return (
                     <button
-                      id={`archive-asset-${index}`}
+                      id={`archive-asset-${workIndex}`}
                       className={styles.asset}
                       key={work.code}
                       type="button"
                       role="option"
                       aria-selected={selected}
+                      data-photo-slot={slot.index + 1}
+                      data-photo-ratio={slot.ratio}
                       onClick={() => { setSelectedCode(work.code); setMobilePane("inspector"); }}
                       onDoubleClick={() => onOpenWork(work)}
-                      onKeyDown={(event) => moveSelection(event, index)}
+                      onKeyDown={(event) => moveSelection(event, workIndex)}
                     >
-                      <span className={styles.assetImage}>
-                        <img
-                          src={work.preview}
-                          srcSet={`${work.preview} ${work.previewWidth}w, ${work.image} ${work.fullWidth}w`}
-                          sizes={viewMode === "grid" ? "(max-width: 760px) 44vw, (max-width: 1200px) 28vw, 18vw" : "8rem"}
-                          width={work.previewWidth}
-                          height={work.previewHeight}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                          style={{ objectPosition: work.position }}
-                        />
-                        <i aria-hidden="true">{selected ? "SELECTED" : "RAW+"}</i>
+                      <span className={styles.assetWell}>
+                        <span className={styles.assetImage} data-photo-ratio={slot.ratio} style={viewMode === "grid" ? getPhotoSlotStyle(slot) : { aspectRatio: "16 / 9" }}>
+                          <img
+                            src={work.preview}
+                            srcSet={`${work.preview} ${work.previewWidth}w, ${work.image} ${work.fullWidth}w`}
+                            sizes={viewMode === "grid" ? "(max-width: 480px) 88vw, (max-width: 760px) 44vw, (max-width: 1200px) 28vw, 18vw" : "8rem"}
+                            width={work.previewWidth}
+                            height={work.previewHeight}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                            style={{ objectPosition: work.position }}
+                          />
+                          <i aria-hidden="true">{selected ? "SELECTED" : "RAW+"}</i>
+                        </span>
                       </span>
                       <span className={styles.assetMeta}>
                         <strong>{work.title}</strong>
@@ -208,6 +221,29 @@ export default function ArchiveOsTemplate({
                         <em>{work.code} · WEBP</em>
                       </span>
                     </button>
+                  );
+
+                  }
+
+                  return (
+                    <div
+                      className={`${styles.asset} ${styles.assetPlaceholder}`}
+                      key={`empty-${slot.index}`}
+                      role="presentation"
+                      data-photo-slot={slot.index + 1}
+                      data-photo-ratio={slot.ratio}
+                    >
+                      <div className={styles.assetWell}>
+                        <div className={styles.assetImage} data-photo-ratio={slot.ratio} style={viewMode === "grid" ? getPhotoSlotStyle(slot) : { aspectRatio: "16 / 9" }}>
+                          <PhotoPlaceholder slot={slot} tone="light" compact label="EMPTY SLOT" />
+                        </div>
+                      </div>
+                      <span className={styles.assetMeta}>
+                        <strong>EMPTY_SLOT_{String(slot.index + 1).padStart(2, "0")}</strong>
+                        <small>Upload a photograph in Admin</small>
+                        <em>FRAME {String(slot.index + 1).padStart(2, "0")} · {slot.ratio}</em>
+                      </span>
+                    </div>
                   );
                 })}
               </div>
@@ -220,7 +256,14 @@ export default function ArchiveOsTemplate({
             <div className={styles.inspectorTitle}><span>INSPECTOR</span><small>⌘ I</small></div>
             {selectedWork ? (
               <>
-                <button className={styles.inspectorImage} type="button" onClick={() => onOpenWork(selectedWork)} aria-label={`Quick Look ${selectedWork.title}`}>
+                <button
+                  className={styles.inspectorImage}
+                  type="button"
+                  data-photo-ratio={selectedWork.previewHeight > selectedWork.previewWidth ? "2:3" : "3:2"}
+                  style={{ aspectRatio: selectedWork.previewHeight > selectedWork.previewWidth ? "2 / 3" : "3 / 2" }}
+                  onClick={() => onOpenWork(selectedWork)}
+                  aria-label={`Quick Look ${selectedWork.title}`}
+                >
                   <img
                     src={selectedWork.preview}
                     srcSet={`${selectedWork.preview} ${selectedWork.previewWidth}w, ${selectedWork.image} ${selectedWork.fullWidth}w`}

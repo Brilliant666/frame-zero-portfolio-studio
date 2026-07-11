@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
+import PhotoFallbackController from "./photo-fallback-controller";
 import { siteConfig } from "./site-config";
 
 const geistSans = Geist({
@@ -34,13 +35,11 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: siteConfig.profile.brand,
       title,
       description,
-      images: [{ url: `${origin}/og.png`, width: 1536, height: 1024, alt: `${siteConfig.profile.brand} Cosplay 摄影作品集` }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [`${origin}/og.png`],
     },
   };
 }
@@ -53,7 +52,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>{children}</body>
+      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <PhotoFallbackController />
+        {children}
+      </body>
     </html>
   );
 }

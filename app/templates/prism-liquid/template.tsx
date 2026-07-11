@@ -2,18 +2,25 @@
 
 /* eslint-disable @next/next/no-img-element -- local portfolio assets already provide responsive derivatives. */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { TemplateProps } from "../types";
+import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import styles from "./template.module.css";
+
+const PRISM_RATIOS = ["3:2", "2:3", "3:2", "3:2", "3:2", "16:9", "3:2", "3:2", "3:2"] as const;
 
 export default function PrismLiquidTemplate({ content, works, packages, bookingTemplate, copiedKey, onCopy, onOpenWork }: TemplateProps) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const activeWork = works[activeIndex] ?? works[0];
+  const gallerySlots = useMemo(() => buildPhotoSlots(works, PRISM_RATIOS), [works]);
+  const displayedWorks = useMemo(() => gallerySlots.flatMap((slot) => slot.work ? [slot.work] : []), [gallerySlots]);
+  const safeActiveIndex = displayedWorks.length === 0 ? 0 : Math.min(activeIndex, displayedWorks.length - 1);
+  const activeWork = displayedWorks[safeActiveIndex] ?? displayedWorks[0];
+  const heroSlot = { index: 0, ratio: "3:2" as const, work: activeWork ?? null };
 
   const move = useCallback((direction: -1 | 1) => {
-    if (works.length === 0) return;
-    setActiveIndex((index) => (index + direction + works.length) % works.length);
-  }, [works.length]);
+    if (displayedWorks.length === 0) return;
+    setActiveIndex((index) => (Math.min(index, displayedWorks.length - 1) + direction + displayedWorks.length) % displayedWorks.length);
+  }, [displayedWorks.length]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -44,8 +51,8 @@ export default function PrismLiquidTemplate({ content, works, packages, bookingT
           <p>{content.profile.photographer} · {content.profile.role}<br />{content.profile.intro}</p>
         </div>
 
-        {activeWork && (
-          <div className={styles.stage}>
+        <div className={styles.stage}>
+          {activeWork ? (
             <button type="button" className={styles.mainImage} onClick={() => onOpenWork(activeWork)} aria-label={`打开作品 ${activeWork.title}`}>
               <img
                 key={activeWork.image}
@@ -60,30 +67,43 @@ export default function PrismLiquidTemplate({ content, works, packages, bookingT
               />
               <span className={styles.prismEdge} aria-hidden="true" />
             </button>
+          ) : (
+            <div className={`${styles.mainImage} ${styles.heroPlaceholder}`}>
+              <PhotoPlaceholder slot={heroSlot} tone="light" label="AWAITING HERO IMAGE" />
+            </div>
+          )}
+          {activeWork ? (
             <div className={styles.stageMeta}>
               <span>{activeWork.code}</span>
               <strong>{activeWork.title}</strong>
               <small>{activeWork.subtitle}</small>
             </div>
+          ) : (
+            <div className={styles.stageMeta}><span>FRAME 00</span><strong>AWAITING IMAGE</strong><small>Upload a 3:2 photograph in Admin</small></div>
+          )}
             <div className={styles.stageControls}>
-              <button type="button" onClick={() => move(-1)} aria-label="上一张作品">←</button>
-              <span>{String(activeIndex + 1).padStart(2, "0")} / {String(works.length).padStart(2, "0")}</span>
-              <button type="button" onClick={() => move(1)} aria-label="下一张作品">→</button>
+              <button type="button" onClick={() => move(-1)} aria-label="上一张作品" disabled={displayedWorks.length < 2}>←</button>
+              <span>{displayedWorks.length ? String(safeActiveIndex + 1).padStart(2, "0") : "00"} / {String(PRISM_RATIOS.length).padStart(2, "0")}</span>
+              <button type="button" onClick={() => move(1)} aria-label="下一张作品" disabled={displayedWorks.length < 2}>→</button>
             </div>
-          </div>
-        )}
+        </div>
 
         <div className={styles.colorRail} aria-label="选择主视觉作品">
-          {works.map((work, index) => (
-            <button
-              type="button"
-              key={work.code}
-              className={index === activeIndex ? styles.isActive : ""}
-              onClick={() => setActiveIndex(index)}
-              aria-label={`切换到 ${work.title}`}
-              aria-pressed={index === activeIndex}
-            ><span>{String(index + 1).padStart(2, "0")}</span></button>
-          ))}
+          {gallerySlots.map((slot) => {
+            if (!slot.work) return <span className={styles.colorRailPlaceholder} key={`empty-${slot.index}`}><span>--</span></span>;
+            const workIndex = displayedWorks.findIndex((work) => work.code === slot.work?.code);
+            const isActive = activeWork?.code === slot.work.code;
+            return (
+              <button
+                type="button"
+                key={slot.work.code}
+                className={isActive ? styles.isActive : ""}
+                onClick={() => setActiveIndex(workIndex)}
+                aria-label={`切换到 ${slot.work.title}`}
+                aria-pressed={isActive}
+              ><span>{String(slot.index + 1).padStart(2, "0")}</span></button>
+            );
+          })}
         </div>
         <a className={styles.scrollCue} href="#prism-gallery">EXPLORE THE SPECTRUM ↓</a>
       </section>
@@ -95,11 +115,38 @@ export default function PrismLiquidTemplate({ content, works, packages, bookingT
           <p>{content.hero.services}</p>
         </div>
         <div className={styles.galleryGrid}>
-          {works.map((work, index) => (
-            <button type="button" key={work.code} onClick={() => onOpenWork(work)} className={index % 4 === 0 ? styles.galleryWide : ""}>
-              <img src={work.preview} width={work.previewWidth} height={work.previewHeight} alt={work.subtitle} loading="lazy" style={{ objectPosition: work.position }} />
-              <span><small>{work.code}</small><strong>{work.title}</strong><em>{work.subtitle}</em></span>
-            </button>
+          {[
+            { className: styles.galleryFeatureRow, slots: gallerySlots.slice(0, 2) },
+            { className: styles.galleryTriptych, slots: gallerySlots.slice(2, 5) },
+            { className: styles.galleryPanorama, slots: gallerySlots.slice(5, 6) },
+            { className: styles.galleryTriptych, slots: gallerySlots.slice(6, 9) },
+          ].map((group, groupIndex) => (
+            <div className={group.className} key={`gallery-group-${groupIndex}`}>
+              {group.slots.map((slot) => slot.work ? (
+                <button
+                  type="button"
+                  key={slot.work.code}
+                  onClick={() => onOpenWork(slot.work!)}
+                  className={styles.galleryCard}
+                  data-photo-slot={slot.index + 1}
+                  data-photo-ratio={slot.ratio}
+                  style={getPhotoSlotStyle(slot)}
+                >
+                  <img src={slot.work.preview} width={slot.work.previewWidth} height={slot.work.previewHeight} alt={slot.work.subtitle} loading="lazy" style={{ objectPosition: slot.work.position }} />
+                  <span><small>{slot.work.code}</small><strong>{slot.work.title}</strong><em>{slot.work.subtitle}</em></span>
+                </button>
+              ) : (
+                <div
+                  className={`${styles.galleryCard} ${styles.galleryPlaceholder}`}
+                  key={`empty-${slot.index}`}
+                  data-photo-slot={slot.index + 1}
+                  data-photo-ratio={slot.ratio}
+                  style={getPhotoSlotStyle(slot)}
+                >
+                  <PhotoPlaceholder slot={slot} tone="light" label="AWAITING IMAGE" />
+                </div>
+              ))}
+            </div>
           ))}
         </div>
       </section>

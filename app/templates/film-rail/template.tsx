@@ -3,8 +3,11 @@
 /* eslint-disable @next/next/no-img-element -- the portfolio supplies local responsive WebP derivatives. */
 
 import { useRef } from "react";
+import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import type { TemplateProps } from "../types";
 import styles from "./film-rail.module.css";
+
+const filmRatios = Array.from({ length: 9 }, () => "3:2" as const);
 
 export default function FilmRailTemplate({
   templateId,
@@ -17,8 +20,12 @@ export default function FilmRailTemplate({
   onOpenWork,
 }: TemplateProps) {
   const railRef = useRef<HTMLDivElement>(null);
-  const selectedWorks = works.slice(0, 9);
-  const leadWork = selectedWorks[0];
+  const filmSlots = buildPhotoSlots(
+    works.filter((work) => work.previewWidth >= work.previewHeight),
+    filmRatios,
+  );
+  const leadSlot = filmSlots.find((slot) => slot.work) ?? filmSlots[0];
+  const leadWork = leadSlot.work;
 
   const moveRail = (direction: -1 | 1) => {
     const rail = railRef.current;
@@ -44,7 +51,7 @@ export default function FilmRailTemplate({
           <a href="#film-services">SERVICES</a>
           <a href="#film-booking">BOOKING</a>
         </nav>
-        <span className={styles.reelStatus}>ROLL 01 · {String(selectedWorks.length).padStart(2, "0")} FRAMES</span>
+        <span className={styles.reelStatus}>ROLL 01 · {String(filmSlots.length).padStart(2, "0")} FRAMES</span>
       </header>
 
       <section className={styles.hero} id="film-top">
@@ -85,7 +92,7 @@ export default function FilmRailTemplate({
                   style={{ objectPosition: leadWork.position }}
                 />
               </button>
-            ) : <div className={styles.emptyFrame}>NO FRAME LOADED</div>}
+            ) : <PhotoPlaceholder slot={leadSlot} className={styles.emptyFrame} tone="dark" label="未曝光主画面" />}
             <div className={styles.heroCaption}>
               <span>35 MM / COLOR NEGATIVE</span>
               <strong>{leadWork?.title ?? content.profile.brand}</strong>
@@ -112,14 +119,28 @@ export default function FilmRailTemplate({
         <div className={styles.filmStock}>
           <div className={styles.sprockets} aria-hidden="true" />
           <div className={styles.rail} id="film-rail" ref={railRef} tabIndex={0} aria-label="横向作品胶片">
-            {selectedWorks.map((work, index) => (
-              <article className={styles.frame} id={`film-frame-${index + 1}`} key={work.code}>
+            {filmSlots.map((slot, index) => {
+              const work = slot.work;
+              return (
+              <article
+                className={styles.frame}
+                data-photo-slot={index + 1}
+                data-photo-ratio={slot.ratio}
+                id={`film-frame-${index + 1}`}
+                key={work?.code ?? `film-placeholder-${index}`}
+              >
                 <div className={styles.frameTopline}>
                   <span>KODAK PORTRA 400</span>
-                  <span>{String(index + 1).padStart(2, "0")} / {String(selectedWorks.length).padStart(2, "0")}</span>
-                  <span>{work.code}</span>
+                  <span>{String(index + 1).padStart(2, "0")} / {String(filmSlots.length).padStart(2, "0")}</span>
+                  <span>{work?.code ?? "UNEXPOSED"}</span>
                 </div>
-                <button type="button" className={styles.frameImage} onClick={() => onOpenWork(work)} aria-label={`打开作品 ${work.title}`}>
+                {work ? <button
+                  type="button"
+                  className={styles.frameImage}
+                  style={getPhotoSlotStyle(slot)}
+                  onClick={() => onOpenWork(work)}
+                  aria-label={`打开作品 ${work.title}`}
+                >
                   <img
                     src={work.preview}
                     srcSet={`${work.preview} ${work.previewWidth}w, ${work.image} ${work.fullWidth}w`}
@@ -132,13 +153,16 @@ export default function FilmRailTemplate({
                     style={{ objectPosition: work.position }}
                   />
                   <span>OPEN FULL FRAME ↗</span>
-                </button>
+                </button> : (
+                  <PhotoPlaceholder slot={slot} className={styles.framePlaceholder} tone="dark" label="未曝光帧" />
+                )}
                 <div className={styles.frameCaption}>
-                  <div><small>SCENE {String(index + 1).padStart(2, "0")}</small><h3>{work.title}</h3></div>
-                  <p>{work.subtitle}</p>
+                  <div><small>SCENE {String(index + 1).padStart(2, "0")}</small><h3>{work?.title ?? "FRAME RESERVED"}</h3></div>
+                  <p>{work?.subtitle ?? "等待下一组角色影像写入胶片"}</p>
                 </div>
               </article>
-            ))}
+              );
+            })}
             <div className={styles.endLeader} aria-hidden="true">
               <span>END OF ROLL</span><i /><span>FRAME//ZERO</span>
             </div>
@@ -149,11 +173,16 @@ export default function FilmRailTemplate({
         <nav className={styles.timeline} aria-label="作品帧号时间轴">
           <span>ROLL 01</span>
           <div>
-            {selectedWorks.map((work, index) => (
-              <a key={work.code} href={`#film-frame-${index + 1}`} aria-label={`定位到第 ${index + 1} 帧 ${work.title}`}>
+            {filmSlots.map((slot, index) => slot.work ? (
+              <a className={styles.timelineFrame} key={slot.work.code} href={`#film-frame-${index + 1}`} aria-label={`定位到第 ${index + 1} 帧 ${slot.work.title}`}>
                 <i />
                 <small>{String(index + 1).padStart(2, "0")}</small>
               </a>
+            ) : (
+              <span className={`${styles.timelineFrame} ${styles.timelinePlaceholder}`} key={`film-timeline-placeholder-${index}`} aria-label={`第 ${index + 1} 帧待补充`}>
+                <i />
+                <small>{String(index + 1).padStart(2, "0")}</small>
+              </span>
             ))}
           </div>
           <span>END</span>

@@ -174,6 +174,10 @@ export default function AdminEditor({ editorLabel }: { editorLabel: string }) {
                   <span className="template-state">READY · {String(index + 1).padStart(2, "0")}</span>
                   <strong>{template.name}</strong>
                   <small>{template.description}</small>
+                  <span className="template-photo-plan">
+                    {template.photoSlots} 个固定照片位
+                    <small>{template.photoRatios}</small>
+                  </span>
                 </label>
                 <a className="template-card-preview" href={`/?template=${template.id}`} target="_blank" rel="noreferrer">独立预览 ↗</a>
               </div>
@@ -243,7 +247,14 @@ export default function AdminEditor({ editorLabel }: { editorLabel: string }) {
           <div className="work-editor-grid">
             {content.works.map((work, index) => (
               <article className={`work-editor ${work.enabled ? "" : "is-disabled"}`} key={`${work.image}-${index}`}>
-                <img src={work.preview} alt="" />
+                <img
+                  src={work.preview}
+                  width={work.previewWidth}
+                  height={work.previewHeight}
+                  loading="lazy"
+                  decoding="async"
+                  alt=""
+                />
                 <div className="work-editor-body">
                   <div className="editor-card-head">
                     <strong>{String(index + 1).padStart(2, "0")} · {work.code}</strong>

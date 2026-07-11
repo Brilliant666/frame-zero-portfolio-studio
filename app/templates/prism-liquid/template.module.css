@@ -82,8 +82,10 @@
 .heroCopy p { max-width: 26rem; margin: 1.4rem 0 0; color: rgba(21,18,29,.68); line-height: 1.8; }
 
 .stage { position: relative; align-self: stretch; display: grid; align-content: center; padding: 3rem 0; }
-.mainImage { position: relative; display: block; width: min(54vw, 49rem); aspect-ratio: 4 / 5; overflow: hidden; border: 1px solid rgba(255,255,255,.62); background: #e6e2f0; box-shadow: 0 2rem 5rem rgba(39,18,84,.2); cursor: zoom-in; clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 94%); }
+.mainImage { position: relative; display: block; width: min(54vw, 49rem); aspect-ratio: 3 / 2; overflow: hidden; border: 1px solid rgba(255,255,255,.62); background: #e6e2f0; box-shadow: 0 2rem 5rem rgba(39,18,84,.2); cursor: zoom-in; clip-path: polygon(3% 0, 100% 0, 97% 100%, 0 94%); }
 .mainImage img { width: 100%; height: 100%; object-fit: cover; animation: image-refract .65s cubic-bezier(.2,.75,.25,1) both; }
+.heroPlaceholder { cursor: default; }
+.heroPlaceholder > * { min-height: 0; }
 .prismEdge { position: absolute; inset: 0; border: 1px solid rgba(255,255,255,.7); box-shadow: inset 1rem 0 2rem rgba(255,36,178,.17), inset -1rem 0 2rem rgba(0,146,255,.18); pointer-events: none; }
 .stageMeta { position: absolute; left: -2rem; bottom: 5rem; display: grid; gap: .25rem; padding: .8rem 1rem; background: rgba(255,255,255,.84); box-shadow: 0 .8rem 2rem rgba(38,20,70,.12); backdrop-filter: blur(12px); }
 .stageMeta span { color: var(--violet); font: .62rem var(--font-geist-mono), monospace; }
@@ -91,24 +93,31 @@
 .stageMeta small { color: rgba(21,18,29,.56); }
 .stageControls { position: absolute; right: 1rem; bottom: 4rem; display: flex; align-items: center; gap: .65rem; padding: .45rem; border-radius: 2rem; background: rgba(255,255,255,.86); font: .62rem var(--font-geist-mono), monospace; }
 .stageControls button { display: grid; width: 2.2rem; height: 2.2rem; place-items: center; border-radius: 50%; background: #16121e; color: #fff; cursor: pointer; }
+.stageControls button:disabled { cursor: default; opacity: .35; }
 
 .colorRail { display: grid; gap: .7rem; align-content: center; }
 .colorRail button { position: relative; display: grid; width: 2.65rem; height: 2.65rem; place-items: center; border-radius: 50%; background: conic-gradient(from calc(var(--index, 1) * 40deg), #ff4f72, #8844ff, #31b5ff, #ff4f72); color: #fff; cursor: pointer; opacity: .48; transition: opacity .2s ease, transform .2s ease; }
 .colorRail button:nth-child(2n) { background: conic-gradient(#1488ff, #ff65b8, #6038ff, #1488ff); }
 .colorRail button span { display: grid; width: 1.7rem; height: 1.7rem; place-items: center; border-radius: 50%; background: #fff; color: #17121d; font: .55rem var(--font-geist-mono), monospace; }
 .colorRail button.isActive { opacity: 1; transform: scale(1.16); }
+.colorRailPlaceholder { display: grid; width: 2.65rem; height: 2.65rem; place-items: center; border: 1px dashed rgba(84,40,168,.28); border-radius: 50%; color: rgba(21,18,29,.35); }
+.colorRailPlaceholder > span { font: .55rem var(--font-geist-mono), monospace; }
 .scrollCue { position: absolute; left: 4vw; bottom: 2rem; font: .6rem var(--font-geist-mono), monospace; letter-spacing: .12em; }
 
 .gallery, .services { padding: clamp(5rem, 9vw, 9rem) 4vw; }
 .sectionTitle { display: grid; grid-template-columns: 1fr 1.3fr .7fr; align-items: end; gap: 2rem; margin-bottom: 4rem; }
 .sectionTitle h2 { margin: 0; font: 400 clamp(3rem, 6vw, 7rem)/.9 Georgia, serif; letter-spacing: -.06em; }
 .sectionTitle p { color: rgba(21,18,29,.55); }
-.galleryGrid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1rem; }
-.galleryGrid button { position: relative; grid-column: span 4; min-height: 30rem; overflow: hidden; background: #e8e3ef; cursor: zoom-in; }
-.galleryGrid .galleryWide { grid-column: span 8; }
+.galleryGrid { display: grid; gap: 1rem; }
+.galleryFeatureRow { display: grid; grid-template-columns: minmax(0, 9fr) minmax(0, 4fr); gap: 1rem; align-items: start; }
+.galleryTriptych { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; align-items: start; }
+.galleryPanorama { display: grid; }
+.galleryCard { position: relative; display: block; width: 100%; min-width: 0; overflow: hidden; background: #e8e3ef; cursor: zoom-in; }
+.galleryPlaceholder { cursor: default; }
+.galleryPlaceholder > * { min-height: 0; }
 .galleryGrid img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s cubic-bezier(.2,.7,.2,1), filter .6s ease; }
-.galleryGrid button:hover img { transform: scale(1.025); filter: saturate(1.12); }
-.galleryGrid button > span { position: absolute; right: .8rem; bottom: .8rem; left: .8rem; display: grid; grid-template-columns: auto 1fr; gap: .2rem .8rem; padding: .75rem; background: rgba(255,255,255,.86); text-align: left; backdrop-filter: blur(12px); }
+.galleryCard:hover img { transform: scale(1.025); filter: saturate(1.12); }
+.galleryCard > span { position: absolute; right: .8rem; bottom: .8rem; left: .8rem; display: grid; grid-template-columns: auto 1fr; gap: .2rem .8rem; padding: .75rem; background: rgba(255,255,255,.86); text-align: left; backdrop-filter: blur(12px); }
 .galleryGrid small { color: var(--violet); font-family: var(--font-geist-mono), monospace; }
 .galleryGrid strong { font-size: .9rem; }
 .galleryGrid em { grid-column: 2; color: rgba(21,18,29,.54); font-size: .68rem; font-style: normal; }
@@ -156,7 +165,7 @@
   .heroCopy { align-self: auto; padding: 0; }
   .heroCopy h1 { font-size: clamp(3.8rem, 17vw, 6.8rem); }
   .stage { justify-items: center; padding: 0; }
-  .mainImage { width: min(88vw, 34rem); aspect-ratio: 4 / 5; }
+  .mainImage { width: min(88vw, 40rem); aspect-ratio: 3 / 2; }
   .stageMeta { left: 0; bottom: 1rem; }
   .stageControls { right: .5rem; bottom: 1rem; }
   .colorRail { grid-template-columns: repeat(9, 1fr); justify-self: center; gap: .3rem; }
@@ -164,7 +173,7 @@
   .colorRail button span { width: 1.35rem; height: 1.35rem; font-size: .45rem; }
   .scrollCue { display: none; }
   .sectionTitle { grid-template-columns: 1fr; gap: .7rem; }
-  .galleryGrid button, .galleryGrid .galleryWide { grid-column: span 6; min-height: 22rem; }
+  .galleryFeatureRow { grid-template-columns: minmax(0, 9fr) minmax(0, 4fr); }
   .packageGrid { grid-template-columns: 1fr; }
   .packageGrid article { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.16); }
   .booking { grid-template-columns: 1fr; padding: 7rem 1rem; }
@@ -173,8 +182,7 @@
 @media (max-width: 560px) {
   .availability { max-width: 8rem; text-align: right; }
   .gallery, .services { padding: 5rem 1rem; }
-  .galleryGrid { grid-template-columns: 1fr; }
-  .galleryGrid button, .galleryGrid .galleryWide { grid-column: 1; min-height: 0; aspect-ratio: 16 / 10; }
+  .galleryFeatureRow, .galleryTriptych { grid-template-columns: 1fr; }
   .contactActions { grid-template-columns: 1fr; }
   .booking { grid-template-columns: 1fr; }
   .requestCard pre { min-height: 17rem; }
