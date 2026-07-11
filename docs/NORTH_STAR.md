@@ -578,9 +578,11 @@ type SiteDocumentV1 = {
   bookingFields: string[];
   statement: StatementContent;
   compositions: Partial<Record<TemplateId, TemplateComposition>>;
-  theme?: ThemeOverrides;
 };
 ```
+
+首个可执行 V1 不接受 `theme`。主题覆盖仍是后续产品概念；只有在字段集合、清洗规则和
+版本兼容策略通过独立决策后，才能加入一个明确版本的可执行契约，不能静默扩展 V1。
 
 ## 7.5 TemplateComposition
 
@@ -2395,12 +2397,14 @@ Deprecated
 
 为保护当前私人站，采用渐进迁移：
 
-## Step 1：只增加版本，不改变行为
+## Step 1：定义版本化内容契约，不改变运行时行为
 
--   给现有内容增加 `schemaVersion: 1`；
--   增加固定 site UUID；
--   为现有作品生成稳定 asset UUID；
--   保持旧 API 可读。
+-   定义 `SiteDocumentV1.schemaVersion: 1`；
+-   文档不包含 `siteId`，构图只引用不透明 `assetId`；
+-   保持旧 `SiteContent`、API 和 D1 数据不变。
+
+默认 Site 的随机 `siteId` 持久化、公开 Asset ID 决策、稳定 ID 迁移和旧内容兼容读取，
+分别由后续独立 PR 按照已接受 ADR 与 Phase 0 路线图实现，不在内容契约中隐式完成。
 
 ## Step 2：引入新表
 
