@@ -30,10 +30,17 @@ values. It rejects tenant identity, storage paths, resolved image URLs, legacy
 `works` fields, unknown schema versions, and invalid or duplicate slot
 references.
 
+Schema version 1 freezes its eleven template identities in
+`SITE_DOCUMENT_V1_TEMPLATE_IDS`; the document contract does not import or derive
+them from the mutable runtime template catalog. Adding, removing, renaming, or
+editing runtime catalog entries therefore cannot silently expand or invalidate
+historical V1 documents. A new document template identity requires an explicit
+versioned contract decision.
+
 Slot indices are unique and structurally bounded from 0 through 255. Exact slot
-compatibility must later be checked against both `templateId` and
-`templateVersion`; validating old revisions against only the mutable current
-catalog would incorrectly invalidate historical compositions.
+and renderer compatibility for the current installation must later be checked
+against both `templateId` and `templateVersion`; structural parsing does not
+claim that a frozen identity is currently renderable.
 An `assetId` is an uninterpreted opaque reference here: its generator, public
 encoding, uniqueness scope, and migration policy remain separate decisions.
 Even when its text resembles a path or URL, consumers must only use it as an ID

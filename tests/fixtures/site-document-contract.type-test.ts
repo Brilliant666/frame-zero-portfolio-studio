@@ -1,4 +1,13 @@
-import type { SiteDocumentV1, SlotComposition } from "../../app/site-document";
+import type {
+  SiteDocumentV1,
+  SiteDocumentV1TemplateId,
+  SlotComposition,
+} from "../../app/site-document";
+
+export const frozenTemplateIdentity: SiteDocumentV1TemplateId = "museum-depth";
+
+// @ts-expect-error A runtime-only or future template is not part of schemaVersion 1.
+export const futureTemplateIdentity: SiteDocumentV1TemplateId = "future-template";
 
 export const validDocument = {
   schemaVersion: 1,
@@ -33,6 +42,20 @@ export const validDocument = {
   },
   compositions: {},
 } satisfies SiteDocumentV1;
+
+export const futureActiveTemplateMustStayOut: SiteDocumentV1 = {
+  ...validDocument,
+  // @ts-expect-error SiteDocumentV1.activeTemplate is closed for schemaVersion 1.
+  activeTemplate: "future-template",
+};
+
+export const futureCompositionMustStayOut: SiteDocumentV1 = {
+  ...validDocument,
+  compositions: {
+    // @ts-expect-error Composition keys use the frozen V1 template identity set.
+    "future-template": { templateVersion: 1, slots: [] },
+  },
+};
 
 export const tenantIdentityMustStayOut: SiteDocumentV1 = {
   ...validDocument,

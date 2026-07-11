@@ -7,15 +7,26 @@ import test from "node:test";
 import ts from "typescript";
 
 const contractPath = fileURLToPath(new URL("../app/site-document.ts", import.meta.url));
-const catalogPath = fileURLToPath(new URL("../app/templates/catalog.ts", import.meta.url));
+const runtimeCatalogPath = fileURLToPath(new URL("../app/templates/catalog.ts", import.meta.url));
 const typeFixturePath = fileURLToPath(
   new URL("./fixtures/site-document-contract.type-test.ts", import.meta.url),
 );
+const FROZEN_V1_TEMPLATE_IDS = [
+  "cinematic-light",
+  "neon-hud",
+  "film-rail",
+  "manga-panels",
+  "prism-liquid",
+  "orbital-portal",
+  "archive-os",
+  "editorial-duet",
+  "polaroid-field",
+  "character-select",
+  "museum-depth",
+];
 
 async function importContract(t) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "frame-zero-site-document-"));
-  const templatesDirectory = path.join(directory, "templates");
-  await fs.mkdir(templatesDirectory, { recursive: true });
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
 
   const compile = async (sourcePath, outputPath) => {
@@ -33,14 +44,8 @@ async function importContract(t) {
     await fs.writeFile(outputPath, result.outputText, "utf8");
   };
 
-  await compile(catalogPath, path.join(templatesDirectory, "catalog.mjs"));
-  await compile(contractPath, path.join(directory, "site-document.mjs"));
-
   const modulePath = path.join(directory, "site-document.mjs");
-  const compiled = (await fs.readFile(modulePath, "utf8"))
-    .replaceAll('"./templates/catalog"', '"./templates/catalog.mjs"')
-    .replaceAll("'./templates/catalog'", "'./templates/catalog.mjs'");
-  await fs.writeFile(modulePath, compiled, "utf8");
+  await compile(contractPath, modulePath);
   return import(`${pathToFileURL(modulePath).href}?test=${Date.now()}`);
 }
 
@@ -124,8 +129,8 @@ function assertIssue(result, pathValue, code) {
   );
 }
 
-test("the isolated SiteDocumentV1 contract type-checks", () => {
-  const program = ts.createProgram([contractPath, catalogPath, typeFixturePath], {
+test("the isolated SiteDocumentV1 contract type-checks without the runtime catalog", () => {
+  const program = ts.createProgram([contractPath, typeFixturePath], {
     module: ts.ModuleKind.ESNext,
     moduleResolution: ts.ModuleResolutionKind.Bundler,
     noEmit: true,
@@ -141,6 +146,14 @@ test("the isolated SiteDocumentV1 contract type-checks", () => {
       message: ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
     })),
     [],
+  );
+  assert.equal(
+    program.getSourceFiles().some(
+      (sourceFile) => path.resolve(sourceFile.fileName).toLowerCase()
+        === path.resolve(runtimeCatalogPath).toLowerCase(),
+    ),
+    false,
+    "the TypeScript dependency graph must not include the mutable runtime template catalog",
   );
 });
 
@@ -181,8 +194,12 @@ test("strictly rejects missing, malformed, and future schema versions", async (t
   }
 });
 
-test("requires every V1 root field and a known active template", async (t) => {
-  const { parseSiteDocumentV1 } = await importContract(t);
+test("requires every V1 root field and accepts exactly the frozen V1 template identities", async (t) => {
+  const {
+    isSiteDocumentV1TemplateId,
+    parseSiteDocumentV1,
+    SITE_DOCUMENT_V1_TEMPLATE_IDS,
+  } = await importContract(t);
   const requiredFields = [
     "activeTemplate",
     "profile",
@@ -206,9 +223,28 @@ test("requires every V1 root field and a known active template", async (t) => {
     );
   }
 
+  assert.deepEqual(SITE_DOCUMENT_V1_TEMPLATE_IDS, FROZEN_V1_TEMPLATE_IDS);
+  assert.equal(Object.isFrozen(SITE_DOCUMENT_V1_TEMPLATE_IDS), true);
+  for (const templateId of FROZEN_V1_TEMPLATE_IDS) {
+    const input = validDocument();
+    const composition = structuredClone(input.compositions["cinematic-light"]);
+    composition.templateVersion = Number.MAX_SAFE_INTEGER;
+    composition.slots = [{ ...composition.slots[0], slotIndex: 255 }];
+    input.activeTemplate = templateId;
+    input.compositions = { [templateId]: composition };
+
+    const result = parseSiteDocumentV1(input);
+    assert.equal(result.success, true, `${templateId} must remain valid in schemaVersion 1`);
+    assert.equal(result.data.activeTemplate, templateId);
+    assert.deepEqual(Object.keys(result.data.compositions), [templateId]);
+    assert.equal(isSiteDocumentV1TemplateId(templateId), true);
+  }
+
   const unknownTemplate = validDocument();
   unknownTemplate.activeTemplate = "unknown-template";
   assertIssue(parseSiteDocumentV1(unknownTemplate), "$.activeTemplate", "unknown_template");
+  assert.equal(isSiteDocumentV1TemplateId("unknown-template"), false);
+  assert.equal(isSiteDocumentV1TemplateId(null), false);
 });
 
 test("does not treat the legacy SiteContent shape as an implicit V1 migration", async (t) => {

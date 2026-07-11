@@ -1,6 +1,31 @@
-import { isTemplateId, type TemplateId } from "./templates/catalog";
-
 export const SITE_DOCUMENT_SCHEMA_VERSION = 1 as const;
+
+/**
+ * The template identities accepted by schemaVersion 1 are immutable contract
+ * data. Runtime catalog changes must not expand or invalidate historical V1
+ * documents; renderer support is checked by a separate compatibility layer.
+ */
+export const SITE_DOCUMENT_V1_TEMPLATE_IDS = Object.freeze([
+  "cinematic-light",
+  "neon-hud",
+  "film-rail",
+  "manga-panels",
+  "prism-liquid",
+  "orbital-portal",
+  "archive-os",
+  "editorial-duet",
+  "polaroid-field",
+  "character-select",
+  "museum-depth",
+] as const);
+
+export type SiteDocumentV1TemplateId = (typeof SITE_DOCUMENT_V1_TEMPLATE_IDS)[number];
+
+const siteDocumentV1TemplateIds = new Set<string>(SITE_DOCUMENT_V1_TEMPLATE_IDS);
+
+export function isSiteDocumentV1TemplateId(value: unknown): value is SiteDocumentV1TemplateId {
+  return typeof value === "string" && siteDocumentV1TemplateIds.has(value);
+}
 
 const MAX_TEXT_LENGTH = 2_048;
 const MAX_TRUST_ITEMS = 8;
@@ -92,7 +117,7 @@ export type TemplateComposition = {
  */
 export type SiteDocumentV1 = {
   schemaVersion: typeof SITE_DOCUMENT_SCHEMA_VERSION;
-  activeTemplate: TemplateId;
+  activeTemplate: SiteDocumentV1TemplateId;
   profile: ProfileContent;
   hero: HeroContent;
   trustItems: TrustItem[];
@@ -101,7 +126,7 @@ export type SiteDocumentV1 = {
   social: SocialLink[];
   bookingFields: string[];
   statement: StatementContent;
-  compositions: Partial<Record<TemplateId, TemplateComposition>>;
+  compositions: Partial<Record<SiteDocumentV1TemplateId, TemplateComposition>>;
 };
 
 export type SiteDocument = SiteDocumentV1;
@@ -517,15 +542,15 @@ function parseComposition(
 function parseCompositions(
   value: unknown,
   issues: SiteDocumentValidationIssue[],
-): Partial<Record<TemplateId, TemplateComposition>> {
+): Partial<Record<SiteDocumentV1TemplateId, TemplateComposition>> {
   const path = "$.compositions";
   const source = recordValue(value, path, issues);
   if (!source) return {};
 
-  const compositions: Partial<Record<TemplateId, TemplateComposition>> = {};
+  const compositions: Partial<Record<SiteDocumentV1TemplateId, TemplateComposition>> = {};
   for (const [templateId, composition] of Object.entries(source)) {
     const compositionPath = fieldPath(path, templateId);
-    if (!isTemplateId(templateId)) {
+    if (!isSiteDocumentV1TemplateId(templateId)) {
       addIssue(issues, compositionPath, "unknown_template", `Unknown template: ${templateId}.`);
       continue;
     }
@@ -537,16 +562,17 @@ function parseCompositions(
 function parseActiveTemplate(
   value: unknown,
   issues: SiteDocumentValidationIssue[],
-) {
+): SiteDocumentV1TemplateId {
   const path = "$.activeTemplate";
   if (typeof value !== "string") {
     addIssue(issues, path, "invalid_type", "Expected a template ID string.");
-    return "cinematic-light" as TemplateId;
+    return SITE_DOCUMENT_V1_TEMPLATE_IDS[0];
   }
-  if (!isTemplateId(value)) {
+  if (!isSiteDocumentV1TemplateId(value)) {
     addIssue(issues, path, "unknown_template", `Unknown template: ${value}.`);
+    return SITE_DOCUMENT_V1_TEMPLATE_IDS[0];
   }
-  return value as TemplateId;
+  return value;
 }
 
 /**

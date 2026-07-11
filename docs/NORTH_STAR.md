@@ -566,9 +566,26 @@ type SiteMember = {
 当前 `SiteContent` 应演进为显式版本化文档：
 
 ``` ts
+const SITE_DOCUMENT_V1_TEMPLATE_IDS = [
+  "cinematic-light",
+  "neon-hud",
+  "film-rail",
+  "manga-panels",
+  "prism-liquid",
+  "orbital-portal",
+  "archive-os",
+  "editorial-duet",
+  "polaroid-field",
+  "character-select",
+  "museum-depth",
+] as const;
+
+type SiteDocumentV1TemplateId =
+  (typeof SITE_DOCUMENT_V1_TEMPLATE_IDS)[number];
+
 type SiteDocumentV1 = {
   schemaVersion: 1;
-  activeTemplate: TemplateId;
+  activeTemplate: SiteDocumentV1TemplateId;
   profile: ProfileContent;
   hero: HeroContent;
   trustItems: TrustItem[];
@@ -577,9 +594,14 @@ type SiteDocumentV1 = {
   social: SocialLink[];
   bookingFields: string[];
   statement: StatementContent;
-  compositions: Partial<Record<TemplateId, TemplateComposition>>;
+  compositions: Partial<Record<SiteDocumentV1TemplateId, TemplateComposition>>;
 };
 ```
+
+V1 的模板身份集合属于版本化文档契约，不能从当前运行时 `templateCatalog` 动态推导。
+运行时 catalog 新增、删除、重命名或修改展示元数据，都不得静默改变历史 V1 文档的
+结构有效性。当前安装能否渲染某个 `(templateId, templateVersion)`，由独立的兼容性
+校验负责；新增文档模板身份必须经过显式的版本契约决策。
 
 首个可执行 V1 不接受 `theme`。主题覆盖仍是后续产品概念；只有在字段集合、清洗规则和
 版本兼容策略通过独立决策后，才能加入一个明确版本的可执行契约，不能静默扩展 V1。
