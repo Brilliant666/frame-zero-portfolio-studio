@@ -13,6 +13,7 @@ const credentialMaterial = /(?:ghp_[a-z0-9]{20,}|github_pat_[a-z0-9_]{20,}|sk-[a
 const emailAddress = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
 const allowedEmails = [
   /^git@github\.com$/i,
+  /^noreply@github\.com$/i,
   /@users\.noreply\.github\.com$/i,
   /\.example$/i,
 ];
