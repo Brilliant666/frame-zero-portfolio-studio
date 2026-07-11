@@ -82,12 +82,13 @@ async function requestSiteContent(url, init = {}, database) {
 }
 
 test("GET returns normalized content stored in D1", async () => {
+  const storedContent = JSON.stringify({
+    activeTemplate: "film-rail",
+    profile: { brand: "API TEST" },
+  });
   const database = new MemoryD1({
     id: 1,
-    content: JSON.stringify({
-      activeTemplate: "film-rail",
-      profile: { brand: "API TEST" },
-    }),
+    content: storedContent,
     updatedAt: "2026-07-11 14:00:00",
   });
 
@@ -102,6 +103,12 @@ test("GET returns normalized content stored in D1", async () => {
   assert.equal(payload.content.activeTemplate, "film-rail");
   assert.equal(payload.content.profile.brand, "API TEST");
   assert.equal(payload.updatedAt, "2026-07-11 14:00:00");
+  assert.equal(database.row.content, storedContent, "GET must not rewrite legacy D1 content");
+  assert.equal(
+    database.prepareCalls.some((sql) => /^\s*(insert|update)\b/i.test(sql)),
+    false,
+    "GET must not prepare a legacy data write",
+  );
 });
 
 test("GET falls back to demo content when D1 throws", async () => {
@@ -125,7 +132,23 @@ test("PUT allows a loopback request and persists normalized content", async () =
     {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ content: { profile: { brand: "LOCAL SAVE" } } }),
+      body: JSON.stringify({
+        content: {
+          profile: { brand: "LOCAL SAVE" },
+          works: [{
+            code: "LEGACY-01",
+            title: "LEGACY WORK",
+            subtitle: "Compatibility canary",
+            image: "/photos/legacy-full.webp",
+            preview: "/photos/legacy-card.webp",
+            position: "50% 50%",
+            previewWidth: 1100,
+            previewHeight: 733,
+            fullWidth: 2200,
+            enabled: true,
+          }],
+        },
+      }),
     },
     database,
   );
@@ -133,7 +156,12 @@ test("PUT allows a loopback request and persists normalized content", async () =
 
   assert.equal(response.status, 200);
   assert.equal(payload.content.profile.brand, "LOCAL SAVE");
-  assert.equal(JSON.parse(database.row.content).profile.brand, "LOCAL SAVE");
+  assert.equal(payload.content.works[0].image, "/photos/legacy-full.webp");
+  assert.equal(payload.content.works[0].preview, "/photos/legacy-card.webp");
+  const persisted = JSON.parse(database.row.content);
+  assert.equal(persisted.profile.brand, "LOCAL SAVE");
+  assert.equal(persisted.works[0].image, "/photos/legacy-full.webp");
+  assert.equal(persisted.works[0].preview, "/photos/legacy-card.webp");
   assert.equal(payload.updatedAt, "2026-07-11 15:00:00");
 });
 

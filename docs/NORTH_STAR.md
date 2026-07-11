@@ -566,9 +566,26 @@ type SiteMember = {
 当前 `SiteContent` 应演进为显式版本化文档：
 
 ``` ts
+const SITE_DOCUMENT_V1_TEMPLATE_IDS = [
+  "cinematic-light",
+  "neon-hud",
+  "film-rail",
+  "manga-panels",
+  "prism-liquid",
+  "orbital-portal",
+  "archive-os",
+  "editorial-duet",
+  "polaroid-field",
+  "character-select",
+  "museum-depth",
+] as const;
+
+type SiteDocumentV1TemplateId =
+  (typeof SITE_DOCUMENT_V1_TEMPLATE_IDS)[number];
+
 type SiteDocumentV1 = {
   schemaVersion: 1;
-  activeTemplate: TemplateId;
+  activeTemplate: SiteDocumentV1TemplateId;
   profile: ProfileContent;
   hero: HeroContent;
   trustItems: TrustItem[];
@@ -577,10 +594,17 @@ type SiteDocumentV1 = {
   social: SocialLink[];
   bookingFields: string[];
   statement: StatementContent;
-  compositions: Partial<Record<TemplateId, TemplateComposition>>;
-  theme?: ThemeOverrides;
+  compositions: Partial<Record<SiteDocumentV1TemplateId, TemplateComposition>>;
 };
 ```
+
+V1 的模板身份集合属于版本化文档契约，不能从当前运行时 `templateCatalog` 动态推导。
+运行时 catalog 新增、删除、重命名或修改展示元数据，都不得静默改变历史 V1 文档的
+结构有效性。当前安装能否渲染某个 `(templateId, templateVersion)`，由独立的兼容性
+校验负责；新增文档模板身份必须经过显式的版本契约决策。
+
+首个可执行 V1 不接受 `theme`。主题覆盖仍是后续产品概念；只有在字段集合、清洗规则和
+版本兼容策略通过独立决策后，才能加入一个明确版本的可执行契约，不能静默扩展 V1。
 
 ## 7.5 TemplateComposition
 
@@ -2395,12 +2419,14 @@ Deprecated
 
 为保护当前私人站，采用渐进迁移：
 
-## Step 1：只增加版本，不改变行为
+## Step 1：定义版本化内容契约，不改变运行时行为
 
--   给现有内容增加 `schemaVersion: 1`；
--   增加固定 site UUID；
--   为现有作品生成稳定 asset UUID；
--   保持旧 API 可读。
+-   定义 `SiteDocumentV1.schemaVersion: 1`；
+-   文档不包含 `siteId`，构图只引用不透明 `assetId`；
+-   保持旧 `SiteContent`、API 和 D1 数据不变。
+
+默认 Site 的随机 `siteId` 持久化、公开 Asset ID 决策、稳定 ID 迁移和旧内容兼容读取，
+分别由后续独立 PR 按照已接受 ADR 与 Phase 0 路线图实现，不在内容契约中隐式完成。
 
 ## Step 2：引入新表
 

@@ -21,6 +21,42 @@ content document for profile, package, and contact data. Each template keeps a
 small independent selection of 7–12 local-library assets, so changing one
 layout does not disturb the composition of another.
 
+## Versioned document contract
+
+Phase 0 defines the future portable `SiteDocumentV1` contract in
+`app/site-document.ts`. Its strict parser accepts `schemaVersion: 1`, known
+content fields, and template compositions that reference opaque `assetId`
+values. It rejects tenant identity, storage paths, resolved image URLs, legacy
+`works` fields, unknown schema versions, and invalid or duplicate slot
+references.
+
+Schema version 1 freezes its eleven template identities in
+`SITE_DOCUMENT_V1_TEMPLATE_IDS`; the document contract does not import or derive
+them from the mutable runtime template catalog. Adding, removing, renaming, or
+editing runtime catalog entries therefore cannot silently expand or invalidate
+historical V1 documents. A new document template identity requires an explicit
+versioned contract decision.
+
+Slot indices are unique and structurally bounded from 0 through 255. Exact slot
+and renderer compatibility for the current installation must later be checked
+against both `templateId` and `templateVersion`; structural parsing does not
+claim that a frozen identity is currently renderable.
+An `assetId` is an uninterpreted opaque reference here: its generator, public
+encoding, uniqueness scope, and migration policy remain separate decisions.
+Even when its text resembles a path or URL, consumers must only use it as an ID
+in a future site-scoped resolver; the contract never resolves or fetches it.
+Manual compositions may intentionally reuse one asset in multiple slots;
+automatic layout keeps its stricter no-reuse rule.
+
+This contract is intentionally not connected to the current D1 API yet. The
+homepage and admin still use legacy `SiteContent` until a separate compatibility
+adapter is reviewed. A document is not a self-contained photo export, and asset
+existence and target-Site ownership must later be validated by a site-scoped
+resolver or repository.
+
+Theme overrides are outside the executable V1 contract until a closed,
+sanitized schema and explicit version-compatibility policy are accepted.
+
 ## Local development
 
 Requires Node.js `>=22.13.0`.
@@ -109,6 +145,7 @@ credential formats appear in the worktree, index, or reachable Git history.
 ```bash
 npm run lint
 npm test
+npm run test:contracts
 npm run test:photos
 npm run photos:import -- --source "<photo-folder>"
 npm run build
