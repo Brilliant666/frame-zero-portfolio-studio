@@ -1,6 +1,7 @@
 "use client";
 
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from "react";
+import PhotoFallbackController from "../photo-fallback-controller";
 import type { TemplateId } from "./catalog";
 import type { TemplateProps } from "./types";
 
@@ -33,6 +34,7 @@ export default function TemplateRenderer(props: TemplateProps) {
   return (
     <Suspense fallback={<TemplateLoading brand={props.content.profile.brand} />}>
       <Template key={props.templateId} {...props} />
+      <PhotoFallbackController />
     </Suspense>
   );
 }
