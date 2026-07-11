@@ -4,18 +4,20 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { TemplateProps } from "../types";
+import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import styles from "./template.module.css";
 
-const PRISM_RATIOS = ["3:2", "2:3", "3:2", "3:2", "3:2", "16:9", "3:2", "3:2", "3:2"] as const;
+const PRISM_RATIOS = getTemplateSlotRatios("prism-liquid");
 
 export default function PrismLiquidTemplate({ content, works, packages, bookingTemplate, copiedKey, onCopy, onOpenWork }: TemplateProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const gallerySlots = useMemo(() => buildPhotoSlots(works, PRISM_RATIOS), [works]);
-  const displayedWorks = useMemo(() => gallerySlots.flatMap((slot) => slot.work ? [slot.work] : []), [gallerySlots]);
-  const safeActiveIndex = displayedWorks.length === 0 ? 0 : Math.min(activeIndex, displayedWorks.length - 1);
-  const activeWork = displayedWorks[safeActiveIndex] ?? displayedWorks[0];
-  const heroSlot = { index: 0, ratio: "3:2" as const, work: activeWork ?? null };
+  const displayedSlots = useMemo(() => gallerySlots.filter((slot) => slot.work), [gallerySlots]);
+  const displayedWorks = useMemo(() => displayedSlots.map((slot) => slot.work!), [displayedSlots]);
+  const safeActiveIndex = displayedSlots.length === 0 ? 0 : Math.min(activeIndex, displayedSlots.length - 1);
+  const heroSlot = displayedSlots[safeActiveIndex] ?? gallerySlots[0];
+  const activeWork = heroSlot.work;
 
   const move = useCallback((direction: -1 | 1) => {
     if (displayedWorks.length === 0) return;

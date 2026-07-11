@@ -4,28 +4,23 @@
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { TemplateProps } from "../types";
+import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import styles from "./template.module.css";
 
-const ORBIT_RATIOS = ["2:3", "2:3", "2:3", "2:3", "2:3", "2:3", "2:3", "2:3"] as const;
+const ORBIT_RATIOS = getTemplateSlotRatios("orbital-portal");
 
 export default function OrbitalPortalTemplate({ content, works, packages, bookingTemplate, copiedKey, onCopy, onOpenWork }: TemplateProps) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const orbitSlots = useMemo(() => {
-    const preferredSlots = buildPhotoSlots(works, ORBIT_RATIOS);
-    const assignedCodes = new Set(preferredSlots.flatMap((slot) => slot.work ? [slot.work.code] : []));
-    const fallbackWorks = works.filter((work) => !assignedCodes.has(work.code)).slice(0, ORBIT_RATIOS.length);
-
-    return preferredSlots.map((slot) => slot.work ? slot : { ...slot, work: fallbackWorks.shift() ?? null });
-  }, [works]);
-  const orbitWorks = useMemo(() => orbitSlots.flatMap((slot) => slot.work ? [slot.work] : []), [orbitSlots]);
-  const safeActiveIndex = orbitWorks.length === 0 ? 0 : Math.min(activeIndex, orbitWorks.length - 1);
-  const activeWork = orbitWorks[safeActiveIndex] ?? orbitWorks[0];
-  const heroSlot = { index: 0, ratio: "3:2" as const, work: activeWork ?? null };
+  const orbitSlots = useMemo(() => buildPhotoSlots(works, ORBIT_RATIOS), [works]);
+  const filledOrbitSlots = useMemo(() => orbitSlots.filter((slot) => slot.work), [orbitSlots]);
+  const safeActiveIndex = filledOrbitSlots.length === 0 ? 0 : Math.min(activeIndex, filledOrbitSlots.length - 1);
+  const activeSlot = filledOrbitSlots[safeActiveIndex] ?? orbitSlots[0];
+  const activeWork = activeSlot.work;
   const move = useCallback((direction: -1 | 1) => {
-    if (orbitWorks.length === 0) return;
-    setActiveIndex((index) => (Math.min(index, orbitWorks.length - 1) + direction + orbitWorks.length) % orbitWorks.length);
-  }, [orbitWorks.length]);
+    if (filledOrbitSlots.length === 0) return;
+    setActiveIndex((index) => (Math.min(index, filledOrbitSlots.length - 1) + direction + filledOrbitSlots.length) % filledOrbitSlots.length);
+  }, [filledOrbitSlots.length]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -72,19 +67,19 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
             </button>
           ) : (
             <div className={`${styles.portalImage} ${styles.portalImagePlaceholder}`}>
-              <PhotoPlaceholder slot={heroSlot} label="AWAITING SIGNAL" compact />
+              <PhotoPlaceholder slot={activeSlot} label="AWAITING SIGNAL" compact />
             </div>
           )}
           <div className={styles.coordinate} aria-hidden="true"><span>AZ {activeIndex * 37 + 12}°</span><span>EL 42°</span><span>DST 0.{activeIndex + 3} AU</span></div>
           <div className={styles.portalControls}>
-            <button type="button" onClick={() => move(-1)} aria-label="上一张作品" disabled={orbitWorks.length < 2}>←</button>
-            <span>{orbitWorks.length ? String(safeActiveIndex + 1).padStart(2, "0") : "00"} / {String(ORBIT_RATIOS.length).padStart(2, "0")}</span>
-            <button type="button" onClick={() => move(1)} aria-label="下一张作品" disabled={orbitWorks.length < 2}>→</button>
+            <button type="button" onClick={() => move(-1)} aria-label="上一张作品" disabled={filledOrbitSlots.length < 2}>←</button>
+            <span>{filledOrbitSlots.length ? String(safeActiveIndex + 1).padStart(2, "0") : "00"} / {String(ORBIT_RATIOS.length).padStart(2, "0")}</span>
+            <button type="button" onClick={() => move(1)} aria-label="下一张作品" disabled={filledOrbitSlots.length < 2}>→</button>
           </div>
         </div>
 
         <aside className={styles.activeMeta}>
-          <span>{activeWork?.code ?? "SIGNAL 00"}</span><strong>{activeWork?.title ?? "AWAITING IMAGE"}</strong><small>{activeWork?.subtitle ?? "Upload a 3:2 photograph in Admin"}</small>
+          <span>{activeWork?.code ?? "SIGNAL 00"}</span><strong>{activeWork?.title ?? "AWAITING IMAGE"}</strong><small>{activeWork?.subtitle ?? "Upload a 2:3 photograph in Admin"}</small>
           <div>{content.trustItems.map((item) => <p key={item.label}><b>{item.label}</b>{item.value}</p>)}</div>
         </aside>
       </section>

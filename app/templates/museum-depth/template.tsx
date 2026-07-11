@@ -4,10 +4,11 @@
 
 import { useMemo, type CSSProperties } from "react";
 import type { TemplateProps } from "../types";
-import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoRatio } from "../shared/photo-slots";
+import { getTemplateSlotRatios } from "../catalog";
+import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import styles from "./template.module.css";
 
-const MUSEUM_RATIOS = ["3:2", "3:2", "2:3", "16:9", "3:2", "3:2", "16:9"] as const satisfies readonly PhotoRatio[];
+const MUSEUM_RATIOS = getTemplateSlotRatios("museum-depth");
 
 export default function MuseumDepthTemplate({ content, works, packages, bookingTemplate, copiedKey, onCopy, onOpenWork }: TemplateProps) {
   const photoSlots = useMemo(() => buildPhotoSlots(works, MUSEUM_RATIOS), [works]);

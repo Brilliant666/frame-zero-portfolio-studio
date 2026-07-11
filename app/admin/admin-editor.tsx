@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element -- admin thumbnails reuse locally generated responsive assets. */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   cloneSiteContent,
   siteConfig,
@@ -11,6 +11,7 @@ import {
   type SiteContent,
   type Work,
 } from "../site-config";
+import PhotoLibraryEditor from "./photo-library-editor";
 
 type SaveState = "idle" | "loading" | "saving" | "saved" | "error";
 
@@ -42,6 +43,7 @@ export default function AdminEditor({ editorLabel }: { editorLabel: string }) {
   const [state, setState] = useState<SaveState>("loading");
   const [message, setMessage] = useState("正在读取数据库…");
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const saveResetTimerRef = useRef<number | null>(null);
 
   const visibleWorkCount = useMemo(() => content.works.filter((work) => work.enabled).length, [content.works]);
   const formattedUpdatedAt = useMemo(() => formatSavedAt(updatedAt), [updatedAt]);
@@ -67,10 +69,17 @@ export default function AdminEditor({ editorLabel }: { editorLabel: string }) {
         setMessage(error instanceof Error ? error.message : "读取失败");
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      if (saveResetTimerRef.current !== null) window.clearTimeout(saveResetTimerRef.current);
+    };
   }, []);
 
   const save = async () => {
+    if (saveResetTimerRef.current !== null) {
+      window.clearTimeout(saveResetTimerRef.current);
+      saveResetTimerRef.current = null;
+    }
     setState("saving");
     setMessage("正在保存到数据库…");
 
@@ -87,7 +96,10 @@ export default function AdminEditor({ editorLabel }: { editorLabel: string }) {
       setUpdatedAt(result.updatedAt ?? null);
       setState("saved");
       setMessage("已保存，刷新主页即可看到新内容");
-      window.setTimeout(() => setState("idle"), 2400);
+      saveResetTimerRef.current = window.setTimeout(() => {
+        setState("idle");
+        saveResetTimerRef.current = null;
+      }, 2400);
     } catch (error) {
       setState("error");
       setMessage(error instanceof Error ? error.message : "保存失败");
@@ -150,11 +162,11 @@ export default function AdminEditor({ editorLabel }: { editorLabel: string }) {
         <a href="#template">页面模板</a>
         <a href="#profile">个人资料</a>
         <a href="#packages">套餐价格</a>
-        <a href="#works">作品管理</a>
+        <a href="#library">素材库与排版</a>
         <a href="#contact">联系与约拍</a>
       </nav>
 
-      <div className="admin-layout">
+      <fieldset className="admin-layout" disabled={state === "saving" || state === "loading"}>
         <section id="template" className="admin-panel admin-panel-wide">
           <div className="admin-panel-title">
             <div><small>01</small><h2>页面模板</h2></div>
@@ -239,10 +251,12 @@ export default function AdminEditor({ editorLabel }: { editorLabel: string }) {
           </div>
         </section>
 
-        <section id="works" className="admin-panel admin-panel-wide">
+        <PhotoLibraryEditor content={content} setContent={setContent} />
+
+        <section id="works" className="admin-panel admin-panel-wide admin-legacy-panel">
           <div className="admin-panel-title">
-            <div><small>04</small><h2>作品展示</h2></div>
-            <p>当前主页显示 {visibleWorkCount} / {content.works.length} 组；可隐藏、改标题和调整顺序。</p>
+            <div><small>LEGACY</small><h2>旧版兼容作品</h2></div>
+            <p>仅当某个模板尚未使用新素材库排版时生效；当前保留 {visibleWorkCount} / {content.works.length} 组。</p>
           </div>
           <div className="work-editor-grid">
             {content.works.map((work, index) => (
@@ -271,7 +285,7 @@ export default function AdminEditor({ editorLabel }: { editorLabel: string }) {
               </article>
             ))}
           </div>
-          <p className="admin-hint">这一版先管理现有作品。后续增加“上传照片”时会接入 R2 图库，避免大图塞进数据库。</p>
+          <p className="admin-hint">这里保留旧数据，避免升级后主页空白。为模板执行一次“智能排版”或手动选片后，该模板会改用上方的新槽位数据。</p>
         </section>
 
         <section id="contact" className="admin-panel admin-panel-wide">
@@ -303,7 +317,7 @@ export default function AdminEditor({ editorLabel }: { editorLabel: string }) {
             {fieldLabel("中文第二行", content.statement.lineTwo, (value) => setContent((current) => ({ ...current, statement: { ...current.statement, lineTwo: value } })))}
           </div>
         </section>
-      </div>
+      </fieldset>
 
       <footer className="admin-footer">
         <div><strong>修改完成后别忘了保存</strong><span>主页会在刷新时读取最新数据。</span></div>

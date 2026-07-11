@@ -4,10 +4,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { TemplateProps } from "../types";
-import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoRatio } from "../shared/photo-slots";
+import { getTemplateSlotRatios } from "../catalog";
+import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import styles from "./template.module.css";
 
-const EDITORIAL_RATIOS = ["2:3", "3:2", "16:9", "3:2", "3:2", "16:9", "3:2", "3:2", "16:9"] as const satisfies readonly PhotoRatio[];
+const EDITORIAL_RATIOS = getTemplateSlotRatios("editorial-duet");
 
 export default function EditorialDuetTemplate({
   content,

@@ -45,3 +45,4 @@ next-env.d.ts
 # Local-only photography assets (never commit or upload these files)
 /public/photos/
 /public/og.png
+/.frame-zero/

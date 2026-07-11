@@ -17,12 +17,19 @@ A multi-template Cosplay photography portfolio with a shared content admin.
 11. Museum Depth
 
 Every template is a separate lazy-loaded React entry. They share one D1-backed
-content document, so switching the layout never duplicates profile, package,
-contact, or work metadata.
+content document for profile, package, and contact data. Each template keeps a
+small independent selection of 7–12 local-library assets, so changing one
+layout does not disturb the composition of another.
 
 ## Local development
 
 Requires Node.js `>=22.13.0`.
+
+If the terminal is still using an older installed version, switch it first:
+
+```bash
+fnm use 22.13.1
+```
 
 ```bash
 npm install
@@ -47,6 +54,52 @@ repository contains layout code and image metadata only, never the photographs.
 When photos are absent, every template keeps its intended composition with
 designed text placeholders.
 
+### Import a local photo library
+
+Point the importer at a folder containing photographs. It scans nested folders,
+deduplicates identical files by SHA-256, applies EXIF orientation, strips image
+metadata, and creates three colour-managed WebP variants per unique photograph:
+
+```bash
+npm run photos:import -- --source "<photo-folder>"
+```
+
+Generated files stay local in `public/photos/library/`. The browser-safe index is
+`public/photos/library-manifest.json`; it contains stable asset IDs, aspect ratios,
+orientations, and responsive image dimensions, but no source file names or local
+paths. Incremental import state is stored in `.frame-zero/`. Both locations are
+ignored by Git. JPEG, PNG, WebP, AVIF, TIFF, HEIC, and HEIF inputs are considered;
+actual format support depends on the installed Sharp build. Damaged or unsupported
+files are skipped and listed in the command summary.
+
+Imports are additive: choosing the wrong folder, temporarily losing a source file,
+or hitting one damaged photograph will not delete assets already used by a saved
+homepage. Re-importing the same files reuses their stable SHA-256 assets.
+
+Normal projects keep `public/photos/` as a regular ignored directory. If an
+advanced local setup intentionally makes it a junction or symlink, the first run
+must explicitly adopt and pin that target with:
+
+```bash
+npm run photos:import -- "<photo-folder>" adopt-linked-output
+```
+
+Later imports use the normal command. A random owner token plus a hashed target
+prevents an accidental or retargeted link from receiving generated files.
+
+After import, open `http://127.0.0.1:3001/admin#library` and click **重新读取素材库**.
+For the active template you can then:
+
+- create an initial ratio-aware layout with **一键智能排版**;
+- pick or replace a specific fixed slot manually;
+- swap adjacent slots, remove a photograph, or lock it before recomposing;
+- click the subject in a crop preview, or use the two sliders, to set its focal point;
+- save the result without copying the rest of the material library into D1.
+
+If a template has no saved V2 composition it continues to use the original `works`
+list. If there are not enough compatible landscape or portrait photographs, the
+unfilled slots remain intentional text placeholders instead of forcing a bad crop.
+
 `npm run check:public` fails if photographs, local Windows paths, WeChat storage
 identifiers, non-placeholder email addresses, Chinese mobile numbers, or common
 credential formats appear in the worktree, index, or reachable Git history.
@@ -56,6 +109,8 @@ credential formats appear in the worktree, index, or reachable Git history.
 ```bash
 npm run lint
 npm test
+npm run test:photos
+npm run photos:import -- --source "<photo-folder>"
 npm run build
 npm run check:bundle
 npm run check:public

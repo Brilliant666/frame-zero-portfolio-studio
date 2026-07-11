@@ -4,6 +4,9 @@ export { isTemplateId, templateCatalog };
 export type { TemplateId };
 
 export type Work = {
+  assetId?: string;
+  slotIndex?: number;
+  locked?: boolean;
   code: string;
   title: string;
   subtitle: string;
@@ -41,6 +44,7 @@ export type SiteContent = {
   hero: { eyebrow: string; title: string; services: string };
   trustItems: Array<{ label: string; value: string }>;
   works: Work[];
+  templateWorks: Partial<Record<TemplateId, Work[]>>;
   packages: PhotographyPackage[];
   contact: { wechat: string; email: string; note: string };
   social: Array<{ label: string; handle: string }>;
@@ -180,6 +184,7 @@ export const siteConfig: SiteContent = {
       enabled: true,
     },
   ],
+  templateWorks: {},
   packages: [
     {
       number: "01",
@@ -244,6 +249,71 @@ export function cloneSiteContent(content: SiteContent = siteConfig): SiteContent
   return JSON.parse(JSON.stringify(content)) as SiteContent;
 }
 
+const MAX_WORK_STRING_LENGTH = 2_048;
+
+function safeWorkString(value: unknown, fallback: string, maxLength = MAX_WORK_STRING_LENGTH) {
+  return typeof value === "string" ? value.slice(0, maxLength) : fallback;
+}
+
+function safeDimension(value: unknown, fallback: number) {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? Math.min(100_000, Math.max(1, Math.round(value)))
+    : fallback;
+}
+
+function formatPercent(value: number) {
+  return Number(value.toFixed(2)).toString();
+}
+
+function safeFocusPosition(value: unknown, fallback: string) {
+  if (typeof value !== "string") return fallback;
+  const match = value.trim().match(/^(-?\d+(?:\.\d+)?)%\s+(-?\d+(?:\.\d+)?)%$/);
+  if (!match) return fallback;
+
+  const x = Number(match[1]);
+  const y = Number(match[2]);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return fallback;
+
+  return `${formatPercent(Math.min(100, Math.max(0, x)))}% ${formatPercent(Math.min(100, Math.max(0, y)))}%`;
+}
+
+function safeAssetId(value: unknown) {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  return normalized.length > 0 && normalized.length <= 128 && /^[A-Za-z0-9_-]+$/.test(normalized)
+    ? normalized
+    : undefined;
+}
+
+function safeSlotIndex(value: unknown, slotCount: number) {
+  if (typeof value !== "number" || !Number.isInteger(value) || slotCount <= 0) return undefined;
+  return Math.min(slotCount - 1, Math.max(0, value));
+}
+
+function normalizeWork(value: unknown, fallback: Work, slotCount: number): Work {
+  const source = value && typeof value === "object" ? value as Partial<Record<keyof Work, unknown>> : {};
+  const work: Work = {
+    code: safeWorkString(source.code, fallback.code, 80),
+    title: safeWorkString(source.title, fallback.title, 240),
+    subtitle: safeWorkString(source.subtitle, fallback.subtitle, 500),
+    image: safeWorkString(source.image, fallback.image),
+    preview: safeWorkString(source.preview, fallback.preview),
+    position: safeFocusPosition(source.position, fallback.position),
+    previewWidth: safeDimension(source.previewWidth, fallback.previewWidth),
+    previewHeight: safeDimension(source.previewHeight, fallback.previewHeight),
+    fullWidth: safeDimension(source.fullWidth, fallback.fullWidth),
+    enabled: typeof source.enabled === "boolean" ? source.enabled : true,
+  };
+
+  const assetId = safeAssetId(source.assetId);
+  const slotIndex = safeSlotIndex(source.slotIndex, slotCount);
+  if (assetId !== undefined) work.assetId = assetId;
+  if (slotIndex !== undefined) work.slotIndex = slotIndex;
+  if (typeof source.locked === "boolean") work.locked = source.locked;
+
+  return work;
+}
+
 export function normalizeSiteContent(value: unknown): SiteContent {
   if (!value || typeof value !== "object") return cloneSiteContent();
 
@@ -283,21 +353,40 @@ export function normalizeSiteContent(value: unknown): SiteContent {
       .slice(0, 30);
   }
   if (Array.isArray(incoming.works)) {
-    normalized.works = incoming.works.slice(0, 40).map((work, index) => {
-      const fallback = siteConfig.works[index] ?? siteConfig.works[0];
-      return {
-        code: typeof work?.code === "string" ? work.code : fallback.code,
-        title: typeof work?.title === "string" ? work.title : fallback.title,
-        subtitle: typeof work?.subtitle === "string" ? work.subtitle : fallback.subtitle,
-        image: typeof work?.image === "string" ? work.image : fallback.image,
-        preview: typeof work?.preview === "string" ? work.preview : fallback.preview,
-        position: typeof work?.position === "string" ? work.position : fallback.position,
-        previewWidth: typeof work?.previewWidth === "number" ? work.previewWidth : fallback.previewWidth,
-        previewHeight: typeof work?.previewHeight === "number" ? work.previewHeight : fallback.previewHeight,
-        fullWidth: typeof work?.fullWidth === "number" ? work.fullWidth : fallback.fullWidth,
-        enabled: typeof work?.enabled === "boolean" ? work.enabled : true,
-      };
-    });
+    normalized.works = incoming.works.slice(0, 40).map((work, index) => normalizeWork(
+      work,
+      siteConfig.works[index] ?? siteConfig.works[0],
+      40,
+    ));
+  }
+
+  normalized.templateWorks = {};
+  if (incoming.templateWorks && typeof incoming.templateWorks === "object" && !Array.isArray(incoming.templateWorks)) {
+    const rawTemplateWorks = incoming.templateWorks as Partial<Record<TemplateId, unknown>>;
+
+    for (const template of templateCatalog) {
+      const rawWorks = rawTemplateWorks[template.id];
+      if (!Array.isArray(rawWorks)) continue;
+
+      const assetIds = new Set<string>();
+      const slotIndexes = new Set<number>();
+      const templateSelection: Work[] = [];
+
+      for (const [index, rawWork] of rawWorks.entries()) {
+        if (templateSelection.length >= template.photoSlots) break;
+        const fallback = siteConfig.works[index] ?? siteConfig.works[0];
+        const work = normalizeWork(rawWork, fallback, template.photoSlots);
+
+        if (work.assetId !== undefined && assetIds.has(work.assetId)) continue;
+        if (work.slotIndex !== undefined && slotIndexes.has(work.slotIndex)) continue;
+
+        if (work.assetId !== undefined) assetIds.add(work.assetId);
+        if (work.slotIndex !== undefined) slotIndexes.add(work.slotIndex);
+        templateSelection.push(work);
+      }
+
+      normalized.templateWorks[template.id] = templateSelection;
+    }
   }
   if (Array.isArray(incoming.packages)) {
     normalized.packages = incoming.packages.slice(0, 12).map((item, index) => {

@@ -4,7 +4,8 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import type { TemplateProps } from "../types";
-import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoRatio } from "../shared/photo-slots";
+import { getTemplateSlotRatios } from "../catalog";
+import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import styles from "./polaroid-field.module.css";
 
 type ViewState = { x: number; y: number; scale: number };
@@ -14,7 +15,7 @@ type PolaroidStyle = CSSProperties & { "--rotation": string; "--delay": string }
 const INITIAL_VIEW: ViewState = { x: 0, y: 0, scale: 1 };
 const MIN_SCALE = 0.72;
 const MAX_SCALE = 1.28;
-const POLAROID_RATIOS = ["3:2", "16:9", "3:2", "3:2", "2:3", "3:2", "16:9", "3:2", "3:2"] as const satisfies readonly PhotoRatio[];
+const POLAROID_RATIOS = getTemplateSlotRatios("polaroid-field");
 
 const placements = [
   { left: "6%", top: "8%", width: "25rem", rotation: "-7deg", z: 5, tone: "coral" },

@@ -3,10 +3,11 @@
 /* eslint-disable @next/next/no-img-element -- responsive WebP variants are generated locally for this portfolio. */
 
 import type { CSSProperties } from "react";
+import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import type { TemplateProps } from "../types";
 
-const cinematicRatios = ["16:9", "3:2", "2:3", "3:2", "3:2", "16:9", "3:2", "3:2", "16:9"] as const;
+const cinematicRatios = getTemplateSlotRatios("cinematic-light");
 
 export default function CinematicLightTemplate({
   templateId,
@@ -22,6 +23,10 @@ export default function CinematicLightTemplate({
   const heroTitle = content.hero.title.trim().split(/\s+/);
   const heroTitleLead = heroTitle.shift() ?? "";
   const photoSlots = buildPhotoSlots(works, cinematicRatios);
+  const heroSlot = photoSlots[0];
+  const heroWork = heroSlot.work;
+  const statementSlot = photoSlots[photoSlots.length - 1];
+  const statementWork = statementSlot.work;
 
   return (
     <main className="site-shell" data-template={templateId}>
@@ -49,20 +54,27 @@ export default function CinematicLightTemplate({
       </header>
 
       <section id="top" className="hero">
-        <picture className="hero-media">
-          <source media="(max-width: 600px)" srcSet="/photos/photo-01-card.webp" />
-          <img
-            className="hero-image"
-            src="/photos/photo-01-full.webp"
-            srcSet="/photos/photo-01-card.webp 1100w, /photos/photo-01-full.webp 2200w"
-            sizes="100vw"
-            width="2200"
-            height="1466"
-            alt="赛博风格Cosplay摄影作品"
-            decoding="async"
-            fetchPriority="high"
-          />
-        </picture>
+        {heroWork ? (
+          <picture className="hero-media" data-photo-slot={heroSlot.index + 1} data-photo-ratio={heroSlot.ratio}>
+            <source media="(max-width: 600px)" srcSet={heroWork.preview} />
+            <img
+              className="hero-image"
+              src={heroWork.image}
+              srcSet={`${heroWork.preview} ${heroWork.previewWidth}w, ${heroWork.image} ${heroWork.fullWidth}w`}
+              sizes="100vw"
+              width={heroWork.fullWidth}
+              height={Math.round(heroWork.fullWidth * heroWork.previewHeight / heroWork.previewWidth)}
+              alt={heroWork.subtitle}
+              decoding="async"
+              fetchPriority="high"
+              style={{ objectPosition: heroWork.position }}
+            />
+          </picture>
+        ) : (
+          <div className="hero-media" data-photo-slot={heroSlot.index + 1} data-photo-ratio={heroSlot.ratio}>
+            <PhotoPlaceholder slot={heroSlot} label="待补充主视觉" />
+          </div>
+        )}
         <div className="hero-vignette" />
         <div className="hero-grid" aria-hidden="true" />
 
@@ -216,16 +228,21 @@ export default function CinematicLightTemplate({
       </section>
 
       <section className="statement">
-        <img
-          src="/photos/photo-11-full.webp"
-          srcSet="/photos/photo-11-card.webp 1100w, /photos/photo-11-full.webp 2200w"
-          sizes="100vw"
-          width="2200"
-          height="1467"
-          alt="暖白电影感Cosplay摄影作品"
-          loading="lazy"
-          decoding="async"
-        />
+        {statementWork ? (
+          <img
+            src={statementWork.image}
+            srcSet={`${statementWork.preview} ${statementWork.previewWidth}w, ${statementWork.image} ${statementWork.fullWidth}w`}
+            sizes="100vw"
+            width={statementWork.fullWidth}
+            height={Math.round(statementWork.fullWidth * statementWork.previewHeight / statementWork.previewWidth)}
+            alt={statementWork.subtitle}
+            loading="lazy"
+            decoding="async"
+            style={{ objectPosition: statementWork.position }}
+          />
+        ) : (
+          <PhotoPlaceholder slot={statementSlot} tone="light" label="待补充宣言画面" />
+        )}
         <div className="statement-overlay" />
         <div className="statement-copy">
           <p>{content.statement.eyebrow}</p>
