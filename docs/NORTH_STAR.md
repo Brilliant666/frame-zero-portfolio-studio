@@ -2439,8 +2439,13 @@ Deprecated
 PR-01B 已建立未接线的稳定 ID 迁移规划契约：旧来源由
 `migrationKey = legacy:site_settings:1` 定位；首次正式执行只产生待立即持久化的 UUID v4
 pending checkpoint；重跑复用该 `siteId`；dry-run 不生成临时 ID；completed 重跑为
-no-op。资产规划只使用带 Site 范围的私有 fingerprint 映射，缺失 fingerprint 的槽位
-进入 unresolved 报告。该契约不创建表、不写 D1，也不接入当前 API 或 importer。
+no-op。资产规划在分配 Asset UUID 前对不可信 `templateId` 执行冻结 V1 身份的运行时
+校验，并只使用带 Site 范围的私有 fingerprint 映射。没有 unresolved 时，规划返回
+`ready-to-complete` 和状态为 `completed` 的 `nextCheckpoint`；存在 unresolved 时返回
+`blocked-by-unresolved`、`nextCheckpoint = null`，当前 checkpoint 必须继续保持 pending。
+冲突不产生完成 checkpoint。后续持久化执行器必须在同一个原子事务中写入
+`newMappings` 与 completed checkpoint；PR-01B 只描述该规划要求，不创建表、不写 D1、
+不实现数据库事务，也不接入当前 API 或 importer。
 
 ## Step 2：引入新表
 
@@ -2464,9 +2469,16 @@ asset_variants
 -   失败重跑时读取并复用 pending `siteId`，完成后重跑为 no-op；
 -   创建初始 Revision；
 -   将本地 manifest 的私有 fingerprint 映射为当前 Site 下的随机 UUID v4 Asset；
+-   在生成 Asset UUID 前，以冻结的 V1 模板身份集合对槽位 `templateId` 做运行时校验；
 -   无法确认 fingerprint 的路径型作品写入 unresolved 报告；
+-   没有 unresolved 时生成 `ready-to-complete` 规划和 completed `nextCheckpoint`；存在
+    unresolved 时保持 pending，不得标记 completed；
+-   将新 fingerprint 映射和 completed checkpoint 放在同一个原子事务中持久化；冲突
+    不得产生完成 checkpoint；
 -   保存旧 asset path 作为临时 resolver 数据；
 -   输出迁移报告。
+
+PR-01B 只定义上述迁移规划协议；真实原子持久化由后续数据库 PR 实现。
 
 ## Step 4：双读
 

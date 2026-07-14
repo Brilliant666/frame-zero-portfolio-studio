@@ -1,12 +1,14 @@
 import {
   LEGACY_SITE_SETTINGS_MIGRATION_KEY,
   type AssetId,
+  type LegacyAssetMigrationPlan,
   type LegacySlotAssetCandidate,
   type SiteId,
 } from "../../app/stable-id-migration";
 
 declare const siteId: SiteId;
 declare const assetId: AssetId;
+declare const assetPlan: LegacyAssetMigrationPlan;
 
 const candidate: LegacySlotAssetCandidate = {
   slot: {
@@ -20,6 +22,18 @@ const candidate: LegacySlotAssetCandidate = {
 void siteId;
 void assetId;
 void candidate;
+
+if (assetPlan.action === "map-assets") {
+  if (assetPlan.completion.status === "ready-to-complete") {
+    const completedStatus: "completed" = assetPlan.completion.nextCheckpoint.status;
+    const completedSiteId: SiteId = assetPlan.completion.nextCheckpoint.siteId;
+    void completedStatus;
+    void completedSiteId;
+  } else {
+    const noCheckpoint: null = assetPlan.completion.nextCheckpoint;
+    void noCheckpoint;
+  }
+}
 
 // @ts-expect-error A migration source locator is not a Site ID.
 const migrationKeyAsSiteId: SiteId = LEGACY_SITE_SETTINGS_MIGRATION_KEY;

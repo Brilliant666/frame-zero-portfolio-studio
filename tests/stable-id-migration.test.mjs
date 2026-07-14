@@ -7,6 +7,7 @@ import test from "node:test";
 import ts from "typescript";
 
 const contractPath = new URL("../app/stable-id-migration.ts", import.meta.url);
+const siteDocumentPath = new URL("../app/site-document.ts", import.meta.url);
 const typeFixturePath = new URL("./fixtures/stable-id-migration.type-test.ts", import.meta.url);
 
 const SITE_A = "11111111-1111-4111-8111-111111111111";
@@ -17,20 +18,44 @@ const ASSET_C = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const FINGERPRINT_A = "a".repeat(64);
 const FINGERPRINT_B = "b".repeat(64);
 
-async function importContract(t) {
-  const source = await fs.readFile(contractPath, "utf8");
-  const compiled = ts.transpileModule(source, {
+function transpile(source, fileName) {
+  return ts.transpileModule(source, {
     compilerOptions: {
       module: ts.ModuleKind.ESNext,
       target: ts.ScriptTarget.ES2022,
     },
-    fileName: "stable-id-migration.ts",
+    fileName,
   }).outputText;
+}
+
+async function importContract(t) {
+  const [source, siteDocumentSource] = await Promise.all([
+    fs.readFile(contractPath, "utf8"),
+    fs.readFile(siteDocumentPath, "utf8"),
+  ]);
+  const compiled = transpile(source, "stable-id-migration.ts");
+  const rewritten = compiled.replace(
+    'from "./site-document";',
+    'from "./site-document.mjs";',
+  );
+  assert.notEqual(rewritten, compiled, "the runtime template validator import must be linked");
+
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "frame-zero-stable-id-"));
   const modulePath = path.join(directory, "stable-id-migration.mjs");
-  await fs.writeFile(modulePath, compiled, "utf8");
+  const siteDocumentModulePath = path.join(directory, "site-document.mjs");
+  await Promise.all([
+    fs.writeFile(modulePath, rewritten, "utf8"),
+    fs.writeFile(siteDocumentModulePath, transpile(siteDocumentSource, "site-document.ts"), "utf8"),
+  ]);
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
-  return import(`${pathToFileURL(modulePath).href}?test=${Date.now()}`);
+  const [contract, siteDocument] = await Promise.all([
+    import(`${pathToFileURL(modulePath).href}?test=${Date.now()}`),
+    import(pathToFileURL(siteDocumentModulePath).href),
+  ]);
+  return {
+    ...contract,
+    SITE_DOCUMENT_V1_TEMPLATE_IDS: siteDocument.SITE_DOCUMENT_V1_TEMPLATE_IDS,
+  };
 }
 
 function checkpoint(siteId, status = "pending") {
@@ -59,6 +84,13 @@ function generator(...values) {
     return value;
   };
   return { calls, generate };
+}
+
+function assertConflictWithoutCompletion(result, expectedCode) {
+  assert.equal(result.success, false);
+  assert.ok(result.conflicts.some((conflict) => conflict.code === expectedCode));
+  assert.equal("plan" in result, false, "conflicts must not expose a completion plan");
+  assert.equal(JSON.stringify(result).includes("nextCheckpoint"), false);
 }
 
 test("the TypeScript contract keeps migration, Site, Asset, and slot identities separate", () => {
@@ -151,11 +183,15 @@ test("pending retries reuse Site ID and completed retries are stable no-ops", as
   assert.equal(ids.calls.length, 0);
 });
 
-test("duplicate, mismatched, invalid, and non-v4 checkpoints fail as conflicts", async (t) => {
+test("invalid modes and checkpoints fail without producing a completion plan", async (t) => {
   const { planLegacySiteMigrationStart } = await importContract(t);
   const ids = generator("not-a-uuid");
 
   const cases = [
+    {
+      expected: "invalid_migration_mode",
+      input: { mode: "preview", persistedCheckpoints: [] },
+    },
     {
       expected: "duplicate_checkpoint",
       input: { mode: "apply", persistedCheckpoints: [checkpoint(SITE_A), checkpoint(SITE_B)] },
@@ -179,16 +215,60 @@ test("duplicate, mismatched, invalid, and non-v4 checkpoints fail as conflicts",
 
   for (const { expected, input } of cases) {
     const result = planLegacySiteMigrationStart(input, ids.generate);
-    assert.equal(result.success, false);
-    assert.ok(result.conflicts.some((conflict) => conflict.code === expected));
+    assertConflictWithoutCompletion(result, expected);
   }
 
   const invalidGenerated = planLegacySiteMigrationStart(
     { mode: "apply", persistedCheckpoints: [] },
     ids.generate,
   );
-  assert.equal(invalidGenerated.success, false);
-  assert.equal(invalidGenerated.conflicts[0].code, "invalid_generated_site_id");
+  assertConflictWithoutCompletion(invalidGenerated, "invalid_generated_site_id");
+});
+
+test("every frozen V1 template identity can plan a completed checkpoint", async (t) => {
+  const {
+    SITE_DOCUMENT_V1_TEMPLATE_IDS,
+    planLegacyAssetMigration,
+  } = await importContract(t);
+  const ids = generator();
+  const result = planLegacyAssetMigration({
+    checkpoint: checkpoint(SITE_A),
+    candidates: SITE_DOCUMENT_V1_TEMPLATE_IDS.map((templateId, slotIndex) => (
+      slot(slotIndex, FINGERPRINT_A, templateId)
+    )),
+    persistedMappings: [{ siteId: SITE_A, sourceFingerprint: FINGERPRINT_A, assetId: ASSET_A }],
+  }, ids.generate);
+
+  assert.equal(result.success, true);
+  assert.equal(result.plan.action, "map-assets");
+  assert.deepEqual(
+    result.plan.assignments.map(({ slot: assignedSlot, disposition }) => ({
+      templateId: assignedSlot.templateId,
+      disposition,
+    })),
+    SITE_DOCUMENT_V1_TEMPLATE_IDS.map((templateId) => ({
+      templateId,
+      disposition: "reused",
+    })),
+  );
+  assert.deepEqual(result.plan.completion, {
+    status: "ready-to-complete",
+    nextCheckpoint: checkpoint(SITE_A, "completed"),
+  });
+  assert.equal(ids.calls.length, 0);
+});
+
+test("unknown template identities fail before Asset UUID allocation", async (t) => {
+  const { planLegacyAssetMigration } = await importContract(t);
+  const ids = generator(ASSET_A);
+  const result = planLegacyAssetMigration({
+    checkpoint: checkpoint(SITE_A),
+    candidates: [slot(0, FINGERPRINT_A, "unknown-template")],
+    persistedMappings: [],
+  }, ids.generate);
+
+  assertConflictWithoutCompletion(result, "invalid_slot_identity");
+  assert.equal(ids.calls.length, 0);
 });
 
 test("same-Site fingerprints reuse mappings while new fingerprints receive random Asset IDs", async (t) => {
@@ -233,12 +313,16 @@ test("the same fingerprint in different Sites receives different Asset IDs", asy
   assert.notEqual(result.plan.assignments[0].assetId, ASSET_A);
 });
 
-test("missing fingerprints stay unresolved and never allocate path-derived IDs", async (t) => {
-  const { planLegacyAssetMigration } = await importContract(t);
+test("unresolved assets block completion and retries keep the pending Site ID", async (t) => {
+  const {
+    planLegacyAssetMigration,
+    planLegacySiteMigrationStart,
+  } = await importContract(t);
   const ids = generator();
   const candidate = slot(7, null, "museum-depth");
+  const pendingCheckpoint = checkpoint(SITE_A);
   const result = planLegacyAssetMigration({
-    checkpoint: checkpoint(SITE_A),
+    checkpoint: pendingCheckpoint,
     candidates: [candidate],
     persistedMappings: [],
   }, ids.generate);
@@ -248,12 +332,32 @@ test("missing fingerprints stay unresolved and never allocate path-derived IDs",
     plan: {
       action: "map-assets",
       assignments: [],
+      completion: {
+        status: "blocked-by-unresolved",
+        nextCheckpoint: null,
+      },
       migrationKey: "legacy:site_settings:1",
       newMappings: [],
       siteId: SITE_A,
       unresolved: [{ slot: candidate.slot, reason: "missing_source_fingerprint" }],
     },
   });
+
+  const resumed = planLegacySiteMigrationStart(
+    { mode: "apply", persistedCheckpoints: [pendingCheckpoint] },
+    ids.generate,
+  );
+  assert.equal(resumed.success, true);
+  assert.equal(resumed.plan.action, "resume");
+  assert.equal(resumed.plan.siteId, SITE_A);
+
+  const retried = planLegacyAssetMigration({
+    checkpoint: pendingCheckpoint,
+    candidates: [candidate],
+    persistedMappings: [],
+  }, ids.generate);
+  assert.deepEqual(retried, result);
+  assert.deepEqual(pendingCheckpoint, checkpoint(SITE_A), "blocked completion must remain pending");
   assert.equal(ids.calls.length, 0);
 });
 
@@ -291,8 +395,7 @@ test("UUID allocation failures return conflicts and a clean retry can resume", a
     { mode: "apply", persistedCheckpoints: [] },
     () => { throw new Error("secure random source unavailable"); },
   );
-  assert.equal(failedSite.success, false);
-  assert.equal(failedSite.conflicts[0].code, "site_id_generation_failed");
+  assertConflictWithoutCompletion(failedSite, "site_id_generation_failed");
 
   const retriedSite = planLegacySiteMigrationStart(
     { mode: "apply", persistedCheckpoints: [] },
@@ -311,12 +414,10 @@ test("UUID allocation failures return conflicts and a clean retry can resume", a
     migrationInput,
     () => { throw new Error("secure random source unavailable"); },
   );
-  assert.equal(failedAsset.success, false);
-  assert.equal(failedAsset.conflicts[0].code, "asset_id_generation_failed");
+  assertConflictWithoutCompletion(failedAsset, "asset_id_generation_failed");
 
   const invalidAsset = planLegacyAssetMigration(migrationInput, () => FINGERPRINT_A);
-  assert.equal(invalidAsset.success, false);
-  assert.equal(invalidAsset.conflicts[0].code, "invalid_generated_asset_id");
+  assertConflictWithoutCompletion(invalidAsset, "invalid_generated_asset_id");
 
   const retriedAsset = planLegacyAssetMigration(migrationInput, () => ASSET_A);
   assert.equal(retriedAsset.success, true);
@@ -366,21 +467,55 @@ test("mapping and slot conflicts fail without allocating another identity", asyn
         persistedMappings: [],
       },
     },
+    {
+      code: "invalid_asset_id",
+      input: {
+        checkpoint: checkpoint(SITE_A),
+        candidates: [slot(0, FINGERPRINT_A)],
+        persistedMappings: [
+          { siteId: SITE_A, sourceFingerprint: FINGERPRINT_A, assetId: "asset-from-path" },
+        ],
+      },
+    },
   ];
 
   for (const { code, input } of cases) {
     const result = planLegacyAssetMigration(input, ids.generate);
-    assert.equal(result.success, false);
-    assert.ok(result.conflicts.some((conflict) => conflict.code === code));
+    assertConflictWithoutCompletion(result, code);
   }
   assert.equal(ids.calls.length, 0);
+
+  const collidingIds = generator(ASSET_A);
+  const generatedCollision = planLegacyAssetMigration({
+    checkpoint: checkpoint(SITE_A),
+    candidates: [slot(0, FINGERPRINT_B)],
+    persistedMappings: [
+      { siteId: SITE_A, sourceFingerprint: FINGERPRINT_A, assetId: ASSET_A },
+    ],
+  }, collidingIds.generate);
+  assertConflictWithoutCompletion(generatedCollision, "asset_mapping_conflict");
+  assert.equal(collidingIds.calls.length, 1);
 });
 
-test("completed migrations cannot create another asset plan", async (t) => {
+test("completed checkpoints produce stable no-ops on every retry", async (t) => {
   const { planLegacyAssetMigration } = await importContract(t);
   const ids = generator();
+  const ready = planLegacyAssetMigration({
+    checkpoint: checkpoint(SITE_A),
+    candidates: [],
+    persistedMappings: [],
+  }, ids.generate);
+  assert.equal(ready.success, true);
+  assert.equal(ready.plan.completion.status, "ready-to-complete");
+
+  const completedCheckpoint = ready.plan.completion.nextCheckpoint;
   const result = planLegacyAssetMigration({
-    checkpoint: checkpoint(SITE_A, "completed"),
+    checkpoint: completedCheckpoint,
+    candidates: [slot(0, FINGERPRINT_A)],
+    persistedMappings: [],
+  }, ids.generate);
+  const repeated = planLegacyAssetMigration({
+    checkpoint: completedCheckpoint,
     candidates: [slot(0, FINGERPRINT_A)],
     persistedMappings: [],
   }, ids.generate);
@@ -393,6 +528,7 @@ test("completed migrations cannot create another asset plan", async (t) => {
       siteId: SITE_A,
     },
   });
+  assert.deepEqual(repeated, result);
   assert.equal(ids.calls.length, 0);
 });
 

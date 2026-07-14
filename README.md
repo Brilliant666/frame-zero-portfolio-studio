@@ -68,12 +68,25 @@ must be persisted and read back before asset planning. Pending retries reuse the
 same Site ID, completed retries are no-ops, and conflicting checkpoints fail
 closed.
 
+Before allocating any Asset UUID, asset planning validates every legacy slot's
+`templateId` at runtime against the frozen V1 template identities. An empty
+`unresolved` report produces `completion.status = "ready-to-complete"` and a
+`nextCheckpoint` whose status is `completed`. If any slot remains unresolved,
+completion is `blocked-by-unresolved`, `nextCheckpoint` is `null`, and the
+current checkpoint remains pending. Conflicts do not produce a completion
+checkpoint.
+
 Confirmed legacy SHA-256 values are private source fingerprints. Within one
 Site they may reuse a persisted fingerprint-to-Asset mapping; another Site must
 receive another random Asset ID. A legacy slot without a confirmed fingerprint
 is reported as unresolved instead of deriving identity from a path, filename,
 display code, or hash. This module does not create tables, write D1, modify the
 local importer, or connect the migration to the page/API runtime.
+
+A later persistence executor must commit `newMappings` and the completed
+checkpoint in the same atomic transaction. PR-01B defines that planning
+requirement only; it does not implement the database transaction. Completed
+retries remain stable no-ops.
 
 Theme overrides are outside the executable V1 contract until a closed,
 sanitized schema and explicit version-compatibility policy are accepted.

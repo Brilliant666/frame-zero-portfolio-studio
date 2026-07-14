@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
-import type { SiteDocumentV1TemplateId } from "./site-document";
+import {
+  isSiteDocumentV1TemplateId,
+  type SiteDocumentV1TemplateId,
+} from "./site-document";
 
 export const LEGACY_SITE_SETTINGS_MIGRATION_KEY = "legacy:site_settings:1" as const;
 
@@ -113,10 +116,27 @@ export type LegacyUnresolvedAsset = {
   reason: "missing_source_fingerprint";
 };
 
+export type CompletedLegacySiteMigrationCheckpoint = {
+  migrationKey: typeof LEGACY_SITE_SETTINGS_MIGRATION_KEY;
+  siteId: SiteId;
+  status: "completed";
+};
+
+export type LegacyAssetMigrationCompletion =
+  | {
+      status: "ready-to-complete";
+      nextCheckpoint: CompletedLegacySiteMigrationCheckpoint;
+    }
+  | {
+      status: "blocked-by-unresolved";
+      nextCheckpoint: null;
+    };
+
 export type LegacyAssetMigrationPlan =
   | {
       action: "map-assets";
       assignments: LegacyAssetAssignment[];
+      completion: LegacyAssetMigrationCompletion;
       migrationKey: typeof LEGACY_SITE_SETTINGS_MIGRATION_KEY;
       newMappings: Array<{
         siteId: SiteId;
@@ -308,8 +328,7 @@ function slotKey(slot: LegacySlotIdentity) {
 }
 
 function isValidSlotIdentity(slot: LegacySlotIdentity) {
-  return typeof slot.templateId === "string"
-    && slot.templateId.length > 0
+  return isSiteDocumentV1TemplateId(slot.templateId)
     && Number.isSafeInteger(slot.templateVersion)
     && slot.templateVersion >= 1
     && Number.isSafeInteger(slot.slotIndex)
@@ -406,7 +425,7 @@ export function planLegacyAssetMigration(
       conflicts.push(conflict(
         "invalid_slot_identity",
         `${path}.slot`,
-        "Slot identity requires templateId, positive templateVersion, and slotIndex 0..255.",
+        "Slot identity requires a frozen V1 templateId, positive templateVersion, and slotIndex 0..255.",
       ));
       return;
     }
@@ -489,11 +508,26 @@ export function planLegacyAssetMigration(
     assignments.push({ slot, assetId, disposition: "generated" });
   }
 
+  const completion: LegacyAssetMigrationCompletion = unresolved.length === 0
+    ? {
+        status: "ready-to-complete",
+        nextCheckpoint: {
+          migrationKey: LEGACY_SITE_SETTINGS_MIGRATION_KEY,
+          siteId: checkpoint.siteId,
+          status: "completed",
+        },
+      }
+    : {
+        status: "blocked-by-unresolved",
+        nextCheckpoint: null,
+      };
+
   return {
     success: true,
     plan: {
       action: "map-assets",
       assignments,
+      completion,
       migrationKey: LEGACY_SITE_SETTINGS_MIGRATION_KEY,
       newMappings,
       siteId: checkpoint.siteId,

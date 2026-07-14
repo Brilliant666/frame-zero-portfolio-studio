@@ -67,13 +67,18 @@ D1 或本地照片兼容能力的前提下，建立版本化内容、稳定标�
 - **PR-01B：稳定 ID 迁移设计与测试（已完成）** — 定义
   `migrationKey = legacy:site_settings:1`、服务端 UUID v4 Site/Asset ID、首次
   `persist-pending`、pending 重跑复用、completed no-op、同 Site fingerprint 映射、跨
-  Site 新 Asset ID 和 unresolved 报告；只交付未接线的纯规划契约与行为测试，不写入或
-  覆盖原数据。public Asset ID、公开 URL 和对象存储 key 等待 ADR-0008。
+  Site 新 Asset ID、冻结 V1 模板身份的运行时校验和 unresolved 报告；没有 unresolved
+  时规划 `ready-to-complete` 与 completed `nextCheckpoint`，存在 unresolved 时以
+  `blocked-by-unresolved` 保持 pending，冲突不产生完成 checkpoint。这里只完成未接线的
+  纯规划协议与行为测试，不写入或覆盖原数据。public Asset ID、公开 URL 和对象存储 key
+  等待 ADR-0008。
 - **PR-01C：兼容适配器** — 旧 `SiteContent` 可升级为 V1，旧 API 在保留期内仍可读。
 
 `siteId` 只属于 Site、带租户范围的持久化信封及授权上下文；PR-01B 的规划结果要求后续
-迁移器先持久化 pending checkpoint，再继续资产映射。实际数据库写入、双读和回滚仍由
-后续独立 migration PR 完成。
+迁移器先持久化 pending checkpoint，再继续资产映射；最终必须在同一个原子事务中提交
+`newMappings` 和 completed checkpoint，unresolved 未处理完前不得标记 completed。
+PR-01B 只描述该规划要求，真实原子数据库持久化、双读和回滚仍由后续独立 migration PR
+完成；completed 重跑继续稳定返回 no-op。
 
 ### Epic 02：持久化边界
 

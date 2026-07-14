@@ -81,7 +81,11 @@ Phase 0 迁移器将为当前私人站生成并持久化一个随机、不可变
   pending checkpoint 被重新读取前不得继续规划资产迁移；
 - 正式迁移生成的随机 `siteId` 必须能在迁移失败后恢复；
 - 迁移重跑必须复用已存在的 `siteId`，不能创建第二个默认 Site；
-- 已完成迁移再次执行必须是 no-op，或产生与既有完成状态一致的报告。
+- 资产规划没有 unresolved 时必须返回 `ready-to-complete` 和状态为 `completed` 的
+  `nextCheckpoint`；存在 unresolved 时必须返回 `blocked-by-unresolved`、
+  `nextCheckpoint = null`，当前 checkpoint 继续保持 pending；
+- 冲突不得产生完成 checkpoint；
+- 已完成迁移再次执行必须稳定返回 no-op。
 
 ### 6. 旧素材迁移使用随机 Asset ID 和私有 fingerprint
 
@@ -93,6 +97,8 @@ Phase 0 迁移器将为当前私人站生成并持久化一个随机、不可变
 - public Asset ID、公开 URL 编码和对象存储 key 留给 ADR-0008，本 ADR 不决定其格式；
 - 本迁移不新增 Work 实体；槽位身份继续由 `templateId + templateVersion + slotIndex`
   组成；
+- 不可信的槽位 `templateId` 必须在生成 Asset UUID 前通过冻结 V1 模板身份的运行时
+  校验，不能只依赖 TypeScript 类型；
 - 无法确认 fingerprint 的旧路径型作品进入 `unresolved` 报告，不根据路径强行生成 ID。
 
 ## 方案对比
@@ -108,7 +114,10 @@ Phase 0 迁移器将为当前私人站生成并持久化一个随机、不可变
 ## 数据与兼容性
 
 - 本 ADR PR 不修改数据库、D1 记录、JSON 格式或 API 行为。
-- PR-01B 只建立未接线的迁移规划契约和行为测试，不持久化 checkpoint 或资产映射。
+- PR-01B 只建立未接线的迁移规划契约和行为测试，不持久化 checkpoint 或资产映射，
+  也不实现数据库事务。
+- 后续持久化执行器必须在同一个原子事务中提交 `newMappings` 与 completed
+  checkpoint；unresolved 未处理完前不得标记 completed。
 - 后续 Site/Revision/Asset 表必须以 `siteId` 建立查询范围和必要索引。
 - 当前 `site_settings(id = 1)` 在兼容期内保持可读，不在引入新表的同一 PR 中删除。
 - 单站迁移失败时继续读取旧记录；新模型写入不得覆盖旧 JSON。
