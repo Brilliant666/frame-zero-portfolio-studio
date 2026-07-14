@@ -629,7 +629,8 @@ type SlotComposition = {
 
 禁止继续以展示编号 `code` 作为程序身份。
 
-每个实体必须拥有稳定的 UUID、ULID 或等价不可变 ID。
+Site 与 Asset 使用服务端生成、不可由业务字段推导的随机 UUID v4。其他实体也必须使用
+稳定、不可变且非展示字段的身份；其具体格式由对应领域决策确定。
 
 ## 7.6 Revision
 
@@ -684,6 +685,9 @@ type Asset = {
   deletedAt: string | null;
 };
 ```
+
+`Asset.id` 是内部随机 UUID v4。`sourceFingerprint` 是带 Site 范围的私有去重/迁移信息，
+不是 Asset ID；相同照片跨 Site 迁移时必须重新生成 `Asset.id`。
 
 ## 7.8 AssetVariant
 
@@ -977,16 +981,20 @@ interface ObjectStorage {
 
 ## 11.6 隐私 ID
 
-原始文件哈希可用于私有去重，但不能直接作为公开素材 ID 或公开 URL。
+原始文件哈希可用于私有去重，但不能直接作为内部 Asset ID、公开素材 ID 或公开 URL。
+当前本地 importer 产生的原始 SHA-256 只作为 legacy/source fingerprint，用于同一 Site
+内的去重和迁移重跑。
 
 推荐：
 
 ``` text
-asset.id = UUID/ULID
-sourceFingerprint = HMAC-SHA256(tenantSecret, originalBytes)
+asset.id = server-generated random UUID v4
+legacySourceFingerprint = SHA-256(originalBytes) // private, Site-scoped migration input
+futureSourceFingerprint = HMAC-SHA256(tenantSecret, originalBytes) // optional future policy
 ```
 
-公开 URL 只暴露随机 ID 或不可推断存储 key。
+同一照片在不同 Site 中拥有不同 `asset.id`。public Asset ID、公开 URL 编码和对象存储
+key 由 ADR-0008 决定；在该 ADR 接受前不能从本节推断公开编码方案。
 
 ## 11.7 删除策略
 
@@ -2428,6 +2436,17 @@ Deprecated
 默认 Site 的随机 `siteId` 持久化、公开 Asset ID 决策、稳定 ID 迁移和旧内容兼容读取，
 分别由后续独立 PR 按照已接受 ADR 与 Phase 0 路线图实现，不在内容契约中隐式完成。
 
+PR-01B 已建立未接线的稳定 ID 迁移规划契约：旧来源由
+`migrationKey = legacy:site_settings:1` 定位；首次正式执行只产生待立即持久化的 UUID v4
+pending checkpoint；重跑复用该 `siteId`；dry-run 不生成临时 ID；completed 重跑为
+no-op。资产规划在分配 Asset UUID 前对不可信 `templateId` 执行冻结 V1 身份的运行时
+校验，并只使用带 Site 范围的私有 fingerprint 映射。没有 unresolved 时，规划返回
+`ready-to-complete` 和状态为 `completed` 的 `nextCheckpoint`；存在 unresolved 时返回
+`blocked-by-unresolved`、`nextCheckpoint = null`，当前 checkpoint 必须继续保持 pending。
+冲突不产生完成 checkpoint。后续持久化执行器必须在同一个原子事务中写入
+`newMappings` 与 completed checkpoint；PR-01B 只描述该规划要求，不创建表、不写 D1、
+不实现数据库事务，也不接入当前 API 或 importer。
+
 ## Step 2：引入新表
 
 创建：
@@ -2446,11 +2465,20 @@ asset_variants
 迁移器：
 
 -   读取 `site_settings`；
--   创建默认 Site；
+-   以 `legacy:site_settings:1` 定位来源，生成默认 Site UUID v4，并先持久化 pending；
+-   失败重跑时读取并复用 pending `siteId`，完成后重跑为 no-op；
 -   创建初始 Revision；
--   将本地 manifest 映射为 Asset；
+-   将本地 manifest 的私有 fingerprint 映射为当前 Site 下的随机 UUID v4 Asset；
+-   在生成 Asset UUID 前，以冻结的 V1 模板身份集合对槽位 `templateId` 做运行时校验；
+-   无法确认 fingerprint 的路径型作品写入 unresolved 报告；
+-   没有 unresolved 时生成 `ready-to-complete` 规划和 completed `nextCheckpoint`；存在
+    unresolved 时保持 pending，不得标记 completed；
+-   将新 fingerprint 映射和 completed checkpoint 放在同一个原子事务中持久化；冲突
+    不得产生完成 checkpoint；
 -   保存旧 asset path 作为临时 resolver 数据；
 -   输出迁移报告。
+
+PR-01B 只定义上述迁移规划协议；真实原子持久化由后续数据库 PR 实现。
 
 ## Step 4：双读
 

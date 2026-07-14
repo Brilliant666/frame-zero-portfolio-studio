@@ -11,7 +11,8 @@ D1 或本地照片兼容能力的前提下，建立版本化内容、稳定标�
 - D1 只保存固定 `id = 1` 的全局 JSON，GET 失败时回退到演示配置。
 - 本地回环地址可直接写入；远端写入依赖 ChatGPT Sites 注入的用户头。
 - 11 套模板共享 `SiteContent`，模板独立懒加载，并保留各自固定照片槽位。
-- 本地导入器已提供去重、EXIF 方向处理、元数据移除、WebP 变体和损坏文件隔离。
+- 本地导入器已提供去重、EXIF 方向处理、元数据移除、WebP 变体和损坏文件隔离；其
+  SHA-256 manifest ID 仍是待迁移的 legacy fingerprint。
 - GitHub 已执行公开仓库安全扫描，以及 lint、测试、生产构建和体积预算门禁。
 
 ## Phase 0 差距
@@ -21,7 +22,7 @@ D1 或本地照片兼容能力的前提下，建立版本化内容、稳定标�
 | 项目治理 | PR 模板、ADR 模板和 Phase 0 跟踪页已建立 | 已完成 |
 | CI | 公开安全与完整质量工作流均已在 `main` 运行通过 | 已完成 |
 | 内容模型 | 独立 `SiteDocumentV1` 契约与严格验证已建立；运行时仍使用无版本 `SiteContent` | 进行中 |
-| 稳定标识 | 单条记录固定为 `id = 1`，资源 ID 未形成迁移契约 | 待实施 |
+| 稳定标识 | UUID v4、pending 恢复和 site-scoped fingerprint 映射规划契约已建立；尚未持久化或接线 | 进行中 |
 | 数据访问 | API 直接读写 D1，没有 repository 边界 | 待实施 |
 | 授权 | 本地放行，远端只判断是否存在认证用户 | 待实施 |
 | 修订与发布 | 保存立即成为公开内容，没有草稿、发布指针或回滚 | 待实施 |
@@ -63,12 +64,21 @@ D1 或本地照片兼容能力的前提下，建立版本化内容、稳定标�
   11 个 V1 模板身份和只通过 `assetId` 表达的构图引用规则；文档不包含 `siteId`、
   所有权、存储路径或固定 URL，不是自包含素材包，也不实现跨 Site 导入；主题覆盖等待
   独立版本决策；保持现有页面、API 与持久化行为不变。
-- **PR-01B：稳定 ID 迁移设计与测试** — 定义默认 Site 的随机 `siteId` 首次生成、持久化
-  和重跑复用规则；公开 Asset ID 等待 ADR-0008，不在本 PR 写入或覆盖原数据。
+- **PR-01B：稳定 ID 迁移设计与测试（已完成）** — 定义
+  `migrationKey = legacy:site_settings:1`、服务端 UUID v4 Site/Asset ID、首次
+  `persist-pending`、pending 重跑复用、completed no-op、同 Site fingerprint 映射、跨
+  Site 新 Asset ID、冻结 V1 模板身份的运行时校验和 unresolved 报告；没有 unresolved
+  时规划 `ready-to-complete` 与 completed `nextCheckpoint`，存在 unresolved 时以
+  `blocked-by-unresolved` 保持 pending，冲突不产生完成 checkpoint。这里只完成未接线的
+  纯规划协议与行为测试，不写入或覆盖原数据。public Asset ID、公开 URL 和对象存储 key
+  等待 ADR-0008。
 - **PR-01C：兼容适配器** — 旧 `SiteContent` 可升级为 V1，旧 API 在保留期内仍可读。
 
-`siteId` 只属于 Site、带租户范围的持久化信封及授权上下文；实际生成、写入、双读和
-回滚由后续独立 migration PR 完成。
+`siteId` 只属于 Site、带租户范围的持久化信封及授权上下文；PR-01B 的规划结果要求后续
+迁移器先持久化 pending checkpoint，再继续资产映射；最终必须在同一个原子事务中提交
+`newMappings` 和 completed checkpoint，unresolved 未处理完前不得标记 completed。
+PR-01B 只描述该规划要求，真实原子数据库持久化、双读和回滚仍由后续独立 migration PR
+完成；completed 重跑继续稳定返回 no-op。
 
 ### Epic 02：持久化边界
 

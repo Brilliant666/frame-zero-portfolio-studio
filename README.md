@@ -41,10 +41,14 @@ Slot indices are unique and structurally bounded from 0 through 255. Exact slot
 and renderer compatibility for the current installation must later be checked
 against both `templateId` and `templateVersion`; structural parsing does not
 claim that a frozen identity is currently renderable.
-An `assetId` is an uninterpreted opaque reference here: its generator, public
-encoding, uniqueness scope, and migration policy remain separate decisions.
-Even when its text resembles a path or URL, consumers must only use it as an ID
-in a future site-scoped resolver; the contract never resolves or fetches it.
+An `assetId` remains an uninterpreted opaque reference at the document parser
+boundary, so structural parsing does not reject historical references. The
+Phase 0 migration contract in `app/stable-id-migration.ts` fixes newly migrated
+internal Site and Asset identities as server-generated UUID v4 values. Public
+Asset identifiers, URL encoding, and object-storage keys remain an ADR-0008
+decision. Even when a reference resembles a path or URL, consumers must only
+use it as an ID in a future site-scoped resolver; the document contract never
+resolves or fetches it.
 Manual compositions may intentionally reuse one asset in multiple slots;
 automatic layout keeps its stricter no-reuse rule.
 
@@ -53,6 +57,36 @@ homepage and admin still use legacy `SiteContent` until a separate compatibility
 adapter is reviewed. A document is not a self-contained photo export, and asset
 existence and target-Site ownership must later be validated by a site-scoped
 resolver or repository.
+
+## Stable ID migration planning
+
+`app/stable-id-migration.ts` defines an unconnected migration planning contract
+for the current `site_settings(id = 1)` source. The source is located by
+`migrationKey = legacy:site_settings:1`; that key is never a `siteId`. Dry-runs
+allocate nothing. A first apply produces only a UUID v4 pending checkpoint that
+must be persisted and read back before asset planning. Pending retries reuse the
+same Site ID, completed retries are no-ops, and conflicting checkpoints fail
+closed.
+
+Before allocating any Asset UUID, asset planning validates every legacy slot's
+`templateId` at runtime against the frozen V1 template identities. An empty
+`unresolved` report produces `completion.status = "ready-to-complete"` and a
+`nextCheckpoint` whose status is `completed`. If any slot remains unresolved,
+completion is `blocked-by-unresolved`, `nextCheckpoint` is `null`, and the
+current checkpoint remains pending. Conflicts do not produce a completion
+checkpoint.
+
+Confirmed legacy SHA-256 values are private source fingerprints. Within one
+Site they may reuse a persisted fingerprint-to-Asset mapping; another Site must
+receive another random Asset ID. A legacy slot without a confirmed fingerprint
+is reported as unresolved instead of deriving identity from a path, filename,
+display code, or hash. This module does not create tables, write D1, modify the
+local importer, or connect the migration to the page/API runtime.
+
+A later persistence executor must commit `newMappings` and the completed
+checkpoint in the same atomic transaction. PR-01B defines that planning
+requirement only; it does not implement the database transaction. Completed
+retries remain stable no-ops.
 
 Theme overrides are outside the executable V1 contract until a closed,
 sanitized schema and explicit version-compatibility policy are accepted.
@@ -110,7 +144,9 @@ files are skipped and listed in the command summary.
 
 Imports are additive: choosing the wrong folder, temporarily losing a source file,
 or hitting one damaged photograph will not delete assets already used by a saved
-homepage. Re-importing the same files reuses their stable SHA-256 assets.
+homepage. The current compatibility manifest still keys its legacy entries by
+SHA-256 so re-imports reuse them; those hashes are migration fingerprints, not
+the future random internal Asset IDs.
 
 Normal projects keep `public/photos/` as a regular ignored directory. If an
 advanced local setup intentionally makes it a junction or symlink, the first run

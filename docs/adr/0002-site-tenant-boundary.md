@@ -24,8 +24,8 @@
 内容修订、素材、素材变体、发布记录、域名、上传任务和配额等租户资源都必须归属于
 一个明确的 `siteId`。
 
-`siteId` 是不可变、不可由展示字段推导的随机 UUID、ULID 或等价标识。站点的 slug、
-展示名称、域名、owner 邮箱和摄影师品牌名都不能作为实体身份。
+`siteId` 是服务端生成、不可变的随机 UUID v4。它不能由 slug、展示名称、域名、用户、
+owner 邮箱、摄影师品牌名、旧记录 ID 或其他业务字段推导，也不能由客户端指定。
 
 ### 2. SiteDocumentV1 是可移植内容，不承载租户身份
 
@@ -63,8 +63,11 @@
 
 ### 5. 当前私人站通过单站迁移获得真实 siteId
 
-Phase 0 迁移器将为当前私人站生成并持久化一个随机、不可变的 `siteId`。该 ID 在一次
+Phase 0 迁移器将为当前私人站生成并持久化一个随机、不可变的 UUID v4 `siteId`。该 ID 在一次
 安装内保持稳定，但不能作为所有自托管安装共享的源码常量。
+
+旧站迁移来源由固定的 `migrationKey = legacy:site_settings:1` 定位。`migrationKey` 只表示
+迁移来源和幂等键，不是 `siteId`，也不能被转换或散列为 `siteId`。
 
 兼容期内保留 `site_settings(id = 1)` 作为旧数据回退来源。新模型读取成功前不得删除旧
 记录；迁移必须支持 dry-run、备份、迁移报告和失败恢复。具体表结构、双读切换与旧表
@@ -72,10 +75,31 @@ Phase 0 迁移器将为当前私人站生成并持久化一个随机、不可变
 
 默认 Site 迁移必须满足以下幂等约束：
 
-- dry-run 只计算并报告迁移结果，不持久化 `siteId`；
-- 正式迁移生成的随机 `siteId` 必须持久化，并能在迁移失败后恢复；
+- dry-run 只计算并报告迁移结果，不生成或持久化临时 `siteId`，也不把临时 UUID 当成
+  正式结果；
+- 首次正式迁移生成随机 UUID v4 `siteId` 后，必须先以 `pending` 状态立即持久化；在
+  pending checkpoint 被重新读取前不得继续规划资产迁移；
+- 正式迁移生成的随机 `siteId` 必须能在迁移失败后恢复；
 - 迁移重跑必须复用已存在的 `siteId`，不能创建第二个默认 Site；
-- 已完成迁移再次执行必须是 no-op，或产生与既有完成状态一致的报告。
+- 资产规划没有 unresolved 时必须返回 `ready-to-complete` 和状态为 `completed` 的
+  `nextCheckpoint`；存在 unresolved 时必须返回 `blocked-by-unresolved`、
+  `nextCheckpoint = null`，当前 checkpoint 继续保持 pending；
+- 冲突不得产生完成 checkpoint；
+- 已完成迁移再次执行必须稳定返回 no-op。
+
+### 6. 旧素材迁移使用随机 Asset ID 和私有 fingerprint
+
+- 新内部 `assetId` 由服务端生成随机 UUID v4，不使用文件路径、文件名、`work.code`、
+  原始 SHA-256 或其他展示字段；
+- 现有 SHA-256 只作为私有 legacy/source fingerprint，用于同一 Site 内去重和迁移重跑；
+- fingerprint 到 `assetId` 的映射必须带 `siteId` 范围并持久化；同一照片在不同 Site
+  中拥有不同 `assetId`；
+- public Asset ID、公开 URL 编码和对象存储 key 留给 ADR-0008，本 ADR 不决定其格式；
+- 本迁移不新增 Work 实体；槽位身份继续由 `templateId + templateVersion + slotIndex`
+  组成；
+- 不可信的槽位 `templateId` 必须在生成 Asset UUID 前通过冻结 V1 模板身份的运行时
+  校验，不能只依赖 TypeScript 类型；
+- 无法确认 fingerprint 的旧路径型作品进入 `unresolved` 报告，不根据路径强行生成 ID。
 
 ## 方案对比
 
@@ -90,6 +114,10 @@ Phase 0 迁移器将为当前私人站生成并持久化一个随机、不可变
 ## 数据与兼容性
 
 - 本 ADR PR 不修改数据库、D1 记录、JSON 格式或 API 行为。
+- PR-01B 只建立未接线的迁移规划契约和行为测试，不持久化 checkpoint 或资产映射，
+  也不实现数据库事务。
+- 后续持久化执行器必须在同一个原子事务中提交 `newMappings` 与 completed
+  checkpoint；unresolved 未处理完前不得标记 completed。
 - 后续 Site/Revision/Asset 表必须以 `siteId` 建立查询范围和必要索引。
 - 当前 `site_settings(id = 1)` 在兼容期内保持可读，不在引入新表的同一 PR 中删除。
 - 单站迁移失败时继续读取旧记录；新模型写入不得覆盖旧 JSON。
@@ -141,3 +169,4 @@ Phase 0 迁移器将为当前私人站生成并持久化一个随机、不可变
 | --- | --- | --- |
 | 2026-07-12 | Proposed | 提交 SiteDocumentV1 与稳定 ID 实现前的租户边界草案 |
 | 2026-07-12 | Accepted | 维护者有条件接受，并补充跨 Site 资产映射与默认 Site 迁移幂等约束 |
+| 2026-07-12 | Accepted | 维护者固定 UUID v4、migrationKey、pending 恢复和 legacy fingerprint 约束 |
