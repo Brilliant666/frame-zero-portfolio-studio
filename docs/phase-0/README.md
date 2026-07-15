@@ -21,7 +21,7 @@ D1 或本地照片兼容能力的前提下，建立版本化内容、稳定标�
 | --- | --- | --- |
 | 项目治理 | PR 模板、ADR 模板和 Phase 0 跟踪页已建立 | 已完成 |
 | CI | 公开安全与完整质量工作流均已在 `main` 运行通过 | 已完成 |
-| 内容模型 | 独立 `SiteDocumentV1` 契约与严格验证已建立；运行时仍使用无版本 `SiteContent` | 进行中 |
+| 内容模型 | 独立 `SiteDocumentV1` 契约、严格验证与纯 legacy adapter 已建立；运行时仍使用无版本 `SiteContent` | 进行中 |
 | 稳定标识 | UUID v4、pending 恢复和 site-scoped fingerprint 映射规划契约已建立；尚未持久化或接线 | 进行中 |
 | 数据访问 | API 直接读写 D1，没有 repository 边界 | 待实施 |
 | 授权 | 本地放行，远端只判断是否存在认证用户 | 待实施 |
@@ -72,7 +72,25 @@ D1 或本地照片兼容能力的前提下，建立版本化内容、稳定标�
   `blocked-by-unresolved` 保持 pending，冲突不产生完成 checkpoint。这里只完成未接线的
   纯规划协议与行为测试，不写入或覆盖原数据。public Asset ID、公开 URL 和对象存储 key
   等待 ADR-0008。
-- **PR-01C：兼容适配器** — 旧 `SiteContent` 可升级为 V1，旧 API 在保留期内仍可读。
+- **PR-01C：兼容适配器（本 PR）** — 接收未经 `normalizeSiteContent()` 掩盖的 raw
+  `unknown` legacy JSON，严格验证根内容，并将 11 个冻结模板一对一映射为
+  `templateVersion: 1` 的 V1 compositions。每个模板的 raw `templateWorks` 自有 key 使用
+  explicit 布局（显式 `[]` 保留为空 composition），key 缺失则使用调用方预计算的全局
+  `works` fallback；不只转换 active template。
+
+PR-01C 的调用方必须传入覆盖全部 11 个模板的单 Site、slot-aware、深只读素材解析快照。
+快照显式记录 `siteId`、模板身份和版本、`explicit | fallback` mode、legacy 来源位置、
+`slotIndex`，以及 resolved UUID v4 `assetId` 或 unresolved reason。adapter 不调用
+`buildPhotoSlots()`，不读取 D1、文件、manifest、私有 importer state 或网络，不分配 UUID，
+也不从路径、URL、文件名、`work.code`、SHA-256 或旧 `assetId` 推导身份。
+
+adapter 结果固定为三态：`ready.document` 是唯一可由未来执行器持久化的结果；
+`blocked-by-unresolved.documentPreview` 仅供审计或预览，未解析槽位从 composition 省略且
+不得推进 completed；`invalid.document` 为 `null`。ready document 与 blocked preview 均须
+通过 `parseSiteDocumentV1()`，resolved ID 还须单独通过 UUID v4 门禁。errors、unresolved
+和聚合 warnings 使用稳定 code 并确定性排序；unsupported `theme`、丢弃的 `work.code` 和
+`fullWidth` 不得静默消失。当前 legacy API、页面、后台和 D1 行为保持不变；repository、
+双读、数据库迁移、checkpoint/原子持久化、运行时接线和 importer 修改不属于 PR-01C。
 
 `siteId` 只属于 Site、带租户范围的持久化信封及授权上下文；PR-01B 的规划结果要求后续
 迁移器先持久化 pending checkpoint，再继续资产映射；最终必须在同一个原子事务中提交

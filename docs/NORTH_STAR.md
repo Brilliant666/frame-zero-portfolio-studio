@@ -2447,6 +2447,41 @@ no-op。资产规划在分配 Asset UUID 前对不可信 `templateId` 执行冻�
 `newMappings` 与 completed checkpoint；PR-01B 只描述该规划要求，不创建表、不写 D1、
 不实现数据库事务，也不接入当前 API 或 importer。
 
+PR-01C 在同一未接线边界内提供纯 legacy 兼容适配器。它直接接收 raw `unknown`
+`SiteContent` JSON，禁止先调用 `normalizeSiteContent()`，以免未知模板、非法必填字段、
+unsupported `theme` 或被 demo 默认值回退的数据失去诊断信息。适配器严格验证并深复制
+根内容，将 11 个冻结 V1 模板显式一对一映射为 `templateVersion: 1`，且为全部 11 个模板
+materialize composition：raw `templateWorks` 拥有模板 key 时使用 explicit slots（包括
+显式空数组对应的空 composition），key 缺失时使用调用方预计算的全局 `works` fallback
+slots。不得只转换 active template。
+
+调用方提供一个覆盖全部 11 个模板、单 Site、slot-aware、深只读的素材解析快照。每项
+必须显式携带 `siteId`、`templateId`、`templateVersion: 1`、`explicit | fallback` mode、
+legacy 来源位置、`slotIndex`，以及 resolved UUID v4 `assetId` 或 unresolved reason；mode
+必须与 raw key 的存在状态一致。所有布局 materialization 都发生在调用方，适配器不调用
+`buildPhotoSlots()`，不依赖 TSX、CSS 或 renderer。resolved ID 另行执行 UUID v4 验证，
+因为 `SiteDocumentV1` parser 有意只把 Asset ID 当作不透明字符串。
+
+每个 snapshot slot 对应的 enabled legacy work 只转换 `title`、`subtitle`、严格位于
+`0..100%` 的百分比 focus，以及缺失时默认为 `false` 的 `locked`。disabled work 直接
+省略且不产生 unresolved；snapshot unresolved work 从 composition 省略并保留在 unresolved
+报告。`image`、`preview`、preview/full 尺寸、路径、URL、旧 `assetId` 和 `work.code` 均不
+进入 V1 slot；非法 focus 产生 error，不得静默夹紧或回退。
+
+适配结果是确定性的三态联合：`ready` 包含未来唯一允许持久化的 `document`；
+`blocked-by-unresolved` 只包含供审计或预览的 `documentPreview`，未解析素材从 composition
+省略，且 unresolved 清零前不得把迁移推进为 completed；`invalid` 的 `document` 为
+`null`。ready document 与 blocked documentPreview 都必须通过 `parseSiteDocumentV1()`，
+并返回 parser 的深度分离数据。errors、unresolved 与聚合 warnings 使用稳定 code 和
+确定性排序；`theme`、`work.code` 和 `fullWidth` 等不进入 V1 的信息必须产生 warning，
+未知字段和非法必填值必须产生 error，不能静默丢弃或夹紧 focus。
+
+该适配器不执行 I/O，不读 D1、文件系统、manifest、私有 migration state 或网络；不生成
+Site/Asset UUID，不接受 UUID generator，也不从路径、URL、文件名、`work.code`、SHA-256
+或 legacy `assetId` 推导身份。PR-01C 不修改当前 API、页面、后台、D1 或 importer 行为，
+也不实现 repository、数据库 migration、双读/双写、checkpoint 持久化、原子事务、V1
+endpoint、AssetResolver 或 Work 实体。
+
 ## Step 2：引入新表
 
 创建：
