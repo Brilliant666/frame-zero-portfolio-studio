@@ -72,7 +72,7 @@ D1 或本地照片兼容能力的前提下，建立版本化内容、稳定标�
   `blocked-by-unresolved` 保持 pending，冲突不产生完成 checkpoint。这里只完成未接线的
   纯规划协议与行为测试，不写入或覆盖原数据。public Asset ID、公开 URL 和对象存储 key
   等待 ADR-0008。
-- **PR-01C：兼容适配器（本 PR）** — 接收未经 `normalizeSiteContent()` 掩盖的 raw
+- **PR-01C：兼容适配器（已完成）** — 接收未经 `normalizeSiteContent()` 掩盖的 raw
   `unknown` legacy JSON，严格验证根内容，并将 11 个冻结模板一对一映射为
   `templateVersion: 1` 的 V1 compositions。每个模板的 raw `templateWorks` 自有 key 使用
   explicit 布局（显式 `[]` 保留为空 composition），key 缺失则使用调用方预计算的全局
