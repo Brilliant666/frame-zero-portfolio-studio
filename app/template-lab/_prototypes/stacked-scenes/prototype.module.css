@@ -1,0 +1,578 @@
+.prototype {
+  --stack-shell: #19131a;
+  --stack-paper: #eee5d7;
+  --stack-ink: #211a20;
+  --stack-muted: #65565d;
+  --stack-clay: #d9664e;
+  --stack-indigo: #4a4aa8;
+  --stack-moss: #a7b7a3;
+  --stack-rule: #57464f;
+  --stack-focus: #fff267;
+  --stack-card-focus: #34205f;
+  min-width: 0;
+  min-height: 100%;
+  overflow-x: clip;
+  background: var(--stack-shell);
+  color: var(--stack-paper);
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+  scroll-behavior: smooth;
+}
+
+.prototype *,
+.prototype *::before,
+.prototype *::after {
+  box-sizing: border-box;
+}
+
+.prototype a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.hero {
+  display: grid;
+  min-height: 100svh;
+  padding: clamp(1rem, 3vw, 2.5rem) clamp(1rem, 4vw, 4rem);
+  border-bottom: 1px solid var(--stack-rule);
+  background:
+    linear-gradient(135deg, transparent 0 64%, rgb(200 78 54 / 18%) 64% 65%, transparent 65%),
+    var(--stack-shell);
+  grid-template-rows: auto 1fr auto;
+}
+
+.heroTopline {
+  display: flex;
+  gap: 1rem 2rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.heroTopline p,
+.eyebrow,
+.sceneNav > p,
+.sequenceIntro > p:first-child,
+.sceneHeader p,
+.captionCopy > p:first-child,
+.sceneFacts dt {
+  margin: 0;
+  color: var(--stack-muted);
+  font: 680 0.66rem/1.4 var(--font-geist-mono), monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.heroTopline p,
+.eyebrow,
+.sceneNav > p {
+  color: #bcaeb5;
+}
+
+.heroBody {
+  display: grid;
+  width: min(100%, 92rem);
+  gap: clamp(1rem, 2vw, 1.7rem);
+  align-content: center;
+  padding-block: clamp(4rem, 10vh, 8rem);
+  animation: stack-intro 520ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+.heroBody h1 {
+  max-width: 9ch;
+  margin: 0;
+  font-size: clamp(4rem, 13vw, 11rem);
+  font-weight: 580;
+  letter-spacing: -0.085em;
+  line-height: 0.78;
+}
+
+.heroSummary {
+  max-width: 46rem;
+  margin: 0;
+  color: #c9bdc2;
+  font-size: clamp(1rem, 1.6vw, 1.35rem);
+  line-height: 1.65;
+}
+
+.sceneNav {
+  display: grid;
+  gap: 0.8rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--stack-rule);
+}
+
+.sceneNav ol {
+  display: grid;
+  padding: 0;
+  margin: 0;
+  gap: 0.55rem;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  list-style: none;
+}
+
+.sceneNav a {
+  display: flex;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding-block: 0.65rem;
+  gap: 0.7rem;
+  align-items: center;
+  border-bottom: 1px solid var(--stack-rule);
+  color: #c9bdc2;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.sceneNav a span {
+  color: var(--stack-clay);
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.sceneNav a:hover,
+.sceneFooter a:hover {
+  opacity: 0.7;
+  transform: translateY(-0.12rem);
+}
+
+.hero a:focus-visible {
+  outline: 3px solid var(--stack-focus);
+  outline-offset: 0.3rem;
+}
+
+.sequence {
+  padding: clamp(4rem, 8vw, 9rem) clamp(1rem, 4vw, 4rem) 0;
+  background: var(--stack-shell);
+}
+
+.sequenceIntro {
+  display: grid;
+  width: min(100%, 76rem);
+  padding-bottom: clamp(4rem, 9vw, 9rem);
+  gap: 1.15rem;
+}
+
+.sequenceIntro > p:first-child {
+  color: var(--stack-clay);
+}
+
+.sequenceIntro h2,
+.sequenceIntro p {
+  margin: 0;
+}
+
+.sequenceIntro h2 {
+  max-width: 14ch;
+  font-size: clamp(2.8rem, 8vw, 7.5rem);
+  font-weight: 560;
+  letter-spacing: -0.07em;
+  line-height: 0.88;
+}
+
+.sequenceIntro > p:last-child {
+  max-width: 46rem;
+  color: #c9bdc2;
+  font-size: clamp(1rem, 1.5vw, 1.25rem);
+  line-height: 1.65;
+}
+
+.stack {
+  display: grid;
+  padding-bottom: clamp(10rem, 28vh, 22rem);
+  gap: clamp(8rem, 22vh, 16rem);
+}
+
+.scene {
+  position: sticky;
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: 35rem;
+  height: calc(100svh - 5.75rem);
+  overflow: hidden;
+  border: 1px solid var(--stack-rule);
+  border-radius: clamp(0.9rem, 2vw, 1.65rem);
+  background: var(--card-paper, var(--stack-paper));
+  color: var(--stack-ink);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  scroll-margin-top: 1rem;
+  box-shadow: 0 -0.45rem 0 0 var(--card-accent, var(--stack-clay));
+}
+
+.scene:focus-visible {
+  outline: 4px solid var(--stack-card-focus);
+  outline-offset: -0.6rem;
+}
+
+.scene a:focus-visible {
+  outline: 3px solid var(--stack-card-focus);
+  outline-offset: 0.3rem;
+}
+
+.layerOne {
+  top: 1rem;
+  z-index: 1;
+  --card-paper: #eee5d7;
+  --card-accent: #9a3025;
+}
+
+.layerTwo {
+  top: 1.75rem;
+  z-index: 2;
+  --card-paper: #dfe7df;
+  --card-accent: #405f50;
+}
+
+.layerThree {
+  top: 2.5rem;
+  z-index: 3;
+  --card-paper: #e1dff0;
+  --card-accent: #4a4aa8;
+}
+
+.layerFour {
+  top: 3.25rem;
+  z-index: 4;
+  --card-paper: #ecdccf;
+  --card-accent: #87374b;
+}
+
+.layerFive {
+  top: 4rem;
+  z-index: 5;
+  --card-paper: #dae3e6;
+  --card-accent: #1d606a;
+}
+
+.sceneHeader,
+.sceneFooter {
+  display: flex;
+  min-width: 0;
+  padding: 0.85rem clamp(1rem, 2vw, 1.6rem);
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sceneHeader {
+  border-bottom: 1px solid var(--stack-rule);
+}
+
+.sceneHeader p:last-child {
+  overflow: hidden;
+  max-width: 52ch;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sceneBody {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1.45fr) minmax(16rem, 0.55fr);
+}
+
+.mediaField {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  padding: clamp(1rem, 3vw, 2.5rem);
+  place-items: center;
+  overflow: hidden;
+  border-right: 1px solid var(--stack-rule);
+  background: var(--stack-ink);
+}
+
+.scenePlaceholder {
+  width: 100%;
+  max-width: min(100%, 66rem);
+  border-color: #c9bdc2;
+  background-color: #2a2128;
+  color: #d9cfd3;
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.scenePlaceholder[data-photo-ratio="2:3"] {
+  max-width: min(100%, 66rem, 48svh);
+}
+
+.scenePlaceholder[data-photo-ratio="3:2"] {
+  max-width: min(100%, 66rem, 108svh);
+}
+
+.scenePlaceholder[data-photo-ratio="16:9"] {
+  max-width: min(100%, 66rem, 128svh);
+}
+
+.scene:focus-visible .scenePlaceholder {
+  opacity: 0.9;
+  transform: scale(0.992);
+}
+
+.captionPanel {
+  display: grid;
+  min-width: 0;
+  padding: clamp(1rem, 2.5vw, 2.2rem);
+  gap: clamp(1rem, 2vh, 2rem);
+  align-content: space-between;
+  overflow: hidden;
+}
+
+.sceneNumber {
+  margin: 0;
+  color: var(--card-accent, var(--stack-clay));
+  font: 620 clamp(4rem, 10vw, 9rem)/0.72 var(--font-geist-sans), Arial, sans-serif;
+  letter-spacing: -0.08em;
+}
+
+.captionCopy {
+  display: grid;
+  min-width: 0;
+  gap: 0.8rem;
+}
+
+.captionCopy h3,
+.captionCopy p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.captionCopy > p:first-child {
+  color: var(--card-accent, var(--stack-clay));
+}
+
+.captionCopy h3 {
+  font-size: clamp(1.8rem, 3.5vw, 4rem);
+  font-weight: 620;
+  letter-spacing: -0.055em;
+  line-height: 0.95;
+}
+
+.captionCopy > p:last-child {
+  color: var(--stack-muted);
+  font-size: 0.93rem;
+  line-height: 1.55;
+}
+
+.sceneFacts {
+  display: grid;
+  padding: 0;
+  margin: 0;
+  border-top: 1px solid var(--stack-rule);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sceneFacts div {
+  display: grid;
+  min-width: 0;
+  padding-top: 0.75rem;
+  gap: 0.25rem;
+}
+
+.sceneFacts div + div {
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--stack-rule);
+}
+
+.sceneFacts dd {
+  margin: 0;
+  font: 680 0.76rem/1.35 var(--font-geist-mono), monospace;
+}
+
+.sceneFooter {
+  border-top: 1px solid var(--stack-rule);
+}
+
+.sceneFooter a {
+  display: inline-flex;
+  min-height: 2.75rem;
+  gap: 0.55rem;
+  align-items: center;
+  font: 680 0.68rem/1.3 var(--font-geist-mono), monospace;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+@keyframes stack-intro {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 960px) {
+  .heroBody h1 {
+    font-size: clamp(4rem, 15vw, 9rem);
+  }
+
+  .sceneNav ol {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .scene {
+    height: calc(100svh - 5rem);
+  }
+
+  .sceneBody {
+    grid-template-columns: minmax(0, 1.2fr) minmax(14rem, 0.8fr);
+  }
+
+  .mediaField,
+  .captionPanel {
+    padding: 1.15rem;
+  }
+
+  .sceneNumber {
+    font-size: clamp(3rem, 9vw, 6rem);
+  }
+
+  .captionCopy h3 {
+    font-size: clamp(1.7rem, 4.5vw, 3rem);
+  }
+}
+
+@media (max-width: 720px) {
+  .heroTopline {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .heroBody h1 {
+    font-size: clamp(3.6rem, 21vw, 7rem);
+  }
+
+  .sceneNav ol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sequence {
+    padding-inline: 0.85rem;
+  }
+
+  .stack {
+    padding-bottom: 5rem;
+    gap: 1.5rem;
+  }
+
+  .scene,
+  .layerOne,
+  .layerTwo,
+  .layerThree,
+  .layerFour,
+  .layerFive {
+    position: relative;
+    top: auto;
+    z-index: auto;
+    min-height: 0;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sceneBody {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mediaField {
+    min-height: 58svh;
+    border-right: 0;
+    border-bottom: 1px solid var(--stack-rule);
+  }
+
+  .captionPanel {
+    overflow: visible;
+  }
+
+  .sceneNumber {
+    font-size: clamp(3.5rem, 18vw, 6rem);
+  }
+
+  .captionCopy h3 {
+    font-size: clamp(2rem, 10vw, 3.5rem);
+  }
+}
+
+@media (max-width: 400px) {
+  .hero,
+  .sequence {
+    padding-inline: 0.75rem;
+  }
+
+  .heroBody h1 {
+    font-size: clamp(3rem, 18vw, 4.5rem);
+    letter-spacing: -0.075em;
+    overflow-wrap: anywhere;
+  }
+
+  .sceneNav ol {
+    grid-template-columns: 1fr;
+  }
+
+  .sceneHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sceneHeader p:last-child {
+    max-width: 100%;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .sceneFooter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .sceneFooter a:last-child {
+    justify-content: flex-end;
+  }
+
+  .mediaField,
+  .captionPanel,
+  .sceneHeader,
+  .sceneFooter {
+    padding-inline: 0.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prototype {
+    scroll-behavior: auto;
+  }
+
+  .heroBody {
+    animation: none;
+  }
+
+  .scene,
+  .layerOne,
+  .layerTwo,
+  .layerThree,
+  .layerFour,
+  .layerFive {
+    position: relative;
+    top: auto;
+    z-index: auto;
+    min-height: 0;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sceneNav a,
+  .scenePlaceholder,
+  .sceneFooter a {
+    transition: none;
+  }
+
+  .sceneNav a:hover,
+  .scene:focus-visible .scenePlaceholder,
+  .sceneFooter a:hover {
+    transform: none;
+  }
+}

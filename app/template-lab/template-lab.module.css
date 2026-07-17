@@ -1,0 +1,196 @@
+.labBoundary {
+  --lab-paper: #f2efe7;
+  --lab-ink: #151512;
+  min-height: 100vh;
+  overflow-x: clip;
+  background: var(--lab-paper);
+  color: var(--lab-ink);
+}
+
+.index {
+  min-height: 100vh;
+  background: var(--lab-paper);
+  color: var(--lab-ink);
+}
+
+.indexHeader {
+  display: grid;
+  gap: clamp(1.4rem, 3vw, 3rem);
+  min-height: min(52rem, 88svh);
+  align-content: end;
+  padding: clamp(1rem, 4vw, 4rem);
+  border-bottom: 1px solid currentColor;
+}
+
+.indexEyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem 2rem;
+  font: 650 0.68rem/1.2 var(--font-geist-mono), monospace;
+  letter-spacing: 0.08em;
+}
+
+.indexHeader h1,
+.indexHeader p {
+  margin: 0;
+}
+
+.indexHeader h1 {
+  max-width: 11ch;
+  font-size: clamp(4rem, 15vw, 13rem);
+  font-weight: 520;
+  letter-spacing: -0.085em;
+  line-height: 0.76;
+}
+
+.indexHeader > p {
+  max-width: 52rem;
+  font-size: clamp(1rem, 1.7vw, 1.35rem);
+  line-height: 1.65;
+}
+
+.prototypeList {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prototypeCard {
+  display: grid;
+  grid-template-columns: minmax(4rem, 0.25fr) minmax(14rem, 0.7fr) minmax(18rem, 1.4fr) auto;
+  gap: clamp(1rem, 3vw, 3rem);
+  align-items: start;
+  padding: clamp(1.5rem, 4vw, 4rem);
+  border-bottom: 1px solid currentColor;
+}
+
+.cardNumber {
+  font: 520 clamp(2rem, 5vw, 5rem)/0.85 var(--font-geist-mono), monospace;
+  letter-spacing: -0.06em;
+}
+
+.cardTitle {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.cardTitle span,
+.cardTitle code,
+.prototypeCard dt {
+  font: 650 0.64rem/1.3 var(--font-geist-mono), monospace;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.cardTitle h2 {
+  margin: 0.7rem 0 0;
+  font-size: clamp(1.9rem, 3.4vw, 4rem);
+  font-weight: 540;
+  letter-spacing: -0.06em;
+  line-height: 0.95;
+}
+
+.prototypeCard dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.5rem;
+  min-width: 0;
+  margin: 0;
+}
+
+.prototypeCard dl div {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.prototypeCard dt,
+.prototypeCard dd {
+  margin: 0;
+}
+
+.prototypeCard dd {
+  line-height: 1.5;
+}
+
+.prototypeCard > a {
+  display: inline-flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 2.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid currentColor;
+  font: 700 0.75rem/1 var(--font-geist-mono), monospace;
+  white-space: nowrap;
+}
+
+.prototypeCard > a:focus-visible,
+.indexFooter a:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 0.35rem;
+}
+
+.indexFooter {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: clamp(1.5rem, 4vw, 4rem);
+  background: #151512;
+  color: #fffef8;
+}
+
+.indexFooter p {
+  margin: 0;
+}
+
+.indexFooter a {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  border-bottom: 1px solid currentColor;
+}
+
+@media (max-width: 920px) {
+  .prototypeCard {
+    grid-template-columns: minmax(3rem, 0.2fr) minmax(0, 1fr);
+  }
+
+  .prototypeCard dl,
+  .prototypeCard > a {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 560px) {
+  .indexHeader {
+    min-height: 72svh;
+  }
+
+  .indexHeader h1 {
+    font-size: clamp(3.5rem, 25vw, 7rem);
+    line-height: 0.82;
+  }
+
+  .prototypeCard {
+    grid-template-columns: 1fr;
+  }
+
+  .prototypeCard dl,
+  .prototypeCard > a {
+    grid-column: 1;
+  }
+
+  .prototypeCard dl {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .labBoundary,
+  .labBoundary * {
+    scroll-behavior: auto !important;
+  }
+}

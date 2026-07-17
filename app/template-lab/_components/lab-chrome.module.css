@@ -1,0 +1,186 @@
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.status span {
+  padding: 0.38rem 0.55rem;
+  border: 1px solid currentColor;
+  font: 650 0.63rem/1 var(--font-geist-mono), monospace;
+  letter-spacing: 0.06em;
+}
+
+.backLink {
+  display: inline-flex;
+  gap: 0.55rem;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid currentColor;
+  font: 650 0.75rem/1.2 var(--font-geist-mono), monospace;
+  letter-spacing: 0.05em;
+}
+
+.backLink:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 0.35rem;
+}
+
+.placeholder {
+  position: relative;
+  display: grid;
+  width: 100%;
+  overflow: hidden;
+  place-items: center;
+  border: 1px solid currentColor;
+  background:
+    linear-gradient(90deg, transparent calc(50% - 0.5px), currentColor 50%, transparent calc(50% + 0.5px)),
+    linear-gradient(transparent calc(50% - 0.5px), currentColor 50%, transparent calc(50% + 0.5px));
+  color: inherit;
+  isolation: isolate;
+}
+
+.placeholder::before,
+.placeholder::after {
+  position: absolute;
+  content: "";
+  pointer-events: none;
+}
+
+.placeholder::before {
+  inset: 8%;
+  border: 1px solid currentColor;
+  opacity: 0.45;
+}
+
+.placeholder::after {
+  width: 38%;
+  aspect-ratio: 1;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  opacity: 0.35;
+}
+
+.placeholderIndex,
+.placeholderLabel {
+  position: absolute;
+  z-index: 1;
+  font: 650 0.62rem/1 var(--font-geist-mono), monospace;
+  letter-spacing: 0.08em;
+}
+
+.placeholderIndex {
+  top: 0.75rem;
+  left: 0.75rem;
+}
+
+.placeholderLabel {
+  right: 0.75rem;
+  bottom: 0.75rem;
+}
+
+.placeholderFocus {
+  position: relative;
+  z-index: 1;
+  width: 0.6rem;
+  height: 0.6rem;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.brief {
+  display: grid;
+  gap: clamp(2rem, 5vw, 5rem);
+  padding: clamp(4rem, 8vw, 8rem) clamp(1rem, 5vw, 5rem);
+  background: #f3f0e9;
+  color: #171714;
+}
+
+.briefIntro {
+  display: grid;
+  max-width: 58rem;
+  gap: 1rem;
+}
+
+.briefIntro p,
+.briefIntro h2,
+.briefGrid dt,
+.briefGrid dd {
+  margin: 0;
+}
+
+.briefIntro > p:first-child,
+.briefGrid dt {
+  font: 650 0.68rem/1.3 var(--font-geist-mono), monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.briefIntro h2 {
+  font-size: clamp(2.5rem, 7vw, 7rem);
+  font-weight: 520;
+  letter-spacing: -0.065em;
+  line-height: 0.9;
+}
+
+.briefIntro > p:last-child {
+  max-width: 45rem;
+  font-size: clamp(1rem, 1.6vw, 1.3rem);
+  line-height: 1.65;
+}
+
+.briefGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid currentColor;
+}
+
+.briefGrid div {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 1.25rem 1.25rem 1.5rem 0;
+  border-bottom: 1px solid currentColor;
+}
+
+.briefGrid div:nth-child(odd) {
+  padding-right: 1.25rem;
+  border-right: 1px solid currentColor;
+}
+
+.briefGrid div:nth-child(even) {
+  padding-left: 1.25rem;
+}
+
+.briefGrid dd {
+  max-width: 44rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.briefGrid code {
+  font-family: var(--font-geist-mono), monospace;
+}
+
+@media (max-width: 680px) {
+  .briefGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .briefGrid div,
+  .briefGrid div:nth-child(odd),
+  .briefGrid div:nth-child(even) {
+    padding-inline: 0;
+    border-right: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backLink {
+    scroll-behavior: auto;
+  }
+}

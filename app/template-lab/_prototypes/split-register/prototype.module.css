@@ -1,0 +1,539 @@
+.root {
+  --chalk: #f4f1e8;
+  --chalk-raised: #fbf9f2;
+  --ink: #171a19;
+  --muted: #5f625e;
+  --rule: rgba(23, 26, 25, 0.31);
+  --rule-strong: #171a19;
+  --vermilion: #b63824;
+  min-width: 0;
+  min-height: 100vh;
+  overflow-x: clip;
+  background: var(--chalk);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+  scroll-behavior: smooth;
+}
+
+.root *,
+.root *::before,
+.root *::after {
+  box-sizing: border-box;
+}
+
+.masthead {
+  display: grid;
+  gap: clamp(2rem, 5vw, 5rem);
+  min-height: min(54rem, 94svh);
+  align-content: space-between;
+  padding: clamp(1rem, 3vw, 3rem);
+  border-bottom: 1px solid var(--rule-strong);
+  background:
+    linear-gradient(90deg, transparent calc(25% - 0.5px), var(--rule) 25%, transparent calc(25% + 0.5px)),
+    linear-gradient(90deg, transparent calc(75% - 0.5px), var(--rule) 75%, transparent calc(75% + 0.5px)),
+    var(--chalk);
+}
+
+.mastheadTopline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  align-items: start;
+  justify-content: space-between;
+}
+
+.mastheadTopline p,
+.eyebrow,
+.sectionHeading > p:first-child,
+.directoryLabel,
+.annotationLabel {
+  margin: 0;
+  font: 680 0.64rem/1.3 var(--font-geist-mono), monospace;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.mastheadTopline p {
+  padding-top: 0.75rem;
+}
+
+.titleBlock {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(16rem, 0.5fr);
+  gap: 1rem clamp(2rem, 6vw, 7rem);
+  align-items: end;
+}
+
+.titleBlock h1 {
+  grid-column: 1 / -1;
+  max-width: 11ch;
+  margin: 0;
+  font-size: clamp(4.5rem, 14vw, 14rem);
+  font-weight: 520;
+  letter-spacing: -0.085em;
+  line-height: 0.74;
+}
+
+.eyebrow {
+  color: var(--vermilion);
+}
+
+.dek {
+  grid-column: 2;
+  margin: 0;
+  font-size: clamp(1rem, 1.35vw, 1.25rem);
+  line-height: 1.65;
+}
+
+.register {
+  padding: clamp(4rem, 8vw, 9rem) clamp(1rem, 3vw, 3rem);
+}
+
+.sectionHeading {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.35fr) minmax(18rem, 1fr) minmax(16rem, 0.55fr);
+  gap: clamp(1rem, 4vw, 4rem);
+  align-items: end;
+  padding-bottom: clamp(2rem, 5vw, 5rem);
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.sectionHeading h2,
+.sectionHeading p {
+  margin: 0;
+}
+
+.sectionHeading h2 {
+  max-width: 18ch;
+  font-size: clamp(2.5rem, 6vw, 7rem);
+  font-weight: 520;
+  letter-spacing: -0.065em;
+  line-height: 0.9;
+}
+
+.sectionHeading > p:last-child {
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.registerLayout {
+  display: grid;
+  grid-template-columns: minmax(13rem, 0.28fr) minmax(0, 1fr);
+  gap: clamp(1.5rem, 4vw, 5rem);
+  align-items: start;
+  min-width: 0;
+  padding-top: 1px;
+}
+
+.directory {
+  position: sticky;
+  top: 1rem;
+  min-width: 0;
+  padding-top: 1.25rem;
+}
+
+.directoryLabel {
+  padding-bottom: 1rem;
+  color: var(--vermilion);
+}
+
+.directory ol,
+.ledger {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.directory li {
+  border-top: 1px solid var(--rule);
+}
+
+.directory li:last-child {
+  border-bottom: 1px solid var(--rule);
+}
+
+.directory a {
+  display: grid;
+  grid-template-columns: 2.2rem minmax(0, 1fr) auto;
+  gap: 0.8rem;
+  align-items: center;
+  min-height: 4.35rem;
+  padding: 0.65rem 0.35rem;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 160ms ease, padding 160ms ease;
+}
+
+.directory a:hover {
+  padding-inline: 0.7rem;
+  background: var(--chalk-raised);
+}
+
+.directory a:focus-visible,
+.annotation a:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 7px var(--vermilion);
+}
+
+.directoryNumber,
+.directoryArrow,
+.entryNumber,
+.imageLedger figcaption,
+.annotation dl,
+.annotation a {
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.directoryNumber {
+  color: var(--vermilion);
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.directoryText {
+  display: grid;
+  min-width: 0;
+  gap: 0.22rem;
+}
+
+.directoryText strong,
+.directoryText small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.directoryText strong {
+  font-size: 0.82rem;
+}
+
+.directoryText small {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.directoryArrow {
+  font-size: 0.72rem;
+}
+
+.ledger {
+  min-width: 0;
+}
+
+.ledger > li {
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: minmax(3.5rem, 0.12fr) minmax(0, 1fr) minmax(14rem, 0.42fr);
+  gap: clamp(1rem, 2.5vw, 2.5rem);
+  min-width: 0;
+  padding: clamp(2rem, 5vw, 5rem) 0;
+  scroll-margin-top: 1rem;
+}
+
+.entry:target {
+  padding-inline: 1rem;
+  outline: 2px solid var(--vermilion);
+  outline-offset: -2px;
+  box-shadow: inset 0.65rem 0 0 var(--vermilion);
+}
+
+.entry:focus-visible {
+  outline: 4px double var(--ink);
+  outline-offset: 0.45rem;
+  box-shadow: 0 0 0 0.72rem var(--chalk), 0 0 0 0.92rem var(--vermilion);
+}
+
+.entryNumber {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-start;
+}
+
+.entryNumber span {
+  color: var(--vermilion);
+  font-size: clamp(1.8rem, 3vw, 3.8rem);
+  font-weight: 520;
+  letter-spacing: -0.07em;
+  line-height: 0.85;
+}
+
+.entryNumber small {
+  color: var(--muted);
+  font-size: 0.58rem;
+}
+
+.imageLedger {
+  min-width: 0;
+  margin: 0;
+}
+
+.photoPlaceholder {
+  background:
+    linear-gradient(135deg, rgba(182, 56, 36, 0.08), transparent 42%),
+    var(--chalk-raised);
+  color: var(--ink);
+}
+
+.imageLedger figcaption {
+  display: grid;
+  grid-template-columns: minmax(7rem, 0.35fr) minmax(0, 1fr);
+  gap: 1rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.65rem;
+  line-height: 1.45;
+}
+
+.imageLedger figcaption span:first-child {
+  color: var(--vermilion);
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.annotation {
+  align-self: stretch;
+  min-width: 0;
+  padding-left: clamp(1rem, 2vw, 2rem);
+  border-left: 1px solid var(--rule-strong);
+}
+
+.annotationLabel {
+  color: var(--vermilion);
+}
+
+.annotation h3 {
+  margin: clamp(2rem, 6vw, 6rem) 0 1rem;
+  font-size: clamp(1.6rem, 3vw, 3.4rem);
+  font-weight: 540;
+  letter-spacing: -0.055em;
+  line-height: 0.96;
+}
+
+.annotation > p:not(.annotationLabel) {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.annotation dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 2rem 0 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+.annotation dl div {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.75rem 0;
+}
+
+.annotation dt,
+.annotation dd {
+  margin: 0;
+  font-size: 0.62rem;
+}
+
+.annotation dt {
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.annotation dd {
+  font-weight: 750;
+}
+
+.annotation a {
+  display: inline-flex;
+  gap: 0.7rem;
+  align-items: center;
+  margin-top: 1.5rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--rule-strong);
+  color: inherit;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+@media (max-width: 1080px) {
+  .sectionHeading {
+    grid-template-columns: minmax(7rem, 0.3fr) minmax(0, 1fr);
+  }
+
+  .sectionHeading > p:last-child {
+    grid-column: 2;
+  }
+
+  .registerLayout {
+    grid-template-columns: minmax(11rem, 0.25fr) minmax(0, 1fr);
+    gap: 2rem;
+  }
+
+  .directoryText small {
+    display: none;
+  }
+
+  .entry {
+    grid-template-columns: 3rem minmax(0, 1fr);
+  }
+
+  .annotation {
+    grid-column: 2;
+    padding: 1.5rem 0 0;
+    border-top: 1px solid var(--rule);
+    border-left: 0;
+  }
+
+  .annotation h3 {
+    margin-top: 1.5rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .masthead {
+    min-height: 80svh;
+    background: var(--chalk);
+  }
+
+  .mastheadTopline {
+    display: grid;
+  }
+
+  .titleBlock {
+    grid-template-columns: 1fr;
+  }
+
+  .titleBlock h1,
+  .dek {
+    grid-column: 1;
+  }
+
+  .titleBlock h1 {
+    font-size: clamp(4rem, 22vw, 8rem);
+    line-height: 0.78;
+  }
+
+  .sectionHeading {
+    grid-template-columns: 1fr;
+  }
+
+  .sectionHeading > p:last-child {
+    grid-column: 1;
+  }
+
+  .registerLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .directory {
+    position: static;
+    padding: 1.25rem 0 2rem;
+  }
+
+  .directory ol {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border-top: 1px solid var(--rule-strong);
+    border-left: 1px solid var(--rule-strong);
+  }
+
+  .directory li,
+  .directory li:last-child {
+    min-width: 0;
+    border-top: 0;
+    border-right: 1px solid var(--rule-strong);
+    border-bottom: 1px solid var(--rule-strong);
+  }
+
+  .directory a {
+    grid-template-columns: 1fr;
+    min-height: 5rem;
+    padding: 0.65rem;
+  }
+
+  .directory a:hover {
+    padding-inline: 0.65rem;
+  }
+
+  .directoryText small,
+  .directoryArrow {
+    display: none;
+  }
+
+  .entry {
+    grid-template-columns: 1fr;
+    padding-block: 3.5rem;
+  }
+
+  .entry:target {
+    padding-inline: 0.75rem;
+  }
+
+  .entryNumber,
+  .annotation,
+  .imageLedger {
+    grid-column: 1;
+  }
+
+  .entryNumber {
+    flex-direction: row;
+    align-items: baseline;
+  }
+
+  .annotation {
+    padding-top: 1.25rem;
+  }
+
+  .imageLedger figcaption {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .masthead,
+  .register {
+    padding-inline: 0.75rem;
+  }
+
+  .masthead {
+    min-height: 44rem;
+  }
+
+  .titleBlock h1 {
+    font-size: clamp(3.8rem, 24vw, 6rem);
+    overflow-wrap: anywhere;
+  }
+
+  .directory ol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .directory a {
+    min-height: 4.6rem;
+  }
+
+  .annotation dl {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root,
+  .root * {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}
