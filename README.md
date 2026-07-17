@@ -52,9 +52,9 @@ resolves or fetches it.
 Manual compositions may intentionally reuse one asset in multiple slots;
 automatic layout keeps its stricter no-reuse rule.
 
-This contract is intentionally not connected to the current D1 API yet. The
-homepage and admin still use legacy `SiteContent` until a separate compatibility
-adapter is reviewed. A document is not a self-contained photo export, and asset
+This contract and the pure PR-01C compatibility adapter are intentionally not
+connected to the current D1 API yet. The homepage and admin still use legacy
+`SiteContent`. A document is not a self-contained photo export, and asset
 existence and target-Site ownership must later be validated by a site-scoped
 resolver or repository.
 
@@ -87,6 +87,53 @@ A later persistence executor must commit `newMappings` and the completed
 checkpoint in the same atomic transaction. PR-01B defines that planning
 requirement only; it does not implement the database transaction. Completed
 retries remain stable no-ops.
+
+## Legacy SiteContent compatibility adapter
+
+`app/legacy-site-content-adapter.ts` is the unconnected PR-01C compatibility
+boundary from raw legacy `SiteContent` JSON to `SiteDocumentV1`. It accepts the
+original `unknown` value and never runs `normalizeSiteContent()`, so an unknown
+template, malformed required field, unsupported theme, or value that the legacy
+runtime would replace with demo content remains diagnosable. Root content is
+strictly validated and deeply copied, and every successful document or blocked
+preview is returned from `parseSiteDocumentV1()`.
+
+The adapter materializes compositions for all eleven frozen V1 templates with
+`templateVersion: 1`. An own `templateWorks` key selects the explicit layout,
+including an explicit empty array; a missing key selects the caller's
+precomputed global-works fallback. The caller supplies one deeply read-only,
+single-Site, slot-aware resolution snapshot covering all eleven templates. Each
+snapshot entry records the template, version, explicit/fallback mode, legacy
+source position and slot index, plus either a resolved UUID v4 Asset ID or an
+unresolved reason. The adapter does not call the layout algorithm or derive a
+slot assignment itself.
+
+For each snapshot-provided slot, a resolved enabled work contributes its
+`title`, `subtitle`, strict `0..100%` focus point, and `locked` state (defaulting
+to `false`) together with the snapshot UUID. A disabled work is omitted without
+creating an unresolved item. An unresolved work is also omitted from the
+composition but remains in the unresolved report. Legacy image/preview values,
+dimensions, display code, and old asset reference never enter the V1 slot;
+invalid focus is an error rather than a clamp or demo fallback.
+
+Results are a deterministic three-state union. `ready` contains the only
+document that a future persistence executor may save. `blocked-by-unresolved`
+contains only `documentPreview`; unresolved slots are omitted from that preview,
+and it must never be treated as a completed migration document. `invalid`
+contains `document: null`. Stable, sorted errors and unresolved diagnostics
+identify blocking input or asset-resolution problems; aggregated warnings make
+unsupported `theme`, dropped `work.code`, and dropped `fullWidth` visible rather
+than silently discarding them. Resolved snapshot IDs receive an additional UUID
+v4 check because the V1 parser intentionally treats Asset IDs as opaque.
+
+This adapter performs no I/O and allocates no identity. It does not read D1, the
+filesystem, the photo manifest, private importer state, or the network; it does
+not import a UUID generator or infer an Asset ID from a path, URL, filename,
+display code, SHA-256 value, or legacy `assetId`. PR-01C does not connect the
+adapter to the current API, homepage, admin, importer, or database. The legacy
+API and page behavior therefore remain unchanged, while repository, double-read,
+checkpoint persistence, atomic migration writes, and runtime wiring stay in
+later PRs.
 
 Theme overrides are outside the executable V1 contract until a closed,
 sanitized schema and explicit version-compatibility policy are accepted.
@@ -182,6 +229,7 @@ credential formats appear in the worktree, index, or reachable Git history.
 npm run lint
 npm test
 npm run test:contracts
+npm run test:adapters
 npm run test:photos
 npm run photos:import -- --source "<photo-folder>"
 npm run build
