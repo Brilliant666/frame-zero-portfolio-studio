@@ -176,8 +176,11 @@ app/site-config.ts
 app/page.tsx
 app/api/site-content/route.ts
 app/chatgpt-auth.ts
-app/admin/admin-editor.tsx
-app/admin/photo-library-editor.tsx
+app/admin/layout.tsx
+app/admin/admin-provider.tsx
+app/admin/admin-shell.tsx
+app/admin/layout/layout-workspace.tsx
+app/admin/advanced/advanced-editor.tsx
 app/photo-library.ts
 app/templates/catalog.ts
 app/templates/template-renderer.tsx
