@@ -136,6 +136,8 @@ test("responsive CSS exposes a mobile section switcher and single-column layout 
   ]);
   assert.match(shell, /ADMIN_SECTIONS\.map/);
   assert.match(shell, /<select value=\{current\.href\}/);
+  assert.match(css, /@media \(max-width: 1280px\) and \(min-width: 761px\)/);
+  assert.match(css, /grid-template-areas:\s*"slots editor"\s*"assets assets"/);
   assert.match(css, /@media \(max-width: 760px\)/);
   assert.match(css, /grid-template-areas: "slots" "editor" "assets"/);
   assert.match(css, /@media \(max-width: 480px\)/);
