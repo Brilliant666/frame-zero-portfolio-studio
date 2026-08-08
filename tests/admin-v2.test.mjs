@@ -87,6 +87,8 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   for (const field of ["number", "english", "name", "description", "price", "duration", "deliverables", "enabled"]) {
     assert.match(packages, new RegExp(`item\\.${field}`));
   }
+  assert.match(packages, /key=\{index\}/);
+  assert.doesNotMatch(packages, /key=\{`\$\{item\.number\}/);
   assert.match(packages, /已启用/);
   assert.match(packages, /已隐藏/);
 

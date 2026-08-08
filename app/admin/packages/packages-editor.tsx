@@ -29,7 +29,7 @@ export default function PackagesEditor() {
           const open = openIndex === index;
           const panelId = `package-panel-${index}`;
           return (
-            <article className={styles.disclosureCard} data-open={open} key={`${item.number}-${index}`}>
+            <article className={styles.disclosureCard} data-open={open} key={index}>
               <button
                 type="button"
                 className={styles.disclosureSummary}
