@@ -5,34 +5,21 @@ import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { ADMIN_SECTIONS, getAdminSection } from "./admin-navigation";
 import { formatSavedAt, useAdmin } from "./admin-provider";
+import { getAdminStatus } from "./admin-state";
 import styles from "./admin-v2.module.css";
-
-function statusLabel(phase: ReturnType<typeof useAdmin>["phase"], dirty: boolean) {
-  if (phase === "loading") return "正在读取";
-  if (phase === "saving") return "正在保存";
-  if (phase === "error") return "保存失败";
-  if (dirty) return "未保存";
-  if (phase === "success") return "保存成功";
-  return "已保存";
-}
-
-function statusTone(phase: ReturnType<typeof useAdmin>["phase"], dirty: boolean) {
-  if (phase === "error") return "error";
-  if (phase === "saving" || phase === "loading") return "busy";
-  if (dirty) return "dirty";
-  if (phase === "success") return "success";
-  return "saved";
-}
 
 export default function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
   const router = useRouter();
   const current = getAdminSection(pathname);
-  const { content, dirty, editorLabel, message, phase, save, updatedAt } = useAdmin();
+  const { content, dirty, editorLabel, loadState, message, reload, save, saveState, updatedAt } = useAdmin();
   const savedAt = formatSavedAt(updatedAt);
-  const label = statusLabel(phase, dirty);
-  const tone = statusTone(phase, dirty);
-  const saveDisabled = !dirty || phase === "loading" || phase === "saving";
+  const status = getAdminStatus(loadState, saveState, dirty);
+  const saveDisabled = !dirty || loadState !== "ready" || saveState === "saving";
+  const showStatusMessage = loadState !== "ready"
+    || saveState === "error"
+    || saveState === "saving"
+    || saveState === "success";
 
   return (
     <div className={styles.shell} data-admin-v2="true">
@@ -49,9 +36,16 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
         </div>
 
         <div className={styles.topbarActions}>
-          <div className={styles.saveStatus} data-tone={tone} aria-live="polite">
-            <strong>{label}</strong>
-            <span>{phase === "error" ? message : savedAt ? `上次保存 ${savedAt}` : editorLabel}</span>
+          <div
+            className={styles.saveStatus}
+            data-tone={status.tone}
+            data-save-state={saveState}
+            data-dirty={dirty}
+            role="status"
+            aria-atomic="true"
+          >
+            <strong>{status.label}</strong>
+            <span>{showStatusMessage ? message : savedAt ? `上次保存 ${savedAt}` : editorLabel}</span>
           </div>
           <a
             className={styles.previewLink}
@@ -66,9 +60,9 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
             className={styles.saveButton}
             onClick={() => void save()}
             disabled={saveDisabled}
-            title={!dirty && phase !== "loading" ? "没有需要保存的修改" : undefined}
+            title={!dirty && loadState === "ready" ? "没有需要保存的修改" : undefined}
           >
-            {phase === "saving" ? "正在保存…" : "保存"}
+            {saveState === "saving" ? "正在保存…" : "保存"}
           </button>
         </div>
       </header>
@@ -105,7 +99,12 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
         </aside>
 
         <main id="admin-main" className={styles.main} tabIndex={-1}>
-          {phase === "error" ? <div className={styles.errorSummary} role="alert">{message}</div> : null}
+          {loadState === "error" || loadState === "degraded" ? (
+            <div className={styles.errorSummary} role="alert">
+              <span>{message}</span>
+              <button type="button" onClick={() => void reload()}>重新读取</button>
+            </div>
+          ) : saveState === "error" ? <div className={styles.errorSummary} role="alert">{message}</div> : null}
           {children}
         </main>
       </div>

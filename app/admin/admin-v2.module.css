@@ -208,6 +208,10 @@
 }
 
 .errorSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   margin-bottom: 1rem;
   padding: .85rem 1rem;
   border: 1px solid #d7aaa0;
@@ -215,6 +219,19 @@
   color: #8b2d1d;
   font-size: .88rem;
 }
+
+.errorSummary button {
+  flex: 0 0 auto;
+  min-height: 2.4rem;
+  padding: .5rem .75rem;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.errorSummary button:focus-visible { outline: 3px solid #222; outline-offset: 2px; }
 
 .section {
   min-width: 0;

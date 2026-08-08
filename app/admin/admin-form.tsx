@@ -28,6 +28,7 @@ export function AdminSection({
         <p>{description}</p>
       </header>
       <fieldset className={styles.sectionFieldset} disabled={busy}>
+        <legend className="sr-only">{title}</legend>
         {children}
       </fieldset>
     </section>
