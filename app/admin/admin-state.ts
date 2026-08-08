@@ -29,6 +29,10 @@ export function saveStateAfterDraftChange(saveState: AdminSaveState): AdminSaveS
   return saveState === "saving" ? "saving" : "idle";
 }
 
+export function splitAdminTextareaLines(value: string) {
+  return value === "" ? [] : value.split("\n");
+}
+
 export function isAdminSaveShortcut(event: Pick<KeyboardEvent, "altKey" | "ctrlKey" | "key" | "metaKey">) {
   return !event.altKey && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s";
 }

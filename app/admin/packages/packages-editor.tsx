@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { PhotographyPackage } from "../../site-config";
 import { AdminField, AdminSection, AdminToggle } from "../admin-form";
 import { useAdmin } from "../admin-provider";
+import { splitAdminTextareaLines } from "../admin-state";
 import styles from "../admin-v2.module.css";
 
 export default function PackagesEditor() {
@@ -69,7 +70,7 @@ export default function PackagesEditor() {
                       label="交付内容"
                       help="每行填写一项，保存时继续使用原有字符串数组格式。"
                       value={item.deliverables.join("\n")}
-                      onChange={(value) => updatePackage(index, { deliverables: value.split("\n").filter(Boolean) })}
+                      onChange={(value) => updatePackage(index, { deliverables: splitAdminTextareaLines(value) })}
                     />
                   </div>
                 </div>

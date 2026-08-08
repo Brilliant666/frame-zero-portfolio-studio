@@ -96,3 +96,11 @@ test("a new draft edit clears stale success and error feedback without interrupt
   assert.equal(saveStateAfterDraftChange("error"), "idle");
   assert.equal(saveStateAfterDraftChange("saving"), "saving");
 });
+
+test("multiline package editing preserves a trailing line while the user is typing", async (t) => {
+  const { splitAdminTextareaLines } = await importAdminState(t);
+
+  assert.deepEqual(splitAdminTextareaLines(""), []);
+  assert.deepEqual(splitAdminTextareaLines("预告片\n"), ["预告片", ""]);
+  assert.deepEqual(splitAdminTextareaLines("预告片\n相册"), ["预告片", "相册"]);
+});
