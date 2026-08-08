@@ -647,6 +647,98 @@
 .libraryEmpty { display: grid; min-height: 18rem; place-items: center; align-content: center; gap: .35rem; padding: 2rem; text-align: center; }
 .libraryEmpty p { max-width: 20rem; margin: 0; color: var(--admin-v2-muted); font-size: .78rem; line-height: 1.55; }
 
+.advancedStack { display: grid; gap: 1rem; }
+.legacyDisclosure { border: 1px solid var(--admin-v2-line); background: #fff; }
+.legacySummary {
+  display: grid;
+  grid-template-columns: 4rem minmax(0, 1fr) 2rem;
+  align-items: center;
+  gap: .75rem;
+  width: 100%;
+  min-height: 5rem;
+  padding: .85rem 1rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.legacySummary:hover { background: #faf7f2; }
+.legacySummary > span:first-child { color: #8a3d12; font: 700 .72rem var(--font-geist-mono), monospace; letter-spacing: .08em; }
+.legacySummary > span:nth-child(2) { display: grid; gap: .2rem; }
+.legacySummary strong { font-size: .92rem; }
+.legacySummary small { color: var(--admin-v2-muted); font-size: .75rem; line-height: 1.45; }
+.legacySummary > span:last-child { font-size: 1.25rem; text-align: center; }
+.legacyPanel { border-top: 1px solid var(--admin-v2-line); }
+.advancedHint { margin: 0; padding: .85rem 1rem; border-bottom: 1px solid var(--admin-v2-line); background: #fff8ef; color: #6f4a34; font-size: .78rem; line-height: 1.6; }
+.legacyGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; padding: .8rem; }
+.legacyCard { display: grid; grid-template-columns: minmax(8rem, .7fr) minmax(13rem, 1.3fr); min-width: 0; border: 1px solid var(--admin-v2-line); background: #fff; }
+.legacyCard[data-enabled="false"] { opacity: .62; }
+.legacyPreview { width: 100%; height: 100%; min-height: 20rem; object-fit: cover; }
+.legacyCardBody { display: grid; min-width: 0; align-content: start; gap: .7rem; padding: .8rem; }
+.legacyCardHead { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding-bottom: .6rem; border-bottom: 1px solid var(--admin-v2-line); }
+.legacyCardHead > strong { font: 700 .75rem var(--font-geist-mono), monospace; }
+.legacyMeta { display: grid; gap: .35rem; min-width: 0; margin: 0; padding: .65rem; background: #f7f4ef; }
+.legacyMeta div { display: grid; min-width: 0; gap: .15rem; }
+.legacyMeta dt { color: var(--admin-v2-muted); font-size: .68rem; }
+.legacyMeta dd { overflow: hidden; margin: 0; font: 400 .68rem var(--font-geist-mono), monospace; text-overflow: ellipsis; white-space: nowrap; }
+.legacyOrder { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
+.legacyOrder button {
+  min-height: 2.75rem;
+  border: 1px solid var(--admin-v2-line);
+  background: #fff;
+  color: inherit;
+  font-size: .75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.legacyOrder button:disabled { opacity: .35; cursor: default; }
+
+.dangerZone { display: flex; align-items: center; justify-content: space-between; gap: 1.25rem; padding: 1rem; border: 1px solid #c99d91; background: #fff7f4; }
+.dangerHeader { display: grid; grid-template-columns: minmax(9rem, .55fr) minmax(14rem, 1fr); align-items: center; gap: 1rem; }
+.dangerHeader > div { display: grid; gap: .2rem; }
+.dangerHeader span { color: #8b2d1d; font: 700 .7rem var(--font-geist-mono), monospace; letter-spacing: .08em; }
+.dangerHeader h3 { margin: 0; font-size: 1rem; }
+.dangerHeader p { margin: 0; color: #765a52; font-size: .78rem; line-height: 1.55; }
+.dangerButton {
+  flex: 0 0 auto;
+  min-height: 2.75rem;
+  padding: .65rem .85rem;
+  border: 1px solid #8b2d1d;
+  background: transparent;
+  color: #8b2d1d;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.resetDialog {
+  width: min(30rem, calc(100% - 2rem));
+  max-width: none;
+  max-height: calc(100dvh - 2rem);
+  padding: 0;
+  overflow: auto;
+  border: 1px solid #2b201a;
+  border-radius: 0;
+  background: #fff;
+  color: var(--admin-v2-ink);
+}
+.resetDialog::backdrop { background: rgba(17, 13, 11, .68); backdrop-filter: blur(3px); }
+.resetDialogBody { display: grid; gap: .75rem; padding: 1.25rem; }
+.resetDialogBody > span { color: #8b2d1d; font: 700 .7rem var(--font-geist-mono), monospace; letter-spacing: .1em; }
+.resetDialogBody h3 { margin: 0; font-size: 1.4rem; letter-spacing: -.035em; }
+.resetDialogBody p { margin: 0; color: var(--admin-v2-muted); line-height: 1.65; }
+.resetDialogActions { display: flex; justify-content: flex-end; gap: .55rem; margin-top: .5rem; }
+.resetDialogActions button {
+  min-height: 2.75rem;
+  padding: .65rem .8rem;
+  border: 1px solid var(--admin-v2-line);
+  background: #fff;
+  color: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.resetDialogActions .confirmDanger { border-color: #8b2d1d; background: #8b2d1d; color: #fff; }
+
 .slotListButton:focus-visible,
 .libraryImportCard > button:focus-visible,
 .layoutActions button:focus-visible,
@@ -656,6 +748,14 @@
 .libraryFilters button:focus-visible,
 .assetPick:focus-visible,
 .pagination button:focus-visible {
+  outline: 3px solid #222;
+  outline-offset: 2px;
+}
+
+.legacySummary:focus-visible,
+.legacyOrder button:focus-visible,
+.dangerButton:focus-visible,
+.resetDialogActions button:focus-visible {
   outline: 3px solid #222;
   outline-offset: 2px;
 }
@@ -712,6 +812,7 @@
     grid-template-columns: 13.5rem minmax(0, 1fr);
   }
   .assetGrid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .legacyGrid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 760px) {
@@ -729,6 +830,10 @@
   .slotListButton { border-right: 1px solid var(--admin-v2-line); }
   .slotListButton:nth-child(2n) { border-right: 0; }
   .assetGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .legacyGrid { grid-template-columns: 1fr; }
+  .dangerZone,
+  .dangerHeader { display: grid; grid-template-columns: 1fr; }
+  .dangerButton { width: 100%; }
 }
 
 @media (max-width: 480px) {
@@ -772,4 +877,8 @@
   .libraryFilters button,
   .libraryFilters button:first-child { border-left: 1px solid var(--admin-v2-line); }
   .assetGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .legacySummary { grid-template-columns: 3.5rem minmax(0, 1fr) 1.5rem; padding-inline: .75rem; }
+  .legacyCard { grid-template-columns: 1fr; }
+  .legacyPreview { height: 12rem; min-height: 0; }
+  .resetDialogActions { display: grid; grid-template-columns: 1fr; }
 }
