@@ -52,8 +52,9 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
             href={`/?template=${content.activeTemplate}`}
             target="_blank"
             rel="noreferrer"
+            aria-label="在新标签页预览当前主页"
           >
-            预览当前主页 <span aria-hidden="true">↗</span>
+            <span className={styles.previewText}>预览当前主页</span> <span aria-hidden="true">↗</span>
           </a>
           <button
             type="button"

@@ -26,7 +26,7 @@ export default function TemplateEditor() {
       description="先浏览模板，再明确选择。预览不会改变当前草稿。"
     >
       <div className={styles.templateWorkbench}>
-        <div className={styles.templateList} role="list" aria-label="正式页面模板">
+        <div className={styles.templateList} role="group" aria-label="正式页面模板">
           {templateCatalog.map((template, index) => {
             const isInspected = inspected.id === template.id;
             const isDraft = content.activeTemplate === template.id;
@@ -46,23 +46,25 @@ export default function TemplateEditor() {
                   <small>{template.description}</small>
                 </span>
                 <span className={styles.templateListStatus}>
-                  {isDraft && isSaved ? "当前使用" : isDraft ? "当前草稿" : isSaved ? "已保存" : "查看"}
+                  {isInspected ? "正在查看" : isDraft && isSaved ? "当前使用" : isDraft ? "当前草稿" : isSaved ? "已保存" : "查看"}
                 </span>
               </button>
             );
           })}
         </div>
 
-        <article className={styles.templateDetail} aria-live="polite">
-          <div className={`template-swatch is-${inspected.id} ${styles.templateHero}`} aria-hidden="true">
-            <i /><b />
+        <article className={styles.templateDetail}>
+          <div className={`is-${inspected.id} ${styles.templateHeroFrame}`} aria-hidden="true">
+            <div className={`template-swatch ${styles.templateHero}`}>
+              <i /><b />
+            </div>
           </div>
           <div className={styles.templateDetailHeader}>
             <div>
               <span>{inspected.id}</span>
               <h3>{inspected.name}</h3>
             </div>
-            <strong>{inspectedIsDraft ? (draftChanged ? "草稿已选择" : "当前使用") : "仅查看"}</strong>
+            <strong aria-live="polite">{inspectedIsDraft ? (draftChanged ? "草稿已选择" : "当前使用") : "仅查看"}</strong>
           </div>
           <p className={styles.templateDescription}>{inspected.description}</p>
 
@@ -76,7 +78,7 @@ export default function TemplateEditor() {
           {!inspectedIsDraft ? (
             <div className={styles.templateNotice} role="note">
               将从“{templateCatalog.find((item) => item.id === content.activeTemplate)?.name}”切换到“{inspected.name}”。
-              各模板已有的显式槽位排版会继续保留，不会在这里静默删除。
+              模板槽位数量或比例可能不同，当前主页的素材排版可能变化；各模板已有的显式槽位排版会继续保留，不会在这里静默删除。
             </div>
           ) : null}
 

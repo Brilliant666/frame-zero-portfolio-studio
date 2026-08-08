@@ -165,6 +165,99 @@ test("PUT allows a loopback request and persists normalized content", async () =
   assert.equal(payload.updatedAt, "2026-07-11 15:00:00");
 });
 
+test("PUT preserves the complete legacy SiteContent shape at site_settings id 1", async () => {
+  const database = new MemoryD1();
+  const work = {
+    assetId: "asset_demo_01",
+    slotIndex: 0,
+    locked: true,
+    code: "FULL-01",
+    title: "FULL WORK",
+    subtitle: "Complete compatibility sentinel",
+    image: "/photos/full-01.webp",
+    preview: "/photos/card-01.webp",
+    position: "45% 55%",
+    previewWidth: 1200,
+    previewHeight: 800,
+    fullWidth: 2400,
+    enabled: true,
+    ignoredWorkField: "drop me",
+  };
+  const content = {
+    activeTemplate: "film-rail",
+    profile: {
+      brand: "FULL BRAND",
+      mark: "FB",
+      photographer: "FULL PHOTOGRAPHER",
+      role: "FULL ROLE",
+      city: "FULL CITY",
+      availability: "FULL AVAILABILITY",
+      intro: "FULL INTRO",
+      ignoredProfileField: "drop me",
+    },
+    hero: { eyebrow: "FULL EYEBROW", title: "FULL TITLE", services: "FULL SERVICES" },
+    trustItems: [{ label: "FULL TRUST", value: "FULL VALUE", ignored: "drop me" }],
+    works: [work],
+    templateWorks: { "film-rail": [work], unknownTemplate: [work] },
+    packages: [{
+      number: "99",
+      english: "FULL PACKAGE",
+      name: "完整套餐",
+      description: "完整说明",
+      price: "示例价格",
+      duration: "FULL DURATION",
+      deliverables: ["FULL DELIVERY"],
+      enabled: false,
+      ignoredPackageField: "drop me",
+    }],
+    contact: { wechat: "FULL_WECHAT", email: "full@framezero.example", note: "FULL NOTE" },
+    social: [{ label: "FULL SOCIAL", handle: "FULL HANDLE", ignored: "drop me" }],
+    bookingFields: ["FULL BOOKING FIELD"],
+    statement: { eyebrow: "FULL STATEMENT", lineOne: "FULL LINE ONE", lineTwo: "FULL LINE TWO" },
+    ignoredRootField: "drop me",
+  };
+
+  const response = await requestSiteContent(
+    "http://127.0.0.1:3001/api/site-content",
+    {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content }),
+    },
+    database,
+  );
+  const payload = await response.json();
+  const persisted = JSON.parse(database.row.content);
+
+  assert.equal(response.status, 200);
+  assert.equal(database.row.id, 1);
+  assert.deepEqual(Object.keys(persisted).sort(), [
+    "activeTemplate",
+    "bookingFields",
+    "contact",
+    "hero",
+    "packages",
+    "profile",
+    "social",
+    "statement",
+    "templateWorks",
+    "trustItems",
+    "works",
+  ]);
+  assert.deepEqual(Object.keys(persisted.profile).sort(), [
+    "availability", "brand", "city", "intro", "mark", "photographer", "role",
+  ]);
+  assert.deepEqual(Object.keys(persisted.packages[0]).sort(), [
+    "deliverables", "description", "duration", "enabled", "english", "name", "number", "price",
+  ]);
+  assert.deepEqual(Object.keys(persisted.works[0]).sort(), [
+    "assetId", "code", "enabled", "fullWidth", "image", "locked", "position", "preview",
+    "previewHeight", "previewWidth", "slotIndex", "subtitle", "title",
+  ]);
+  assert.deepEqual(Object.keys(persisted.templateWorks), ["film-rail"]);
+  assert.deepEqual(payload.content, persisted);
+});
+
 test("PUT rejects an unauthenticated remote request", async () => {
   const database = new MemoryD1();
   const response = await requestSiteContent(

@@ -36,6 +36,15 @@ export default function ResetExampleDialog() {
         className={styles.resetDialog}
         aria-labelledby="reset-example-title"
         aria-describedby="reset-example-description"
+        onCancel={(event) => {
+          event.preventDefault();
+          dialogRef.current?.close();
+        }}
+        onKeyDown={(event) => {
+          if (event.key !== "Escape") return;
+          event.preventDefault();
+          dialogRef.current?.close();
+        }}
         onClose={() => triggerRef.current?.focus()}
       >
         <div className={styles.resetDialogBody}>

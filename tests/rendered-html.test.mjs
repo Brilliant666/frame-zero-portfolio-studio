@@ -43,14 +43,14 @@ test("server-renders the finished photography portfolio", async () => {
 });
 
 test("keeps editable content and eleven lazy template choices in one configuration", async () => {
-  const [config, catalog, renderer, page, layout, photoFallback, admin, api, schema, hosting] = await Promise.all([
+  const [config, catalog, renderer, page, layout, photoFallback, adminShell, api, schema, hosting] = await Promise.all([
     readFile(new URL("../app/site-config.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/templates/catalog.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/templates/template-renderer.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/photo-fallback-controller.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/admin/admin-editor.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/admin/admin-shell.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/site-content/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
@@ -83,9 +83,9 @@ test("keeps editable content and eleven lazy template choices in one configurati
   assert.match(page, /fetch\("\/api\/site-content"/);
   assert.match(page, /const selected = content\.templateWorks\[templateId\]/);
   assert.match(page, /buildPhotoSlots\(/);
-  assert.match(admin, /摄影主页后台/);
-  assert.match(admin, /保存全部修改/);
-  assert.match(admin, /moveWork/);
+  assert.match(adminShell, /FRAME\/\/ZERO/);
+  assert.match(adminShell, /预览当前主页/);
+  assert.match(adminShell, /ADMIN_SECTIONS\.map/);
   assert.match(api, /onConflictDoUpdate/);
   assert.match(schema, /site_settings/);
   assert.match(hosting, /"d1": "DB"/);
@@ -117,11 +117,11 @@ test("keeps every template on a fixed photo-slot contract with missing-image pla
     "museum-depth",
   ];
 
-  const [catalog, admin, sharedSlots, libraryEditor, libraryModel, ...templateSources] = await Promise.all([
+  const [catalog, templateEditor, sharedSlots, layoutWorkspace, libraryModel, ...templateSources] = await Promise.all([
     readFile(new URL("../app/templates/catalog.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/admin/admin-editor.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/admin/template/template-editor.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/templates/shared/photo-slots.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/admin/photo-library-editor.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/admin/layout/layout-workspace.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/photo-library.ts", import.meta.url), "utf8"),
     ...templateIds.map((id) => readFile(new URL(`../app/templates/${id}/template.tsx`, import.meta.url), "utf8")),
   ]);
@@ -129,13 +129,13 @@ test("keeps every template on a fixed photo-slot contract with missing-image pla
   assert.equal(catalog.match(/photoSlots: \d+/g)?.length, templateIds.length);
   assert.equal(catalog.match(/photoRatios: "/g)?.length, templateIds.length);
   assert.equal(catalog.match(/slotRatios: \[/g)?.length, templateIds.length);
-  assert.match(admin, /template-photo-plan/);
-  assert.match(admin, /PhotoLibraryEditor/);
+  assert.match(templateEditor, /photoSlots/);
+  assert.match(templateEditor, /photoRatios/);
   assert.match(sharedSlots, /export function buildPhotoSlots/);
   assert.match(sharedSlots, /export function PhotoPlaceholder/);
   assert.match(sharedSlots, /Math\.abs\(Math\.log\(actualRatio \/ targetRatio\)\)/);
-  assert.match(libraryEditor, /一键智能排版/);
-  assert.match(libraryEditor, /重新读取素材库/);
+  assert.match(layoutWorkspace, /一键智能排版/);
+  assert.match(layoutWorkspace, /重新读取/);
   assert.match(libraryModel, /parsePhotoLibraryManifest/);
   assert.match(libraryModel, /autoComposeTemplateWorks/);
 

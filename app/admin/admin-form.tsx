@@ -19,7 +19,12 @@ export function AdminSection({
   const headingId = `admin-${eyebrow.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-heading`;
 
   return (
-    <section className={styles.section} aria-labelledby={headingId} aria-busy={busy}>
+    <section
+      className={styles.section}
+      data-admin-section={eyebrow.toLowerCase()}
+      aria-labelledby={headingId}
+      aria-busy={busy}
+    >
       <header className={styles.sectionHeader}>
         <div>
           <span>{eyebrow}</span>
