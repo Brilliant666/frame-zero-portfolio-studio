@@ -463,6 +463,203 @@
 .rowActions button:disabled { opacity: .35; cursor: default; }
 .secondaryButton { margin: 0 1.1rem 1.1rem; background: #fff; color: var(--admin-v2-ink); }
 
+.mobileLayoutNote {
+  display: none;
+  margin: 0 0 .8rem;
+  padding: .7rem .8rem;
+  border-left: 3px solid var(--admin-v2-accent);
+  background: #fff7ef;
+  font-size: .78rem;
+  line-height: 1.55;
+}
+
+.libraryImportCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: .8rem;
+  padding: 1rem;
+  border: 1px solid var(--admin-v2-line);
+  border-left: 4px solid #777069;
+  background: #fff;
+}
+.libraryImportCard[data-state="ready"] { border-left-color: #367148; }
+.libraryImportCard[data-state="error"] { border-left-color: #a23a20; }
+.libraryImportCopy { display: grid; min-width: 0; gap: .25rem; }
+.libraryImportCopy strong { font-size: .86rem; }
+.libraryImportCopy p { margin: 0; color: var(--admin-v2-muted); font-size: .76rem; }
+.libraryImportCopy code { overflow-wrap: anywhere; color: #6e3211; font-size: .7rem; }
+.libraryImportCopy small { color: var(--admin-v2-muted); font-size: .68rem; line-height: 1.45; }
+.libraryImportCard > button,
+.layoutActions button,
+.slotControls button,
+.libraryFilters button,
+.pagination button {
+  min-height: 2.75rem;
+  padding: .55rem .75rem;
+  border: 1px solid var(--admin-v2-line);
+  background: #fff;
+  color: var(--admin-v2-ink);
+  font: 700 .75rem var(--font-geist-sans), sans-serif;
+  cursor: pointer;
+}
+.libraryImportCard > button:disabled,
+.layoutActions button:disabled,
+.slotControls button:disabled,
+.assetPick:disabled,
+.pagination button:disabled { opacity: .4; cursor: default; }
+
+.layoutSummary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(10rem, 1fr)) auto;
+  margin-bottom: .8rem;
+  border: 1px solid var(--admin-v2-line);
+  background: #fff;
+}
+.layoutSummary > div { display: grid; align-content: center; gap: .15rem; min-width: 0; padding: .8rem 1rem; border-right: 1px solid var(--admin-v2-line); }
+.layoutSummary > div:last-child { border-right: 0; }
+.layoutSummary span { color: var(--admin-v2-muted); font: 700 .68rem var(--font-geist-mono), monospace; text-transform: uppercase; }
+.layoutSummary strong { font-size: .85rem; }
+.layoutSummary small { color: var(--admin-v2-muted); font-size: .72rem; }
+.layoutActions { display: flex !important; flex-direction: row; align-items: center; gap: .45rem !important; }
+.layoutActions button:first-child { border-color: var(--admin-v2-ink); background: var(--admin-v2-ink); color: #fff; }
+
+.layoutWorkspace {
+  display: grid;
+  grid-template-areas: "slots editor assets";
+  grid-template-columns: 13.5rem minmax(18rem, .82fr) minmax(22rem, 1.18fr);
+  gap: .8rem;
+  min-width: 0;
+  align-items: start;
+}
+.slotPane,
+.slotEditor,
+.assetPane { min-width: 0; border: 1px solid var(--admin-v2-line); background: #fff; }
+.slotPane { grid-area: slots; }
+.slotEditor { grid-area: editor; }
+.assetPane { grid-area: assets; }
+.paneHeading {
+  display: flex;
+  min-height: 4rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .75rem .85rem;
+  border-bottom: 1px solid var(--admin-v2-line);
+}
+.paneHeading > div { display: grid; min-width: 0; gap: .12rem; }
+.paneHeading strong { font-size: .8rem; }
+.paneHeading small { color: var(--admin-v2-muted); font-size: .68rem; line-height: 1.4; }
+.paneHeading > span { flex: 0 0 auto; color: var(--admin-v2-muted); font: 700 .68rem var(--font-geist-mono), monospace; }
+
+.slotList { display: grid; }
+.slotListButton {
+  display: grid;
+  grid-template-columns: 1.7rem 3.25rem minmax(0, 1fr);
+  align-items: center;
+  gap: .55rem;
+  width: 100%;
+  min-height: 4.4rem;
+  padding: .55rem .65rem;
+  border: 0;
+  border-bottom: 1px solid var(--admin-v2-line);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.slotListButton:last-child { border-bottom: 0; }
+.slotListButton:hover { background: #faf7f2; }
+.slotListButton[data-active="true"] { box-shadow: inset 3px 0 var(--admin-v2-accent); background: #fff6eb; }
+.slotNumber { color: var(--admin-v2-muted); font: 700 .68rem var(--font-geist-mono), monospace; }
+.slotThumb { position: relative; display: grid; width: 3.25rem; height: 3.25rem; place-items: center; overflow: hidden; background: #ded8d1; }
+.slotThumb img { width: 100%; height: 100%; object-fit: cover; }
+.slotThumb > span { font: 700 .62rem var(--font-geist-mono), monospace; }
+.slotThumb[data-empty="true"] { border: 1px dashed #aaa29b; background: #f4f0ea; }
+.slotState { display: grid; min-width: 0; gap: .12rem; }
+.slotState strong { font-size: .78rem; }
+.slotState small { color: var(--admin-v2-muted); font-size: .72rem; }
+
+.slotEditorBody { display: grid; gap: .9rem; padding: .85rem; }
+.slotCanvas { position: relative; min-height: 12rem; overflow: hidden; background: #d8d2cb; cursor: crosshair; touch-action: none; }
+.slotCanvas img { width: 100%; height: 100%; object-fit: cover; }
+.slotCanvas > small { position: absolute; right: .45rem; bottom: .45rem; padding: .25rem .4rem; background: rgba(20, 17, 15, .78); color: #fff; font-size: .68rem; }
+.focusCrosshair { position: absolute; width: 1rem; height: 1rem; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px #17120f; transform: translate(-50%, -50%); pointer-events: none; }
+.focusCrosshair::before,
+.focusCrosshair::after { content: ""; position: absolute; top: 50%; left: 50%; background: #fff; transform: translate(-50%, -50%); }
+.focusCrosshair::before { width: 1.5rem; height: 1px; }
+.focusCrosshair::after { width: 1px; height: 1.5rem; }
+.slotFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+.slotFields label,
+.focusRanges label { display: grid; min-width: 0; gap: .32rem; }
+.slotFields span,
+.focusRanges span { font-size: .72rem; font-weight: 700; }
+.slotFields input,
+.librarySearch input {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: .6rem .65rem;
+  border: 1px solid #c8c1ba;
+  border-radius: 0;
+  background: #fff;
+  color: inherit;
+  font: 400 .88rem var(--font-geist-sans), sans-serif;
+}
+.focusRanges { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+.focusRanges input { width: 100%; min-width: 0; min-height: 2rem; accent-color: var(--admin-v2-accent); }
+.slotControls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .45rem; }
+.slotLock {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: .45rem;
+  padding: .5rem .65rem;
+  border: 1px solid var(--admin-v2-line);
+  font-size: .75rem;
+  font-weight: 700;
+}
+.slotLock input { width: 1rem; height: 1rem; accent-color: var(--admin-v2-accent); }
+.dangerText { color: #8b2d1d !important; }
+.emptyEditor { display: grid; min-height: 24rem; place-items: center; align-content: center; gap: .5rem; padding: 2rem; text-align: center; }
+.emptyEditor > span { display: grid; width: 7rem; min-height: 7rem; place-items: center; border: 1px dashed #aaa29b; color: var(--admin-v2-muted); font: 700 1rem var(--font-geist-mono), monospace; }
+.emptyEditor strong { margin-top: .45rem; }
+.emptyEditor p { max-width: 18rem; margin: 0; color: var(--admin-v2-muted); font-size: .78rem; line-height: 1.55; }
+
+.libraryToolbar { display: grid; grid-template-columns: minmax(9rem, 1fr) auto; gap: .55rem; padding: .7rem; border-bottom: 1px solid var(--admin-v2-line); }
+.libraryFilters { display: flex; }
+.libraryFilters button { min-width: 3.25rem; border-left: 0; }
+.libraryFilters button:first-child { border-left: 1px solid var(--admin-v2-line); }
+.libraryFilters button[aria-pressed="true"] { background: var(--admin-v2-ink); color: #fff; }
+.assetGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .55rem; padding: .7rem; }
+.assetCard { min-width: 0; border: 1px solid var(--admin-v2-line); }
+.assetCard[data-selected="true"] { border-color: var(--admin-v2-accent); }
+.assetPick { display: grid; width: 100%; min-width: 0; padding: 0; border: 0; background: #fff; color: inherit; text-align: left; cursor: pointer; }
+.assetThumb { position: relative; display: block; width: 100%; overflow: hidden; background: #ded8d1; }
+.assetThumb img { width: 100%; height: 100%; object-fit: cover; }
+.assetThumb b { position: absolute; top: .35rem; right: .35rem; display: grid; min-width: 1.6rem; height: 1.6rem; place-items: center; background: var(--admin-v2-accent); color: #211006; font: 700 .68rem var(--font-geist-mono), monospace; }
+.assetMeta { display: grid; min-width: 0; gap: .15rem; padding: .55rem; }
+.assetMeta strong { font-size: .72rem; }
+.assetMeta small { overflow: hidden; color: var(--admin-v2-muted); font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
+.pagination { display: flex; align-items: center; justify-content: center; gap: .65rem; padding: .25rem .7rem .8rem; }
+.pagination span { font: 700 .72rem var(--font-geist-mono), monospace; }
+.libraryEmpty { display: grid; min-height: 18rem; place-items: center; align-content: center; gap: .35rem; padding: 2rem; text-align: center; }
+.libraryEmpty p { max-width: 20rem; margin: 0; color: var(--admin-v2-muted); font-size: .78rem; line-height: 1.55; }
+
+.slotListButton:focus-visible,
+.libraryImportCard > button:focus-visible,
+.layoutActions button:focus-visible,
+.slotControls button:focus-visible,
+.slotLock input:focus-visible,
+.librarySearch input:focus-visible,
+.libraryFilters button:focus-visible,
+.assetPick:focus-visible,
+.pagination button:focus-visible {
+  outline: 3px solid #222;
+  outline-offset: 2px;
+}
+
 .placeholder {
   display: grid;
   min-height: 22rem;
@@ -505,6 +702,35 @@
   .templateDetail { position: static; }
 }
 
+@media (max-width: 1280px) and (min-width: 901px) {
+  .templateWorkbench { grid-template-columns: 1fr; }
+  .templateDetail { position: static; }
+  .layoutWorkspace {
+    grid-template-areas:
+      "slots editor"
+      "assets assets";
+    grid-template-columns: 13.5rem minmax(0, 1fr);
+  }
+  .assetGrid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .mobileLayoutNote { display: block; }
+  .libraryImportCard { align-items: stretch; flex-direction: column; }
+  .layoutSummary { grid-template-columns: 1fr; }
+  .layoutSummary > div { border-right: 0; border-bottom: 1px solid var(--admin-v2-line); }
+  .layoutSummary > div:last-child { border-bottom: 0; }
+  .layoutActions { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .layoutWorkspace {
+    grid-template-areas: "slots" "editor" "assets";
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .slotList { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .slotListButton { border-right: 1px solid var(--admin-v2-line); }
+  .slotListButton:nth-child(2n) { border-right: 0; }
+  .assetGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
 @media (max-width: 480px) {
   .topbar { min-height: 4.5rem; }
   .currentSection span { display: none; }
@@ -535,4 +761,15 @@
   .disclosureIcon { grid-row: 2; grid-column: 3; }
   .bookingList li { grid-template-columns: 1.5rem minmax(0, 1fr); align-items: start; }
   .rowActions { grid-column: 2; flex-wrap: wrap; }
+  .slotList { grid-template-columns: 1fr; }
+  .slotListButton { border-right: 0; }
+  .slotFields,
+  .focusRanges,
+  .libraryToolbar { grid-template-columns: 1fr; }
+  .slotControls { grid-template-columns: 1fr; }
+  .slotLock { min-height: 2.75rem; }
+  .libraryFilters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .libraryFilters button,
+  .libraryFilters button:first-child { border-left: 1px solid var(--admin-v2-line); }
+  .assetGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
