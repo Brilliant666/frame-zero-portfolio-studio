@@ -443,7 +443,7 @@
 .disclosurePanel { min-width: 0; }
 .packageToolbar { display: flex; justify-content: flex-end; padding: .8rem 1.1rem 0; }
 
-.toggle { display: inline-grid; grid-template-columns: 2.25rem auto; align-items: center; gap: .55rem; cursor: pointer; }
+.toggle { display: inline-grid; grid-template-columns: 2.25rem auto; min-height: 2.75rem; align-items: center; gap: .55rem; cursor: pointer; }
 .toggle input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .toggle > span { position: relative; width: 2.25rem; height: 1.25rem; border: 1px solid #aaa29b; background: #d7d1ca; }
 .toggle > span::after { content: ""; position: absolute; top: 2px; left: 2px; width: .9rem; height: .9rem; background: #fff; transition: transform .15s ease; }
@@ -456,13 +456,13 @@
 .bookingList li > span { color: var(--admin-v2-muted); font: 700 .68rem var(--font-geist-mono), monospace; }
 .rowActions { display: flex; gap: .3rem; }
 .rowActions button {
-  min-width: 2.45rem;
-  min-height: 2.45rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   padding: .4rem;
   border: 1px solid var(--admin-v2-line);
   background: #fff;
   color: var(--admin-v2-ink);
-  font-size: .72rem;
+  font-size: .75rem;
   cursor: pointer;
 }
 .rowActions button:last-child { color: #8b2d1d; }

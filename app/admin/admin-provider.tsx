@@ -18,6 +18,7 @@ import {
   hasAdminChanges,
   isAdminSaveShortcut,
   reconcileAdminSave,
+  saveStateAfterDraftChange,
   type AdminLoadState,
   type AdminSaveState,
 } from "./admin-state";
@@ -75,7 +76,7 @@ export function AdminProvider({
   const setContent = useCallback<Dispatch<SetStateAction<SiteContent>>>((action) => {
     const next = typeof action === "function" ? action(contentRef.current) : action;
     replaceContent(next);
-    setSaveState((current) => current === "success" ? "idle" : current);
+    setSaveState(saveStateAfterDraftChange);
   }, [replaceContent]);
 
   const dirty = useMemo(

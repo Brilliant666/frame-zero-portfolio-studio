@@ -87,3 +87,12 @@ test("admin status distinguishes load errors, save errors, dirty, and success", 
   assert.deepEqual(getAdminStatus("ready", "success", false), { label: "保存成功", tone: "success" });
   assert.deepEqual(getAdminStatus("ready", "idle", false), { label: "已保存", tone: "saved" });
 });
+
+test("a new draft edit clears stale success and error feedback without interrupting an active save", async (t) => {
+  const { saveStateAfterDraftChange } = await importAdminState(t);
+
+  assert.equal(saveStateAfterDraftChange("idle"), "idle");
+  assert.equal(saveStateAfterDraftChange("success"), "idle");
+  assert.equal(saveStateAfterDraftChange("error"), "idle");
+  assert.equal(saveStateAfterDraftChange("saving"), "saving");
+});
