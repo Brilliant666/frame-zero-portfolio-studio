@@ -16,6 +16,7 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
   const savedAt = formatSavedAt(updatedAt);
   const status = getAdminStatus(loadState, saveState, dirty);
   const saveDisabled = !dirty || loadState !== "ready" || saveState === "saving";
+  const saveActionLabel = saveState === "saving" ? "正在保存全部修改" : "保存全部修改";
   const showStatusMessage = loadState !== "ready"
     || saveState === "error"
     || saveState === "saving"
@@ -61,9 +62,13 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
             className={styles.saveButton}
             onClick={() => void save()}
             disabled={saveDisabled}
-            title={!dirty && loadState === "ready" ? "没有需要保存的修改" : undefined}
+            aria-label={saveActionLabel}
+            title={saveActionLabel}
           >
-            {saveState === "saving" ? "正在保存…" : "保存"}
+            <span className={styles.saveButtonFull} aria-hidden="true">{saveActionLabel}</span>
+            <span className={styles.saveButtonCompact} aria-hidden="true">
+              {saveState === "saving" ? "保存中…" : "保存"}
+            </span>
           </button>
         </div>
       </header>

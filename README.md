@@ -159,16 +159,30 @@ The local preview runs at `http://127.0.0.1:3001/`; the content admin is at
 The [ADMIN-V2 / DESIGN-01 workbench](docs/admin-v2.md) divides the editor into
 six focused routes for templates, profile, packages, layout, contact, and
 advanced compatibility controls. All routes share one client-side draft and
-the existing save endpoint. The template route uses a compact eleven-item
+the existing save endpoint; the single top-bar action saves all changes across
+the six sections. The template route uses a compact eleven-item
 selector and expands only one candidate detail at a time. Desktop editing uses a
 persistent sidebar; mobile keeps every section accessible through a compact
 switcher, while complex photo layout remains desktop-first. The Admin structure
 does not change `SiteContent`, the write payload, D1 schema, or template catalog.
 
+The Polaroid Field keeps its fixed nine-slot contract. On desktop its initial
+view and FIT control calculate a rotation-aware fit with a safe viewport margin;
+zooming and panning remain available after that fitted overview.
+
 ## Public-safe demo data
 
 The repository contains fictional profile, pricing, and contact placeholders.
 Replace them locally through `/admin`; never commit real contact details.
+
+After the browser loads saved `SiteContent`, it updates the visible tab title
+from `profile.brand`, then `profile.photographer`, with a neutral portfolio
+fallback. This is client-visible polish only: the server-rendered title,
+Open Graph, Twitter, and other SEO metadata still use the legacy demo path.
+The future `PUBLIC-IDENTITY / SSR-BRIDGE` scope must use editable
+`profile.role` instead of a hard-coded photographer role, combine empty
+city/role values safely, and must not use `profile.mark` as the SEO title
+subject.
 
 Photography assets are intentionally excluded from Git and GitHub:
 

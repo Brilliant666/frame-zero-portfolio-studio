@@ -188,6 +188,11 @@ test("responsive CSS exposes a mobile section switcher and single-column layout 
   assert.match(shell, /<select value=\{current\.href\}/);
   assert.match(shell, /data-admin-title="true"/);
   assert.doesNotMatch(shell, /FRAME\/\/ZERO/);
+  assert.match(shell, /saveActionLabel = saveState === "saving" \? "正在保存全部修改" : "保存全部修改"/);
+  assert.match(shell, /aria-label=\{saveActionLabel\}/);
+  assert.match(shell, /title=\{saveActionLabel\}/);
+  assert.match(shell, /className=\{styles\.saveButtonFull\}/);
+  assert.match(shell, /className=\{styles\.saveButtonCompact\}/);
   assert.match(css, /\.templateWorkbench\s*\{[^}]*grid-template-columns:\s*minmax\(13rem, 16rem\) minmax\(0, 1fr\)/s);
   assert.match(css, /\.templateList\s*\{/);
   assert.match(css, /\.templateDetail\s*\{/);
@@ -201,6 +206,10 @@ test("responsive CSS exposes a mobile section switcher and single-column layout 
   assert.match(css, /\.templateMobileSelector\s*\{\s*display:\s*grid/);
   assert.match(css, /grid-template-areas: "slots" "editor" "assets"/);
   assert.match(css, /@media \(max-width: 480px\)/);
+  assert.match(css, /\.saveButtonCompact\s*\{\s*display:\s*none/);
+  assert.match(css, /@media \(max-width: 480px\)[\s\S]*\.saveButtonFull\s*\{\s*display:\s*none;\s*\}[\s\S]*\.saveButtonCompact\s*\{\s*display:\s*inline;/);
+  assert.match(css, /\.slotEditorBody\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;/s);
+  assert.match(css, /\.slotCanvas\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*max-width:\s*100%;/s);
   assert.doesNotMatch(css, /\.slotPane\s*\{[^}]*display:\s*none/s);
   assert.doesNotMatch(css, /\.assetPane\s*\{[^}]*display:\s*none/s);
   assert.match(globals, /\.template-swatch::before\s*\{[^}]*content:\s*"LIGHT"/s);
