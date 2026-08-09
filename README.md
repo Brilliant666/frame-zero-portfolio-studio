@@ -156,6 +156,15 @@ npm run dev
 The local preview runs at `http://127.0.0.1:3001/`; the content admin is at
 `http://127.0.0.1:3001/admin`.
 
+The [ADMIN-V2 / DESIGN-01 workbench](docs/admin-v2.md) divides the editor into
+six focused routes for templates, profile, packages, layout, contact, and
+advanced compatibility controls. All routes share one client-side draft and
+the existing save endpoint. The template route uses a compact eleven-item
+selector and expands only one candidate detail at a time. Desktop editing uses a
+persistent sidebar; mobile keeps every section accessible through a compact
+switcher, while complex photo layout remains desktop-first. The Admin structure
+does not change `SiteContent`, the write payload, D1 schema, or template catalog.
+
 ## Public-safe demo data
 
 The repository contains fictional profile, pricing, and contact placeholders.
@@ -206,7 +215,7 @@ npm run photos:import -- "<photo-folder>" adopt-linked-output
 Later imports use the normal command. A random owner token plus a hashed target
 prevents an accidental or retargeted link from receiving generated files.
 
-After import, open `http://127.0.0.1:3001/admin#library` and click **重新读取素材库**.
+After import, open `http://127.0.0.1:3001/admin/layout` and click **重新读取**.
 For the active template you can then:
 
 - create an initial ratio-aware layout with **一键智能排版**;

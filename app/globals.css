@@ -1562,7 +1562,7 @@ footer p { margin: 0; }
 }
 
 .template-swatch::before {
-  content: "F//0";
+  content: "LIGHT";
   position: absolute;
   left: .65rem;
   bottom: .55rem;
