@@ -44,7 +44,12 @@ function orientationLabel(orientation: PhotoAsset["orientation"]) {
 }
 
 export default function LayoutWorkspace() {
-  const { content, localPhotoImportEnabled, setContent } = useAdmin();
+  const {
+    content,
+    localPhotoImportOrigin,
+    localPhotoImportState,
+    setContent,
+  } = useAdmin();
   const [assets, setAssets] = useState<PhotoAsset[]>([]);
   const [libraryState, setLibraryState] = useState<LibraryState>("loading");
   const [libraryMessage, setLibraryMessage] = useState("正在读取本地素材库…");
@@ -248,10 +253,11 @@ export default function LayoutWorkspace() {
       <p className={styles.mobileLayoutNote}>手机可查看并完成基础调整；复杂素材排版建议使用桌面端。</p>
 
       <PhotoImportPanel
-        enabled={localPhotoImportEnabled}
         importing={isImporting}
         libraryMessage={libraryMessage}
         libraryState={libraryState}
+        localPhotoImportOrigin={localPhotoImportOrigin}
+        localPhotoImportState={localPhotoImportState}
         onImportingChange={setIsImporting}
         onRefresh={refreshLibrary}
         stats={libraryStats}
@@ -409,9 +415,11 @@ export default function LayoutWorkspace() {
               <p>{assets.length === 0
                 ? libraryState === "error"
                   ? "未能读取素材库；请先处理上方错误并重新读取。"
-                  : localPhotoImportEnabled
+                  : localPhotoImportState === "configured"
                     ? "使用上方“添加照片”或“添加文件夹”把作品加入素材库。"
-                    : "当前没有可用的素材。"
+                    : localPhotoImportState === "missing"
+                      ? "本地照片导入服务未启动；请使用 npm run dev 启动完整编辑环境。"
+                      : "当前没有可用的素材。"
                 : "试试切换画幅或清空搜索词。"}</p>
             </div>
           )}

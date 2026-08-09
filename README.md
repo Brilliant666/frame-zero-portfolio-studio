@@ -155,8 +155,10 @@ npm run dev
 
 The local preview runs at `http://127.0.0.1:3001/`; the content admin is at
 `http://127.0.0.1:3001/admin`. The same `npm run dev` command also starts the
-loopback-only photo import service at `127.0.0.1:3002`. It is a local editing
-companion only and is never started by the production build.
+loopback-only photo import service on an automatically assigned free port. The
+supervisor passes that private origin to the Admin server process; users do not
+need to find or manage the companion port. It is a local editing companion only
+and is never started by the production build.
 
 The [ADMIN-V2 / DESIGN-01 workbench](docs/admin-v2.md) divides the editor into
 six focused routes for templates, profile, packages, layout, contact, and
@@ -249,7 +251,10 @@ prevents an accidental or retargeted link from receiving generated files.
 The executable import controls are available only from the loopback Admin. A
 hosted Admin can still browse an existing manifest, but it does not call a
 visitor's `127.0.0.1`; remote object storage is a separate future scope. Manual
-**重新读取** and `npm run photos:serve` remain available for diagnostics.
+**重新读取** and `npm run photos:serve` remain available for diagnostics. The
+standalone service defaults to port 3002 and can use another diagnostic port,
+for example `npm run photos:serve -- --port 3003`; normal `npm run dev` always
+uses automatic loopback port discovery.
 
 After the material grid refreshes, for the active template you can:
 
@@ -277,6 +282,7 @@ npm run test:adapters
 npm run test:photos
 npm run photos:import -- --source "<photo-folder>"
 npm run photos:serve
+npm run photos:serve -- --port 3003
 npm run build
 npm run check:bundle
 npm run check:public

@@ -34,7 +34,8 @@ type AdminContextValue = {
   dirty: boolean;
   busy: boolean;
   editorLabel: string;
-  localPhotoImportEnabled: boolean;
+  localPhotoImportOrigin: string | null;
+  localPhotoImportState: "configured" | "missing" | "hosted";
   save: () => Promise<boolean>;
   reload: () => Promise<boolean>;
   resetToExample: () => void;
@@ -55,11 +56,13 @@ export function formatSavedAt(value: string | null) {
 export function AdminProvider({
   children,
   editorLabel,
-  localPhotoImportEnabled,
+  localPhotoImportOrigin,
+  localPhotoImportState,
 }: Readonly<{
   children: ReactNode;
   editorLabel: string;
-  localPhotoImportEnabled: boolean;
+  localPhotoImportOrigin: string | null;
+  localPhotoImportState: "configured" | "missing" | "hosted";
 }>) {
   const [content, setContentState] = useState<SiteContent>(() => cloneSiteContent());
   const [savedContent, setSavedContent] = useState<SiteContent>(() => cloneSiteContent());
@@ -211,11 +214,12 @@ export function AdminProvider({
     dirty,
     busy,
     editorLabel,
-    localPhotoImportEnabled,
+    localPhotoImportOrigin,
+    localPhotoImportState,
     save,
     reload,
     resetToExample,
-  }), [busy, content, dirty, editorLabel, loadState, localPhotoImportEnabled, message, reload, resetToExample, save, savedContent, saveState, setContent, updatedAt]);
+  }), [busy, content, dirty, editorLabel, loadState, localPhotoImportOrigin, localPhotoImportState, message, reload, resetToExample, save, savedContent, saveState, setContent, updatedAt]);
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
 }

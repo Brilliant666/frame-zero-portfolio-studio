@@ -9,6 +9,9 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 const STOP_TIMEOUT_MS = 3_000;
+const IMPORTER_READY_TIMEOUT_MS = 15_000;
+export const LOCAL_PHOTO_IMPORT_ORIGIN_ENV = "FRAME_ZERO_LOCAL_PHOTO_IMPORT_ORIGIN";
+export const LOCAL_PHOTO_IMPORT_PORT_ENV = "FRAME_ZERO_LOCAL_PHOTO_IMPORT_PORT";
 
 function hasExited(child) {
   return child.exitCode !== null || child.signalCode !== null;
@@ -87,15 +90,72 @@ export async function stopChildProcess(child, {
   }
 }
 
+export function originFromPhotoImportReadyMessage(message) {
+  const keys = message && typeof message === "object" && !Array.isArray(message)
+    ? Object.keys(message).sort()
+    : [];
+  if (
+    keys.length !== 3
+    || keys[0] !== "host"
+    || keys[1] !== "port"
+    || keys[2] !== "type"
+    || message.type !== "ready"
+    || message.host !== "127.0.0.1"
+    || !Number.isInteger(message.port)
+    || message.port < 1
+    || message.port > 65_535
+  ) {
+    throw new TypeError("The local photo import service sent an invalid ready message");
+  }
+  return `http://127.0.0.1:${message.port}`;
+}
+
+function waitForPhotoImportReady(child, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      child.off("error", onError);
+      child.off("exit", onExit);
+      child.off("message", onMessage);
+      callback(value);
+    };
+    const onError = () => finish(reject, new Error("The local photo import service failed before ready"));
+    const onExit = () => finish(reject, new Error("The local photo import service exited before ready"));
+    const onMessage = (message) => {
+      if (!message || typeof message !== "object" || message.type !== "ready") return;
+      try {
+        finish(resolve, originFromPhotoImportReadyMessage(message));
+      } catch (error) {
+        finish(reject, error);
+      }
+    };
+    const timer = setTimeout(
+      () => finish(reject, new Error("The local photo import service did not become ready")),
+      timeoutMs,
+    );
+    child.once("error", onError);
+    child.once("exit", onExit);
+    child.on("message", onMessage);
+  });
+}
+
 export function createDevLocalSupervisor({
   projectRoot,
   nodeExecutable = process.execPath,
+  processEnvironment = process.env,
+  readyTimeoutMs = IMPORTER_READY_TIMEOUT_MS,
   reportError = console.error,
   spawnProcess = spawn,
   stopProcess = stopChildProcess,
 } = {}) {
   if (typeof projectRoot !== "string" || projectRoot.trim() === "") {
     throw new TypeError("projectRoot is required");
+  }
+  if (!Number.isInteger(readyTimeoutMs) || readyTimeoutMs < 1) {
+    throw new TypeError("readyTimeoutMs must be a positive integer");
   }
 
   const resolvedProjectRoot = path.resolve(projectRoot);
@@ -107,11 +167,11 @@ export function createDevLocalSupervisor({
   let resolveDone;
   const done = new Promise((resolve) => { resolveDone = resolve; });
 
-  function spawnNamed(name, args, stdio) {
+  function spawnNamed(name, args, stdio, environmentOverrides = {}) {
     const child = spawnProcess(nodeExecutable, args, {
       cwd: resolvedProjectRoot,
       detached: false,
-      env: process.env,
+      env: { ...processEnvironment, ...environmentOverrides },
       stdio,
       windowsHide: true,
     });
@@ -130,20 +190,29 @@ export function createDevLocalSupervisor({
   function start() {
     if (started) throw new Error("The local development supervisor has already started");
     started = true;
-    try {
-      spawnNamed(
-        "web",
-        [vinextCli, "dev", "--hostname", "127.0.0.1", "--port", "3001"],
-        "inherit",
-      );
-      spawnNamed(
-        "photo-import",
-        [serviceScript],
-        ["inherit", "inherit", "inherit", "ipc"],
-      );
-    } catch {
-      void shutdown({ exitCode: 1, reason: "spawn-error" });
-    }
+    void (async () => {
+      try {
+        const importer = spawnNamed(
+          "photo-import",
+          [serviceScript],
+          ["inherit", "inherit", "inherit", "ipc"],
+          { [LOCAL_PHOTO_IMPORT_PORT_ENV]: "0" },
+        );
+        const importerOrigin = await waitForPhotoImportReady(importer, readyTimeoutMs);
+        if (shutdownPromise) return;
+        spawnNamed(
+          "web",
+          [vinextCli, "dev", "--hostname", "127.0.0.1", "--port", "3001"],
+          "inherit",
+          { [LOCAL_PHOTO_IMPORT_ORIGIN_ENV]: importerOrigin },
+        );
+      } catch {
+        if (!shutdownPromise) {
+          reportError("Unable to start the complete local editing environment.");
+          await shutdown({ exitCode: 1, reason: "startup-error" });
+        }
+      }
+    })();
     return done;
   }
 

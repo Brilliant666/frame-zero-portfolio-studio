@@ -3,6 +3,7 @@
 import { useRef, useState, type ChangeEvent } from "react";
 import styles from "../admin-v2.module.css";
 import {
+  LocalPhotoImportUnavailableError,
   localPhotoImportAccept,
   runLocalPhotoImport,
   selectLocalPhotoImportFiles,
@@ -20,10 +21,11 @@ export type PhotoLibraryStats = Readonly<{
 }>;
 
 type PhotoImportPanelProps = Readonly<{
-  enabled: boolean;
   importing: boolean;
   libraryMessage: string;
   libraryState: PhotoLibraryState;
+  localPhotoImportOrigin: string | null;
+  localPhotoImportState: "configured" | "missing" | "hosted";
   onImportingChange: (importing: boolean) => void;
   onRefresh: () => Promise<number | null>;
   stats: PhotoLibraryStats;
@@ -32,10 +34,11 @@ type PhotoImportPanelProps = Readonly<{
 const directoryInputAttributes = { webkitdirectory: "" };
 
 export default function PhotoImportPanel({
-  enabled,
   importing,
   libraryMessage,
   libraryState,
+  localPhotoImportOrigin,
+  localPhotoImportState,
   onImportingChange,
   onRefresh,
   stats,
@@ -46,14 +49,21 @@ export default function PhotoImportPanel({
   const [progress, setProgress] = useState<PhotoImportProgress | null>(null);
   const [result, setResult] = useState<PhotoImportResult | null>(null);
   const [batchError, setBatchError] = useState<string | null>(null);
+  const [healthError, setHealthError] = useState<string | null>(null);
   const [ignoredFiles, setIgnoredFiles] = useState(0);
 
   const beginImport = async (files: ArrayLike<File> | null) => {
-    if (!enabled || batchActiveRef.current || !files) return;
+    if (
+      localPhotoImportState !== "configured"
+      || !localPhotoImportOrigin
+      || batchActiveRef.current
+      || !files
+    ) return;
     const selection = selectLocalPhotoImportFiles(files);
     if (selection.accepted.length === 0) {
       setProgress(null);
       setResult(null);
+      setHealthError(null);
       setIgnoredFiles(selection.ignored);
       setBatchError("所选内容中没有受支持的照片。");
       return;
@@ -64,16 +74,21 @@ export default function PhotoImportPanel({
     setProgress(null);
     setResult(null);
     setBatchError(null);
+    setHealthError(null);
     setIgnoredFiles(selection.ignored);
 
     try {
-      const nextResult = await runLocalPhotoImport(selection.accepted, {
+      const nextResult = await runLocalPhotoImport(localPhotoImportOrigin, selection.accepted, {
         onProgress: setProgress,
         refreshLibrary: onRefresh,
       });
       setResult(nextResult);
-    } catch {
-      setBatchError("本地照片导入服务暂时不可用，请确认 npm run dev 正在运行。");
+    } catch (error) {
+      if (error instanceof LocalPhotoImportUnavailableError) {
+        setHealthError("导入地址已配置，但当前无法连接本地照片导入服务。请确认 npm run dev 正在运行。");
+      } else {
+        setBatchError("照片导入未能完成，请重试。");
+      }
     } finally {
       batchActiveRef.current = false;
       onImportingChange(false);
@@ -94,7 +109,7 @@ export default function PhotoImportPanel({
   return (
     <section
       className={styles.libraryImportCard}
-      data-local-photo-import={enabled ? "enabled" : "disabled"}
+      data-local-photo-import={localPhotoImportState}
       data-state={libraryState}
       aria-labelledby="local-photo-library-heading"
     >
@@ -116,7 +131,7 @@ export default function PhotoImportPanel({
         <div><dt>方图</dt><dd>{stats.square}</dd></div>
       </dl>
 
-      {enabled ? (
+      {localPhotoImportState === "configured" && localPhotoImportOrigin ? (
         <div className={styles.photoImportControls}>
           <div className={styles.photoImportActions}>
             <button
@@ -162,6 +177,11 @@ export default function PhotoImportPanel({
           <p className={styles.photoImportHint}>
             支持 JPG、JPEG、PNG、WebP、AVIF、HEIC、HEIF、TIFF；暂不支持相机 RAW。照片会立即加入本地素材库，不会自动修改或保存主页排版。
           </p>
+        </div>
+      ) : localPhotoImportState === "missing" ? (
+        <div className={styles.hostedImportNotice} role="note">
+          <strong>本地照片导入服务未启动。</strong>
+          <p>请使用 npm run dev 启动完整编辑环境。</p>
         </div>
       ) : (
         <div className={styles.hostedImportNotice} role="note">
@@ -222,6 +242,13 @@ export default function PhotoImportPanel({
           <strong>未能开始添加</strong>
           <p>{batchError}</p>
           {ignoredFiles > 0 ? <small>已忽略 {ignoredFiles} 个不受支持的文件。</small> : null}
+        </div>
+      ) : null}
+
+      {healthError ? (
+        <div className={styles.photoImportError} data-photo-import-health="unavailable" role="alert">
+          <strong>本地照片导入服务暂时不可用</strong>
+          <p>{healthError}</p>
         </div>
       ) : null}
 

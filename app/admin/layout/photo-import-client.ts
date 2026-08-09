@@ -1,4 +1,3 @@
-export const localPhotoImportOrigin = "http://127.0.0.1:3002";
 export const localPhotoImportMaximumBytes = 200 * 1024 * 1024;
 export const localPhotoImportExtensions = Object.freeze([
   ".avif",
@@ -129,9 +128,19 @@ function responseErrorCode(value: unknown) {
   return value.error.code;
 }
 
-export async function checkLocalPhotoImportHealth(fetchImpl: FetchLike = fetch) {
+function localPhotoImportUrl(origin: string, pathname: "/health" | "/import") {
+  if (typeof origin !== "string" || origin.length === 0) {
+    throw new TypeError("A configured local photo import origin is required");
+  }
+  return `${origin}${pathname}`;
+}
+
+export async function checkLocalPhotoImportHealth(
+  origin: string,
+  fetchImpl: FetchLike = fetch,
+) {
   try {
-    const response = await fetchImpl(`${localPhotoImportOrigin}/health`, {
+    const response = await fetchImpl(localPhotoImportUrl(origin, "/health"), {
       method: "GET",
       cache: "no-store",
       credentials: "omit",
@@ -146,6 +155,7 @@ export async function checkLocalPhotoImportHealth(fetchImpl: FetchLike = fetch) 
 }
 
 export async function runLocalPhotoImport(
+  origin: string,
   files: readonly LocalPhotoImportFile[],
   {
     fetchImpl = fetch,
@@ -154,7 +164,7 @@ export async function runLocalPhotoImport(
   }: RunPhotoImportOptions,
 ): Promise<PhotoImportResult> {
   if (files.length === 0) throw new TypeError("At least one photo is required");
-  if (!await checkLocalPhotoImportHealth(fetchImpl)) {
+  if (!await checkLocalPhotoImportHealth(origin, fetchImpl)) {
     throw new LocalPhotoImportUnavailableError();
   }
 
@@ -179,7 +189,7 @@ export async function runLocalPhotoImport(
     }
 
     try {
-      const response = await fetchImpl(`${localPhotoImportOrigin}/import`, {
+      const response = await fetchImpl(localPhotoImportUrl(origin, "/import"), {
         method: "POST",
         headers: {
           "content-type": "application/octet-stream",

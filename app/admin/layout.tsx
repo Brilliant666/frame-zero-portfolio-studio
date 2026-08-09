@@ -24,14 +24,44 @@ export const metadata: Metadata = {
 };
 
 function isLocalHost(host: string | null) {
-  const hostname = (host ?? "").split(":")[0];
-  return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "[::1]";
+  if (!host) return false;
+  const match = /^(127\.0\.0\.1|localhost|\[::1\])(?::([1-9][0-9]{0,4}))?$/i.exec(host);
+  if (!match || match[0] !== host) return false;
+  return match[2] === undefined || Number(match[2]) <= 65_535;
+}
+
+function localPhotoImportOriginFromEnvironment() {
+  const value = process.env.FRAME_ZERO_LOCAL_PHOTO_IMPORT_ORIGIN;
+  if (!value) return null;
+
+  const match = /^http:\/\/127\.0\.0\.1:([1-9][0-9]{0,4})$/.exec(value);
+  if (!match || match[0] !== value || Number(match[1]) > 65_535) return null;
+
+  try {
+    const parsed = new URL(value);
+    if (
+      parsed.protocol !== "http:"
+      || parsed.hostname !== "127.0.0.1"
+      || parsed.username !== ""
+      || parsed.password !== ""
+      || parsed.pathname !== "/"
+      || parsed.search !== ""
+      || parsed.hash !== ""
+    ) return null;
+  } catch {
+    return null;
+  }
+  return value;
 }
 
 export default async function AdminLayout({ children }: Readonly<{ children: ReactNode }>) {
   const requestHeaders = await headers();
   const local = isLocalHost(requestHeaders.get("host"));
   const user = local ? null : await getChatGPTUser();
+  const localPhotoImportOrigin = local ? localPhotoImportOriginFromEnvironment() : null;
+  const localPhotoImportState = local
+    ? localPhotoImportOrigin ? "configured" : "missing"
+    : "hosted";
 
   if (!local && !user) {
     return (
@@ -50,7 +80,8 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
   return (
     <AdminProvider
       editorLabel={local ? "本地编辑模式" : user?.displayName ?? "已登录"}
-      localPhotoImportEnabled={local}
+      localPhotoImportOrigin={localPhotoImportOrigin}
+      localPhotoImportState={localPhotoImportState}
     >
       <AdminShell>{children}</AdminShell>
     </AdminProvider>

@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { fork } from "node:child_process";
+import { once } from "node:events";
 import fs from "node:fs/promises";
 import http from "node:http";
 import os from "node:os";
@@ -6,9 +8,13 @@ import path from "node:path";
 import test from "node:test";
 import sharp from "sharp";
 import {
+  createPhotoImportReadyMessage,
   createPhotoImportService,
   LOCAL_PHOTO_IMPORT_HOST,
   LOCAL_PHOTO_IMPORT_MAX_BYTES,
+  LOCAL_PHOTO_IMPORT_PORT,
+  LOCAL_PHOTO_IMPORT_PORT_ENV,
+  resolvePhotoImportPort,
 } from "../scripts/photo-import-server.mjs";
 import { importPhotoLibrary, photoImportContract } from "../scripts/lib/photo-import.mjs";
 
@@ -78,6 +84,119 @@ async function waitUntil(predicate, timeoutMs = 2_000) {
 async function makeJpegBuffer({ width = 96, height = 64, color = "#d26935" } = {}) {
   return sharp({ create: { width, height, channels: 3, background: color } }).jpeg().toBuffer();
 }
+
+function waitForChildMessage(child, timeoutMs = 5_000) {
+  return new Promise((resolve, reject) => {
+    const finish = (callback, value) => {
+      clearTimeout(timer);
+      child.off("error", onError);
+      child.off("exit", onExit);
+      child.off("message", onMessage);
+      callback(value);
+    };
+    const onError = (error) => finish(reject, error);
+    const onExit = (code, signal) => finish(
+      reject,
+      new Error(`photo import child exited before ready: ${signal ?? code}`),
+    );
+    const onMessage = (message) => finish(resolve, message);
+    const timer = setTimeout(() => finish(reject, new Error("photo import child ready timeout")), timeoutMs);
+    child.once("error", onError);
+    child.once("exit", onExit);
+    child.once("message", onMessage);
+  });
+}
+
+test("listen(0) binds an OS-selected non-zero port on the exact loopback host", async (t) => {
+  const workspace = await makeWorkspace(t);
+  const service = createPhotoImportService({
+    ...workspace,
+    contract: { supportedExtensions: [".jpg"] },
+    importer: async () => assert.fail("listen must not invoke the importer"),
+  });
+  t.after(() => service.close());
+  const address = await service.listen(0);
+  assert.equal(address.address, LOCAL_PHOTO_IMPORT_HOST);
+  assert.equal(address.family, "IPv4");
+  assert.ok(Number.isInteger(address.port));
+  assert.ok(address.port > 0 && address.port <= 65_535);
+});
+
+test("closing during a pending dynamic listen cannot leave a loopback server behind", async (t) => {
+  const workspace = await makeWorkspace(t);
+  const service = createPhotoImportService({
+    ...workspace,
+    contract: { supportedExtensions: [".jpg"] },
+    importer: async () => assert.fail("lifecycle cleanup must not invoke the importer"),
+  });
+  const listening = service.listen(0);
+  const closing = service.close();
+  await assert.rejects(listening, /service is stopping/);
+  await closing;
+  assert.equal(service.server.listening, false);
+});
+
+test("diagnostic port parsing is strict while preserving the standalone 3002 default", () => {
+  assert.equal(resolvePhotoImportPort({ argv: [], environment: {} }), LOCAL_PHOTO_IMPORT_PORT);
+  assert.equal(
+    resolvePhotoImportPort({ argv: [], environment: { [LOCAL_PHOTO_IMPORT_PORT_ENV]: "0" } }),
+    0,
+  );
+  assert.equal(resolvePhotoImportPort({ argv: ["--port", "3003"], environment: {} }), 3003);
+  assert.equal(resolvePhotoImportPort({ argv: ["--port=3004"], environment: {} }), 3004);
+  assert.equal(
+    resolvePhotoImportPort({
+      argv: ["--port", "3005"],
+      environment: { [LOCAL_PHOTO_IMPORT_PORT_ENV]: "3999" },
+    }),
+    3005,
+  );
+
+  for (const value of ["", "-1", "+1", "03003", "3.5", "65536", "not-a-port"]) {
+    assert.throws(
+      () => resolvePhotoImportPort({ argv: [], environment: { [LOCAL_PHOTO_IMPORT_PORT_ENV]: value } }),
+      /integer from 0 to 65535/,
+    );
+  }
+  assert.throws(() => resolvePhotoImportPort({ argv: ["--port"], environment: {} }), /integer/);
+  assert.throws(() => resolvePhotoImportPort({ argv: ["--host", "127.0.0.1"], environment: {} }), /Only --port/);
+  assert.throws(
+    () => resolvePhotoImportPort({ argv: ["--port", "3003", "--port=3004"], environment: {} }),
+    /only be provided once/,
+  );
+});
+
+test("the ready IPC payload contains only the validated loopback host and actual port", async (t) => {
+  assert.deepEqual(
+    createPhotoImportReadyMessage({ address: "127.0.0.1", family: "IPv4", port: 43123 }),
+    { type: "ready", host: "127.0.0.1", port: 43123 },
+  );
+  assert.throws(
+    () => createPhotoImportReadyMessage({ address: "0.0.0.0", family: "IPv4", port: 43123 }),
+    /invalid address/,
+  );
+
+  const child = fork(path.resolve("scripts", "photo-import-server.mjs"), [], {
+    env: { ...process.env, [LOCAL_PHOTO_IMPORT_PORT_ENV]: "0" },
+    silent: true,
+  });
+  t.after(() => {
+    if (child.exitCode === null && child.signalCode === null) child.kill();
+  });
+  const message = await waitForChildMessage(child);
+  assert.deepEqual(Object.keys(message).sort(), ["host", "port", "type"]);
+  assert.equal(message.type, "ready");
+  assert.equal(message.host, LOCAL_PHOTO_IMPORT_HOST);
+  assert.ok(Number.isInteger(message.port) && message.port > 0);
+  const serialized = JSON.stringify(message);
+  for (const forbiddenKey of ["projectRoot", "cwd", "path", "tempRoot"]) {
+    assert.ok(!serialized.includes(forbiddenKey));
+  }
+  child.send({ type: "shutdown" });
+  const [code, signal] = await once(child, "exit");
+  assert.equal(signal, null);
+  assert.equal(code, 0);
+});
 
 test("health is minimal, loopback-only, and applies the exact Origin allowlist", async (t) => {
   const workspace = await makeWorkspace(t);

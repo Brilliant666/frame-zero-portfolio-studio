@@ -12,6 +12,7 @@ import { importPhotoLibrary, photoImportContract } from "./lib/photo-import.mjs"
 export const LOCAL_PHOTO_IMPORT_HOST = "127.0.0.1";
 export const LOCAL_PHOTO_IMPORT_PORT = 3002;
 export const LOCAL_PHOTO_IMPORT_MAX_BYTES = 200 * 1024 * 1024;
+export const LOCAL_PHOTO_IMPORT_PORT_ENV = "FRAME_ZERO_LOCAL_PHOTO_IMPORT_PORT";
 
 const ALLOWED_ORIGINS = new Set([
   "http://127.0.0.1:3001",
@@ -25,6 +26,63 @@ const ALLOWED_PREFLIGHT_HEADERS = new Set([
 const IMPORT_HEADER = "x-frame-zero-local-import";
 const EXTENSION_HEADER = "x-frame-zero-photo-extension";
 const TEMP_DIRECTORY_PREFIX = "frame-zero-photo-import-";
+
+function parsePortValue(value, source) {
+  if (typeof value !== "string" || !/^(?:0|[1-9]\d{0,4})$/.test(value)) {
+    throw new TypeError(`${source} must be an integer from 0 to 65535`);
+  }
+  const port = Number(value);
+  if (!Number.isInteger(port) || port < 0 || port > 65_535) {
+    throw new TypeError(`${source} must be an integer from 0 to 65535`);
+  }
+  return port;
+}
+
+export function resolvePhotoImportPort({
+  argv = [],
+  environment = process.env,
+} = {}) {
+  if (!Array.isArray(argv)) throw new TypeError("argv must be an array");
+
+  let commandLinePort;
+  for (let index = 0; index < argv.length; index += 1) {
+    const argument = argv[index];
+    let rawPort;
+    if (argument === "--port") {
+      index += 1;
+      rawPort = argv[index];
+    } else if (typeof argument === "string" && argument.startsWith("--port=")) {
+      rawPort = argument.slice("--port=".length);
+    } else {
+      throw new TypeError("Only --port is supported");
+    }
+    if (commandLinePort !== undefined) throw new TypeError("--port may only be provided once");
+    commandLinePort = parsePortValue(rawPort, "--port");
+  }
+
+  if (commandLinePort !== undefined) return commandLinePort;
+  const environmentPort = environment?.[LOCAL_PHOTO_IMPORT_PORT_ENV];
+  if (environmentPort === undefined) return LOCAL_PHOTO_IMPORT_PORT;
+  return parsePortValue(environmentPort, LOCAL_PHOTO_IMPORT_PORT_ENV);
+}
+
+export function createPhotoImportReadyMessage(address) {
+  if (
+    !address
+    || typeof address !== "object"
+    || address.address !== LOCAL_PHOTO_IMPORT_HOST
+    || !Number.isInteger(address.port)
+    || address.port < 1
+    || address.port > 65_535
+  ) {
+    throw new TypeError("The local photo import service returned an invalid address");
+  }
+  return {
+    type: "ready",
+    host: LOCAL_PHOTO_IMPORT_HOST,
+    port: address.port,
+  };
+}
 
 class SafeHttpError extends Error {
   constructor(status, code, message) {
@@ -243,6 +301,7 @@ export function createPhotoImportService({
   const enqueueRequest = createPromiseQueue();
   const inFlight = new Set();
   let closing = false;
+  let pendingListen = null;
 
   async function importOne(request) {
     const extension = validateImportHeaders(request, supportedExtensions);
@@ -327,7 +386,10 @@ export function createPhotoImportService({
 
   async function listen(port = LOCAL_PHOTO_IMPORT_PORT) {
     if (!Number.isInteger(port) || port < 0 || port > 65_535) throw new TypeError("port is invalid");
-    await new Promise((resolve, reject) => {
+    if (closing) throw new Error("The local photo import service is stopping");
+    if (pendingListen || server.listening) throw new Error("The local photo import service is already listening");
+
+    const listenAttempt = new Promise((resolve, reject) => {
       const onError = (error) => {
         server.off("listening", onListening);
         reject(error);
@@ -340,11 +402,20 @@ export function createPhotoImportService({
       server.once("listening", onListening);
       server.listen({ host: LOCAL_PHOTO_IMPORT_HOST, port });
     });
-    return server.address();
+    pendingListen = listenAttempt;
+    try {
+      await listenAttempt;
+      if (closing) throw new Error("The local photo import service is stopping");
+      return server.address();
+    } finally {
+      if (pendingListen === listenAttempt) pendingListen = null;
+    }
   }
 
   async function close() {
     closing = true;
+    const listenAttempt = pendingListen;
+    if (listenAttempt) await listenAttempt.catch(() => undefined);
     if (server.listening) {
       server.closeIdleConnections?.();
       await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
@@ -382,9 +453,14 @@ if (isMain) {
   });
 
   try {
-    await service.listen();
-    console.log(`Local photo import service: http://${LOCAL_PHOTO_IMPORT_HOST}:${LOCAL_PHOTO_IMPORT_PORT}`);
-    if (typeof process.send === "function") process.send({ type: "ready" });
+    const requestedPort = resolvePhotoImportPort({
+      argv: process.argv.slice(2),
+      environment: process.env,
+    });
+    const address = await service.listen(requestedPort);
+    const readyMessage = createPhotoImportReadyMessage(address);
+    console.log(`Local photo import service: http://${readyMessage.host}:${readyMessage.port}`);
+    if (typeof process.send === "function") process.send(readyMessage);
   } catch {
     console.error("Unable to start the local photo import service.");
     process.exitCode = 1;

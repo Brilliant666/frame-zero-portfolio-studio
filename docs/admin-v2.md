@@ -35,7 +35,7 @@ legacy `SiteContent`、`/api/site-content` 和 `site_settings(id = 1)` 行为不
 - 11 个正式模板使用紧凑选择列表，同一时间只展开当前查看候选的完整详情；已保存、当前 draft 与正在查看三个状态分别显示。浏览候选不会修改 draft，只有“选择此模板”会修改 draft，独立预览也不会修改 draft。
 - 基本资料优先展示摄影师、Hero 与信任信息；`profile.brand`、`profile.mark` 和 `statement` 保留原契约，但收进默认关闭的可选品牌内容。
 - 每个套餐的主页标题始终以可编辑输入显示，其他套餐字段继续使用有文字状态的 disclosure；旧版作品只在高级设置中按需展开。
-- 本机素材导入通过 `127.0.0.1:3002` 的独立 loopback service，把浏览器选择的单张、多张或文件夹照片逐张流式交给现有 Sharp importer；整个合法 manifest 仍是自动排版候选集，不增加 approved pool。
+- `npm run dev` 先在 `127.0.0.1` 的系统分配空闲端口启动独立素材导入服务，等待可信 IPC ready 后再把实际 origin 仅注入 Admin server；浏览器选择的单张、多张或文件夹照片仍逐张流式交给现有 Sharp importer，用户无需管理 companion port，整个合法 manifest 仍是自动排版候选集，不增加 approved pool。
 - 单文件上限为 200 MiB；服务请求和同一项目的 manifest 写入均串行，临时文件在成功、失败或中断后清理。
 - 导入照片立即更新本地 Photo Library，但不修改 SiteContent draft、不触发自动排版，也不需要点击“保存全部修改”；导入结束只重新读取 manifest。
 - 远程 Admin 不提供可执行的本机导入控件；本轮不增加云端素材 API、对象存储、删除能力或 repository。
@@ -46,4 +46,4 @@ legacy `SiteContent`、`/api/site-content` 和 `site_settings(id = 1)` 行为不
 
 本设计不引入实时主页 iframe、SiteDocument 运行时接线、新内容 schema、D1 API、数据库
 迁移、云端 repository、Asset UUID 分配、素材删除、模板目录变化或正式模板布局与视觉方向重做。
-本机 loopback import service 只是开发期 companion，不属于 hosted runtime；其他边界需要独立范围审查。
+本机 loopback import service 只是开发期 companion，不属于 hosted runtime；hosted 请求即使存在环境变量也不能启用本机 picker。独立 `npm run photos:serve` 默认使用可预测的诊断端口，并允许显式指定其他端口；其他边界需要独立范围审查。

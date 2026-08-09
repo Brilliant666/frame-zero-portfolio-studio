@@ -6,11 +6,9 @@ import { pathToFileURL } from "node:url";
 import test from "node:test";
 import ts from "typescript";
 import { photoImportContract } from "../scripts/lib/photo-import.mjs";
-import {
-  LOCAL_PHOTO_IMPORT_HOST,
-  LOCAL_PHOTO_IMPORT_MAX_BYTES,
-  LOCAL_PHOTO_IMPORT_PORT,
-} from "../scripts/photo-import-server.mjs";
+import { LOCAL_PHOTO_IMPORT_MAX_BYTES } from "../scripts/photo-import-server.mjs";
+
+const configuredOrigin = "http://127.0.0.1:43127";
 
 async function importPhotoImportClient(t) {
   const sourcePath = new URL("../app/admin/layout/photo-import-client.ts", import.meta.url);
@@ -37,15 +35,26 @@ function jsonResponse(value, status = 200) {
   });
 }
 
-test("the browser and loopback service share the importer limits", async (t) => {
+test("the browser and loopback service share limits without a fixed client origin", async (t) => {
   const {
+    checkLocalPhotoImportHealth,
     localPhotoImportExtensions,
     localPhotoImportMaximumBytes,
-    localPhotoImportOrigin,
   } = await importPhotoImportClient(t);
   assert.deepEqual(localPhotoImportExtensions, photoImportContract.supportedExtensions);
   assert.equal(localPhotoImportMaximumBytes, LOCAL_PHOTO_IMPORT_MAX_BYTES);
-  assert.equal(localPhotoImportOrigin, `http://${LOCAL_PHOTO_IMPORT_HOST}:${LOCAL_PHOTO_IMPORT_PORT}`);
+  const source = await fs.readFile(
+    new URL("../app/admin/layout/photo-import-client.ts", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(source, /127\.0\.0\.1:3002|localPhotoImportOrigin\s*=/);
+
+  let requestedUrl = null;
+  assert.equal(await checkLocalPhotoImportHealth(configuredOrigin, async (url) => {
+    requestedUrl = String(url);
+    return jsonResponse({ ok: true });
+  }), true);
+  assert.equal(requestedUrl, `${configuredOrigin}/health`);
 });
 
 test("the browser selection accepts the importer whitelist without reading folder paths", async (t) => {
@@ -102,7 +111,7 @@ test("a batch performs one raw sequential request per photo and refreshes once",
   let refreshes = 0;
   const progress = [];
 
-  const result = await runLocalPhotoImport(files, {
+  const result = await runLocalPhotoImport(configuredOrigin, files, {
     fetchImpl,
     onProgress: (value) => progress.push(value),
     refreshLibrary: async () => {
@@ -128,7 +137,7 @@ test("a batch performs one raw sequential request per photo and refreshes once",
   });
 
   requests.forEach(({ url, init }, index) => {
-    assert.equal(url, "http://127.0.0.1:3002/import");
+    assert.equal(url, `${configuredOrigin}/import`);
     assert.equal(init.method, "POST");
     assert.equal(init.body, files[index]);
     assert.equal(init.headers["content-type"], "application/octet-stream");
@@ -151,7 +160,7 @@ test("oversized and failed photos do not stop later queue items", async (t) => {
     return jsonResponse({ ok: true, status: "added", totalAssets: 20 });
   };
 
-  const result = await runLocalPhotoImport(files, {
+  const result = await runLocalPhotoImport(configuredOrigin, files, {
     fetchImpl,
     refreshLibrary: async () => null,
   });
@@ -173,7 +182,7 @@ test("an unavailable health endpoint starts no batch and performs no refresh", a
   let calls = 0;
   let refreshes = 0;
   await assert.rejects(
-    runLocalPhotoImport([photo("one.jpg")], {
+    runLocalPhotoImport(configuredOrigin, [photo("one.jpg")], {
       fetchImpl: async () => {
         calls += 1;
         return jsonResponse({ ok: false }, 503);
@@ -191,7 +200,7 @@ test("an unavailable health endpoint starts no batch and performs no refresh", a
 
 test("a full library is reported as a safe recoverable batch failure", async (t) => {
   const { runLocalPhotoImport } = await importPhotoImportClient(t);
-  const result = await runLocalPhotoImport([photo("one.jpg")], {
+  const result = await runLocalPhotoImport(configuredOrigin, [photo("one.jpg")], {
     fetchImpl: async (url) => String(url).endsWith("/health")
       ? jsonResponse({ ok: true })
       : jsonResponse({
