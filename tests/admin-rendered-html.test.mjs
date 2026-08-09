@@ -42,6 +42,8 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
     assert.match(html, /<meta property="og:site_name" content="内容管理后台"\/>/);
     assert.match(html, /<meta name="twitter:title" content="内容管理后台"\/>/);
     assert.match(html, /<link rel="icon" href="(?:https?:\/\/[^\"]+)?\/favicon\.svg"\/>/);
+    assert.match(html, /aria-label="保存全部修改"/);
+    assert.match(html, /title="保存全部修改"/);
     assert.equal(html.match(/<h1\b/g)?.length, 1);
     assert.equal(html.match(/data-admin-section="[^"]+"/g)?.length, 1);
     assert.match(html, new RegExp(`data-admin-section="${section}"`));

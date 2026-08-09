@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { getClientVisiblePortfolioTitle } from "./client-visible-title";
 import { isTemplateId, normalizeSiteContent, siteConfig, type SiteContent, type TemplateId, type Work } from "./site-config";
 import { getTemplateCatalogItem } from "./templates/catalog";
 import Lightbox from "./templates/shared/lightbox";
@@ -49,7 +50,9 @@ export default function Home() {
       .then((response) => response.ok ? response.json() : null)
       .then((result: { content?: unknown } | null) => {
         if (!result?.content) return;
-        setContent(normalizeSiteContent(result.content));
+        const nextContent = normalizeSiteContent(result.content);
+        setContent(nextContent);
+        document.title = getClientVisiblePortfolioTitle(nextContent.profile);
         setActiveWork(null);
       })
       .catch((error: unknown) => {

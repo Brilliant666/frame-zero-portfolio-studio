@@ -43,11 +43,12 @@ test("server-renders the finished photography portfolio", async () => {
 });
 
 test("keeps editable content and eleven lazy template choices in one configuration", async () => {
-  const [config, catalog, renderer, page, layout, photoFallback, adminShell, api, schema, hosting] = await Promise.all([
+  const [config, catalog, renderer, page, clientTitle, layout, photoFallback, adminShell, api, schema, hosting] = await Promise.all([
     readFile(new URL("../app/site-config.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/templates/catalog.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/templates/template-renderer.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/client-visible-title.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/photo-fallback-controller.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/admin/admin-shell.tsx", import.meta.url), "utf8"),
@@ -81,6 +82,9 @@ test("keeps editable content and eleven lazy template choices in one configurati
   assert.match(page, /<TemplateRenderer/);
   assert.match(page, /previewTemplate \?\? content\.activeTemplate/);
   assert.match(page, /fetch\("\/api\/site-content"/);
+  assert.match(page, /const nextContent = normalizeSiteContent\(result\.content\)/);
+  assert.match(page, /document\.title = getClientVisiblePortfolioTitle\(nextContent\.profile\)/);
+  assert.doesNotMatch(clientTitle, /FRAME\/\/ZERO|Cosplay 摄影师|openGraph|twitter/u);
   assert.match(page, /const selected = content\.templateWorks\[templateId\]/);
   assert.match(page, /buildPhotoSlots\(/);
   assert.match(adminShell, /data-admin-title="true"/);

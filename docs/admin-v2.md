@@ -22,6 +22,7 @@ legacy `SiteContent`、`/api/site-content` 和 `site_settings(id = 1)` 行为不
 - draft 与最后成功保存的 JSON 不同即为未保存；恢复原值会重新变为 clean。
 - 无修改、读取失败、读取降级或正在保存时不会发送 PUT。
 - 保存仍只发送 `PUT /api/site-content` 和 `{ content: SiteContent }`。
+- 顶栏“保存全部修改”保存六个分区共享的完整 draft；窄屏可缩短可见文案，但无障碍名称仍保留完整语义。
 - 保存失败保留 draft；保存期间产生的新编辑不会被较早的服务器响应覆盖。
 - `Ctrl+S` / `Cmd+S` 阻止浏览器保存网页并触发同一保存操作。
 - 有未保存修改时使用浏览器 `beforeunload` 保护真实离开或刷新；Admin 内部分区切换不弹窗。

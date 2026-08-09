@@ -340,6 +340,14 @@
   line-height: 1.8;
 }
 
+.fieldToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-bottom: .75rem;
+}
+
 .fieldViewport {
   position: relative;
   height: clamp(45rem, 78svh, 62rem);
@@ -370,7 +378,7 @@
   top: 50%;
   left: 50%;
   width: 132rem;
-  height: 82rem;
+  height: 62rem;
   transform-origin: center;
   transition: transform .16s ease-out;
 }
@@ -589,11 +597,8 @@
 }
 
 .fieldControls {
-  position: absolute;
-  z-index: 40;
-  top: 1rem;
-  right: 1rem;
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   overflow: hidden;
   border: 1px solid rgba(24,34,39,.35);
@@ -638,16 +643,14 @@
 }
 
 .dragHint {
-  position: absolute;
-  z-index: 35;
-  right: 1rem;
-  bottom: 1rem;
+  min-width: 0;
+  margin: 0;
   padding: .65rem .8rem;
   background: rgba(24,34,39,.9);
   color: #fff;
   font: 650 .5rem ui-monospace, SFMono-Regular, Consolas, monospace;
+  line-height: 1.45;
   letter-spacing: .08em;
-  pointer-events: none;
 }
 
 .dragHint span {
@@ -1174,6 +1177,10 @@
 
   .sectionHeading h2 {
     font-size: clamp(3rem, 16vw, 5rem);
+  }
+
+  .fieldToolbar {
+    display: none;
   }
 
   .fieldViewport {
