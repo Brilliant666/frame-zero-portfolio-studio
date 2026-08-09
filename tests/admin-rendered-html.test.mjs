@@ -13,10 +13,12 @@ const context = {
   passThroughOnException() {},
 };
 
-function requestAdmin(pathname) {
+function requestAdmin(pathname, { authenticated = false, host = "127.0.0.1:3001" } = {}) {
+  const headers = { accept: "text/html", host };
+  if (authenticated) headers["oai-authenticated-user-email"] = "owner@portfolio.example";
   return worker.fetch(
-    new Request(`http://127.0.0.1:3001${pathname}`, {
-      headers: { accept: "text/html", host: "127.0.0.1:3001" },
+    new Request(`http://${host}${pathname}`, {
+      headers,
       redirect: "manual",
     }),
     { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
@@ -64,6 +66,28 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
     if (section === "packages") {
       assert.equal(html.match(/data-package-title-input="\d+"/g)?.length, 3);
     }
+    if (section === "layout") {
+      assert.match(html, /data-local-photo-import="enabled"/);
+      assert.equal(html.match(/data-photo-picker="(?:files|folder)"/g)?.length, 2);
+      assert.match(html, /data-photo-picker="folder"[^>]*webkitdirectory=""|webkitdirectory=""[^>]*data-photo-picker="folder"/);
+      assert.match(html, /\+ 添加照片/);
+      assert.match(html, /\+ 添加文件夹/);
+      assert.match(html, /aria-label="素材库画幅统计"/);
+    }
     assert.doesNotMatch(html, /admin-section-placeholder/);
   });
 }
+
+test("hosted Admin renders no executable local photo ingest controls", async () => {
+  const response = await requestAdmin("/admin/layout", {
+    authenticated: true,
+    host: "portfolio.example.invalid",
+  });
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /data-local-photo-import="disabled"/);
+  assert.match(html, /本地照片导入仅在本机编辑模式可用/);
+  assert.doesNotMatch(html, /data-photo-picker=/);
+  assert.doesNotMatch(html, /\+ 添加照片|\+ 添加文件夹/);
+  assert.match(html, /aria-label="保存全部修改"/);
+});

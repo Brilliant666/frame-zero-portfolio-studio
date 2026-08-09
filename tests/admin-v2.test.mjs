@@ -168,6 +168,52 @@ test("the obsolete long-form Admin implementation is removed", async () => {
   }
 });
 
+test("local photo ingest stays isolated from the shared SiteContent draft", async () => {
+  const [layout, panel, client, provider, adminLayout, css] = await Promise.all([
+    source("app/admin/layout/layout-workspace.tsx"),
+    source("app/admin/layout/photo-import-panel.tsx"),
+    source("app/admin/layout/photo-import-client.ts"),
+    source("app/admin/admin-provider.tsx"),
+    source("app/admin/layout.tsx"),
+    source("app/admin/admin-v2.module.css"),
+  ]);
+
+  assert.match(layout, /<PhotoImportPanel/);
+  assert.match(layout, /localPhotoImportEnabled/);
+  assert.match(layout, /isImporting \|\| assets\.length === 0/);
+  assert.match(layout, /libraryRequestRef/);
+  assert.match(layout, /request !== libraryRequestRef\.current/);
+  assert.match(layout, /\["all", "landscape", "portrait", "square"\]/);
+  assert.match(layout, /setLibraryMessage\("素材库还为空。"\)/);
+  assert.match(layout, /使用上方“添加照片”或“添加文件夹”把作品加入素材库/);
+  assert.match(layout, /未能读取素材库；请先处理上方错误并重新读取/);
+  assert.doesNotMatch(layout, /先运行文件夹导入命令|重新执行导入命令/);
+  assert.doesNotMatch(panel, /useAdmin|setContent|autoComposeTemplateWorks|\/api\/site-content|method:\s*"PUT"/);
+  assert.match(panel, /data-photo-picker="files"/);
+  assert.match(panel, /data-photo-picker="folder"/);
+  assert.match(panel, /multiple/);
+  assert.match(panel, /webkitdirectory/);
+  assert.equal(panel.match(/aria-hidden="true"/g)?.length, 2);
+  assert.equal(panel.match(/tabIndex=\{-1\}/g)?.length, 2);
+  assert.match(panel, /本地照片导入仅在本机编辑模式可用/);
+  assert.match(panel, /高级 \/ 命令行导入/);
+  assert.match(panel, /新增 \{result\.added\}/);
+  assert.match(panel, /已存在 \{result\.alreadyExists\}/);
+  assert.match(panel, /查看失败详情/);
+  assert.match(panel, /未能添加照片/);
+  assert.match(panel, /aria-label="照片导入进度"/);
+  assert.doesNotMatch(client, /JSON\.stringify|FileReader|readAsDataURL|webkitRelativePath/);
+  assert.match(client, /body: file/);
+  assert.match(client, /"content-type": "application\/octet-stream"/);
+  assert.match(client, /"x-frame-zero-local-import": "1"/);
+  assert.match(client, /localPhotoImportMaximumBytes = 200 \* 1024 \* 1024/);
+  assert.match(provider, /localPhotoImportEnabled: boolean/);
+  assert.match(adminLayout, /localPhotoImportEnabled=\{local\}/);
+  assert.match(css, /\.libraryStats\s*\{/);
+  assert.match(css, /\.photoImportProgress\s*,/);
+  assert.match(css, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
+});
+
 test("Admin V2 keeps shared draft persistence on the unchanged site-content endpoint", async () => {
   const provider = await source("app/admin/admin-provider.tsx");
   assert.match(provider, /fetch\("\/api\/site-content", \{ cache: "no-store" \}\)/);

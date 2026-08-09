@@ -8,7 +8,19 @@ const MANIFEST_VERSION = 1;
 const PIPELINE_VERSION = "webp-480-1100-2200-v1";
 const HASH_PATTERN = /^[a-f0-9]{64}$/;
 const MINIMUM_NODE_VERSION = [22, 13, 0];
-const SUPPORTED_EXTENSIONS = new Set([
+const MAX_MANIFEST_ASSETS = 10_000;
+const MAX_VARIANT_DIMENSION = 100_000;
+const MIN_ASPECT_RATIO = 0.05;
+const MAX_ASPECT_RATIO = 20;
+const ASPECT_RATIO_TOLERANCE = 0.03;
+const PHOTO_IMPORT_LOCK_FILE = "photo-import.lock";
+const PHOTO_IMPORT_RECOVERY_LOCK_FILE = "photo-import.lock.recovery";
+const PHOTO_IMPORT_LOCK_VERSION = 1;
+const PHOTO_IMPORT_LOCK_TIMEOUT_MS = 120_000;
+const PHOTO_IMPORT_LOCK_RETRY_MS = 50;
+const PHOTO_IMPORT_DEAD_LOCK_GRACE_MS = 5_000;
+const PHOTO_IMPORT_INCOMPLETE_LOCK_GRACE_MS = 30_000;
+const SUPPORTED_EXTENSION_LIST = Object.freeze([
   ".avif",
   ".heic",
   ".heif",
@@ -19,6 +31,7 @@ const SUPPORTED_EXTENSIONS = new Set([
   ".tiff",
   ".webp",
 ]);
+const SUPPORTED_EXTENSIONS = new Set(SUPPORTED_EXTENSION_LIST);
 
 const VARIANT_OPTIONS = {
   thumbnail: { maximum: 480, quality: 60 },
@@ -75,7 +88,15 @@ async function ensureGeneratedDirectory(projectRoot, targetDirectory, { allowLin
       if (!stat.isDirectory()) throw new Error("Generated photo path collides with a non-directory entry");
     } catch (error) {
       if (!error || error.code !== "ENOENT") throw error;
-      await fs.mkdir(current);
+      try {
+        await fs.mkdir(current);
+      } catch (mkdirError) {
+        if (!mkdirError || mkdirError.code !== "EEXIST") throw mkdirError;
+        const existing = await fs.lstat(current);
+        if (existing.isSymbolicLink() || !existing.isDirectory()) {
+          throw new Error("Generated photo path collides with a non-directory entry");
+        }
+      }
     }
   }
 
@@ -171,9 +192,42 @@ async function removeFileWithRetry(filePath) {
   }
 }
 
+async function fileExists(filePath) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch (error) {
+    if (error?.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+function atomicWritePaths(filePath) {
+  return {
+    backupPath: `${filePath}.frame-zero-backup`,
+    temporaryPath: `${filePath}.frame-zero-pending`,
+  };
+}
+
+async function recoverInterruptedAtomicWrite(filePath) {
+  const { backupPath, temporaryPath } = atomicWritePaths(filePath);
+  const [targetExists, backupExists] = await Promise.all([
+    fileExists(filePath),
+    fileExists(backupPath),
+  ]);
+
+  if (!targetExists && backupExists) {
+    await fs.rename(backupPath, filePath);
+  } else if (targetExists && backupExists) {
+    await removeFileWithRetry(backupPath);
+  }
+  await removeFileWithRetry(temporaryPath);
+}
+
 async function writeJsonAtomically(filePath, value) {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
-  const temporaryPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  await recoverInterruptedAtomicWrite(filePath);
+  const { backupPath, temporaryPath } = atomicWritePaths(filePath);
   await fs.writeFile(temporaryPath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 
   try {
@@ -183,17 +237,198 @@ async function writeJsonAtomically(filePath, value) {
       await removeFileWithRetry(temporaryPath);
       throw error;
     }
-    await removeFileWithRetry(filePath);
-    await fs.rename(temporaryPath, filePath);
+    await removeFileWithRetry(backupPath);
+    let movedExistingFile = false;
+    try {
+      await fs.rename(filePath, backupPath);
+      movedExistingFile = true;
+      await fs.rename(temporaryPath, filePath);
+      await removeFileWithRetry(backupPath);
+    } catch (replacementError) {
+      if (movedExistingFile) {
+        if (await fileExists(filePath)) await removeFileWithRetry(backupPath);
+        else await fs.rename(backupPath, filePath);
+      }
+      await removeFileWithRetry(temporaryPath);
+      throw replacementError;
+    }
   }
 }
 
 async function readJson(filePath) {
   try {
+    await recoverInterruptedAtomicWrite(filePath);
     return JSON.parse(await fs.readFile(filePath, "utf8"));
   } catch (error) {
     if (error && error.code === "ENOENT") return null;
     return null;
+  }
+}
+
+function sleep(durationMs) {
+  return new Promise((resolve) => setTimeout(resolve, durationMs));
+}
+
+function isProcessAlive(pid) {
+  if (!Number.isSafeInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    if (error?.code === "ESRCH") return false;
+    return true;
+  }
+}
+
+function parseImportLock(contents) {
+  try {
+    const value = JSON.parse(contents);
+    if (
+      value?.version !== PHOTO_IMPORT_LOCK_VERSION
+      || !Number.isSafeInteger(value.pid)
+      || value.pid <= 0
+      || typeof value.token !== "string"
+      || !HASH_PATTERN.test(value.token)
+      || typeof value.createdAt !== "number"
+      || !Number.isFinite(value.createdAt)
+    ) return null;
+    return value;
+  } catch {
+    return null;
+  }
+}
+
+async function inspectImportLock(lockPath) {
+  let contents;
+  let stat;
+  try {
+    [contents, stat] = await Promise.all([
+      fs.readFile(lockPath, "utf8"),
+      fs.stat(lockPath),
+    ]);
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
+
+  const lock = parseImportLock(contents);
+  const now = Date.now();
+  return {
+    contents,
+    isStale: lock
+    ? now - lock.createdAt >= PHOTO_IMPORT_DEAD_LOCK_GRACE_MS && !isProcessAlive(lock.pid)
+    : now - stat.mtimeMs >= PHOTO_IMPORT_INCOMPLETE_LOCK_GRACE_MS,
+  };
+}
+
+async function createOwnedLock(lockPath) {
+  const token = randomBytes(32).toString("hex");
+  let handle;
+  try {
+    handle = await fs.open(lockPath, "wx", 0o600);
+    await handle.writeFile(`${JSON.stringify({
+      version: PHOTO_IMPORT_LOCK_VERSION,
+      pid: process.pid,
+      token,
+      createdAt: Date.now(),
+    })}\n`, "utf8");
+    await handle.sync();
+    await handle.close();
+    return { lockPath, token };
+  } catch (error) {
+    await handle?.close().catch(() => {});
+    if (handle) await removeFileWithRetry(lockPath);
+    throw error;
+  }
+}
+
+async function releaseOwnedLock(lock) {
+  try {
+    const contents = await fs.readFile(lock.lockPath, "utf8");
+    if (parseImportLock(contents)?.token !== lock.token) return;
+    await removeFileWithRetry(lock.lockPath);
+  } catch (error) {
+    if (!error || error.code !== "ENOENT") throw error;
+  }
+}
+
+async function removeAbandonedRecoveryLock(recoveryLockPath) {
+  const observed = await inspectImportLock(recoveryLockPath);
+  if (!observed) return true;
+  if (!observed.isStale) return false;
+
+  try {
+    if (await fs.readFile(recoveryLockPath, "utf8") !== observed.contents) return false;
+    await removeFileWithRetry(recoveryLockPath);
+    return true;
+  } catch (error) {
+    if (error?.code === "ENOENT") return true;
+    throw error;
+  }
+}
+
+async function recoverStaleImportLock(lockPath, recoveryLockPath) {
+  const observed = await inspectImportLock(lockPath);
+  if (!observed) return true;
+  if (!observed.isStale) return false;
+
+  let recoveryLock;
+  try {
+    recoveryLock = await createOwnedLock(recoveryLockPath);
+  } catch (error) {
+    if (error?.code === "EEXIST") return false;
+    throw error;
+  }
+
+  try {
+    const current = await inspectImportLock(lockPath);
+    if (!current) return true;
+    if (!current.isStale || current.contents !== observed.contents) return false;
+    await removeFileWithRetry(lockPath);
+    return true;
+  } catch (error) {
+    if (error?.code === "ENOENT") return true;
+    throw error;
+  } finally {
+    await releaseOwnedLock(recoveryLock);
+  }
+}
+
+async function acquireImportLock(stateDir) {
+  const lockPath = path.join(stateDir, PHOTO_IMPORT_LOCK_FILE);
+  const recoveryLockPath = path.join(stateDir, PHOTO_IMPORT_RECOVERY_LOCK_FILE);
+  const startedAt = Date.now();
+
+  while (true) {
+    const recovery = await inspectImportLock(recoveryLockPath);
+    if (recovery) {
+      if (recovery.isStale) await removeAbandonedRecoveryLock(recoveryLockPath);
+      if (Date.now() - startedAt >= PHOTO_IMPORT_LOCK_TIMEOUT_MS) {
+        throw new Error("Another photo import is still running; try again after it finishes");
+      }
+      await sleep(PHOTO_IMPORT_LOCK_RETRY_MS);
+      continue;
+    }
+
+    try {
+      return await createOwnedLock(lockPath);
+    } catch (error) {
+      if (!error || error.code !== "EEXIST") throw error;
+      if (await recoverStaleImportLock(lockPath, recoveryLockPath)) continue;
+      if (Date.now() - startedAt >= PHOTO_IMPORT_LOCK_TIMEOUT_MS) {
+        throw new Error("Another photo import is still running; try again after it finishes");
+      }
+      await sleep(PHOTO_IMPORT_LOCK_RETRY_MS);
+    }
+  }
+}
+
+async function withImportLock(stateDir, operation) {
+  const lock = await acquireImportLock(stateDir);
+  try {
+    return await operation();
+  } finally {
+    await releaseOwnedLock(lock);
   }
 }
 
@@ -202,27 +437,52 @@ function isVariantShape(value, id, name) {
     value
     && typeof value === "object"
     && value.src === variantSource(id, name)
-    && Number.isInteger(value.width)
+    && Number.isSafeInteger(value.width)
     && value.width > 0
-    && Number.isInteger(value.height)
+    && value.width <= MAX_VARIANT_DIMENSION
+    && Number.isSafeInteger(value.height)
     && value.height > 0
-    && Number.isInteger(value.bytes)
+    && value.height <= MAX_VARIANT_DIMENSION
+    && Number.isSafeInteger(value.bytes)
     && value.bytes > 0,
   );
 }
 
 function isAssetShape(value) {
-  return Boolean(
+  if (!(
     value
     && typeof value === "object"
     && HASH_PATTERN.test(value.id)
     && typeof value.aspectRatio === "number"
+    && Number.isFinite(value.aspectRatio)
+    && value.aspectRatio >= MIN_ASPECT_RATIO
+    && value.aspectRatio <= MAX_ASPECT_RATIO
     && ["landscape", "portrait", "square"].includes(value.orientation)
     && value.variants
     && isVariantShape(value.variants.thumbnail, value.id, "thumbnail")
     && isVariantShape(value.variants.card, value.id, "card")
-    && isVariantShape(value.variants.full, value.id, "full"),
-  );
+    && isVariantShape(value.variants.full, value.id, "full")
+  )) return false;
+
+  const { aspectRatio, orientation, variants } = value;
+  const expectedOrientation = aspectRatio > 1
+    ? "landscape"
+    : aspectRatio < 1
+      ? "portrait"
+      : "square";
+  if (orientation !== expectedOrientation) return false;
+
+  const orderedVariants = [variants.thumbnail, variants.card, variants.full];
+  if (orderedVariants.some((variant) => (
+    Math.abs(Math.log((variant.width / variant.height) / aspectRatio)) > ASPECT_RATIO_TOLERANCE
+  ))) return false;
+  if (variants.thumbnail.width > variants.card.width || variants.thumbnail.height > variants.card.height) {
+    return false;
+  }
+  if (variants.card.width > variants.full.width || variants.card.height > variants.full.height) {
+    return false;
+  }
+  return true;
 }
 
 function selectPublicAssetFields(asset) {
@@ -236,6 +496,78 @@ function selectPublicAssetFields(asset) {
       height: asset.variants[name].height,
       bytes: asset.variants[name].bytes,
     }])),
+  };
+}
+
+function isManifestShape(value) {
+  if (
+    !value
+    || typeof value !== "object"
+    || value.version !== MANIFEST_VERSION
+    || !Array.isArray(value.assets)
+    || value.assets.length > MAX_MANIFEST_ASSETS
+    || !value.assets.every(isAssetShape)
+  ) return false;
+
+  return new Set(value.assets.map((asset) => asset.id)).size === value.assets.length;
+}
+
+async function readExistingManifest(manifestPath) {
+  await recoverInterruptedAtomicWrite(manifestPath);
+  let contents;
+  try {
+    contents = await fs.readFile(manifestPath, "utf8");
+  } catch (error) {
+    if (error?.code === "ENOENT") return { version: MANIFEST_VERSION, assets: [] };
+    throw error;
+  }
+
+  let value;
+  try {
+    value = JSON.parse(contents);
+  } catch {
+    throw new Error("Existing photo library manifest is invalid; refusing to overwrite it");
+  }
+  if (!isManifestShape(value)) {
+    throw new Error("Existing photo library manifest is invalid; refusing to overwrite it");
+  }
+  return {
+    version: MANIFEST_VERSION,
+    assets: value.assets.map(selectPublicAssetFields),
+  };
+}
+
+function selectStoredSourceState(previousState) {
+  if (
+    !previousState
+    || typeof previousState !== "object"
+    || typeof previousState.sourceKey !== "string"
+    || !HASH_PATTERN.test(previousState.sourceKey)
+    || !Array.isArray(previousState.files)
+    || !previousState.files.every((file) => (
+      file
+      && typeof file === "object"
+      && typeof file.relativePath === "string"
+      && file.relativePath.length > 0
+      && !path.isAbsolute(file.relativePath)
+      && typeof file.size === "number"
+      && Number.isFinite(file.size)
+      && file.size >= 0
+      && typeof file.mtimeMs === "number"
+      && Number.isFinite(file.mtimeMs)
+      && typeof file.hash === "string"
+      && HASH_PATTERN.test(file.hash)
+    ))
+  ) return {};
+
+  return {
+    sourceKey: previousState.sourceKey,
+    files: previousState.files.map((file) => ({
+      relativePath: file.relativePath,
+      size: file.size,
+      mtimeMs: file.mtimeMs,
+      hash: file.hash,
+    })),
   };
 }
 
@@ -330,10 +662,14 @@ export async function importPhotoLibrary({
   sourceDir,
   projectRoot = process.cwd(),
   adoptLinkedOutput = false,
+  recordSourceState = true,
 }) {
   assertSupportedNodeRuntime();
   if (typeof sourceDir !== "string" || sourceDir.trim() === "") {
     throw new TypeError("sourceDir is required");
+  }
+  if (typeof recordSourceState !== "boolean") {
+    throw new TypeError("recordSourceState must be a boolean");
   }
 
   const resolvedProjectRoot = await fs.realpath(path.resolve(projectRoot));
@@ -344,149 +680,173 @@ export async function importPhotoLibrary({
   const generatedPhotosRoot = path.join(resolvedProjectRoot, "public", "photos");
   const generatedLibraryDir = path.join(generatedPhotosRoot, "library");
   const stateDir = await ensureGeneratedDirectory(resolvedProjectRoot, path.join(resolvedProjectRoot, ".frame-zero"));
-  const statePath = path.join(stateDir, "photo-import-state.json");
-  const previousState = await readJson(statePath);
-  const linkedManifest = await readJson(path.join(generatedPhotosRoot, "library-manifest.json"));
-  const linkedOwner = await readJson(path.join(generatedLibraryDir, ".frame-zero-owner.json"));
-  let existingOutputKey = null;
-  try {
-    const existingLibraryDir = await fs.realpath(generatedLibraryDir);
-    existingOutputKey = createHash("sha256").update(existingLibraryDir).digest("hex");
-  } catch (error) {
-    if (!error || error.code !== "ENOENT") throw error;
-  }
-  const ownsExistingLinkedOutput = previousState?.pipelineVersion === PIPELINE_VERSION
-    && typeof previousState.outputKey === "string"
-    && previousState.outputKey === existingOutputKey
-    && typeof previousState.ownershipToken === "string"
-    && HASH_PATTERN.test(previousState.ownershipToken)
-    && linkedOwner?.ownershipToken === previousState.ownershipToken
-    && linkedManifest?.version === MANIFEST_VERSION
-    && Array.isArray(linkedManifest.assets)
-    && linkedManifest.assets.every(isAssetShape);
-
   if (isPathInside(generatedLibraryDir, resolvedSourceDir)) {
     throw new Error("Photo source cannot be the generated library directory");
   }
 
-  const libraryDir = await ensureGeneratedDirectory(resolvedProjectRoot, generatedLibraryDir, {
-    allowLinkedOutput: ownsExistingLinkedOutput || adoptLinkedOutput,
-  });
-  if (isPathInside(libraryDir, resolvedSourceDir)) {
-    throw new Error("Photo source cannot be the generated library directory");
-  }
-  const outputKey = createHash("sha256").update(libraryDir).digest("hex");
-  if (previousState?.outputKey && previousState.outputKey !== outputKey && !adoptLinkedOutput) {
-    throw new Error("Generated photo output link changed since the previous import");
-  }
-  const ownershipToken = ownsExistingLinkedOutput
-    ? previousState.ownershipToken
-    : randomBytes(32).toString("hex");
-  const photosRoot = path.dirname(libraryDir);
-  const manifestPath = path.join(photosRoot, "library-manifest.json");
-
-  const scan = await scanPhotoFiles(resolvedSourceDir, [libraryDir, stateDir]);
-  if (scan.files.length === 0) {
-    throw new Error("No supported image files were found in the source directory");
-  }
-
-  const previousManifest = await readJson(manifestPath);
-  const previousAssets = new Map(
-    previousManifest?.version === MANIFEST_VERSION && Array.isArray(previousManifest.assets)
-      ? previousManifest.assets.filter(isAssetShape).map((asset) => [asset.id, selectPublicAssetFields(asset)])
-      : [],
-  );
-  const canReusePrevious = previousState?.pipelineVersion === PIPELINE_VERSION;
-
-  const uniqueSources = new Map();
-  const stateFiles = [];
-  const skipped = [];
-
-  for (const sourcePath of scan.files) {
-    const relativePath = normalizeRelativePath(path.relative(resolvedSourceDir, sourcePath));
+  return withImportLock(stateDir, async () => {
+    const statePath = path.join(stateDir, "photo-import-state.json");
+    const previousState = await readJson(statePath);
+    const linkedManifest = await readJson(path.join(generatedPhotosRoot, "library-manifest.json"));
+    const linkedOwner = await readJson(path.join(generatedLibraryDir, ".frame-zero-owner.json"));
+    let existingOutputKey = null;
     try {
-      const [hash, stat] = await Promise.all([hashFile(sourcePath), fs.stat(sourcePath)]);
-      stateFiles.push({ relativePath, size: stat.size, mtimeMs: stat.mtimeMs, hash });
-      if (!uniqueSources.has(hash)) uniqueSources.set(hash, sourcePath);
+      const existingLibraryDir = await fs.realpath(generatedLibraryDir);
+      existingOutputKey = createHash("sha256").update(existingLibraryDir).digest("hex");
     } catch (error) {
-      skipped.push({ file: relativePath, reason: sanitizeError(error, resolvedSourceDir) });
+      if (!error || error.code !== "ENOENT") throw error;
     }
-  }
+    const ownsExistingLinkedOutput = previousState?.pipelineVersion === PIPELINE_VERSION
+      && typeof previousState.outputKey === "string"
+      && previousState.outputKey === existingOutputKey
+      && typeof previousState.ownershipToken === "string"
+      && HASH_PATTERN.test(previousState.ownershipToken)
+      && linkedOwner?.ownershipToken === previousState.ownershipToken
+      && isManifestShape(linkedManifest);
 
-  const duplicateFiles = stateFiles.length - uniqueSources.size;
-  const currentAssets = [];
-  let generatedAssets = 0;
-  let reusedAssets = 0;
+    const libraryDir = await ensureGeneratedDirectory(resolvedProjectRoot, generatedLibraryDir, {
+      allowLinkedOutput: ownsExistingLinkedOutput || adoptLinkedOutput,
+    });
+    if (isPathInside(libraryDir, resolvedSourceDir)) {
+      throw new Error("Photo source cannot be the generated library directory");
+    }
+    const outputKey = createHash("sha256").update(libraryDir).digest("hex");
+    if (previousState?.outputKey && previousState.outputKey !== outputKey && !adoptLinkedOutput) {
+      throw new Error("Generated photo output link changed since the previous import");
+    }
+    const ownershipToken = ownsExistingLinkedOutput
+      ? previousState.ownershipToken
+      : randomBytes(32).toString("hex");
+    const photosRoot = path.dirname(libraryDir);
+    const manifestPath = path.join(photosRoot, "library-manifest.json");
+    const previousManifest = await readExistingManifest(manifestPath);
+    const previousAssets = new Map(
+      previousManifest.assets.map((asset) => [asset.id, asset]),
+    );
+    const canReusePrevious = previousState?.pipelineVersion === PIPELINE_VERSION;
 
-  for (const [id, sourcePath] of uniqueSources) {
-    try {
-      const previous = canReusePrevious ? previousAssets.get(id) : null;
-      if (previous && await canReuseAsset(previous, libraryDir)) {
-        currentAssets.push(previous);
-        reusedAssets += 1;
-      } else {
-        currentAssets.push(await generateAsset(sourcePath, id, libraryDir));
-        generatedAssets += 1;
+    const scan = await scanPhotoFiles(resolvedSourceDir, [libraryDir, stateDir]);
+    if (scan.files.length === 0) {
+      throw new Error("No supported image files were found in the source directory");
+    }
+
+    const uniqueSources = new Map();
+    const stateFiles = [];
+    const skipped = [];
+
+    for (const sourcePath of scan.files) {
+      const relativePath = normalizeRelativePath(path.relative(resolvedSourceDir, sourcePath));
+      try {
+        const [hash, stat] = await Promise.all([hashFile(sourcePath), fs.stat(sourcePath)]);
+        stateFiles.push({ relativePath, size: stat.size, mtimeMs: stat.mtimeMs, hash });
+        if (!uniqueSources.has(hash)) uniqueSources.set(hash, sourcePath);
+      } catch (error) {
+        skipped.push({ file: relativePath, reason: sanitizeError(error, resolvedSourceDir) });
       }
-    } catch (error) {
-      skipped.push({
-        file: normalizeRelativePath(path.relative(resolvedSourceDir, sourcePath)),
-        reason: sanitizeError(error, resolvedSourceDir),
-      });
     }
-  }
 
-  if (currentAssets.length === 0) {
-    const error = new Error("No readable photographs could be imported");
-    error.skipped = skipped;
-    throw error;
-  }
+    const duplicateFiles = stateFiles.length - uniqueSources.size;
+    const currentAssets = [];
+    let generatedAssets = 0;
+    let reusedAssets = 0;
+    let addedAssets = 0;
+    let existingAssets = 0;
+    let capacityRejectedAssets = 0;
 
-  // Imports are additive by default. A mistaken folder selection, temporary
-  // decoder failure, or removed source file must never invalidate photographs
-  // that are already referenced by a saved homepage layout.
-  const mergedAssets = new Map(previousAssets);
-  for (const asset of currentAssets) mergedAssets.set(asset.id, asset);
-  const assets = [...mergedAssets.values()];
-  assets.sort((left, right) => left.id.localeCompare(right.id));
-  const manifest = { version: MANIFEST_VERSION, assets };
-  await writeJsonAtomically(manifestPath, manifest);
-  await writeJsonAtomically(path.join(libraryDir, ".frame-zero-owner.json"), {
-    version: MANIFEST_VERSION,
-    ownershipToken,
+    for (const [id, sourcePath] of uniqueSources) {
+      const alreadyExists = previousAssets.has(id);
+      if (!alreadyExists && previousAssets.size + addedAssets >= MAX_MANIFEST_ASSETS) {
+        capacityRejectedAssets += 1;
+        skipped.push({
+          file: normalizeRelativePath(path.relative(resolvedSourceDir, sourcePath)),
+          reason: `Photo library is limited to ${MAX_MANIFEST_ASSETS} assets`,
+        });
+        continue;
+      }
+
+      try {
+        const previous = canReusePrevious ? previousAssets.get(id) : null;
+        if (previous && await canReuseAsset(previous, libraryDir)) {
+          currentAssets.push(previous);
+          reusedAssets += 1;
+        } else {
+          currentAssets.push(await generateAsset(sourcePath, id, libraryDir));
+          generatedAssets += 1;
+        }
+        if (alreadyExists) existingAssets += 1;
+        else addedAssets += 1;
+      } catch (error) {
+        skipped.push({
+          file: normalizeRelativePath(path.relative(resolvedSourceDir, sourcePath)),
+          reason: sanitizeError(error, resolvedSourceDir),
+        });
+      }
+    }
+
+    if (currentAssets.length === 0) {
+      const message = capacityRejectedAssets > 0
+        ? `Photo library is limited to ${MAX_MANIFEST_ASSETS} assets`
+        : "No readable photographs could be imported";
+      const error = new Error(message);
+      error.skipped = skipped;
+      throw error;
+    }
+
+    // Imports are additive by default. A mistaken folder selection, temporary
+    // decoder failure, or removed source file must never invalidate photographs
+    // that are already referenced by a saved homepage layout.
+    const mergedAssets = new Map(previousAssets);
+    for (const asset of currentAssets) mergedAssets.set(asset.id, asset);
+    const assets = [...mergedAssets.values()];
+    assets.sort((left, right) => left.id.localeCompare(right.id));
+    const manifest = { version: MANIFEST_VERSION, assets };
+    await writeJsonAtomically(manifestPath, manifest);
+    await writeJsonAtomically(path.join(libraryDir, ".frame-zero-owner.json"), {
+      version: MANIFEST_VERSION,
+      ownershipToken,
+    });
+
+    const sourceState = recordSourceState
+      ? {
+          sourceKey: createHash("sha256").update(resolvedSourceDir).digest("hex"),
+          files: stateFiles,
+        }
+      : selectStoredSourceState(previousState);
+    const state = {
+      version: MANIFEST_VERSION,
+      pipelineVersion: PIPELINE_VERSION,
+      outputKey,
+      ownershipToken,
+      ...sourceState,
+    };
+    await writeJsonAtomically(statePath, state);
+
+    return {
+      manifest,
+      manifestPath,
+      statePath,
+      libraryDir,
+      scannedFiles: scan.scannedFiles,
+      candidateFiles: scan.files.length,
+      uniqueFiles: uniqueSources.size,
+      duplicateFiles,
+      generatedAssets,
+      reusedAssets,
+      addedAssets,
+      existingAssets,
+      sourceAssets: currentAssets.length,
+      importedAssets: assets.length,
+      skippedSymlinks: scan.skippedSymlinks,
+      skipped,
+    };
   });
-
-  const state = {
-    version: MANIFEST_VERSION,
-    pipelineVersion: PIPELINE_VERSION,
-    outputKey,
-    ownershipToken,
-    sourceKey: createHash("sha256").update(resolvedSourceDir).digest("hex"),
-    files: stateFiles,
-  };
-  await writeJsonAtomically(statePath, state);
-
-  return {
-    manifest,
-    manifestPath,
-    statePath,
-    libraryDir,
-    scannedFiles: scan.scannedFiles,
-    candidateFiles: scan.files.length,
-    uniqueFiles: uniqueSources.size,
-    duplicateFiles,
-    generatedAssets,
-    reusedAssets,
-    sourceAssets: currentAssets.length,
-    importedAssets: assets.length,
-    skippedSymlinks: scan.skippedSymlinks,
-    skipped,
-  };
 }
 
 export const photoImportContract = Object.freeze({
+  maxManifestAssets: MAX_MANIFEST_ASSETS,
   manifestVersion: MANIFEST_VERSION,
   pipelineVersion: PIPELINE_VERSION,
+  supportedExtensions: SUPPORTED_EXTENSION_LIST,
   variants: Object.freeze(Object.fromEntries(Object.entries(VARIANT_OPTIONS)
     .map(([name, value]) => [name, Object.freeze({ ...value })]))),
 });

@@ -48,7 +48,10 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
   }
 
   return (
-    <AdminProvider editorLabel={local ? "本地编辑模式" : user?.displayName ?? "已登录"}>
+    <AdminProvider
+      editorLabel={local ? "本地编辑模式" : user?.displayName ?? "已登录"}
+      localPhotoImportEnabled={local}
+    >
       <AdminShell>{children}</AdminShell>
     </AdminProvider>
   );

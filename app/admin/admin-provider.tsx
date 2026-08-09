@@ -34,6 +34,7 @@ type AdminContextValue = {
   dirty: boolean;
   busy: boolean;
   editorLabel: string;
+  localPhotoImportEnabled: boolean;
   save: () => Promise<boolean>;
   reload: () => Promise<boolean>;
   resetToExample: () => void;
@@ -54,9 +55,11 @@ export function formatSavedAt(value: string | null) {
 export function AdminProvider({
   children,
   editorLabel,
+  localPhotoImportEnabled,
 }: Readonly<{
   children: ReactNode;
   editorLabel: string;
+  localPhotoImportEnabled: boolean;
 }>) {
   const [content, setContentState] = useState<SiteContent>(() => cloneSiteContent());
   const [savedContent, setSavedContent] = useState<SiteContent>(() => cloneSiteContent());
@@ -208,10 +211,11 @@ export function AdminProvider({
     dirty,
     busy,
     editorLabel,
+    localPhotoImportEnabled,
     save,
     reload,
     resetToExample,
-  }), [busy, content, dirty, editorLabel, loadState, message, reload, resetToExample, save, savedContent, saveState, setContent, updatedAt]);
+  }), [busy, content, dirty, editorLabel, loadState, localPhotoImportEnabled, message, reload, resetToExample, save, savedContent, saveState, setContent, updatedAt]);
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
 }
