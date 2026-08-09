@@ -159,11 +159,11 @@ The local preview runs at `http://127.0.0.1:3001/`; the content admin is at
 The [ADMIN-V2 / DESIGN-01 workbench](docs/admin-v2.md) divides the editor into
 six focused routes for templates, profile, packages, layout, contact, and
 advanced compatibility controls. All routes share one client-side draft and
-the existing save endpoint. The template route keeps all eleven choices visible
-in one responsive card grid. Desktop editing uses a persistent sidebar; mobile
-keeps every section accessible through a compact switcher, while complex photo
-layout remains desktop-first. This UI refactor does not change `SiteContent`,
-the API payload, D1 schema, template catalog, or public homepage rendering.
+the existing save endpoint. The template route uses a compact eleven-item
+selector and expands only one candidate detail at a time. Desktop editing uses a
+persistent sidebar; mobile keeps every section accessible through a compact
+switcher, while complex photo layout remains desktop-first. The Admin structure
+does not change `SiteContent`, the write payload, D1 schema, or template catalog.
 
 ## Public-safe demo data
 
@@ -255,6 +255,8 @@ The public homepage reads the current legacy `site_settings(id = 1)` record on
 the server for both its initial HTML and its title, description, Open Graph, and
 Twitter metadata. This is a temporary single-site compatibility bridge, not the
 future repository or published-revision renderer described in Phase 0.
+The title context uses the editable `profile.city` and `profile.role` fields and
+omits either value when it is blank.
 
 ## Admin security assumptions
 

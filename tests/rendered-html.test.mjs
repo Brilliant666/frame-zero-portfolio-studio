@@ -138,7 +138,7 @@ test("server-renders persisted content and metadata without leaking demo identit
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  const title = "SAVED BRAND｜SAVED CITY Cosplay 摄影师";
+  const title = "SAVED BRAND｜SAVED CITY SAVED ROLE";
   const description = "SAVED SERVICES。SAVED VALUE TWO。SAVED INTRO。";
 
   assert.match(html, new RegExp(`<title>${title}</title>`));
@@ -164,7 +164,7 @@ test("public title falls back to photographer instead of the compact mark", asyn
     photographer: "SAVED PHOTOGRAPHER",
   }));
   const html = await response.text();
-  const title = "SAVED PHOTOGRAPHER｜SAVED CITY Cosplay 摄影师";
+  const title = "SAVED PHOTOGRAPHER｜SAVED CITY SAVED ROLE";
 
   assert.match(html, new RegExp(`<title>${title}</title>`));
   assert.equal(metaContent(html, "property", "og:site_name"), "SAVED PHOTOGRAPHER");
@@ -178,18 +178,45 @@ test("public title uses a neutral fallback when brand and photographer are empty
     photographer: " ",
   }));
   const html = await response.text();
-  const title = "摄影作品集｜SAVED CITY Cosplay 摄影师";
+  const title = "摄影作品集｜SAVED CITY SAVED ROLE";
 
   assert.match(html, new RegExp(`<title>${title}</title>`));
   assert.equal(metaContent(html, "property", "og:site_name"), "摄影作品集");
 });
 
+test("public title uses the editable role and omits blank context without stray separators", async () => {
+  const roleOnlyHtml = await (await render(persistedContent({
+    city: " ",
+    role: "CUSTOM ROLE",
+  }))).text();
+  assert.match(roleOnlyHtml, /<title>SAVED BRAND｜CUSTOM ROLE<\/title>/);
+  assert.equal(metaContent(roleOnlyHtml, "property", "og:title"), "SAVED BRAND｜CUSTOM ROLE");
+
+  const cityOnlyHtml = await (await render(persistedContent({
+    city: "CUSTOM CITY",
+    role: "  ",
+  }))).text();
+  assert.match(cityOnlyHtml, /<title>SAVED BRAND｜CUSTOM CITY<\/title>/);
+  assert.equal(metaContent(cityOnlyHtml, "name", "twitter:title"), "SAVED BRAND｜CUSTOM CITY");
+
+  const noContextHtml = await (await render(persistedContent({
+    city: "",
+    role: " ",
+  }))).text();
+  assert.match(noContextHtml, /<title>SAVED BRAND<\/title>/);
+  assert.doesNotMatch(noContextHtml, /SAVED BRAND｜|Cosplay 摄影师/);
+});
+
 test("public SSR preserves the legacy demo fallback when D1 is unavailable", async () => {
   const response = await renderWithDatabase(new MemoryD1(null, new Error("D1 unavailable")));
   const html = await response.text();
+  const fallbackTitle = html.match(/<title>([^<]+)<\/title>/)?.[1] ?? "";
 
   assert.equal(response.status, 200);
-  assert.match(html, /<title>FRAME\/\/ZERO｜上海 · 杭州可约 Cosplay 摄影师<\/title>/);
+  assert.match(fallbackTitle, /^FRAME\/\/ZERO(?:｜.+)?$/);
+  assert.equal(metaContent(html, "property", "og:title"), fallbackTitle);
+  assert.equal(metaContent(html, "name", "twitter:title"), fallbackTitle);
+  assert.doesNotMatch(fallbackTitle, /undefined|null|｜\s*$/);
   assert.match(html, /FRAMEZERO_DEMO/);
   assert.doesNotMatch(html, /Internal Server Error|Application error/i);
 });
@@ -256,7 +283,10 @@ test("keeps editable content and eleven lazy template choices in one configurati
   assert.doesNotMatch(layout, /PhotoFallbackController/);
   assert.match(metadata, /content\.profile\.brand\.trim\(\)/);
   assert.match(metadata, /content\.profile\.photographer\.trim\(\)/);
+  assert.match(metadata, /content\.profile\.role\.trim\(\)/);
+  assert.match(metadata, /\[city, role\]\.filter\(Boolean\)/);
   assert.match(metadata, /摄影作品集/);
+  assert.doesNotMatch(metadata, /Cosplay 摄影师/);
   assert.match(contentRead, /SITE_SETTINGS_ID = 1/);
   assert.match(contentRead, /normalizeSiteContent/);
   assert.match(renderer, /PhotoFallbackController/);

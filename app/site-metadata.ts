@@ -16,8 +16,9 @@ export function getPublicSiteName(content: SiteContent) {
 export function buildPublicMetadata(content: SiteContent, origin: string): Metadata {
   const siteName = getPublicSiteName(content);
   const city = content.profile.city.trim();
-  const titleContext = [city, "Cosplay 摄影师"].filter(Boolean).join(" ");
-  const title = `${siteName}｜${titleContext}`;
+  const role = content.profile.role.trim();
+  const titleContext = [city, role].filter(Boolean).join(" ");
+  const title = titleContext ? `${siteName}｜${titleContext}` : siteName;
   const descriptionParts = [
     content.hero.services,
     content.trustItems[1]?.value,

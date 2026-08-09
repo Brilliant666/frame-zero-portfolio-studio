@@ -31,7 +31,7 @@ legacy `SiteContent`、`/api/site-content` 和 `site_settings(id = 1)` 行为不
 
 - Admin 顶栏、认证门禁和页面 metadata 使用通用的内容管理标题，不把当前示例站品牌写入后台系统身份。
 - 桌面端使用 sticky sidebar；移动端使用紧凑的原生 section selector。
-- 11 个正式模板在同一页响应式卡片网格中全部展开；只有“选择此模板”会修改 draft，独立预览不会修改 draft。
+- 11 个正式模板使用紧凑选择列表，同一时间只展开当前查看候选的完整详情；已保存、当前 draft 与正在查看三个状态分别显示。浏览候选不会修改 draft，只有“选择此模板”会修改 draft，独立预览也不会修改 draft。
 - 基本资料优先展示摄影师、Hero 与信任信息；`profile.brand`、`profile.mark` 和 `statement` 保留原契约，但收进默认关闭的可选品牌内容。`profile.brand` 是完整展示名或个人网名，`profile.mark` 只是可留空的紧凑短标；全部正式模板通过同一展示解析器消费这两个字段，短标留空时回退到展示名，两者都为空时不恢复示例品牌。
 - 每个套餐的主页标题始终以可编辑输入显示，其他套餐字段继续使用有文字状态的 disclosure；旧版作品只在高级设置中按需展开。
 - 素材排版只重组现有 manifest、固定槽位和既有算法，不新增素材 API 或 repository。

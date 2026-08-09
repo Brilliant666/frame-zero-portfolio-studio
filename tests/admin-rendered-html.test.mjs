@@ -50,7 +50,10 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
       assert.match(html, new RegExp(`href="/admin/${href}"`));
     }
     if (section === "template") {
-      assert.equal(html.match(/data-template-card="[^"]+"/g)?.length, 11);
+      assert.equal(html.match(/data-template-option="[^"]+"/g)?.length, 11);
+      assert.equal(html.match(/data-template-detail="[^"]+"/g)?.length, 1);
+      assert.equal(html.match(/data-template-mobile-selector="true"/g)?.length, 1);
+      assert.doesNotMatch(html, /data-template-card=/);
       assert.match(html, /aria-label="正式页面模板"/);
     }
     if (section === "profile") {

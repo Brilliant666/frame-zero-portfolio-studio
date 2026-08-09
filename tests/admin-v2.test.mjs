@@ -85,10 +85,38 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   ]);
 
   assert.match(template, /templateCatalog\.map/);
-  assert.match(template, /data-template-card=\{template\.id\}/);
-  assert.match(template, /chooseTemplate\(template\.id\)/);
-  assert.doesNotMatch(template, /useState|setInspectedId|templateWorkbench|templateList|templateDetail/);
+  assert.match(template, /useState<TemplateId \| null>\(null\)/);
+  assert.match(template, /const inspectedId = inspectedOverride \?\? content\.activeTemplate/);
+  assert.match(template, /data-template-option=\{template\.id\}/);
+  assert.match(template, /data-template-detail=\{inspectedTemplate\.id\}/);
+  assert.match(template, /setInspectedOverride\(template\.id\)/);
+  assert.match(template, /chooseTemplate\(inspectedTemplate\.id\)/);
+  assert.match(template, /data-saved=\{inspectedIsSaved\}/);
+  assert.match(template, /data-draft=\{inspectedIsDraft\}/);
+  assert.match(template, /data-inspected="true"/);
+  assert.doesNotMatch(template, /data-template-card/);
+  const inspectHandler = template.slice(
+    template.indexOf("const inspectTemplate"),
+    template.indexOf("const chooseTemplate"),
+  );
+  assert.match(inspectHandler, /isTemplateId\(value\)/);
+  assert.match(inspectHandler, /setInspectedOverride\(value\)/);
+  assert.doesNotMatch(inspectHandler, /setContent|activeTemplate/);
+  const chooseHandler = template.slice(
+    template.indexOf("const chooseTemplate"),
+    template.indexOf("const statusLabels"),
+  );
+  assert.match(chooseHandler, /activeTemplate: templateId/);
+  assert.match(template, /onChange=\{\(event\) => inspectTemplate\(event\.target\.value\)\}/);
+  for (const status of ["已保存", "当前草稿", "正在查看"]) assert.match(template, new RegExp(status));
+  const browseControl = template.slice(
+    template.indexOf("data-template-option"),
+    template.indexOf("</button>", template.indexOf("data-template-option")),
+  );
+  assert.match(browseControl, /setInspectedOverride/);
+  assert.doesNotMatch(browseControl, /chooseTemplate|setContent/);
   assert.match(template, /独立预览/);
+  assert.match(template, /查看候选详情不会修改草稿/);
   assert.match(template, /素材排版可能变化/);
   assert.match(template, /不会在这里静默删除/);
 
@@ -159,12 +187,17 @@ test("responsive CSS exposes a mobile section switcher and single-column layout 
   assert.match(shell, /<select value=\{current\.href\}/);
   assert.match(shell, /data-admin-title="true"/);
   assert.doesNotMatch(shell, /FRAME\/\/ZERO/);
-  assert.match(css, /\.templateGrid\s*\{[^}]*grid-template-columns:\s*repeat\(3,/s);
-  assert.doesNotMatch(css, /\.templateWorkbench|\.templateListItem|\.templateDetail/);
+  assert.match(css, /\.templateWorkbench\s*\{[^}]*grid-template-columns:\s*minmax\(13rem, 16rem\) minmax\(0, 1fr\)/s);
+  assert.match(css, /\.templateList\s*\{/);
+  assert.match(css, /\.templateDetail\s*\{/);
+  assert.doesNotMatch(css, /\.templateGrid|\.templateCard\b/);
   assert.match(css, /@media \(max-width: 1280px\) and \(min-width: 761px\)/);
   assert.match(css, /@media \(max-width: 960px\)\s*\{[^}]*\.packageCardHeader\s*\{[^}]*grid-template-columns:\s*1fr/s);
   assert.match(css, /grid-template-areas:\s*"slots editor"\s*"assets assets"/);
   assert.match(css, /@media \(max-width: 760px\)/);
+  assert.match(css, /@media \(max-width: 760px\)\s*\{[^}]*\.templateWorkbench\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/s);
+  assert.match(css, /\.templateList\s*\{\s*display:\s*none/);
+  assert.match(css, /\.templateMobileSelector\s*\{\s*display:\s*grid/);
   assert.match(css, /grid-template-areas: "slots" "editor" "assets"/);
   assert.match(css, /@media \(max-width: 480px\)/);
   assert.doesNotMatch(css, /\.slotPane\s*\{[^}]*display:\s*none/s);
