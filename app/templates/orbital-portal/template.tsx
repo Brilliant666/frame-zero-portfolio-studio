@@ -3,7 +3,6 @@
 /* eslint-disable @next/next/no-img-element -- local portfolio assets already provide responsive derivatives. */
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { resolveBrandIdentity } from "../../brand-identity";
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
@@ -12,7 +11,6 @@ import styles from "./template.module.css";
 const ORBIT_RATIOS = getTemplateSlotRatios("orbital-portal");
 
 export default function OrbitalPortalTemplate({ content, works, packages, bookingTemplate, copiedKey, onCopy, onOpenWork }: TemplateProps) {
-  const brand = resolveBrandIdentity(content.profile);
   const [activeIndex, setActiveIndex] = useState(0);
   const orbitSlots = useMemo(() => buildPhotoSlots(works, ORBIT_RATIOS), [works]);
   const filledOrbitSlots = useMemo(() => orbitSlots.filter((slot) => slot.work), [orbitSlots]);
@@ -36,7 +34,7 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
   return (
     <main className={styles.shell} data-template="orbital-portal">
       <header className={styles.header}>
-        <a href="#portal-top" className={styles.brand}>{brand.hasDistinctMark && <b>{brand.mark}</b>}<span>{brand.name}<small>ORBITAL OPTICAL LAB</small></span></a>
+        <a href="#portal-top" className={styles.brand}><b>{content.profile.mark}</b><span>{content.profile.brand}<small>ORBITAL OPTICAL LAB</small></span></a>
         <nav aria-label="轨道门户模板导航"><a href="#portal-works">ORBIT</a><a href="#portal-modes">MISSIONS</a><a href="#portal-contact">CONTACT</a></nav>
         <span className={styles.status}><i /> {content.profile.city}</span>
       </header>
@@ -93,7 +91,7 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
           <p>点击轨道上的影像，进入完整画幅。</p>
         </div>
         <div className={styles.orbitScene}>
-          <div className={styles.orbitCore}>{brand.mark && <span>{brand.mark}</span>}<small>SELECT A SIGNAL</small></div>
+          <div className={styles.orbitCore}><span>{content.profile.mark}</span><small>SELECT A SIGNAL</small></div>
           {orbitSlots.map((slot) => {
             const slotStyle = {
               "--orbit-index": slot.index,
@@ -164,7 +162,7 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
         </div>
       </section>
 
-      <footer className={styles.footer}>{brand.name && <strong>{brand.name}</strong>}<span>{content.statement.eyebrow}</span><span>© 2026 ORBITAL ARCHIVE</span></footer>
+      <footer className={styles.footer}><strong>{content.profile.brand}</strong><span>{content.statement.eyebrow}</span><span>© 2026 ORBITAL ARCHIVE</span></footer>
     </main>
   );
 }

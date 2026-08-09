@@ -215,7 +215,7 @@ npm run photos:import -- "<photo-folder>" adopt-linked-output
 Later imports use the normal command. A random owner token plus a hashed target
 prevents an accidental or retargeted link from receiving generated files.
 
-After import, open `http://127.0.0.1:3001/admin#library` and click **重新读取素材库**.
+After import, open `http://127.0.0.1:3001/admin/layout` and click **重新读取**.
 For the active template you can then:
 
 - create an initial ratio-aware layout with **一键智能排版**;
@@ -250,13 +250,6 @@ npm run db:generate
 Content settings are stored in D1. Local development uses the project-local
 Miniflare database; hosted deployments use the logical `DB` binding declared in
 `.openai/hosting.json`.
-
-The public homepage reads the current legacy `site_settings(id = 1)` record on
-the server for both its initial HTML and its title, description, Open Graph, and
-Twitter metadata. This is a temporary single-site compatibility bridge, not the
-future repository or published-revision renderer described in Phase 0.
-The title context uses the editable `profile.city` and `profile.role` fields and
-omits either value when it is blank.
 
 ## Admin security assumptions
 

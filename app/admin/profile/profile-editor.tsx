@@ -58,19 +58,19 @@ export default function ProfileEditor() {
             <span>OPTIONAL</span>
             <span>
               <strong>可选品牌内容</strong>
-              <small>展示名、短标与主页宣言都在这里统一设置。</small>
+              <small>仅在项目需要独立品牌标识或主页宣言时设置。</small>
             </span>
             <span className={styles.optionalDisclosureIcon} aria-hidden="true" />
           </summary>
           <div className={styles.optionalDisclosureBody}>
-            <FormGroup title="展示身份（可选）" description="所有主页模板和网站标题统一读取这里的展示名称；短标只用于紧凑视觉位置，不需要逐个模板修改。">
+            <FormGroup title="品牌身份（可选）" description="主页品牌名与简写；不作为基本资料的优先项。">
               <div className={styles.formGrid}>
-                <AdminField label="展示名称 / 品牌名" help="可填写品牌、个人网名或对外展示名称；留空时网站标题使用摄影师名称。" value={content.profile.brand} onChange={(value) => setContent((current) => ({ ...current, profile: { ...current.profile, brand: value } }))} />
-                <AdminField label="短标 / 缩写（可留空）" help="留空时使用展示名称，不会生成或恢复示例字样。" value={content.profile.mark} onChange={(value) => setContent((current) => ({ ...current, profile: { ...current.profile, mark: value } }))} />
+                <AdminField label="品牌名" value={content.profile.brand} onChange={(value) => setContent((current) => ({ ...current, profile: { ...current.profile, brand: value } }))} />
+                <AdminField label="品牌缩写" value={content.profile.mark} onChange={(value) => setContent((current) => ({ ...current, profile: { ...current.profile, mark: value } }))} />
               </div>
             </FormGroup>
 
-            <FormGroup title="主页 Statement（可选）" description="独立的主页宣言文案，不会从展示名称自动生成。">
+            <FormGroup title="品牌 Statement（可选）" description="主页底部的品牌宣言。">
               <div className={styles.formGrid}>
                 <div className={styles.fullSpan}>
                   <AdminField label="英文眉题" value={content.statement.eyebrow} onChange={(value) => setContent((current) => ({ ...current, statement: { ...current.statement, eyebrow: value } }))} />

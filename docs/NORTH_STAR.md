@@ -159,8 +159,7 @@ FRAME//ZERO 最终同时支持三种运行方式：
 -   所有请求共享同一份站点内容；
 -   远程写权限主要依赖是否存在 ChatGPT 认证头；
 -   用户素材位于本地忽略目录和 `public/photos`；
--   页面已由服务端读取固定 `site_settings(id = 1)` 记录，但仍没有 Site、published
-    revision、域名解析或正式缓存边界；
+-   页面先渲染演示数据，再由浏览器读取真实内容；
 -   没有草稿、发布版本、修订历史和回滚；
 -   没有用户、站点、成员、域名、上传任务和配额模型；
 -   模板、存储、认证与当前运行环境仍有耦合；
@@ -1841,7 +1840,7 @@ npm run test:e2e
 ### 必修问题
 
 -   任意认证用户可能写入；
--   D1 空库或读取失败时，legacy bridge 仍以演示内容作为服务端 fallback；
+-   演示内容服务端首屏；
 -   空数组无法恢复旧版回退；
 -   可编辑文本作为 React key；
 -   `work.code` 被当作身份；
@@ -2033,7 +2032,7 @@ npm run test:e2e
 -   引入 `SiteDocumentV1` 和 schemaVersion；
 -   引入稳定 Site/Asset ID；
 -   抽象 SiteRepository、AssetResolver、AuthProvider；
--   将当前 legacy SSR bridge 改为服务端读取已发布 revision；
+-   将当前主页改为服务端读取真实内容；
 -   建立单站点 revision/publish；
 -   修复当前安全阻断和明确功能缺陷；
 -   给 11 模板建立视觉冒烟测试。

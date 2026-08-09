@@ -101,7 +101,7 @@
 
 .heroVisual { position: relative; }
 .heroFilm { position: relative; padding: 2.6rem 1.3rem 1.2rem; background: var(--film); box-shadow: 1.6rem 1.6rem 0 rgba(98,70,39,.12), 0 2rem 5rem rgba(48,35,20,.18); transform: rotate(1.2deg); }
-.heroFilm::before { content: attr(data-film-stock); position: absolute; top: .65rem; right: 1.3rem; left: 1.3rem; overflow: hidden; color: #d6b98e; font: .52rem var(--font-geist-mono), monospace; letter-spacing: .15em; text-overflow: ellipsis; white-space: nowrap; }
+.heroFilm::before { content: "FRAME//ZERO  35MM  001"; position: absolute; top: .65rem; left: 1.3rem; color: #d6b98e; font: .52rem var(--font-geist-mono), monospace; letter-spacing: .15em; }
 .filmEdge { position: absolute; z-index: 2; top: 0; right: .8rem; bottom: 0; width: .6rem; background: repeating-linear-gradient(to bottom, var(--paper) 0 .65rem, transparent .65rem 1.25rem); opacity: .9; }
 .heroFilm > button { display: block; width: 100%; padding: 0; overflow: hidden; border: 0; background: #080706; cursor: zoom-in; }
 .heroFilm img { display: block; width: 100%; aspect-ratio: 3 / 2; object-fit: cover; transition: filter .35s ease, transform .6s cubic-bezier(.2,.8,.2,1); }

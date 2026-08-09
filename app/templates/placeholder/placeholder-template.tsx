@@ -2,20 +2,18 @@
 
 /* eslint-disable @next/next/no-img-element -- local portfolio assets already provide responsive derivatives. */
 
-import { resolveBrandIdentity, withBrandPrefix } from "../../brand-identity";
 import { getTemplateCatalogItem } from "../catalog";
 import type { TemplateProps } from "../types";
 import styles from "./placeholder.module.css";
 
 export default function PlaceholderTemplate({ templateId, content, works, onOpenWork }: TemplateProps) {
-  const brand = resolveBrandIdentity(content.profile);
   const template = getTemplateCatalogItem(templateId);
   const leadWork = works[0];
 
   return (
     <main className={styles.shell} data-template={templateId}>
       <header className={styles.header}>
-        <span>{withBrandPrefix(brand.mark, "TEMPLATE SYSTEM", " / ")}</span>
+        <span>{content.profile.mark} / TEMPLATE SYSTEM</span>
         <a href="/admin">返回模板后台 ↗</a>
       </header>
 

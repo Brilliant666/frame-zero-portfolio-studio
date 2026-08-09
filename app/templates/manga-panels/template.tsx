@@ -3,7 +3,6 @@
 /* eslint-disable @next/next/no-img-element -- local portfolio assets provide responsive WebP derivatives. */
 
 import type { CSSProperties } from "react";
-import { resolveBrandIdentity } from "../../brand-identity";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import type { TemplateProps } from "../types";
@@ -24,7 +23,6 @@ export default function MangaPanelsTemplate({
   onCopy,
   onOpenWork,
 }: TemplateProps) {
-  const brand = resolveBrandIdentity(content.profile);
   const storyboardSlots = buildPhotoSlots(works, mangaRatios);
   const leadSlot = storyboardSlots[0];
   const leadWork = leadSlot.work;
@@ -39,12 +37,10 @@ export default function MangaPanelsTemplate({
 
       <header className={styles.cover}>
         <div className={styles.masthead}>
-          {brand.hasIdentity && (
-            <a className={styles.brand} href="#top" aria-label="返回漫画封面">
-              {brand.hasDistinctMark && <span>{brand.mark}</span>}
-              <strong>{brand.name}</strong>
-            </a>
-          )}
+          <a className={styles.brand} href="#top" aria-label="返回漫画封面">
+            <span>{content.profile.mark}</span>
+            <strong>{content.profile.brand}</strong>
+          </a>
           <p>角色影像志</p>
           <div className={styles.issue}>
             <span>{isPreview ? "TEMPLATE PREVIEW" : content.profile.availability}</span>
@@ -73,7 +69,7 @@ export default function MangaPanelsTemplate({
 
           <div className={styles.coverVisual}>
             <div className={styles.speedBurst} aria-hidden="true" />
-            <div className={styles.redBlock} aria-hidden="true">{brand.mark || "CUT"}</div>
+            <div className={styles.redBlock} aria-hidden="true">FRAME<br />ZERO</div>
             {leadWork ? (
               <button
                 type="button"
@@ -302,7 +298,7 @@ export default function MangaPanelsTemplate({
 
         <footer className={styles.footer}>
           <div>
-            {brand.name && <strong>{brand.name}</strong>}
+            <strong>{content.profile.brand}</strong>
             <span>{content.profile.photographer} · {content.profile.city}</span>
           </div>
           <p>摄影不是证明。它是角色存在过的证据。</p>

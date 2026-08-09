@@ -1,7 +1,6 @@
 "use client";
 
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from "react";
-import { resolveBrandIdentity, withBrandPrefix } from "../brand-identity";
 import PhotoFallbackController from "../photo-fallback-controller";
 import type { TemplateId } from "./catalog";
 import type { TemplateProps } from "./types";
@@ -31,10 +30,9 @@ const templates = Object.fromEntries(
 
 export default function TemplateRenderer(props: TemplateProps) {
   const Template = templates[props.templateId] ?? templates["cinematic-light"];
-  const brand = resolveBrandIdentity(props.content.profile);
 
   return (
-    <Suspense fallback={<TemplateLoading brand={brand.name} />}>
+    <Suspense fallback={<TemplateLoading brand={props.content.profile.brand} />}>
       <Template key={props.templateId} {...props} />
       <PhotoFallbackController />
     </Suspense>
@@ -56,7 +54,7 @@ function TemplateLoading({ brand }: { brand: string }) {
         letterSpacing: ".12em",
       }}
     >
-      <span>{withBrandPrefix(brand, "LOADING VISUAL SYSTEM")}</span>
+      <span>{brand} · LOADING VISUAL SYSTEM</span>
     </main>
   );
 }

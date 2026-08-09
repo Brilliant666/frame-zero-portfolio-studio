@@ -179,9 +179,10 @@ test("Admin V2 keeps shared draft persistence on the unchanged site-content endp
 });
 
 test("responsive CSS exposes a mobile section switcher and single-column layout without hiding data", async () => {
-  const [shell, css] = await Promise.all([
+  const [shell, css, globals] = await Promise.all([
     source("app/admin/admin-shell.tsx"),
     source("app/admin/admin-v2.module.css"),
+    source("app/globals.css"),
   ]);
   assert.match(shell, /ADMIN_SECTIONS\.map/);
   assert.match(shell, /<select value=\{current\.href\}/);
@@ -202,4 +203,6 @@ test("responsive CSS exposes a mobile section switcher and single-column layout 
   assert.match(css, /@media \(max-width: 480px\)/);
   assert.doesNotMatch(css, /\.slotPane\s*\{[^}]*display:\s*none/s);
   assert.doesNotMatch(css, /\.assetPane\s*\{[^}]*display:\s*none/s);
+  assert.match(globals, /\.template-swatch::before\s*\{[^}]*content:\s*"LIGHT"/s);
+  assert.doesNotMatch(globals, /\.template-swatch::before\s*\{[^}]*content:\s*"F\/\/0"/s);
 });

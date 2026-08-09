@@ -291,7 +291,6 @@
   width: 64%;
   height: 44%;
   padding: 1rem;
-  overflow: hidden;
   background: var(--vermilion);
   color: rgba(255, 255, 255, .18);
   font: 1000 clamp(3rem, 7vw, 7rem)/.72 Arial Black, sans-serif;
