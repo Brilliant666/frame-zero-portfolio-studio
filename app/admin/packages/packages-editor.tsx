@@ -9,7 +9,7 @@ import styles from "../admin-v2.module.css";
 
 export default function PackagesEditor() {
   const { content, setContent } = useAdmin();
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const updatePackage = (index: number, patch: Partial<PhotographyPackage>) => {
     setContent((current) => ({
@@ -30,22 +30,34 @@ export default function PackagesEditor() {
           const panelId = `package-panel-${index}`;
           return (
             <article className={styles.disclosureCard} data-open={open} key={index}>
-              <button
-                type="button"
-                className={styles.disclosureSummary}
-                aria-expanded={open}
-                aria-controls={panelId}
-                onClick={() => setOpenIndex(open ? null : index)}
-              >
-                <span className={styles.disclosureIndex}>{item.number}</span>
-                <span>
-                  <strong>{item.name}</strong>
-                  <small>{item.english}</small>
-                </span>
-                <span className={styles.packageMeta}><strong>{item.price}</strong><small>{item.duration}</small></span>
-                <span className={styles.enabledState} data-enabled={item.enabled}>{item.enabled ? "已启用" : "已隐藏"}</span>
-                <span className={styles.disclosureIcon} aria-hidden="true">{open ? "−" : "+"}</span>
-              </button>
+              <div className={styles.packageCardHeader}>
+                <label className={styles.packageTitleEditor}>
+                  <span>套餐标题 · {item.number}</span>
+                  <input
+                    data-package-title-input={index}
+                    value={item.name}
+                    aria-label={`套餐 ${index + 1} 标题`}
+                    onChange={(event) => updatePackage(index, { name: event.target.value })}
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  className={styles.disclosureSummary}
+                  aria-expanded={open}
+                  aria-controls={panelId}
+                  onClick={() => setOpenIndex(open ? null : index)}
+                >
+                  <span className={styles.disclosureIndex}>{item.number}</span>
+                  <span>
+                    <strong>{open ? "收起套餐详情" : "编辑套餐详情"}</strong>
+                    <small>{item.english}</small>
+                  </span>
+                  <span className={styles.packageMeta}><strong>{item.price}</strong><small>{item.duration}</small></span>
+                  <span className={styles.enabledState} data-enabled={item.enabled}>{item.enabled ? "已启用" : "已隐藏"}</span>
+                  <span className={styles.disclosureIcon} aria-hidden="true">{open ? "−" : "+"}</span>
+                </button>
+              </div>
 
               <div id={panelId} className={styles.disclosurePanel} hidden={!open}>
                 <div className={styles.packageToolbar}>
@@ -58,7 +70,6 @@ export default function PackagesEditor() {
                 <div className={styles.formGrid}>
                   <AdminField label="套餐编号" value={item.number} onChange={(value) => updatePackage(index, { number: value })} />
                   <AdminField label="英文名称" value={item.english} onChange={(value) => updatePackage(index, { english: value })} />
-                  <AdminField label="中文名称" value={item.name} onChange={(value) => updatePackage(index, { name: value })} />
                   <AdminField label="价格" value={item.price} onChange={(value) => updatePackage(index, { price: value })} />
                   <AdminField label="拍摄时长" value={item.duration} onChange={(value) => updatePackage(index, { duration: value })} />
                   <div className={styles.fullSpan}>

@@ -37,6 +37,10 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
     assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
     const html = await response.text();
 
+    assert.match(html, /<title>内容管理后台<\/title>/);
+    assert.match(html, /<meta property="og:title" content="内容管理后台"\/>/);
+    assert.match(html, /<meta property="og:site_name" content="内容管理后台"\/>/);
+    assert.match(html, /<meta name="twitter:title" content="内容管理后台"\/>/);
     assert.equal(html.match(/<h1\b/g)?.length, 1);
     assert.equal(html.match(/data-admin-section="[^"]+"/g)?.length, 1);
     assert.match(html, new RegExp(`data-admin-section="${section}"`));
@@ -47,6 +51,12 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
     if (section === "template") {
       assert.equal(html.match(/data-template-card="[^"]+"/g)?.length, 11);
       assert.match(html, /aria-label="正式页面模板"/);
+    }
+    if (section === "profile") {
+      assert.equal(html.match(/data-optional-brand-content="true"/g)?.length, 1);
+    }
+    if (section === "packages") {
+      assert.equal(html.match(/data-package-title-input="\d+"/g)?.length, 3);
     }
     assert.doesNotMatch(html, /admin-section-placeholder/);
   });

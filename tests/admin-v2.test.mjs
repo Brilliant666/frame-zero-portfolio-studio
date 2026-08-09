@@ -35,7 +35,14 @@ test("Admin V2 freezes six task routes and a template default", async (t) => {
   assert.equal(getAdminSection("/admin/unknown").id, "template");
 
   const adminPage = await source("app/admin/page.tsx");
+  const adminLayout = await source("app/admin/layout.tsx");
   assert.match(adminPage, /redirect\("\/admin\/template"\)/);
+  assert.match(adminLayout, /title: "内容管理后台"/);
+  assert.match(adminLayout, /CONTENT ADMIN/);
+  assert.match(adminLayout, /openGraph:/);
+  assert.match(adminLayout, /siteName: "内容管理后台"/);
+  assert.match(adminLayout, /twitter:/);
+  assert.doesNotMatch(adminLayout, /FRAME\/\/ZERO/);
 });
 
 test("every Admin route renders one dedicated editor instead of the legacy long form", async () => {
@@ -68,8 +75,9 @@ test("the six editors retain ownership of every legacy SiteContent root field", 
 });
 
 test("template browsing, package disclosures, layout tools, and legacy controls keep their required semantics", async () => {
-  const [template, packages, layout, advanced, resetDialog] = await Promise.all([
+  const [template, profile, packages, layout, advanced, resetDialog] = await Promise.all([
     source("app/admin/template/template-editor.tsx"),
+    source("app/admin/profile/profile-editor.tsx"),
     source("app/admin/packages/packages-editor.tsx"),
     source("app/admin/layout/layout-workspace.tsx"),
     source("app/admin/advanced/advanced-editor.tsx"),
@@ -84,12 +92,22 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   assert.match(template, /素材排版可能变化/);
   assert.match(template, /不会在这里静默删除/);
 
+  assert.match(profile, /<details className=\{styles\.optionalDisclosure\}/);
+  assert.match(profile, /data-optional-brand-content="true"/);
+  assert.match(profile, /可选品牌内容/);
+  assert.ok(profile.indexOf('title="摄影师资料"') < profile.indexOf("data-optional-brand-content"));
+
   assert.match(packages, /aria-expanded=\{open\}/);
   for (const field of ["number", "english", "name", "description", "price", "duration", "deliverables", "enabled"]) {
     assert.match(packages, new RegExp(`item\\.${field}`));
   }
   assert.match(packages, /key=\{index\}/);
   assert.doesNotMatch(packages, /key=\{`\$\{item\.number\}/);
+  assert.match(packages, /data-package-title-input=\{index\}/);
+  assert.match(packages, /useState<number \| null>\(null\)/);
+  assert.match(packages, /aria-label=\{`套餐 \$\{index \+ 1\} 标题`\}/);
+  assert.match(packages, /updatePackage\(index, \{ name: event\.target\.value \}\)/);
+  assert.doesNotMatch(packages, /label="中文名称"/);
   assert.match(packages, /已启用/);
   assert.match(packages, /已隐藏/);
 
@@ -139,9 +157,12 @@ test("responsive CSS exposes a mobile section switcher and single-column layout 
   ]);
   assert.match(shell, /ADMIN_SECTIONS\.map/);
   assert.match(shell, /<select value=\{current\.href\}/);
+  assert.match(shell, /data-admin-title="true"/);
+  assert.doesNotMatch(shell, /FRAME\/\/ZERO/);
   assert.match(css, /\.templateGrid\s*\{[^}]*grid-template-columns:\s*repeat\(3,/s);
   assert.doesNotMatch(css, /\.templateWorkbench|\.templateListItem|\.templateDetail/);
   assert.match(css, /@media \(max-width: 1280px\) and \(min-width: 761px\)/);
+  assert.match(css, /@media \(max-width: 960px\)\s*\{[^}]*\.packageCardHeader\s*\{[^}]*grid-template-columns:\s*1fr/s);
   assert.match(css, /grid-template-areas:\s*"slots editor"\s*"assets assets"/);
   assert.match(css, /@media \(max-width: 760px\)/);
   assert.match(css, /grid-template-areas: "slots" "editor" "assets"/);

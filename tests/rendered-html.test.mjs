@@ -83,7 +83,9 @@ test("keeps editable content and eleven lazy template choices in one configurati
   assert.match(page, /fetch\("\/api\/site-content"/);
   assert.match(page, /const selected = content\.templateWorks\[templateId\]/);
   assert.match(page, /buildPhotoSlots\(/);
-  assert.match(adminShell, /FRAME\/\/ZERO/);
+  assert.match(adminShell, /data-admin-title="true"/);
+  assert.match(adminShell, /<strong>ADMIN<\/strong>/);
+  assert.doesNotMatch(adminShell, /FRAME\/\/ZERO/);
   assert.match(adminShell, /预览当前主页/);
   assert.match(adminShell, /ADMIN_SECTIONS\.map/);
   assert.match(api, /onConflictDoUpdate/);

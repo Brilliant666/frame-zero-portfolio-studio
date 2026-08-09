@@ -25,9 +25,9 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
     <div className={styles.shell} data-admin-v2="true">
       <a className={styles.skipLink} href="#admin-main">跳到当前编辑区域</a>
       <header className={styles.topbar}>
-        <div className={styles.brandBlock}>
-          <span>FRAME//ZERO</span>
+        <div className={styles.adminTitleBlock} data-admin-title="true">
           <strong>ADMIN</strong>
+          <span>内容管理</span>
         </div>
 
         <div className={styles.currentSection}>

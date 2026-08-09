@@ -36,7 +36,7 @@
   backdrop-filter: blur(18px);
 }
 
-.brandBlock,
+.adminTitleBlock,
 .currentSection,
 .topbarActions {
   display: flex;
@@ -44,7 +44,7 @@
   padding: .85rem 1.25rem;
 }
 
-.brandBlock {
+.adminTitleBlock {
   width: 16rem;
   gap: .45rem;
   border-right: 1px solid var(--admin-v2-line);
@@ -53,7 +53,7 @@
   letter-spacing: .08em;
 }
 
-.brandBlock strong { color: var(--admin-v2-accent-text); }
+.adminTitleBlock strong { color: var(--admin-v2-accent-text); }
 
 .currentSection {
   display: grid;
@@ -321,6 +321,8 @@
 .bookingList input:focus-visible,
 .templateCardActions a:focus-visible,
 .templateCardActions button:focus-visible,
+.optionalSummary:focus-visible,
+.packageTitleEditor input:focus-visible,
 .disclosureSummary:focus-visible,
 .rowActions button:focus-visible,
 .secondaryButton:focus-visible,
@@ -393,7 +395,49 @@
 .templateCardActions button:disabled { background: #e5e0da; color: var(--admin-v2-muted); cursor: default; }
 .templateCardActions a { border: 0; border-left: 1px solid var(--admin-v2-line); background: #fff; color: var(--admin-v2-ink); }
 
+.optionalDisclosure { border: 1px solid var(--admin-v2-line); background: #fff; }
+.optionalSummary {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr) 2rem;
+  align-items: center;
+  gap: .75rem;
+  min-height: 5rem;
+  padding: .85rem 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+.optionalSummary::-webkit-details-marker { display: none; }
+.optionalSummary > span:first-child { color: #8a3d12; font: 700 .72rem var(--font-geist-mono), monospace; letter-spacing: .08em; }
+.optionalSummary > span:nth-child(2) { display: grid; min-width: 0; gap: .2rem; }
+.optionalSummary strong { font-size: .92rem; }
+.optionalSummary small { color: var(--admin-v2-muted); font-size: .75rem; line-height: 1.45; }
+.optionalDisclosureIcon { font-size: 1.25rem; text-align: center; }
+.optionalDisclosureIcon::before { content: "+"; }
+.optionalDisclosure[open] .optionalDisclosureIcon::before { content: "−"; }
+.optionalDisclosureBody { display: grid; gap: .8rem; padding: .8rem; border-top: 1px solid var(--admin-v2-line); background: var(--admin-v2-paper); }
+
 .disclosureCard { border: 1px solid var(--admin-v2-line); background: #fff; }
+.packageCardHeader { display: grid; grid-template-columns: minmax(16rem, .72fr) minmax(24rem, 1.28fr); }
+.packageTitleEditor {
+  display: grid;
+  min-width: 0;
+  align-content: center;
+  gap: .35rem;
+  padding: .85rem 1rem;
+  border-right: 1px solid var(--admin-v2-line);
+}
+.packageTitleEditor > span { color: var(--admin-v2-muted); font: 700 .72rem var(--font-geist-mono), monospace; }
+.packageTitleEditor input {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: .35rem .5rem;
+  border: 1px solid #c8c1ba;
+  border-radius: 0;
+  background: #fff;
+  color: var(--admin-v2-ink);
+  font: 700 1.12rem/1.35 var(--font-geist-sans), sans-serif;
+}
 .disclosureSummary {
   display: grid;
   grid-template-columns: 3rem minmax(0, 1fr) minmax(7rem, auto) auto 1.5rem;
@@ -407,7 +451,8 @@
   text-align: left;
   cursor: pointer;
 }
-.disclosureCard[data-open="true"] .disclosureSummary { border-bottom: 1px solid var(--admin-v2-line); background: #fcfaf7; }
+.disclosureCard[data-open="true"] .packageCardHeader { border-bottom: 1px solid var(--admin-v2-line); }
+.disclosureCard[data-open="true"] .disclosureSummary { background: #fcfaf7; }
 .disclosureIndex { color: var(--admin-v2-accent-text); font: 700 .75rem var(--font-geist-mono), monospace; }
 .disclosureSummary > span:nth-child(2),
 .packageMeta { display: grid; min-width: 0; gap: .15rem; }
@@ -742,9 +787,14 @@
   outline-offset: 2px;
 }
 
+@media (max-width: 960px) {
+  .packageCardHeader { grid-template-columns: 1fr; }
+  .packageTitleEditor { border-right: 0; border-bottom: 1px solid var(--admin-v2-line); }
+}
+
 @media (max-width: 900px) {
   .topbar { grid-template-columns: minmax(0, 1fr) auto; }
-  .brandBlock { display: none; }
+  .adminTitleBlock { display: none; }
   .currentSection { padding-left: 1rem; }
   .saveStatus { min-width: 0; }
   .saveStatus span, .previewText { display: none; }

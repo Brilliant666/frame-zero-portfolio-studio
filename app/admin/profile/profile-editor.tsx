@@ -11,16 +11,9 @@ export default function ProfileEditor() {
     <AdminSection
       eyebrow="PROFILE"
       title="基本资料"
-      description="按内容语义分组维护品牌、摄影师、首页文案与信任信息。"
+      description="优先维护摄影师、首页文案与信任信息；品牌内容作为项目可选项收起。"
     >
       <div className={styles.groupStack}>
-        <FormGroup title="品牌身份" description="用于主页品牌标识与简写。">
-          <div className={styles.formGrid}>
-            <AdminField label="品牌名" value={content.profile.brand} onChange={(value) => setContent((current) => ({ ...current, profile: { ...current.profile, brand: value } }))} />
-            <AdminField label="品牌缩写" value={content.profile.mark} onChange={(value) => setContent((current) => ({ ...current, profile: { ...current.profile, mark: value } }))} />
-          </div>
-        </FormGroup>
-
         <FormGroup title="摄影师资料" description="对外展示的身份、城市与档期。">
           <div className={styles.formGrid}>
             <AdminField label="摄影师名称" value={content.profile.photographer} onChange={(value) => setContent((current) => ({ ...current, profile: { ...current.profile, photographer: value } }))} />
@@ -60,15 +53,34 @@ export default function ProfileEditor() {
           </div>
         </FormGroup>
 
-        <FormGroup title="品牌 Statement" description="主页底部的品牌宣言。">
-          <div className={styles.formGrid}>
-            <div className={styles.fullSpan}>
-              <AdminField label="英文眉题" value={content.statement.eyebrow} onChange={(value) => setContent((current) => ({ ...current, statement: { ...current.statement, eyebrow: value } }))} />
-            </div>
-            <AdminField label="中文第一行" value={content.statement.lineOne} onChange={(value) => setContent((current) => ({ ...current, statement: { ...current.statement, lineOne: value } }))} />
-            <AdminField label="中文第二行" value={content.statement.lineTwo} onChange={(value) => setContent((current) => ({ ...current, statement: { ...current.statement, lineTwo: value } }))} />
+        <details className={styles.optionalDisclosure} data-optional-brand-content="true">
+          <summary className={styles.optionalSummary}>
+            <span>OPTIONAL</span>
+            <span>
+              <strong>可选品牌内容</strong>
+              <small>仅在项目需要独立品牌标识或主页宣言时设置。</small>
+            </span>
+            <span className={styles.optionalDisclosureIcon} aria-hidden="true" />
+          </summary>
+          <div className={styles.optionalDisclosureBody}>
+            <FormGroup title="品牌身份（可选）" description="主页品牌名与简写；不作为基本资料的优先项。">
+              <div className={styles.formGrid}>
+                <AdminField label="品牌名" value={content.profile.brand} onChange={(value) => setContent((current) => ({ ...current, profile: { ...current.profile, brand: value } }))} />
+                <AdminField label="品牌缩写" value={content.profile.mark} onChange={(value) => setContent((current) => ({ ...current, profile: { ...current.profile, mark: value } }))} />
+              </div>
+            </FormGroup>
+
+            <FormGroup title="品牌 Statement（可选）" description="主页底部的品牌宣言。">
+              <div className={styles.formGrid}>
+                <div className={styles.fullSpan}>
+                  <AdminField label="英文眉题" value={content.statement.eyebrow} onChange={(value) => setContent((current) => ({ ...current, statement: { ...current.statement, eyebrow: value } }))} />
+                </div>
+                <AdminField label="中文第一行" value={content.statement.lineOne} onChange={(value) => setContent((current) => ({ ...current, statement: { ...current.statement, lineOne: value } }))} />
+                <AdminField label="中文第二行" value={content.statement.lineTwo} onChange={(value) => setContent((current) => ({ ...current, statement: { ...current.statement, lineTwo: value } }))} />
+              </div>
+            </FormGroup>
           </div>
-        </FormGroup>
+        </details>
       </div>
     </AdminSection>
   );
