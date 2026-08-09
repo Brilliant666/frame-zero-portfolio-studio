@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { templateCatalog, type TemplateId } from "../../site-config";
 import { AdminSection } from "../admin-form";
 import { useAdmin } from "../admin-provider";
@@ -8,89 +7,88 @@ import styles from "../admin-v2.module.css";
 
 export default function TemplateEditor() {
   const { content, savedContent, setContent } = useAdmin();
-  const [inspectedId, setInspectedId] = useState<TemplateId | null>(null);
-  const inspected = templateCatalog.find((template) => template.id === inspectedId)
-    ?? templateCatalog.find((template) => template.id === content.activeTemplate)
-    ?? templateCatalog[0];
-  const draftChanged = content.activeTemplate !== savedContent.activeTemplate;
-  const inspectedIsDraft = inspected.id === content.activeTemplate;
+  const savedTemplate = templateCatalog.find((template) => template.id === savedContent.activeTemplate);
+  const draftTemplate = templateCatalog.find((template) => template.id === content.activeTemplate);
 
-  const chooseTemplate = () => {
-    setContent((current) => ({ ...current, activeTemplate: inspected.id }));
+  const chooseTemplate = (templateId: TemplateId) => {
+    setContent((current) => ({ ...current, activeTemplate: templateId }));
   };
 
   return (
     <AdminSection
       eyebrow="TEMPLATE"
       title="页面模板"
-      description="先浏览模板，再明确选择。预览不会改变当前草稿。"
+      description="11 个正式模板一次展开浏览；选择与独立预览仍是两个不同操作。"
     >
-      <div className={styles.templateWorkbench}>
-        <div className={styles.templateList} role="group" aria-label="正式页面模板">
-          {templateCatalog.map((template, index) => {
-            const isInspected = inspected.id === template.id;
-            const isDraft = content.activeTemplate === template.id;
-            const isSaved = savedContent.activeTemplate === template.id;
-            return (
-              <button
-                type="button"
-                className={styles.templateListItem}
-                data-selected={isInspected}
-                aria-pressed={isInspected}
-                onClick={() => setInspectedId(template.id)}
-                key={template.id}
-              >
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <span>
-                  <strong>{template.name}</strong>
-                  <small>{template.description}</small>
-                </span>
-                <span className={styles.templateListStatus}>
-                  {isInspected ? "正在查看" : isDraft && isSaved ? "当前使用" : isDraft ? "当前草稿" : isSaved ? "已保存" : "查看"}
-                </span>
-              </button>
-            );
-          })}
+      <div className={styles.templateOverview}>
+        <div className={styles.templateSelectionSummary} role="status" aria-live="polite">
+          <div>
+            <span>已保存模板</span>
+            <strong>{savedTemplate?.name ?? savedContent.activeTemplate}</strong>
+          </div>
+          <div>
+            <span>当前草稿</span>
+            <strong>{draftTemplate?.name ?? content.activeTemplate}</strong>
+          </div>
         </div>
 
-        <article className={styles.templateDetail}>
-          <div className={`is-${inspected.id} ${styles.templateHeroFrame}`} aria-hidden="true">
-            <div className={`template-swatch ${styles.templateHero}`}>
-              <i /><b />
-            </div>
-          </div>
-          <div className={styles.templateDetailHeader}>
-            <div>
-              <span>{inspected.id}</span>
-              <h3>{inspected.name}</h3>
-            </div>
-            <strong aria-live="polite">{inspectedIsDraft ? (draftChanged ? "草稿已选择" : "当前使用") : "仅查看"}</strong>
-          </div>
-          <p className={styles.templateDescription}>{inspected.description}</p>
+        <div className={styles.templateNotice} role="note">
+          选择另一模板只会更新当前草稿。模板槽位数量或比例可能不同，当前主页的素材排版可能变化；
+          各模板已有的显式槽位排版会继续保留，不会在这里静默删除。独立预览不会修改草稿。
+        </div>
 
-          <dl className={styles.templateFacts}>
-            <div><dt>照片槽位</dt><dd>{inspected.photoSlots} 个</dd></div>
-            <div><dt>比例计划</dt><dd>{inspected.photoRatios}</dd></div>
-            <div><dt>已保存模板</dt><dd>{templateCatalog.find((item) => item.id === savedContent.activeTemplate)?.name}</dd></div>
-            <div><dt>当前草稿</dt><dd>{templateCatalog.find((item) => item.id === content.activeTemplate)?.name}</dd></div>
-          </dl>
+        <section className={styles.templateGrid} aria-label="正式页面模板">
+          {templateCatalog.map((template, index) => {
+            const isDraft = content.activeTemplate === template.id;
+            const isSaved = savedContent.activeTemplate === template.id;
+            const status = isDraft
+              ? (isSaved ? "当前使用" : "草稿已选择")
+              : (isSaved ? "上次保存" : "可选择");
 
-          {!inspectedIsDraft ? (
-            <div className={styles.templateNotice} role="note">
-              将从“{templateCatalog.find((item) => item.id === content.activeTemplate)?.name}”切换到“{inspected.name}”。
-              模板槽位数量或比例可能不同，当前主页的素材排版可能变化；各模板已有的显式槽位排版会继续保留，不会在这里静默删除。
-            </div>
-          ) : null}
+            return (
+              <article
+                className={`${styles.templateCard} is-${template.id}`}
+                data-template-card={template.id}
+                data-selected={isDraft}
+                aria-labelledby={`template-name-${template.id}`}
+                key={template.id}
+              >
+                <div className={styles.templateCardVisual}>
+                  <div className={`template-swatch ${styles.templateCardSwatch}`} aria-hidden="true">
+                    <i /><b />
+                  </div>
+                  <span className={styles.templateCardState}>{status}</span>
+                </div>
 
-          <div className={styles.templateActions}>
-            <button type="button" onClick={chooseTemplate} disabled={inspectedIsDraft}>
-              {inspectedIsDraft ? "已选择此模板" : "选择此模板"}
-            </button>
-            <a href={`/?template=${inspected.id}`} target="_blank" rel="noreferrer">
-              独立预览 <span aria-hidden="true">↗</span>
-            </a>
-          </div>
-        </article>
+                <div className={styles.templateCardBody}>
+                  <div className={styles.templateCardHeader}>
+                    <span>READY · {String(index + 1).padStart(2, "0")}</span>
+                    <h3 id={`template-name-${template.id}`}>{template.name}</h3>
+                  </div>
+                  <p>{template.description}</p>
+                  <dl className={styles.templateCardFacts}>
+                    <div><dt>照片槽位</dt><dd>{template.photoSlots} 个</dd></div>
+                    <div><dt>比例计划</dt><dd>{template.photoRatios}</dd></div>
+                  </dl>
+                </div>
+
+                <div className={styles.templateCardActions}>
+                  <button type="button" onClick={() => chooseTemplate(template.id)} disabled={isDraft}>
+                    {isDraft ? status : "选择此模板"}
+                  </button>
+                  <a
+                    href={`/?template=${template.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`独立预览${template.name}`}
+                  >
+                    独立预览 <span aria-hidden="true">↗</span>
+                  </a>
+                </div>
+              </article>
+            );
+          })}
+        </section>
       </div>
     </AdminSection>
   );

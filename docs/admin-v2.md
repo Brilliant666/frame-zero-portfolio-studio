@@ -30,7 +30,7 @@ legacy `SiteContent`、`/api/site-content` 和 `site_settings(id = 1)` 行为不
 ## 交互边界
 
 - 桌面端使用 sticky sidebar；移动端使用紧凑的原生 section selector。
-- 模板的“查看”和“选择”分离，查看或独立预览不会修改 draft。
+- 11 个正式模板在同一页响应式卡片网格中全部展开；只有“选择此模板”会修改 draft，独立预览不会修改 draft。
 - 套餐使用有文字状态的 disclosure；旧版作品只在高级设置中按需展开。
 - 素材排版只重组现有 manifest、固定槽位和既有算法，不新增素材 API 或 repository。
 - 恢复示例数据必须通过原生 dialog 二次确认；确认只替换当前 draft，不立即写数据库。

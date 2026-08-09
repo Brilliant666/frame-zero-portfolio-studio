@@ -44,6 +44,10 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
     for (const href of ["template", "profile", "packages", "layout", "contact", "advanced"]) {
       assert.match(html, new RegExp(`href="/admin/${href}"`));
     }
+    if (section === "template") {
+      assert.equal(html.match(/data-template-card="[^"]+"/g)?.length, 11);
+      assert.match(html, /aria-label="正式页面模板"/);
+    }
     assert.doesNotMatch(html, /admin-section-placeholder/);
   });
 }

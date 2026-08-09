@@ -159,7 +159,8 @@ The local preview runs at `http://127.0.0.1:3001/`; the content admin is at
 The [ADMIN-V2 / DESIGN-01 workbench](docs/admin-v2.md) divides the editor into
 six focused routes for templates, profile, packages, layout, contact, and
 advanced compatibility controls. All routes share one client-side draft and
-the existing save endpoint. Desktop editing uses a persistent sidebar; mobile
+the existing save endpoint. The template route keeps all eleven choices visible
+in one responsive card grid. Desktop editing uses a persistent sidebar; mobile
 keeps every section accessible through a compact switcher, while complex photo
 layout remains desktop-first. This UI refactor does not change `SiteContent`,
 the API payload, D1 schema, template catalog, or public homepage rendering.
