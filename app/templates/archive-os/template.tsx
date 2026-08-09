@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- responsive WebP variants are provided by the local portfolio library. */
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { resolveBrandIdentity, withBrandPrefix } from "../../brand-identity";
 import type { Work } from "../../site-config";
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
@@ -47,6 +48,7 @@ export default function ArchiveOsTemplate({
   onCopy,
   onOpenWork,
 }: TemplateProps) {
+  const brand = resolveBrandIdentity(content.profile);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterId>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -109,12 +111,12 @@ export default function ArchiveOsTemplate({
     <main className={styles.shell} data-template={templateId}>
       <a className={styles.skipLink} href="#archive-library">跳到作品资料库</a>
 
-      <section className={styles.desktopWindow} aria-label="FRAME ZERO 摄影档案系统">
+      <section className={styles.desktopWindow} aria-label={withBrandPrefix(brand.name, "摄影档案系统", " ")}>
         <header className={styles.titlebar}>
           <div className={styles.windowControls} aria-hidden="true"><i /><i /><i /></div>
           <a className={styles.brand} href="#archive-library">
-            <strong>{content.profile.mark}</strong>
-            <span>{content.profile.brand} <small>ARCHIVE OS</small></span>
+            {brand.hasDistinctMark && <strong>{brand.mark}</strong>}
+            <span>{brand.name} <small>ARCHIVE OS</small></span>
           </a>
           <div className={styles.path}><span>LIBRARY</span><i>/</i><strong>SELECTED_WORKS</strong></div>
           <div className={styles.sync}><i /> LOCAL ARCHIVE · {String(works.length).padStart(3, "0")} ITEMS</div>
@@ -175,7 +177,7 @@ export default function ArchiveOsTemplate({
 
           <section className={styles.library} id="archive-library" data-pane="library" aria-labelledby="library-heading">
             <div className={styles.libraryHeading}>
-              <div><p>FRAME//ZERO / {FILTERS.find((item) => item.id === filter)?.label}</p><h1 id="library-heading">摄影作品档案</h1></div>
+              <div><p>{withBrandPrefix(brand.name, FILTERS.find((item) => item.id === filter)?.label ?? "", " / ")}</p><h1 id="library-heading">摄影作品档案</h1></div>
               <span>{content.hero.eyebrow}</span>
             </div>
 
@@ -342,7 +344,7 @@ export default function ArchiveOsTemplate({
       </section>
 
       <footer className={styles.footer}>
-        <strong>{content.profile.brand} / ARCHIVE OS</strong>
+        <strong>{withBrandPrefix(brand.name, "ARCHIVE OS", " / ")}</strong>
         <div>{content.social.map((item) => <span key={item.label}>{item.label} · {item.handle}</span>)}</div>
         <small>© 2026 · ALL SYSTEMS OPERATIONAL</small>
       </footer>

@@ -9,7 +9,7 @@ export const ADMIN_SECTIONS = [
     id: "profile",
     href: "/admin/profile",
     label: "基本资料",
-    description: "维护品牌、摄影师与首页文案",
+    description: "维护摄影师资料与首页文案",
   },
   {
     id: "packages",

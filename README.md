@@ -251,6 +251,11 @@ Content settings are stored in D1. Local development uses the project-local
 Miniflare database; hosted deployments use the logical `DB` binding declared in
 `.openai/hosting.json`.
 
+The public homepage reads the current legacy `site_settings(id = 1)` record on
+the server for both its initial HTML and its title, description, Open Graph, and
+Twitter metadata. This is a temporary single-site compatibility bridge, not the
+future repository or published-revision renderer described in Phase 0.
+
 ## Admin security assumptions
 
 The homepage content API is public by design, so anything entered in `/admin`

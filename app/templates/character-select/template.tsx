@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- local portfolio assets already provide responsive derivatives. */
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { resolveBrandIdentity } from "../../brand-identity";
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
@@ -11,6 +12,7 @@ import styles from "./template.module.css";
 const CHARACTER_RATIOS = getTemplateSlotRatios("character-select");
 
 export default function CharacterSelectTemplate({ content, works, packages, bookingTemplate, copiedKey, onCopy, onOpenWork }: TemplateProps) {
+  const brand = resolveBrandIdentity(content.profile);
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedPackage, setSelectedPackage] = useState(0);
   const photoSlots = useMemo(() => buildPhotoSlots(works, CHARACTER_RATIOS), [works]);
@@ -43,7 +45,7 @@ export default function CharacterSelectTemplate({ content, works, packages, book
   return (
     <main className={styles.shell} data-template="character-select">
       <header className={styles.header}>
-        <a href="#select-top" className={styles.logo}><span>{content.profile.mark}</span>{content.profile.brand}</a>
+        {brand.hasIdentity && <a href="#select-top" className={styles.logo}>{brand.hasDistinctMark && <span>{brand.mark}</span>}{brand.name}</a>}
         <div className={styles.headerTitle}>CHARACTER CAPTURE SYSTEM <b>ONLINE</b></div>
         <nav aria-label="角色选择模板导航"><a href="#select-roster">ROSTER</a><a href="#select-loadout">LOADOUT</a><a href="#select-mission">MISSION</a></nav>
       </header>
@@ -155,7 +157,7 @@ export default function CharacterSelectTemplate({ content, works, packages, book
             </article>
           )}
           <div className={styles.loadoutVisual} aria-hidden="true">
-            <span>{content.profile.mark}</span><i /><i /><i /><b>READY</b>
+            {brand.mark && <span>{brand.mark}</span>}<i /><i /><i /><b>READY</b>
           </div>
         </div>
       </section>
@@ -202,7 +204,7 @@ export default function CharacterSelectTemplate({ content, works, packages, book
         </div>
       </section>
 
-      <footer className={styles.footer}><strong>{content.profile.brand}</strong><span>{content.statement.lineOne}{content.statement.lineTwo}</span><span>© 2026 CHARACTER SELECT</span></footer>
+      <footer className={styles.footer}>{brand.name && <strong>{brand.name}</strong>}<span>{content.statement.lineOne}{content.statement.lineTwo}</span><span>© 2026 CHARACTER SELECT</span></footer>
     </main>
   );
 }

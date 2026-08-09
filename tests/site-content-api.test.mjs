@@ -165,6 +165,26 @@ test("PUT allows a loopback request and persists normalized content", async () =
   assert.equal(payload.updatedAt, "2026-07-11 15:00:00");
 });
 
+test("GET returns demo content without a warning when D1 has no saved row", async () => {
+  const database = new MemoryD1();
+  const response = await requestSiteContent(
+    "http://127.0.0.1:3001/api/site-content",
+    undefined,
+    database,
+  );
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.content.profile.brand, "FRAME//ZERO");
+  assert.equal(payload.updatedAt, null);
+  assert.equal("warning" in payload, false);
+  assert.equal(
+    database.prepareCalls.some((sql) => /^\s*(insert|update)\b/i.test(sql)),
+    false,
+    "an empty GET must not prepare a data write",
+  );
+});
+
 test("PUT preserves the complete legacy SiteContent shape at site_settings id 1", async () => {
   const database = new MemoryD1();
   const work = {

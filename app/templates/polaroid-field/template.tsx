@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- local portfolio assets provide responsive WebP derivatives. */
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { resolveBrandIdentity } from "../../brand-identity";
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
@@ -58,6 +59,7 @@ export default function PolaroidFieldTemplate({
   onCopy,
   onOpenWork,
 }: TemplateProps) {
+  const brand = resolveBrandIdentity(content.profile);
   const fieldSlots = useMemo(() => buildPhotoSlots(works, POLAROID_RATIOS), [works]);
   const viewportRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -224,10 +226,12 @@ export default function PolaroidFieldTemplate({
       <a className={styles.skipLink} href="#polaroid-field">跳到作品星图</a>
 
       <header className={styles.topbar}>
-        <a className={styles.brand} href="#polaroid-top" aria-label="返回页面顶部">
-          <span>{content.profile.mark}</span>
-          <strong>{content.profile.brand}</strong>
-        </a>
+        {brand.hasIdentity && (
+          <a className={styles.brand} href="#polaroid-top" aria-label="返回页面顶部">
+            {brand.hasDistinctMark && <span>{brand.mark}</span>}
+            <strong>{brand.name}</strong>
+          </a>
+        )}
         <nav aria-label="页面导航">
           <a href="#polaroid-field">FIELD</a>
           <a href="#polaroid-packages">PACKAGES</a>
@@ -463,7 +467,7 @@ export default function PolaroidFieldTemplate({
           <span className={styles.notePin} aria-hidden="true" />
           <div className={styles.noteHeader}>
             <span>FIELD_NOTE.txt</span>
-            <strong>{content.profile.brand}</strong>
+            {brand.name && <strong>{brand.name}</strong>}
           </div>
           <pre>{bookingTemplate}</pre>
           <button type="button" onClick={() => void onCopy(bookingTemplate, "polaroid-template")}>
@@ -476,7 +480,7 @@ export default function PolaroidFieldTemplate({
 
         <footer className={styles.footer}>
           <div>
-            <strong>{content.profile.brand}</strong>
+            {brand.name && <strong>{brand.name}</strong>}
             <span>{content.profile.photographer} · {content.profile.role}</span>
           </div>
           <div className={styles.socials}>

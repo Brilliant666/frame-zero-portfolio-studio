@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- the portfolio supplies local responsive WebP derivatives. */
 
 import { useRef } from "react";
+import { resolveBrandIdentity, withBrandPrefix } from "../../brand-identity";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import type { TemplateProps } from "../types";
@@ -20,6 +21,7 @@ export default function FilmRailTemplate({
   onCopy,
   onOpenWork,
 }: TemplateProps) {
+  const brand = resolveBrandIdentity(content.profile);
   const railRef = useRef<HTMLDivElement>(null);
   const filmSlots = buildPhotoSlots(works, filmRatios);
   const leadSlot = filmSlots.find((slot) => slot.work) ?? filmSlots[0];
@@ -41,8 +43,8 @@ export default function FilmRailTemplate({
 
       <header className={styles.header}>
         <a className={styles.brand} href="#film-top" aria-label="返回胶片主页顶部">
-          <strong>{content.profile.mark}</strong>
-          <span>{content.profile.brand}<small>MOTION PICTURE ARCHIVE</small></span>
+          {brand.hasDistinctMark && <strong>{brand.mark}</strong>}
+          <span>{brand.name}<small>MOTION PICTURE ARCHIVE</small></span>
         </a>
         <nav aria-label="胶片模板主导航">
           <a href="#film-archive">FILM</a>
@@ -54,7 +56,7 @@ export default function FilmRailTemplate({
 
       <section className={styles.hero} id="film-top">
         <div className={styles.heroCopy}>
-          <p className={styles.kicker}>FRAME//ZERO PRESENTS · COSPLAY PHOTOGRAPHY</p>
+          <p className={styles.kicker}>{withBrandPrefix(brand.name, "PRESENTS · COSPLAY PHOTOGRAPHY", " ")}</p>
           <h1>
             <span>{content.hero.title}</span>
             <em>ONE FRAME<br />AT A TIME.</em>
@@ -74,7 +76,7 @@ export default function FilmRailTemplate({
         </div>
 
         <div className={styles.heroVisual}>
-          <div className={styles.heroFilm}>
+          <div className={styles.heroFilm} data-film-stock={withBrandPrefix(brand.name, "35MM 001", "  ")}>
             <span className={styles.filmEdge} aria-hidden="true" />
             {leadWork ? (
               <button type="button" onClick={() => onOpenWork(leadWork)} aria-label={`查看主视觉作品 ${leadWork.title}`}>
@@ -93,7 +95,7 @@ export default function FilmRailTemplate({
             ) : <PhotoPlaceholder slot={leadSlot} className={styles.emptyFrame} tone="dark" label="未曝光主画面" />}
             <div className={styles.heroCaption}>
               <span>35 MM / COLOR NEGATIVE</span>
-              <strong>{leadWork?.title ?? content.profile.brand}</strong>
+              <strong>{(leadWork?.title ?? brand.name) || content.profile.photographer}</strong>
               <span>FRAME 001</span>
             </div>
           </div>
@@ -162,7 +164,7 @@ export default function FilmRailTemplate({
               );
             })}
             <div className={styles.endLeader} aria-hidden="true">
-              <span>END OF ROLL</span><i /><span>FRAME//ZERO</span>
+              <span>END OF ROLL</span>{brand.name && <><i /><span>{brand.name}</span></>}
             </div>
           </div>
           <div className={`${styles.sprockets} ${styles.sprocketsBottom}`} aria-hidden="true" />
@@ -235,7 +237,7 @@ export default function FilmRailTemplate({
         </div>
 
         <div className={styles.callSheet}>
-          <div className={styles.callSheetHead}><span>CALL_SHEET / 001</span><span>FRAME//ZERO</span></div>
+          <div className={styles.callSheetHead}><span>CALL_SHEET / 001</span>{brand.name && <span>{brand.name}</span>}</div>
           <pre>{bookingTemplate}</pre>
           <button type="button" onClick={() => void onCopy(bookingTemplate, "film-template")}>
             {copiedKey === "film-template" ? "约拍清单已复制 ✓" : "复制完整约拍清单"}
@@ -244,7 +246,7 @@ export default function FilmRailTemplate({
       </section>
 
       <footer className={styles.footer}>
-        <strong>{content.profile.brand}</strong>
+        {brand.name && <strong>{brand.name}</strong>}
         <div>{content.social.map((item) => <span key={item.label}>{item.label} / {item.handle}</span>)}</div>
         <small>© 2026 · END OF PRODUCTION</small>
       </footer>

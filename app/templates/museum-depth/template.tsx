@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- local portfolio assets already provide responsive derivatives. */
 
 import { useMemo, type CSSProperties } from "react";
+import { resolveBrandIdentity, withBrandPrefix } from "../../brand-identity";
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
@@ -11,6 +12,7 @@ import styles from "./template.module.css";
 const MUSEUM_RATIOS = getTemplateSlotRatios("museum-depth");
 
 export default function MuseumDepthTemplate({ content, works, packages, bookingTemplate, copiedKey, onCopy, onOpenWork }: TemplateProps) {
+  const brand = resolveBrandIdentity(content.profile);
   const photoSlots = useMemo(() => buildPhotoSlots(works, MUSEUM_RATIOS), [works]);
   const heroSlot = photoSlots[0];
   const heroWork = heroSlot.work;
@@ -19,7 +21,7 @@ export default function MuseumDepthTemplate({ content, works, packages, bookingT
   return (
     <main className={styles.shell} data-template="museum-depth">
       <header className={styles.header}>
-        <a href="#museum-top" className={styles.brand}>{content.profile.brand}<small>VIRTUAL EXHIBITION</small></a>
+        <a href="#museum-top" className={styles.brand}>{brand.name}<small>VIRTUAL EXHIBITION</small></a>
         <nav aria-label="深度展厅模板导航"><a href="#museum-exhibition">EXHIBITION</a><a href="#museum-tickets">TICKETS</a><a href="#museum-visit">VISIT</a></nav>
         <span>{content.profile.city}</span>
       </header>
@@ -27,7 +29,7 @@ export default function MuseumDepthTemplate({ content, works, packages, bookingT
       <section id="museum-top" className={styles.hero}>
         <div className={styles.heroNumber}>01</div>
         <div className={styles.heroCopy}>
-          <small>FRAME//ZERO PRESENTS · EXHIBITION 2026</small>
+          <small>{withBrandPrefix(brand.name, "PRESENTS · EXHIBITION 2026", " ")}</small>
           <h1>THE ROLE<br /><em>IN DEPTH</em></h1>
           <p>{content.profile.photographer} 的角色影像展。沿着光线前行，每一幅作品都是通往另一重现实的展框。</p>
           <a href="#museum-exhibition">进入展厅 ↓</a>
@@ -87,7 +89,7 @@ export default function MuseumDepthTemplate({ content, works, packages, bookingT
                   <span className={styles.frameLight} aria-hidden="true" />
                 </div>
               )}
-              <div className={styles.floorMark}>FRAME ZERO COLLECTION · ACQ. 2026</div>
+              <div className={styles.floorMark}>{withBrandPrefix(brand.name, "COLLECTION · ACQ. 2026", " ")}</div>
             </article>
             );
           })}
@@ -109,7 +111,7 @@ export default function MuseumDepthTemplate({ content, works, packages, bookingT
       </section>
 
       <section className={styles.statement}>
-        <span>{content.statement.eyebrow}</span><h2>{content.statement.lineOne}<br />{content.statement.lineTwo}</h2><p>{content.profile.brand} · PERMANENT COLLECTION</p>
+        <span>{content.statement.eyebrow}</span><h2>{content.statement.lineOne}<br />{content.statement.lineTwo}</h2><p>{withBrandPrefix(brand.name, "PERMANENT COLLECTION")}</p>
       </section>
 
       <section id="museum-visit" className={styles.visit}>
@@ -127,7 +129,7 @@ export default function MuseumDepthTemplate({ content, works, packages, bookingT
         </div>
       </section>
 
-      <footer className={styles.footer}><strong>{content.profile.brand}</strong><span>{content.profile.photographer} · {content.profile.role}</span><span>© 2026 VIRTUAL MUSEUM</span></footer>
+      <footer className={styles.footer}>{brand.name && <strong>{brand.name}</strong>}<span>{content.profile.photographer} · {content.profile.role}</span><span>© 2026 VIRTUAL MUSEUM</span></footer>
     </main>
   );
 }

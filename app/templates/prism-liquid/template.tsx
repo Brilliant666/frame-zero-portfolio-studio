@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- local portfolio assets already provide responsive derivatives. */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { resolveBrandIdentity } from "../../brand-identity";
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
@@ -11,6 +12,7 @@ import styles from "./template.module.css";
 const PRISM_RATIOS = getTemplateSlotRatios("prism-liquid");
 
 export default function PrismLiquidTemplate({ content, works, packages, bookingTemplate, copiedKey, onCopy, onOpenWork }: TemplateProps) {
+  const brand = resolveBrandIdentity(content.profile);
   const [activeIndex, setActiveIndex] = useState(0);
   const gallerySlots = useMemo(() => buildPhotoSlots(works, PRISM_RATIOS), [works]);
   const displayedSlots = useMemo(() => gallerySlots.filter((slot) => slot.work), [gallerySlots]);
@@ -36,7 +38,7 @@ export default function PrismLiquidTemplate({ content, works, packages, bookingT
   return (
     <main className={styles.shell} data-template="prism-liquid">
       <header className={styles.header}>
-        <a href="#prism-top" className={styles.brand}>{content.profile.mark}<span>{content.profile.brand}</span></a>
+        {brand.hasIdentity && <a href="#prism-top" className={styles.brand}>{brand.hasDistinctMark && brand.mark}<span>{brand.name}</span></a>}
         <nav aria-label="流体棱镜模板导航">
           <a href="#prism-gallery">WORKS</a>
           <a href="#prism-services">MODES</a>
@@ -194,7 +196,7 @@ export default function PrismLiquidTemplate({ content, works, packages, bookingT
       </section>
 
       <footer className={styles.footer}>
-        <strong>{content.profile.brand}</strong><span>{content.profile.city}</span><span>© 2026 REFRACTED VISUALS</span>
+        {brand.name && <strong>{brand.name}</strong>}<span>{content.profile.city}</span><span>© 2026 REFRACTED VISUALS</span>
       </footer>
     </main>
   );

@@ -158,7 +158,7 @@ export function PhotoPlaceholder({
         <strong>{label}</strong>
         <small>PHOTO SLOT / {slot.ratio}</small>
       </div>
-      <span className={styles.corner}>FRAME//ZERO</span>
+      <span className={styles.corner}>PHOTO</span>
     </div>
   );
 }

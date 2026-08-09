@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- responsive WebP variants are generated locally for this portfolio. */
 
 import type { CSSProperties } from "react";
+import { resolveBrandIdentity, withBrandPrefix } from "../../brand-identity";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import type { TemplateProps } from "../types";
@@ -20,6 +21,7 @@ export default function CinematicLightTemplate({
   onCopy,
   onOpenWork,
 }: TemplateProps) {
+  const brand = resolveBrandIdentity(content.profile);
   const heroTitle = content.hero.title.trim().split(/\s+/);
   const heroTitleLead = heroTitle.shift() ?? "";
   const photoSlots = buildPhotoSlots(works, cinematicRatios);
@@ -32,16 +34,16 @@ export default function CinematicLightTemplate({
     <main className="site-shell" data-template={templateId}>
       <div className={`boot-screen ${booted ? "is-complete" : ""}`} aria-hidden="true">
         <div className="boot-crosshair" />
-        <p>{content.profile.brand} OPTICAL SYSTEM</p>
+        <p>{withBrandPrefix(brand.name, "OPTICAL SYSTEM", " ")}</p>
         <div className="boot-progress"><span /></div>
         <small>CALIBRATING VISUAL UNIT · {String(works.length).padStart(4, "0")} FILES READY</small>
       </div>
 
       <header className="topbar">
         <a className="brand" href="#top" aria-label="返回首页">
-          <span className="brand-mark">{content.profile.mark}</span>
+          {brand.hasDistinctMark && <span className="brand-mark">{brand.mark}</span>}
           <span className="brand-name">
-            {content.profile.brand}
+            {brand.name}
             <small>{content.profile.photographer} · 摄影</small>
           </span>
         </a>
@@ -247,7 +249,7 @@ export default function CinematicLightTemplate({
         <div className="statement-copy">
           <p>{content.statement.eyebrow}</p>
           <h2>{content.statement.lineOne}<br />{content.statement.lineTwo}</h2>
-          <span>{content.profile.brand} · PERSONAL VISUAL ARCHIVE</span>
+          <span>{withBrandPrefix(brand.name, "PERSONAL VISUAL ARCHIVE")}</span>
         </div>
       </section>
 
@@ -286,7 +288,7 @@ export default function CinematicLightTemplate({
         </div>
 
         <footer>
-          <div className="footer-brand">{content.profile.brand}</div>
+          {brand.name && <div className="footer-brand">{brand.name}</div>}
           <p>{content.profile.photographer} · {content.profile.role}</p>
           <div className="footer-links">
             {content.social.map((item) => <span key={item.label}>{item.label} / {item.handle}</span>)}

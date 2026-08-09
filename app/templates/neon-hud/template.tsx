@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- portfolio assets include local responsive WebP derivatives. */
 
 import { useCallback, useEffect, useState } from "react";
+import { resolveBrandIdentity, withBrandPrefix } from "../../brand-identity";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import type { TemplateProps } from "../types";
@@ -20,6 +21,7 @@ export default function NeonHudTemplate({
   onCopy,
   onOpenWork,
 }: TemplateProps) {
+  const brand = resolveBrandIdentity(content.profile);
   const [activeIndex, setActiveIndex] = useState(0);
   const photoSlots = buildPhotoSlots(works, neonRatios);
   const safeIndex = Math.min(Math.max(activeIndex, 0), photoSlots.length - 1);
@@ -55,16 +57,16 @@ export default function NeonHudTemplate({
     <main className={styles.root} data-template="neon-hud">
       <div className={`${styles.boot} ${booted ? styles.bootComplete : ""}`} aria-hidden="true">
         <div className={styles.bootReticle}><span /></div>
-        <p>{content.profile.mark} / OPTICAL LINK</p>
+        <p>{withBrandPrefix(brand.mark, "OPTICAL LINK", " / ")}</p>
         <div className={styles.bootLine}><span /></div>
         <small>CALIBRATING {String(works.length).padStart(3, "0")} VISUAL FILES</small>
       </div>
 
       <header className={styles.header}>
         <a className={styles.brand} href="#hud-top" aria-label="返回霓虹取景器首页">
-          <span className={styles.brandMark}>{content.profile.mark}</span>
+          {brand.hasDistinctMark && <span className={styles.brandMark}>{brand.mark}</span>}
           <span>
-            <strong>{content.profile.brand}</strong>
+            {brand.name && <strong>{brand.name}</strong>}
             <small>OPTICAL ARCHIVE / {content.profile.photographer}</small>
           </span>
         </a>
@@ -355,7 +357,7 @@ export default function NeonHudTemplate({
         <div className={styles.manifestoCopy}>
           <p>{content.statement.eyebrow}</p>
           <h2>{content.statement.lineOne}<br /><span>{content.statement.lineTwo}</span></h2>
-          <small>{content.profile.brand} / VISUAL RECONSTRUCTION UNIT</small>
+          <small>{withBrandPrefix(brand.name, "VISUAL RECONSTRUCTION UNIT", " / ")}</small>
         </div>
       </section>
 
@@ -395,7 +397,7 @@ export default function NeonHudTemplate({
         </div>
 
         <footer className={styles.footer}>
-          <strong>{content.profile.brand}</strong>
+          {brand.name && <strong>{brand.name}</strong>}
           <span>{content.profile.photographer} · {content.profile.role}</span>
           <span>{content.profile.city}</span>
           <small>© 2026 ALL VISUALS RESERVED.</small>

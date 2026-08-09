@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- portfolio assets include local responsive WebP derivatives. */
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { resolveBrandIdentity, withBrandPrefix } from "../../brand-identity";
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
@@ -20,6 +21,7 @@ export default function EditorialDuetTemplate({
   onCopy,
   onOpenWork,
 }: TemplateProps) {
+  const brand = resolveBrandIdentity(content.profile);
   const rootRef = useRef<HTMLElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const photoSlots = useMemo(() => buildPhotoSlots(works, EDITORIAL_RATIOS), [works]);
@@ -55,13 +57,13 @@ export default function EditorialDuetTemplate({
   return (
     <main ref={rootRef} className={styles.root} data-template="editorial-duet">
       <div className={`${styles.curtain} ${booted ? styles.curtainDone : ""}`} aria-hidden="true">
-        <span>{content.profile.brand}</span>
+        {brand.name && <span>{brand.name}</span>}
         <i />
       </div>
 
       <header className={styles.header}>
         <a className={styles.brand} href="#editorial-top" aria-label="返回双页时装刊首页">
-          <strong>{content.profile.brand}</strong>
+          {brand.name && <strong>{brand.name}</strong>}
           <span>{content.profile.photographer} / PORTRAIT &amp; COSPLAY</span>
         </a>
         <nav aria-label="主导航">
@@ -209,7 +211,7 @@ export default function EditorialDuetTemplate({
       <section className={styles.interlude}>
         <p>{content.statement.eyebrow}</p>
         <h2>{content.statement.lineOne}<br /><em>{content.statement.lineTwo}</em></h2>
-        <span>{content.profile.brand} · PERSONAL VISUAL ARCHIVE</span>
+        <span>{withBrandPrefix(brand.name, "PERSONAL VISUAL ARCHIVE")}</span>
       </section>
 
       <section id="editorial-rates" className={styles.rates}>
@@ -263,7 +265,7 @@ export default function EditorialDuetTemplate({
         <div className={styles.bookingSheet}>
           <div className={styles.sheetHead}>
             <span>COMMISSION REQUEST</span>
-            <span>FRAME//ZERO · 2026</span>
+            <span>{withBrandPrefix(brand.name, "2026")}</span>
           </div>
           <pre>{bookingTemplate}</pre>
           <button type="button" onClick={() => void onCopy(bookingTemplate, "editorial-template")}>
@@ -274,7 +276,7 @@ export default function EditorialDuetTemplate({
       </section>
 
       <footer className={styles.footer}>
-        <strong>{content.profile.brand}</strong>
+        {brand.name && <strong>{brand.name}</strong>}
         <div>{content.social.map((item) => <span key={`${item.label}-${item.handle}`}>{item.label} / {item.handle}</span>)}</div>
         <span>{content.profile.city}</span>
         <small>© 2026 ALL VISUALS RESERVED.</small>

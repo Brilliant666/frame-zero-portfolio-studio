@@ -1,20 +1,13 @@
 import { eq, sql } from "drizzle-orm";
-import { env } from "cloudflare:workers";
 import { getDb } from "../../../db";
 import { siteSettings } from "../../../db/schema";
 import { getChatGPTUser } from "../../chatgpt-auth";
-import { normalizeSiteContent, siteConfig } from "../../site-config";
+import { ensureSiteSettingsTable, readSiteContent, SITE_SETTINGS_ID } from "../../site-content-read";
+import { normalizeSiteContent } from "../../site-config";
 
 export const dynamic = "force-dynamic";
 
-const SETTINGS_ID = 1;
 const MAX_CONTENT_BYTES = 256_000;
-
-async function ensureTable() {
-  await env.DB.prepare(
-    "CREATE TABLE IF NOT EXISTS site_settings (id INTEGER PRIMARY KEY NOT NULL, content TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)",
-  ).run();
-}
 
 function isLocalRequest(request: Request) {
   const hostname = new URL(request.url).hostname;
@@ -31,17 +24,7 @@ function errorMessage(error: unknown) {
 }
 
 export async function GET() {
-  try {
-    await ensureTable();
-    const db = getDb();
-    const [row] = await db.select().from(siteSettings).where(eq(siteSettings.id, SETTINGS_ID)).limit(1);
-
-    if (!row) return Response.json({ content: siteConfig, updatedAt: null });
-
-    return Response.json({ content: normalizeSiteContent(JSON.parse(row.content)), updatedAt: row.updatedAt });
-  } catch (error) {
-    return Response.json({ content: siteConfig, updatedAt: null, warning: errorMessage(error) });
-  }
+  return Response.json(await readSiteContent());
 }
 
 export async function PUT(request: Request) {
@@ -59,17 +42,17 @@ export async function PUT(request: Request) {
     const content = normalizeSiteContent(payload.content);
     const serialized = JSON.stringify(content);
 
-    await ensureTable();
+    await ensureSiteSettingsTable();
     const db = getDb();
     await db
       .insert(siteSettings)
-      .values({ id: SETTINGS_ID, content: serialized })
+      .values({ id: SITE_SETTINGS_ID, content: serialized })
       .onConflictDoUpdate({
         target: siteSettings.id,
         set: { content: serialized, updatedAt: sql`CURRENT_TIMESTAMP` },
       });
 
-    const [saved] = await db.select().from(siteSettings).where(eq(siteSettings.id, SETTINGS_ID)).limit(1);
+    const [saved] = await db.select().from(siteSettings).where(eq(siteSettings.id, SITE_SETTINGS_ID)).limit(1);
     return Response.json({ content, updatedAt: saved?.updatedAt ?? null });
   } catch (error) {
     return Response.json({ error: errorMessage(error) }, { status: 400 });

@@ -32,7 +32,7 @@ legacy `SiteContent`、`/api/site-content` 和 `site_settings(id = 1)` 行为不
 - Admin 顶栏、认证门禁和页面 metadata 使用通用的内容管理标题，不把当前示例站品牌写入后台系统身份。
 - 桌面端使用 sticky sidebar；移动端使用紧凑的原生 section selector。
 - 11 个正式模板在同一页响应式卡片网格中全部展开；只有“选择此模板”会修改 draft，独立预览不会修改 draft。
-- 基本资料优先展示摄影师、Hero 与信任信息；`profile.brand`、`profile.mark` 和 `statement` 保留原契约，但收进默认关闭的可选品牌内容。
+- 基本资料优先展示摄影师、Hero 与信任信息；`profile.brand`、`profile.mark` 和 `statement` 保留原契约，但收进默认关闭的可选品牌内容。`profile.brand` 是完整展示名或个人网名，`profile.mark` 只是可留空的紧凑短标；全部正式模板通过同一展示解析器消费这两个字段，短标留空时回退到展示名，两者都为空时不恢复示例品牌。
 - 每个套餐的主页标题始终以可编辑输入显示，其他套餐字段继续使用有文字状态的 disclosure；旧版作品只在高级设置中按需展开。
 - 素材排版只重组现有 manifest、固定槽位和既有算法，不新增素材 API 或 repository。
 - 恢复示例数据必须通过原生 dialog 二次确认；确认只替换当前 draft，不立即写数据库。
@@ -41,5 +41,5 @@ legacy `SiteContent`、`/api/site-content` 和 `site_settings(id = 1)` 行为不
 ## 明确不做
 
 本设计不引入实时主页 iframe、SiteDocument 运行时接线、新内容 schema、新 API、数据库
-迁移、repository、Asset UUID 分配、模板目录变化或正式模板视觉修改。这些边界需要独立
+迁移、repository、Asset UUID 分配、模板目录变化或正式模板布局与视觉方向重做。这些边界需要独立
 范围审查。
