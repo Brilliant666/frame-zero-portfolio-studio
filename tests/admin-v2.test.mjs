@@ -168,6 +168,75 @@ test("the obsolete long-form Admin implementation is removed", async () => {
   }
 });
 
+test("local photo ingest stays isolated from the shared SiteContent draft", async () => {
+  const [layout, panel, client, provider, adminLayout, css, viteConfig] = await Promise.all([
+    source("app/admin/layout/layout-workspace.tsx"),
+    source("app/admin/layout/photo-import-panel.tsx"),
+    source("app/admin/layout/photo-import-client.ts"),
+    source("app/admin/admin-provider.tsx"),
+    source("app/admin/layout.tsx"),
+    source("app/admin/admin-v2.module.css"),
+    source("vite.config.ts"),
+  ]);
+
+  assert.match(layout, /<PhotoImportPanel/);
+  assert.match(layout, /localPhotoImportOrigin/);
+  assert.match(layout, /localPhotoImportState/);
+  assert.match(layout, /isImporting \|\| assets\.length === 0/);
+  assert.match(layout, /libraryRequestRef/);
+  assert.match(layout, /request !== libraryRequestRef\.current/);
+  assert.match(layout, /\["all", "landscape", "portrait", "square"\]/);
+  assert.match(layout, /setLibraryMessage\("素材库还为空。"\)/);
+  assert.match(layout, /使用上方“添加照片”或“添加文件夹”把作品加入素材库/);
+  assert.match(layout, /未能读取素材库；请先处理上方错误并重新读取/);
+  assert.doesNotMatch(layout, /先运行文件夹导入命令|重新执行导入命令/);
+  assert.doesNotMatch(panel, /useAdmin|setContent|autoComposeTemplateWorks|\/api\/site-content|method:\s*"PUT"/);
+  assert.match(panel, /data-photo-picker="files"/);
+  assert.match(panel, /data-photo-picker="folder"/);
+  assert.match(panel, /multiple/);
+  assert.match(panel, /webkitdirectory/);
+  assert.equal(panel.match(/aria-hidden="true"/g)?.length, 2);
+  assert.equal(panel.match(/tabIndex=\{-1\}/g)?.length, 2);
+  assert.match(panel, /本地照片导入仅在本机编辑模式可用/);
+  assert.match(panel, /本地照片导入服务未启动/);
+  assert.match(panel, /请使用 npm run dev 启动完整编辑环境/);
+  assert.match(panel, /data-photo-import-health="unavailable"/);
+  assert.match(panel, /本地照片导入服务暂时不可用/);
+  assert.match(panel, /导入地址已配置，但当前无法连接本地照片导入服务/);
+  assert.match(panel, /高级 \/ 命令行导入/);
+  assert.match(panel, /新增 \{result\.added\}/);
+  assert.match(panel, /已存在 \{result\.alreadyExists\}/);
+  assert.match(panel, /查看失败详情/);
+  assert.match(panel, /未能添加照片/);
+  assert.match(panel, /aria-label="照片导入进度"/);
+  assert.doesNotMatch(client, /JSON\.stringify|FileReader|readAsDataURL|webkitRelativePath/);
+  assert.match(client, /body: file/);
+  assert.match(client, /"content-type": "application\/octet-stream"/);
+  assert.match(client, /"x-frame-zero-local-import": "1"/);
+  assert.match(client, /localPhotoImportMaximumBytes = 200 \* 1024 \* 1024/);
+  assert.match(client, /checkLocalPhotoImportHealth\(\s*origin: string/);
+  assert.match(client, /runLocalPhotoImport\(\s*origin: string/);
+  assert.doesNotMatch(client, /127\.0\.0\.1:3002|localPhotoImportOrigin\s*=/);
+  assert.match(provider, /localPhotoImportOrigin: string \| null/);
+  assert.match(provider, /localPhotoImportState: "configured" \| "missing" \| "hosted"/);
+  assert.match(adminLayout, /FRAME_ZERO_LOCAL_PHOTO_IMPORT_ORIGIN/);
+  assert.match(adminLayout, /local \? localPhotoImportOriginFromEnvironment\(\) : null/);
+  assert.match(adminLayout, /\^http:\\\/\\\/127\\\.0\\\.0\\\.1:/);
+  assert.match(adminLayout, /parsed\.username !== ""/);
+  assert.match(adminLayout, /parsed\.password !== ""/);
+  assert.match(adminLayout, /parsed\.pathname !== "\/"/);
+  assert.match(adminLayout, /parsed\.search !== ""/);
+  assert.match(adminLayout, /parsed\.hash !== ""/);
+  assert.match(viteConfig, /command !== "serve" \|\| isPreview === true/);
+  assert.match(viteConfig, /\^http:\\\/\\\/127\\\.0\\\.0\\\.1:/);
+  assert.match(viteConfig, /\.\.\.resolvedConfig\.vars/);
+  assert.match(viteConfig, /\[LOCAL_PHOTO_IMPORT_ORIGIN_ENV\]: localPhotoImportOrigin/);
+  assert.doesNotMatch(viteConfig, /CLOUDFLARE_INCLUDE_PROCESS_ENV|NEXT_PUBLIC_|VITE_FRAME_ZERO/);
+  assert.match(css, /\.libraryStats\s*\{/);
+  assert.match(css, /\.photoImportProgress\s*,/);
+  assert.match(css, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
+});
+
 test("Admin V2 keeps shared draft persistence on the unchanged site-content endpoint", async () => {
   const provider = await source("app/admin/admin-provider.tsx");
   assert.match(provider, /fetch\("\/api\/site-content", \{ cache: "no-store" \}\)/);

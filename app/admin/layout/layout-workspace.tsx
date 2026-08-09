@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type PointerEvent,
 } from "react";
@@ -24,8 +25,9 @@ import { getTemplateCatalogItem } from "../../templates/catalog";
 import { AdminSection } from "../admin-form";
 import { useAdmin } from "../admin-provider";
 import styles from "../admin-v2.module.css";
+import PhotoImportPanel, { type PhotoLibraryStats } from "./photo-import-panel";
 
-type LibraryFilter = "all" | "landscape" | "portrait";
+type LibraryFilter = "all" | "landscape" | "portrait" | "square";
 type LibraryState = "loading" | "ready" | "empty" | "error";
 
 const manifestUrl = "/photos/library-manifest.json";
@@ -42,13 +44,20 @@ function orientationLabel(orientation: PhotoAsset["orientation"]) {
 }
 
 export default function LayoutWorkspace() {
-  const { content, setContent } = useAdmin();
+  const {
+    content,
+    localPhotoImportOrigin,
+    localPhotoImportState,
+    setContent,
+  } = useAdmin();
   const [assets, setAssets] = useState<PhotoAsset[]>([]);
   const [libraryState, setLibraryState] = useState<LibraryState>("loading");
   const [libraryMessage, setLibraryMessage] = useState("正在读取本地素材库…");
+  const [isImporting, setIsImporting] = useState(false);
   const [filter, setFilter] = useState<LibraryFilter>("all");
   const [query, setQuery] = useState("");
   const [assetPage, setAssetPage] = useState(0);
+  const libraryRequestRef = useRef(0);
   const [activeSlotState, setActiveSlotState] = useState(() => ({
     templateId: content.activeTemplate,
     slotIndex: 0,
@@ -93,6 +102,15 @@ export default function LayoutWorkspace() {
       return matchesFilter && (!needle || asset.id.toLowerCase().includes(needle));
     });
   }, [assets, filter, query]);
+  const libraryStats = useMemo<PhotoLibraryStats>(() => assets.reduce((stats, asset) => ({
+    ...stats,
+    [asset.orientation]: stats[asset.orientation] + 1,
+  }), {
+    total: assets.length,
+    landscape: 0,
+    portrait: 0,
+    square: 0,
+  }), [assets]);
   const assetPageCount = Math.max(1, Math.ceil(filteredAssets.length / assetPageSize));
   const currentAssetPage = Math.min(assetPage, assetPageCount - 1);
   const pagedAssets = filteredAssets.slice(
@@ -101,43 +119,51 @@ export default function LayoutWorkspace() {
   );
 
   const loadLibrary = useCallback(async () => {
+    const request = libraryRequestRef.current + 1;
+    libraryRequestRef.current = request;
     try {
       const response = await fetch(`${manifestUrl}?t=${Date.now()}`, { cache: "no-store" });
+      if (request !== libraryRequestRef.current) return null;
       if (response.status === 404) {
         setAssets([]);
         setAssetPage(0);
         setLibraryState("empty");
-        setLibraryMessage("还没有导入照片文件夹。运行导入命令后，再重新读取素材库。");
-        return;
+        setLibraryMessage("素材库还为空。");
+        return 0;
       }
       if (!response.ok) throw new Error(`素材库读取失败（${response.status}）`);
 
       const manifest = parsePhotoLibraryManifest(await response.json());
-      if (!manifest) throw new Error("素材库清单格式无效，请重新执行导入命令");
+      if (!manifest) throw new Error("素材库清单格式无效，请恢复有效清单后重新读取");
+      if (request !== libraryRequestRef.current) return null;
       setAssets(manifest.assets);
       setAssetPage(0);
       setLibraryState(manifest.assets.length > 0 ? "ready" : "empty");
       setLibraryMessage(manifest.assets.length > 0
         ? `已载入 ${manifest.assets.length} 张本地素材；原图没有复制进项目。`
         : "导入已完成，但文件夹中没有可用照片。");
+      return manifest.assets.length;
     } catch (error) {
-      setAssets([]);
-      setAssetPage(0);
+      if (request !== libraryRequestRef.current) return null;
       setLibraryState("error");
       setLibraryMessage(error instanceof Error ? error.message : "素材库读取失败");
+      return null;
     }
   }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void loadLibrary(), 0);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      libraryRequestRef.current += 1;
+    };
   }, [loadLibrary]);
 
-  const refreshLibrary = () => {
+  const refreshLibrary = useCallback(() => {
     setLibraryState("loading");
     setLibraryMessage("正在重新读取本地素材库…");
-    void loadLibrary();
-  };
+    return loadLibrary();
+  }, [loadLibrary]);
 
   const updateTemplateWorks = (updater: (works: Work[]) => Work[]) => {
     const templateId = content.activeTemplate;
@@ -226,23 +252,22 @@ export default function LayoutWorkspace() {
     >
       <p className={styles.mobileLayoutNote}>手机可查看并完成基础调整；复杂素材排版建议使用桌面端。</p>
 
-      <div className={styles.libraryImportCard} data-state={libraryState}>
-        <div className={styles.libraryImportCopy}>
-          <strong>本地文件夹 → 三档 WebP → 私有素材库</strong>
-          <p>{libraryMessage}</p>
-          <code>npm run photos:import -- --source &quot;&lt;照片文件夹&gt;&quot;</code>
-          <small>只生成网页版本；原图、文件夹路径和文件名不会写入网页数据或 Git。</small>
-        </div>
-        <button type="button" onClick={refreshLibrary} disabled={libraryState === "loading"}>
-          {libraryState === "loading" ? "读取中…" : "重新读取"}
-        </button>
-      </div>
+      <PhotoImportPanel
+        importing={isImporting}
+        libraryMessage={libraryMessage}
+        libraryState={libraryState}
+        localPhotoImportOrigin={localPhotoImportOrigin}
+        localPhotoImportState={localPhotoImportState}
+        onImportingChange={setIsImporting}
+        onRefresh={refreshLibrary}
+        stats={libraryStats}
+      />
 
       <div className={styles.layoutSummary}>
         <div><span>当前模板</span><strong>{template.name}</strong><small>{template.photoRatios}</small></div>
         <div><span>排版状态</span><strong>{layoutConfigured ? `${selectedBySlot.size} / ${template.photoSlots} 已排版` : "沿用旧版作品"}</strong><small>正在编辑槽位 {String(activeSlot + 1).padStart(2, "0")}</small></div>
         <div className={styles.layoutActions}>
-          <button type="button" onClick={autoCompose} disabled={assets.length === 0}>一键智能排版</button>
+          <button type="button" onClick={autoCompose} disabled={isImporting || assets.length === 0}>一键智能排版</button>
           <button type="button" onClick={resetLayout}>清空本模板</button>
         </div>
       </div>
@@ -344,9 +369,9 @@ export default function LayoutWorkspace() {
           <div className={styles.libraryToolbar}>
             <label className={styles.librarySearch}><span className="sr-only">按素材编号搜索</span><input type="search" value={query} onChange={(event) => { setQuery(event.target.value); setAssetPage(0); }} placeholder="搜索素材编号…" /></label>
             <div className={styles.libraryFilters} role="group" aria-label="按画幅筛选">
-              {(["all", "landscape", "portrait"] as const).map((value) => (
+              {(["all", "landscape", "portrait", "square"] as const).map((value) => (
                 <button type="button" aria-pressed={filter === value} onClick={() => { setFilter(value); setAssetPage(0); }} key={value}>
-                  {value === "all" ? "全部" : value === "landscape" ? "横幅" : "竖幅"}
+                  {value === "all" ? "全部" : value === "landscape" ? "横幅" : value === "portrait" ? "竖幅" : "方幅"}
                 </button>
               ))}
             </div>
@@ -387,7 +412,15 @@ export default function LayoutWorkspace() {
           ) : (
             <div className={styles.libraryEmpty} role="status">
               <strong>{assets.length === 0 ? "素材库还是空的" : "没有符合筛选条件的素材"}</strong>
-              <p>{assets.length === 0 ? "先运行文件夹导入命令，再重新读取素材库。" : "试试切换画幅或清空搜索词。"}</p>
+              <p>{assets.length === 0
+                ? libraryState === "error"
+                  ? "未能读取素材库；请先处理上方错误并重新读取。"
+                  : localPhotoImportState === "configured"
+                    ? "使用上方“添加照片”或“添加文件夹”把作品加入素材库。"
+                    : localPhotoImportState === "missing"
+                      ? "本地照片导入服务未启动；请使用 npm run dev 启动完整编辑环境。"
+                      : "当前没有可用的素材。"
+                : "试试切换画幅或清空搜索词。"}</p>
             </div>
           )}
         </section>

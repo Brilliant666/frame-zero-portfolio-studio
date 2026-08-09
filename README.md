@@ -154,7 +154,11 @@ npm run dev
 ```
 
 The local preview runs at `http://127.0.0.1:3001/`; the content admin is at
-`http://127.0.0.1:3001/admin`.
+`http://127.0.0.1:3001/admin`. The same `npm run dev` command also starts the
+loopback-only photo import service on an automatically assigned free port. The
+supervisor passes that private origin to the Admin server process; users do not
+need to find or manage the companion port. It is a local editing companion only
+and is never started by the production build.
 
 The [ADMIN-V2 / DESIGN-01 workbench](docs/admin-v2.md) divides the editor into
 six focused routes for templates, profile, packages, layout, contact, and
@@ -196,9 +200,23 @@ designed text placeholders.
 
 ### Import a local photo library
 
-Point the importer at a folder containing photographs. It scans nested folders,
-deduplicates identical files by SHA-256, applies EXIF orientation, strips image
-metadata, and creates three colour-managed WebP variants per unique photograph:
+For normal local editing, open **Admin → 素材排版** and use **添加照片** or
+**添加文件夹**. Multiple files and nested folders are processed one photograph at
+a time, progress remains visible, duplicate content is reported as already
+present, and the material grid refreshes automatically when the batch finishes.
+Adding material updates the local Photo Library immediately; it does not save or
+change the shared SiteContent draft and it never runs automatic layout.
+
+The local service streams each selected file through a temporary directory into
+the same importer used by the command line. The importer deduplicates identical
+files by SHA-256, applies EXIF orientation, strips image metadata, and creates
+three colour-managed WebP variants per unique photograph. Original files and
+browser folder paths are not copied into the project or manifest. Each request is
+limited to 200 MiB; requests and manifest updates are serialized, including
+against a concurrent CLI import for the same project.
+
+The CLI remains available for advanced automation, recovery, and intentionally
+adopting linked output directories:
 
 ```bash
 npm run photos:import -- --source "<photo-folder>"
@@ -209,8 +227,9 @@ Generated files stay local in `public/photos/library/`. The browser-safe index i
 orientations, and responsive image dimensions, but no source file names or local
 paths. Incremental import state is stored in `.frame-zero/`. Both locations are
 ignored by Git. JPEG, PNG, WebP, AVIF, TIFF, HEIC, and HEIF inputs are considered;
-actual format support depends on the installed Sharp build. Damaged or unsupported
-files are skipped and listed in the command summary.
+actual format support depends on the installed Sharp build. Camera RAW formats
+such as ARW, CR3, and NEF are not supported. Damaged or unsupported files are
+reported without stopping the rest of an Admin batch.
 
 Imports are additive: choosing the wrong folder, temporarily losing a source file,
 or hitting one damaged photograph will not delete assets already used by a saved
@@ -229,8 +248,15 @@ npm run photos:import -- "<photo-folder>" adopt-linked-output
 Later imports use the normal command. A random owner token plus a hashed target
 prevents an accidental or retargeted link from receiving generated files.
 
-After import, open `http://127.0.0.1:3001/admin/layout` and click **重新读取**.
-For the active template you can then:
+The executable import controls are available only from the loopback Admin. A
+hosted Admin can still browse an existing manifest, but it does not call a
+visitor's `127.0.0.1`; remote object storage is a separate future scope. Manual
+**重新读取** and `npm run photos:serve` remain available for diagnostics. The
+standalone service defaults to port 3002 and can use another diagnostic port,
+for example `npm run photos:serve -- --port 3003`; normal `npm run dev` always
+uses automatic loopback port discovery.
+
+After the material grid refreshes, for the active template you can:
 
 - create an initial ratio-aware layout with **一键智能排版**;
 - pick or replace a specific fixed slot manually;
@@ -255,6 +281,8 @@ npm run test:contracts
 npm run test:adapters
 npm run test:photos
 npm run photos:import -- --source "<photo-folder>"
+npm run photos:serve
+npm run photos:serve -- --port 3003
 npm run build
 npm run check:bundle
 npm run check:public

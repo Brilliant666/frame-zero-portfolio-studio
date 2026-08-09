@@ -560,10 +560,8 @@
 }
 
 .libraryImportCard {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.25rem;
+  display: grid;
+  gap: .85rem;
   margin-bottom: .8rem;
   padding: 1rem;
   border: 1px solid var(--admin-v2-line);
@@ -572,12 +570,56 @@
 }
 .libraryImportCard[data-state="ready"] { border-left-color: #367148; }
 .libraryImportCard[data-state="error"] { border-left-color: #a23a20; }
+.libraryImportHeader { display: flex; align-items: center; justify-content: space-between; gap: 1.25rem; }
 .libraryImportCopy { display: grid; min-width: 0; gap: .25rem; }
 .libraryImportCopy strong { font-size: .86rem; }
 .libraryImportCopy p { margin: 0; color: var(--admin-v2-muted); font-size: .76rem; }
-.libraryImportCopy code { overflow-wrap: anywhere; color: #6e3211; font-size: .7rem; }
 .libraryImportCopy small { color: var(--admin-v2-muted); font-size: .68rem; line-height: 1.45; }
-.libraryImportCard > button,
+.libraryStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border: 1px solid var(--admin-v2-line);
+  background: #faf8f5;
+}
+.libraryStats > div { display: grid; gap: .15rem; min-width: 0; padding: .65rem .75rem; border-right: 1px solid var(--admin-v2-line); }
+.libraryStats > div:last-child { border-right: 0; }
+.libraryStats dt { color: var(--admin-v2-muted); font: 700 .64rem var(--font-geist-mono), monospace; text-transform: uppercase; }
+.libraryStats dd { margin: 0; font: 700 1rem var(--font-geist-mono), monospace; }
+.photoImportControls { display: grid; gap: .45rem; }
+.photoImportActions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.photoImportActions button:first-child { border-color: var(--admin-v2-ink); background: var(--admin-v2-ink); color: #fff; }
+.photoImportHint { margin: 0; color: var(--admin-v2-muted); font-size: .7rem; line-height: 1.5; }
+.hostedImportNotice { display: grid; gap: .2rem; padding: .75rem .85rem; border-left: 3px solid #777069; background: #f5f2ee; }
+.hostedImportNotice strong { font-size: .78rem; }
+.hostedImportNotice p { margin: 0; color: var(--admin-v2-muted); font-size: .72rem; }
+.photoImportProgress,
+.photoImportResult,
+.photoImportError { display: grid; gap: .55rem; padding: .75rem .85rem; border: 1px solid var(--admin-v2-line); background: #faf8f5; }
+.photoImportProgress > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.photoImportProgress strong,
+.photoImportResult strong,
+.photoImportError strong { font-size: .78rem; }
+.photoImportProgress > div:first-child span { font: 700 .72rem var(--font-geist-mono), monospace; }
+.photoImportProgress progress { width: 100%; height: .65rem; accent-color: var(--admin-v2-accent); }
+.photoImportProgress dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; }
+.photoImportProgress dl div { display: flex; justify-content: space-between; gap: .5rem; padding-right: .75rem; font-size: .7rem; }
+.photoImportProgress dd { margin: 0; font-weight: 700; }
+.photoImportResult { border-left: 3px solid #367148; background: #f5faf5; }
+.photoImportResult[data-partial="true"] { border-left-color: #a45d18; background: #fff8ef; }
+.photoImportResult p,
+.photoImportError p { margin: 0; color: var(--admin-v2-muted); font-size: .74rem; line-height: 1.5; }
+.photoImportResult small,
+.photoImportError small { color: var(--admin-v2-muted); font-size: .68rem; line-height: 1.45; }
+.photoImportResult details { border-top: 1px solid var(--admin-v2-line); padding-top: .5rem; }
+.photoImportResult summary,
+.photoImportCli summary { width: fit-content; font-size: .72rem; font-weight: 700; cursor: pointer; }
+.photoImportResult ul { display: grid; gap: .3rem; margin: .5rem 0 0; padding-left: 1.25rem; color: var(--admin-v2-muted); font-size: .7rem; }
+.photoImportError { border-left: 3px solid #a23a20; background: #fff4f1; }
+.photoImportCli { border-top: 1px solid var(--admin-v2-line); padding-top: .65rem; }
+.photoImportCli code { display: block; margin-top: .5rem; overflow-wrap: anywhere; color: #6e3211; font-size: .7rem; }
+.libraryImportHeader > button,
+.photoImportActions button,
 .layoutActions button,
 .slotControls button,
 .libraryFilters button,
@@ -590,7 +632,8 @@
   font: 700 .75rem var(--font-geist-sans), sans-serif;
   cursor: pointer;
 }
-.libraryImportCard > button:disabled,
+.libraryImportHeader > button:disabled,
+.photoImportActions button:disabled,
 .layoutActions button:disabled,
 .slotControls button:disabled,
 .assetPick:disabled,
@@ -826,7 +869,10 @@
 .resetDialogActions .confirmDanger { border-color: #8b2d1d; background: #8b2d1d; color: #fff; }
 
 .slotListButton:focus-visible,
-.libraryImportCard > button:focus-visible,
+.libraryImportHeader > button:focus-visible,
+.photoImportActions button:focus-visible,
+.photoImportResult summary:focus-visible,
+.photoImportCli summary:focus-visible,
 .layoutActions button:focus-visible,
 .slotControls button:focus-visible,
 .slotLock input:focus-visible,
@@ -908,7 +954,8 @@
   }
   .templateDetailSwatch { min-height: 10rem; }
   .mobileLayoutNote { display: block; }
-  .libraryImportCard { align-items: stretch; flex-direction: column; }
+  .libraryImportHeader { align-items: stretch; flex-direction: column; }
+  .libraryImportHeader > button { width: 100%; }
   .layoutSummary { grid-template-columns: 1fr; }
   .layoutSummary > div { border-right: 0; border-bottom: 1px solid var(--admin-v2-line); }
   .layoutSummary > div:last-child { border-bottom: 0; }
@@ -964,10 +1011,13 @@
   .libraryToolbar { grid-template-columns: 1fr; }
   .slotControls { grid-template-columns: 1fr; }
   .slotLock { min-height: 2.75rem; }
-  .libraryFilters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .libraryFilters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .libraryFilters button,
   .libraryFilters button:first-child { border-left: 1px solid var(--admin-v2-line); }
   .assetGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .libraryStats > div { padding-inline: .5rem; }
+  .photoImportActions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .photoImportActions button { min-width: 0; padding-inline: .4rem; }
   .legacySummary { grid-template-columns: 3.5rem minmax(0, 1fr) 1.5rem; padding-inline: .75rem; }
   .legacyCard { grid-template-columns: 1fr; }
   .legacyPreview { height: 12rem; min-height: 0; }

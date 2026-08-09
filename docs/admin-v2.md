@@ -10,7 +10,7 @@ legacy `SiteContent`、`/api/site-content` 和 `site_settings(id = 1)` 行为不
 | `/admin/template` | `activeTemplate`，模板查看、选择和独立预览 |
 | `/admin/profile` | `profile`、`hero`、`trustItems`、`statement` |
 | `/admin/packages` | `packages` |
-| `/admin/layout` | `templateWorks`，只读当前 `activeTemplate` 与现有照片 manifest |
+| `/admin/layout` | `templateWorks`、现有照片 manifest 与本机素材导入入口 |
 | `/admin/contact` | `contact`、`social`、`bookingFields` |
 | `/admin/advanced` | legacy `works` 与恢复示例草稿 |
 
@@ -35,12 +35,15 @@ legacy `SiteContent`、`/api/site-content` 和 `site_settings(id = 1)` 行为不
 - 11 个正式模板使用紧凑选择列表，同一时间只展开当前查看候选的完整详情；已保存、当前 draft 与正在查看三个状态分别显示。浏览候选不会修改 draft，只有“选择此模板”会修改 draft，独立预览也不会修改 draft。
 - 基本资料优先展示摄影师、Hero 与信任信息；`profile.brand`、`profile.mark` 和 `statement` 保留原契约，但收进默认关闭的可选品牌内容。
 - 每个套餐的主页标题始终以可编辑输入显示，其他套餐字段继续使用有文字状态的 disclosure；旧版作品只在高级设置中按需展开。
-- 素材排版只重组现有 manifest、固定槽位和既有算法，不新增素材 API 或 repository。
+- `npm run dev` 先在 `127.0.0.1` 的系统分配空闲端口启动独立素材导入服务，等待可信 IPC ready 后再把实际 origin 仅注入 Admin server；浏览器选择的单张、多张或文件夹照片仍逐张流式交给现有 Sharp importer，用户无需管理 companion port，整个合法 manifest 仍是自动排版候选集，不增加 approved pool。
+- 单文件上限为 200 MiB；服务请求和同一项目的 manifest 写入均串行，临时文件在成功、失败或中断后清理。
+- 导入照片立即更新本地 Photo Library，但不修改 SiteContent draft、不触发自动排版，也不需要点击“保存全部修改”；导入结束只重新读取 manifest。
+- 远程 Admin 不提供可执行的本机导入控件；本轮不增加云端素材 API、对象存储、删除能力或 repository。
 - 恢复示例数据必须通过原生 dialog 二次确认；确认只替换当前 draft，不立即写数据库。
 - 手机端可以访问全部内容和基础操作；专业级三栏排版仍以桌面端效率为优先。
 
 ## 明确不做
 
-本设计不引入实时主页 iframe、SiteDocument 运行时接线、新内容 schema、新 API、数据库
-迁移、repository、Asset UUID 分配、模板目录变化或正式模板布局与视觉方向重做。这些边界需要独立
-范围审查。
+本设计不引入实时主页 iframe、SiteDocument 运行时接线、新内容 schema、D1 API、数据库
+迁移、云端 repository、Asset UUID 分配、素材删除、模板目录变化或正式模板布局与视觉方向重做。
+本机 loopback import service 只是开发期 companion，不属于 hosted runtime；hosted 请求即使存在环境变量也不能启用本机 picker。独立 `npm run photos:serve` 默认使用可预测的诊断端口，并允许显式指定其他端口；其他边界需要独立范围审查。
