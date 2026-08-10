@@ -138,6 +138,31 @@ later PRs.
 Theme overrides are outside the executable V1 contract until a closed,
 sanitized schema and explicit version-compatibility policy are accepted.
 
+## Adaptive composition planning foundation
+
+COMPOSITION-02 establishes a pure Composition Variant contract, strict registry
+validation, deterministic assignment, and recommendation planning. A stable
+`variantId` identifies an immutable, design-approved composition within one
+`templateId` and `templateVersion`; it is not inferred from the current photo
+count, ratios, legacy `templateWorks`, or renderer output.
+
+`templateVersion` continues to identify the logical slot schema. Immutable
+Variants under the same version may assign different target ratios to the same
+stable logical slots, but changing slot count, order, key, role, capacity, or
+composition meaning requires a new template version. An existing Variant is
+never changed in place; a new design under the same logical schema receives a
+new `variantId`.
+
+This is a contract/planner foundation only. It does not change
+`SiteDocumentV1`, approve any production Variant or concrete research ratios,
+or connect the planner to Admin, renderer, API, D1, or the eleven formal
+templates. Future persisted composition must explicitly record its Variant in
+a separately approved Vnext contract. Until then, the current production
+layout and rendering paths remain unchanged.
+
+In short: the pure contract/planner foundation is implemented; no production
+runtime integration exists, and no formal visual Variant is approved.
+
 ## Local development
 
 Requires Node.js `>=22.13.0`.
@@ -280,6 +305,7 @@ npm test
 npm run test:contracts
 npm run test:adapters
 npm run test:photos
+npm run test:composition
 npm run photos:import -- --source "<photo-folder>"
 npm run photos:serve
 npm run photos:serve -- --port 3003

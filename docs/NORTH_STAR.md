@@ -1221,9 +1221,14 @@ type TemplateSlotDefinition = {
 
 -   槽位数量；
 -   槽位顺序；
--   槽位比例；
--   slot role；
+-   logical slot key、slot role、critical 语义或容量；
 -   composition 数据含义。
+
+[`ADR-0003`](adr/0003-adaptive-composition-variant-boundary.md) 进一步区分模板版本和
+Composition Variant：`templateVersion` 冻结 logical slot schema；同一版本下多个不可变、
+经过设计审核的 Variant 可以为相同 logical slot 声明不同 `assignmentRatio` 或 secondary
+presentation target。已经存在的 Variant 不得原地改变比例或含义；相同 logical schema 的
+新设计必须使用新的稳定 `variantId`，logical schema 变化则必须提升 `templateVersion`。
 
 只修改 CSS 或不影响 composition 的视觉问题可不提升版本。
 
@@ -1305,6 +1310,18 @@ type TemplateSlotDefinition = {
 -   可撤销；
 -   生成明确的变更摘要；
 -   算法升级不应无提示改变已发布页面。
+
+## 16.4 Adaptive Composition 规划边界
+
+COMPOSITION-02 只建立 versioned Composition Variant contract、严格 registry validator、纯
+assignment engine 和 deterministic planner foundation。普通重新排版必须保留当前 Variant；
+只有首次自动构图或用户明确请求“重新推荐构图”时才允许评估多个 Variant。整个合法 Photo
+Library 是候选集，不增加二次素材批准层；无效 lock 必须返回明确 conflict，不能静默解除。
+
+该基础不修改 `SiteDocumentV1`，不批准任何正式 Variant 或具体 ratios，也不接入当前 Admin、
+renderer、API、D1 或生产模板。Future persisted composition 必须在独立 Vnext 决策后显式记录
+`variantId`；renderer 不得根据素材或 ratios 反推 Variant。第一版 Variant 固定 slot count，
+dynamic slot count 留给后续独立阶段。
 
 ------------------------------------------------------------------------
 

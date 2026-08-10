@@ -28,6 +28,7 @@ D1 或本地照片兼容能力的前提下，建立版本化内容、稳定标�
 | 修订与发布 | 保存立即成为公开内容，没有草稿、发布指针或回滚 | 待实施 |
 | SSR | 首页在浏览器加载真实内容并同步可见标签标题；首屏、服务端 title、Open Graph、Twitter 与 SEO 仍使用演示数据 | 待实施 |
 | 模板契约 | 已共享 props，但尚未完全隔离存储与资源解析 | 待实施 |
+| Adaptive Composition | ADR-0003 与 pure contract/planner foundation 属于 COMPOSITION-02；没有正式 Variant、持久化或 runtime 接线 | 基础已完成（未接线） |
 | 回归覆盖 | 已具备导入、排版、API 行为和源码特征测试，仍缺 11 模板烟测 | 待实施 |
 
 ## 依赖顺序
@@ -97,6 +98,20 @@ adapter 结果固定为三态：`ready.document` 是唯一可由未来执行器�
 `newMappings` 和 completed checkpoint，unresolved 未处理完前不得标记 completed。
 PR-01B 只描述该规划要求，真实原子数据库持久化、双读和回滚仍由后续独立 migration PR
 完成；completed 重跑继续稳定返回 no-op。
+
+### COMPOSITION-02：Adaptive Composition 纯规划基础
+
+- **决策门：ADR-0003（Accepted）** — `variantId` 是稳定、不可变的设计身份，与
+  `templateVersion` 分离；同一模板版本的 Variant 必须保持 logical slot schema 与固定 slot
+  count，但可以为相同 logical slot 声明不同的、经过设计审核的 assignment ratio。
+- **Pure contract / planner foundation（已完成）** — 只建立 registry validator、assignment engine、
+  deterministic recommendation、locked conflict、secondary presentation cost 和 synthetic
+  performance coverage。整个合法 Photo Library 是候选集，不增加二次素材批准层。
+
+COMPOSITION-02 不修改 `SiteDocumentV1`，不批准正式 Variant 或任何 Manga/Museum/其他具体
+ratios，不接入当前 Admin、renderer、API、D1 或 production templates，也不创建 Vnext。
+未来持久化必须在独立 versioned composition 决策后显式记录 `variantId`；dynamic slot count
+和正式视觉试点分别留给后续任务。
 
 ### Epic 02：持久化边界
 
