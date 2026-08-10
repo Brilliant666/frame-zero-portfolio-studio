@@ -324,24 +324,31 @@ npm run photos:import -- --source "<photo-folder>"
 npm run photos:serve
 npm run photos:serve -- --port 3003
 npm run build
-npm run build:node
-npm run start:node
+npm run start
 npm run test:node-runtime
 npm run check:bundle
+npm run build:node
+npm run start:node
+npm run build:legacy
+npm run test:legacy-runtime
+npm run check:bundle:legacy
 npm run check:public
 npm run db:generate
 ```
 
-Stage A currently keeps a parallel Standard Next.js Node standalone parity
-lane. It is intentionally not the default local editing runtime yet: the target
-PostgreSQL repository belongs to Stage B, so the Node lane proves build/start
-and read-only route behavior while legacy writes fail closed. See
+Stage A now uses the Standard Next.js Node standalone artifact for the default
+production `build`, `start`, and bundle gate. It is intentionally not the
+default local editing runtime yet: the target PostgreSQL repository belongs to
+Stage B, so Node reads use the current fallback and writes fail closed. The
+vinext/D1 editor and Photo Library companion remain available through
+`npm run dev`, while explicit `*:legacy` commands preserve rollback evidence. See
 [`docs/stage-a-runtime.md`](docs/stage-a-runtime.md) for the evidence matrix,
 private-photo packaging boundary, remaining cutover gaps, and rollback path.
 
-Content settings are stored in D1. Local development uses the project-local
-Miniflare database; hosted deployments use the logical `DB` binding declared in
-`.openai/hosting.json`.
+The legacy local editor stores content settings in its project-local Miniflare
+D1 database. The logical `DB` binding in `.openai/hosting.json` belongs to the
+explicit Cloudflare compatibility lane, not the Standard Next.js production
+artifact. Stage B will replace that persistence boundary with PostgreSQL.
 
 ## Admin security assumptions
 

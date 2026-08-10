@@ -7,24 +7,17 @@ import path from "node:path";
 import process from "node:process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import {
+  enforceNextBuildBudget,
+  NEXT_BUILD_BUDGETS,
+  TEMPLATE_IDS,
+} from "../scripts/check-next-build-budget.mjs";
 import { stopChildProcess } from "../scripts/dev-local.mjs";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const standaloneRoot = path.join(projectRoot, ".next", "standalone");
 const serverPath = path.join(standaloneRoot, "server.js");
-const templateIds = [
-  "cinematic-light",
-  "neon-hud",
-  "film-rail",
-  "manga-panels",
-  "prism-liquid",
-  "orbital-portal",
-  "archive-os",
-  "editorial-duet",
-  "polaroid-field",
-  "character-select",
-  "museum-depth",
-];
+const templateIds = [...TEMPLATE_IDS];
 
 async function reserveLoopbackPort() {
   const server = createServer();
@@ -68,7 +61,7 @@ async function waitUntilReady(origin, child, logs) {
 }
 
 test("Standard Next.js standalone starts over HTTP with current route parity", async (t) => {
-  assert.equal(existsSync(serverPath), true, "run npm run build:node before this test");
+  assert.equal(existsSync(serverPath), true, "run npm run build before this test");
   assert.equal(existsSync(path.join(standaloneRoot, "public", "favicon.svg")), true);
   assert.equal(existsSync(path.join(standaloneRoot, "public", "photos")), false);
   assert.equal(existsSync(path.join(standaloneRoot, "public", "og.png")), false);
@@ -89,6 +82,11 @@ test("Standard Next.js standalone starts over HTTP with current route parity", a
     serverEntry,
     /"cloudflare:workers":"\.\/db\/node-cloudflare-workers\.ts"/,
   );
+  const publicClientManifest = await readFile(
+    path.join(standaloneRoot, ".next", "server", "app", "page_client-reference-manifest.js"),
+    "utf8",
+  );
+  assert.doesNotMatch(publicClientManifest, /\[project\]\/app\/admin\//);
   const clientFiles = (await walkFiles(path.join(standaloneRoot, ".next", "static")))
     .filter((file) => /\.js$/.test(file));
   const clientSources = [];
@@ -171,4 +169,28 @@ test("Standard Next.js standalone starts over HTTP with current route parity", a
   });
   assert.equal(writeResponse.status, 400);
   assert.match((await writeResponse.json()).error, /Cloudflare D1 binding `DB` is unavailable/);
+});
+
+test("default production commands and build budget target Standard Next.js Node", async () => {
+  const packageJson = JSON.parse(await readFile(path.join(projectRoot, "package.json"), "utf8"));
+  assert.equal(packageJson.scripts.build, "node scripts/build-next-node.mjs");
+  assert.equal(packageJson.scripts.start, "node .next/standalone/server.js");
+  assert.equal(packageJson.scripts.preview, "npm run start");
+  assert.equal(packageJson.scripts["check:bundle"], "node scripts/check-next-build-budget.mjs");
+  assert.equal(packageJson.scripts["build:node"], "npm run build");
+  assert.equal(packageJson.scripts["start:node"], "npm run start");
+  assert.equal(packageJson.scripts.dev, "node scripts/dev-local.mjs");
+  assert.equal(packageJson.scripts["build:legacy"], "vinext build");
+  assert.equal(packageJson.scripts["check:bundle:legacy"], "node scripts/check-build-budget.mjs");
+  assert.match(packageJson.scripts.test, /test:legacy-runtime && npm run test:node-runtime$/);
+
+  assert.deepEqual(NEXT_BUILD_BUDGETS, {
+    applicationJs: 550 * 1024,
+    bootstrapJs: 700 * 1024,
+    publicCss: 300 * 1024,
+    templateJs: 64 * 1024,
+  });
+  const budget = enforceNextBuildBudget(projectRoot);
+  assert.equal(budget.templateChunks.length, templateIds.length);
+  assert.deepEqual(budget.violations, []);
 });
