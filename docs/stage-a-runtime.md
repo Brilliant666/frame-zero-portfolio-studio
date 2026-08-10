@@ -17,9 +17,9 @@ npm run test:node-runtime
 ```
 
 `build:node` uses Next.js `output: "standalone"`, then copies generated
-`_next/static` assets and only Git-tracked `public/` files into the standalone
-artifact. Local photographs, the ignored photo manifest, ignored `og.png`, and
-`.frame-zero` state are not packaged.
+`_next/static` assets and only the reviewed production-public allowlist into
+the standalone artifact. Local photographs, the ignored photo manifest,
+ignored `og.png`, and `.frame-zero` state are not packaged.
 
 The HTTP parity test starts the generated `server.js` on an ephemeral loopback
 port and checks:
@@ -49,9 +49,10 @@ The default build wrapper selects the standalone Next configuration and the
 Stage A fail-closed adapter for the legacy Cloudflare binding import. Keeping
 that selection scoped to the wrapper prevents the explicit vinext rollback
 build from receiving the Node alias. The wrapper then copies Next static assets
-and only Git-tracked public files into the standalone directory. The old
-`build:node` and `start:node` names remain aliases so existing operator notes do
-not break.
+and only the explicit, versioned production-public manifest into the standalone
+directory. This selection is independent of Git metadata and remains fail
+closed in the Stage A2 container build. The old `build:node` and `start:node`
+names remain aliases so existing operator notes do not break.
 
 The default bundle gate now reads `.next` artifacts. It requires all eleven
 templates to remain distinct lazy client chunks and enforces:

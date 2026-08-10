@@ -1,0 +1,47 @@
+name: Container
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: container-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  container:
+    name: Build, inspect, and smoke production image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.1
+          cache: npm
+
+      - name: Create excluded build-context sentinels
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentinel="container-private-sentinel-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "FRAME_ZERO_CONTAINER_TEST_SENTINEL=$sentinel" >> "$GITHUB_ENV"
+          printf '%s\n' "$sentinel" > .env.container-sentinel
+          mkdir -p .frame-zero public/photos .openai
+          printf '%s\n' "$sentinel" > .frame-zero/container-sentinel
+          printf '%s\n' "$sentinel" > public/photos/library-manifest.json
+          printf '%s\n' "$sentinel" > public/og.png
+          printf '%s\n' "$sentinel" > .openai/container-sentinel
+
+      - name: Verify Linux production container
+        run: npm run verify:container
