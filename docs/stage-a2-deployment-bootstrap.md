@@ -15,15 +15,17 @@ server, introduce product persistence, or expose unfinished product routes.
 | Definition of Done | Current evidence | Status after BATCH-01 |
 | --- | --- | --- |
 | Package the Stage A Node artifact | Multi-stage Debian/glibc image builds the accepted Standard Next standalone without Git metadata | Container packaging complete |
-| Minimal Docker image and Compose shell | Reviewed two-service `Caddy -> App` topology keeps App internal, non-root, read-only, and dependency-free | Repo contract and Linux CI complete; target server pending |
-| Caddy HTTPS reverse proxy | Production public-ACME config is separate from CI-only internal TLS; official image is version/digest pinned | Repo config and CI TLS complete; real ACME pending |
-| Health endpoint and basic logs | App stdout/stderr and Caddy JSON runtime/access logs are collected by Compose; sensitive-header sentinel is rejected from logs | Repo contract and Linux CI complete |
-| Repeatable deploy/update smoke | Linux verifier exercises idempotent deploy, restart, immutable release update, rollback, graceful stop, and non-destructive cleanup | Repo tooling and Linux CI complete; target smoke pending |
+| Minimal Docker image and Compose shell | Reviewed two-service `Caddy -> App` topology keeps App internal, non-root, read-only, and dependency-free | Implemented; complete required Linux lifecycle CI pending |
+| Caddy HTTPS reverse proxy | Production public-ACME config is separate from CI-only internal TLS; official image is version/digest pinned | Implemented; required CI rerun and real ACME both pending |
+| Health endpoint and basic logs | App stdout/stderr and Caddy JSON runtime/access logs are collected by Compose; the verifier checks a sensitive-header sentinel | Implemented; complete required logging/lifecycle CI pending |
+| Repeatable deploy/update smoke | Linux verifier defines idempotent deploy, restart, immutable release update, rollback, graceful stop, and non-destructive cleanup | Implemented; update and rollback lack complete Linux evidence |
 | Server-only configuration isolation | Strict known-key parser, safe invalid example, explicit env file, and no accepted secrets or `NEXT_PUBLIC_*` values | Repo contract complete |
-| Receive Stage D routes without exposing unfinished capabilities | Public pages pass through; legacy SiteContent is read-only; Admin/Auth/upload/Draft/unreviewed APIs fail closed | Repo proxy boundary complete; Stage D route remains later work |
+| Receive Stage D routes without exposing unfinished capabilities | Public pages pass through; legacy SiteContent is read-only; Admin/Auth/upload/Draft/unreviewed APIs fail closed | Implemented with partial Linux evidence; full required gate pending |
 
-Repository-side work records `REPO_SIDE_BOOTSTRAP_READY`, but
-`DEPLOYMENT_BOOTSTRAP_READY` is not reached without target Linux and real ACME
+The repository does not yet claim `REPO_SIDE_BOOTSTRAP_READY` or
+`EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED`. The implemented candidates still need
+the complete required Linux CI rerun and human acceptance.
+`DEPLOYMENT_BOOTSTRAP_READY` additionally requires target Linux and real ACME
 evidence. `ONLINE_PREVIEW` also remains blocked on Stage D.
 
 ## Slice 1: production health contract
@@ -201,22 +203,33 @@ until an immutable reviewed release is supplied. Stage A2 accepts no secret.
 
 Both processes write to stdout/stderr. Docker's bounded JSON log driver makes
 them available through `docker compose logs`; Caddy access/runtime logs use
-JSON. Linux CI submits a synthetic Authorization/Cookie sentinel, confirms it
-does not appear in either service log, and rejects local Windows paths.
+JSON. The Linux verifier submits a synthetic Authorization/Cookie sentinel and
+is designed to reject that sentinel or local Windows paths in service logs.
+The required recovery run must complete those assertions before this logging
+candidate is treated as verified.
 
 ### Deployment lifecycle evidence
 
-The dedicated `Deployment Bootstrap` Ubuntu gate performs real Compose and
-Caddy execution. It validates both Caddyfiles, builds App, pulls the pinned
-proxy, checks loopback-only CI port publication, exercises health/public/static
-traffic and proxy negative cases, inspects read-only/non-root/no-privilege
-runtime settings, repeats `up`, restarts App, changes release A to B, rolls B
-back to A, and verifies a graceful non-SIGKILL stop.
+The dedicated `Deployment Bootstrap` Ubuntu gate is designed to perform real
+Compose and Caddy execution. It validates both Caddyfiles, builds App, pulls
+the pinned proxy, checks loopback-only CI port publication, exercises
+health/public/static traffic and proxy negative cases, inspects
+read-only/non-root/no-privilege runtime settings, repeats `up`, restarts App,
+changes release A to B, rolls B back to A, and verifies a graceful
+non-SIGKILL stop.
 
-Normal `down` omits `-v`; the verifier proves the two Caddy volumes remain.
-Only after that assertion does it remove exact, uniquely named CI volumes and
-images. It refuses unknown volume names and contains no registry push, SSH,
-production domain request, or external write.
+The latest pre-recovery Linux run completed config validation, image
+pull/build, Compose startup, CI HTTPS, public/private route checks, runtime
+security inspection, and production of structured Caddy access records. It
+then stopped on an overly exact access-logger-name assertion before idempotent
+`up`, restart, update, rollback, graceful stop, and volume-preservation
+evidence. Failure cleanup removed the isolated test resources.
+
+Normal `down` is implemented without `-v`; the verifier is designed to prove
+the two Caddy volumes remain before removing exact, uniquely named CI volumes
+and images. It refuses unknown volume names and contains no registry push,
+SSH, production domain request, or external write. These lifecycle claims stay
+pending until the recovery run reaches the final evidence record.
 
 This evidence is deliberately classified as
 `CI_TLS_EVIDENCE != REAL_PRODUCTION_HTTPS_EVIDENCE`. Only an approved target
@@ -243,8 +256,14 @@ volumes or data.
 
 ## Remaining Stage A2 gaps
 
-Stage A2 remains `IN_PROGRESS` and `NOT_ONLINE_PREVIEW`. Repository-side gaps
-are complete; the remaining evidence is external:
+Stage A2 remains `IN_PROGRESS` and `NOT_ONLINE_PREVIEW`. The current
+repository-side gaps are:
+
+- complete the required Deployment Bootstrap CI rerun through update,
+  rollback, graceful stop, volume preservation, and isolated cleanup;
+- obtain human acceptance of that complete evidence.
+
+Only after those gates may the remaining external evidence be considered:
 
 - preflight the approved target Linux server and its existing services;
 - approve and bind real ports 80/443 without disturbing another workload;
@@ -253,7 +272,7 @@ are complete; the remaining evidence is external:
 - obtain and verify real public ACME HTTPS;
 - execute target-server deploy/update/rollback smoke.
 
-The stop status is `EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED`. This batch performs
-none of those operations and does not authorize Stage B, Auth, product route
-changes, hosted assets, deployment, `DEPLOYMENT_BOOTSTRAP_READY`, or
-`ONLINE_PREVIEW`.
+This recovery does not claim `REPO_SIDE_BOOTSTRAP_READY` or
+`EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED`. It performs none of the external
+operations and does not authorize Stage B, Auth, product route changes, hosted
+assets, deployment, `DEPLOYMENT_BOOTSTRAP_READY`, or `ONLINE_PREVIEW`.

@@ -25,6 +25,27 @@ test("the deployment verifier exercises real Compose, Caddy, lifecycle, logs, an
   assert.match(verifier, /=== "NET_BIND_SERVICE"/);
   assert.match(verifier, /assertRuntimeSecurity/);
   assert.match(verifier, /assertLogs/);
+  const caddyAccessPatternSource = verifier.match(
+    /const caddyAccessLogPattern = \/(.+)\/;/,
+  )?.[1];
+  assert.ok(caddyAccessPatternSource, "missing the bounded Caddy access-log pattern");
+  const caddyAccessPattern = new RegExp(caddyAccessPatternSource);
+  assert.match(
+    '{"logger":"http.log.access","msg":"handled request"}',
+    caddyAccessPattern,
+  );
+  assert.match(
+    '{"logger":"http.log.access.log0","msg":"handled request"}',
+    caddyAccessPattern,
+  );
+  assert.doesNotMatch(
+    '{"logger":"http.log.tls","msg":"handled request"}',
+    caddyAccessPattern,
+  );
+  assert.doesNotMatch(
+    '{"logger":"http.log.access.log0","msg":"server running"}',
+    caddyAccessPattern,
+  );
   assert.match(verifier, /docker\(\["image", "tag", appImageA, appImageB\]\)/);
   assert.match(verifier, /normal down must preserve future persistent proxy state/);
   assert.doesNotMatch(verifier, /down", "-v"|down --volumes|docker\s+(?:login|push)|\bssh\b|kubectl/i);

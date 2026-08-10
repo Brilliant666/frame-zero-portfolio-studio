@@ -259,7 +259,8 @@ async function assertRuntimeSecurity() {
 async function assertLogs() {
   const logs = await compose(["logs", "--no-color", "--timestamps", "app", "caddy"]);
   assert.match(logs, /(?:Next\.js|Local:|Ready in)/i, "App startup/runtime stdout must be readable");
-  assert.match(logs, /"logger":"http\.log\.access"/, "Caddy JSON access logs must be readable");
+  const caddyAccessLogPattern = /"logger":"http\.log\.access(?:\.[A-Za-z0-9_-]+)?","msg":"handled request"/;
+  assert.match(logs, caddyAccessLogPattern, "Caddy structured JSON access logs must be readable");
   assert.equal(logs.includes(logSentinel), false, "sensitive request sentinels must be redacted or stripped");
   assert.doesNotMatch(logs, /[A-Za-z]:[\\/](?:Users|Documents|AppData)[\\/]/i);
 }
