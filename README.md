@@ -1,6 +1,20 @@
-# FRAME//ZERO Portfolio Studio
+# Portfolio Platform
 
-A multi-template Cosplay photography portfolio with a shared content admin.
+A multi-template photography portfolio platform with a shared content admin.
+
+`FRAME//ZERO` is a historical codename and technical namespace, not the formal
+product brand. The current priority is to deliver a usable self-hosted V1 on a
+user-owned Linux server before expanding the product surface.
+
+Current governance:
+
+- [Portfolio Platform North Star](docs/PORTFOLIO_PLATFORM_NORTH_STAR.md)
+- [Self-Hosted V1 Launch Roadmap](docs/SELF_HOSTED_V1_ROADMAP.md)
+- [Current Status](docs/CURRENT_STATUS.md)
+
+The existing D1, Cloudflare, and local-photo sections below describe the current
+legacy implementation and migration source. They are not the accepted target
+production architecture.
 
 ## Included templates
 

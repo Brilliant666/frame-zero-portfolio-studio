@@ -1,5 +1,13 @@
 # FRAME//ZERO 北极星计划
 
+> - 文档状态：`SUPERSEDED`（仅针对当前产品目标、V1 范围与上线优先级）
+> - 当前项目级来源：[`PORTFOLIO_PLATFORM_NORTH_STAR.md`](PORTFOLIO_PLATFORM_NORTH_STAR.md)
+> - 当前执行路线：[`SELF_HOSTED_V1_ROADMAP.md`](SELF_HOSTED_V1_ROADMAP.md)
+>
+> 本文保留为历史长期平台规划和技术研究背景。Accepted ADR 中已经冻结的 Site、
+> SiteDocumentV1、稳定 ID 与 Composition 不变量继续有效，不能因本文状态变化而被
+> 普通功能 PR 覆盖。
+
 > 面向 Codex、维护者与未来贡献者的长期产品与技术执行纲领\
 > 建议仓库路径：`docs/NORTH_STAR.md`
 
