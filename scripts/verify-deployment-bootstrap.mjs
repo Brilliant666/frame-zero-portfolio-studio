@@ -237,7 +237,11 @@ async function assertRuntimeSecurity() {
   assert.equal(caddy.HostConfig.ReadonlyRootfs, true);
   assert.equal(caddy.HostConfig.Privileged, false);
   assert.deepEqual(caddy.HostConfig.CapDrop, ["ALL"]);
-  assert.ok(caddy.HostConfig.CapAdd.includes("NET_BIND_SERVICE"));
+  assert.ok(
+    caddy.HostConfig.CapAdd.some((capability) =>
+      capability.replace(/^CAP_/, "") === "NET_BIND_SERVICE"),
+    "the proxy must retain only its reviewed low-port binding capability",
+  );
   assert.ok(caddy.HostConfig.SecurityOpt.includes("no-new-privileges:true"));
   for (const binding of Object.values(caddy.HostConfig.PortBindings)) {
     for (const entry of binding) assert.equal(entry.HostIp, "127.0.0.1");
