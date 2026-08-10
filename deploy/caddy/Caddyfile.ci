@@ -1,0 +1,23 @@
+{
+	admin off
+	local_certs
+	skip_install_trust
+	log default {
+		output stdout
+		format json
+		level {$PORTFOLIO_LOG_LEVEL:INFO}
+	}
+}
+
+import /etc/caddy/portfolio-proxy.caddy
+
+{$PORTFOLIO_DOMAIN} {
+	tls internal
+
+	log {
+		output stdout
+		format json
+	}
+
+	import portfolio_public_contract
+}
