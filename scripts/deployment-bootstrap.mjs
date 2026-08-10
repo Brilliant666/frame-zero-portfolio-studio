@@ -149,7 +149,7 @@ async function prepare(envFile, config) {
   await compose(envFile, ["pull", "caddy"], { timeout: 5 * 60_000 });
   await compose(envFile, [
     "run", "--rm", "--no-deps", "caddy",
-    "validate", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile",
+    "caddy", "validate", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile",
   ], { timeout: 2 * 60_000 });
   await compose(envFile, ["build", "--pull", "app"], { timeout: 20 * 60_000 });
 }

@@ -240,7 +240,7 @@ async function assertLogs() {
 async function validateCaddy(environment) {
   await compose([
     "run", "--rm", "--no-deps", "caddy",
-    "validate", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile",
+    "caddy", "validate", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile",
   ], { env: environment, timeout: 2 * 60_000 });
 }
 

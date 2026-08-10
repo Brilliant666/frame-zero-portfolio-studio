@@ -17,7 +17,7 @@ test("the deployment verifier exercises real Compose, Caddy, lifecycle, logs, an
   for (const command of ["config", "pull", "build", "up", "port", "logs", "restart", "stop", "down"]) {
     assert.match(verifier, new RegExp(`\\["${command}"`), `missing Compose ${command} evidence`);
   }
-  assert.match(verifier, /validate.*\/etc\/caddy\/Caddyfile/s);
+  assert.match(verifier, /"caddy", "validate", "--config", "\/etc\/caddy\/Caddyfile"/);
   assert.match(verifier, /assertPublicContract/);
   assert.match(verifier, /assertRuntimeSecurity/);
   assert.match(verifier, /assertLogs/);
