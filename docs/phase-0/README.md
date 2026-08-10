@@ -1,5 +1,11 @@
 # Phase 0 实施基线
 
+> 文档状态：`HISTORICAL`
+> 当前产品目标与上线优先级以
+> [`PORTFOLIO_PLATFORM_NORTH_STAR.md`](../PORTFOLIO_PLATFORM_NORTH_STAR.md) 和
+> [`SELF_HOSTED_V1_ROADMAP.md`](../SELF_HOSTED_V1_ROADMAP.md) 为准。本文继续保留 Phase 0
+> 的完成记录、迁移契约说明和历史证据，不再定义当前执行顺序。
+
 本页把 [`NORTH_STAR.md`](../NORTH_STAR.md) 的长期边界转换为可执行、可审查的
 Phase 0 工作顺序。Phase 0 的目标是保护现有私人摄影主页，在不新增模板、不删除
 D1 或本地照片兼容能力的前提下，建立版本化内容、稳定标识、owner 授权、可回滚发布
