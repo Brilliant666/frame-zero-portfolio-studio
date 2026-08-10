@@ -25,7 +25,7 @@ RUN npm run build
 
 FROM node:22.22.3-bookworm-slim@sha256:e21fc383b50d5347dc7a9f1cae45b8f4e2f0d39f7ade28e4eef7d2934522b752 AS runtime
 
-LABEL org.opencontainers.image.title="Frame Zero Portfolio Studio" \
+LABEL org.opencontainers.image.title="Portfolio Platform" \
       org.opencontainers.image.base.name="docker.io/library/node:22.22.3-bookworm-slim" \
       org.opencontainers.image.base.digest="sha256:e21fc383b50d5347dc7a9f1cae45b8f4e2f0d39f7ade28e4eef7d2934522b752" \
       io.frame-zero.runtime="standard-next-standalone"

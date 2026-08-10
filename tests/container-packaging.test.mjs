@@ -98,6 +98,11 @@ test("Docker contract is default-deny, pinned, non-root, and Standard Next only"
   assert.match(dockerfile, /^USER 1000:1000$/m);
   assert.match(dockerfile, /^ENTRYPOINT \[\]$/m);
   assert.match(dockerfile, /^CMD \["node", "server\.js"\]$/m);
+  assert.match(dockerfile, /^LABEL org\.opencontainers\.image\.title="Portfolio Platform" \\$/m);
+  assert.doesNotMatch(
+    dockerfile,
+    /^LABEL org\.opencontainers\.image\.title="Frame Zero Portfolio Studio"/m,
+  );
   assert.match(dockerfile, /^COPY --from=builder --chown=1000:1000 \/workspace\/\.next\/standalone \.\/$/m);
   assert.doesNotMatch(dockerfile, /COPY\s+\.\s+\./);
   assert.doesNotMatch(dockerfile, /\b(?:vinext|wrangler|cloudflare:workers)\b/i);
@@ -111,4 +116,8 @@ test("Docker contract is default-deny, pinned, non-root, and Standard Next only"
   assert.doesNotMatch(preparer, /\bgit\b|execFile|child_process/);
   assert.match(verifier, /!current\.startsWith\("\/app\/node_modules\/"\).*local Windows path leaked/s);
   assert.match(verifier, /build-context sentinel leaked into runtime/);
+  assert.match(
+    verifier,
+    /inspection\.Config\.Labels\?\.\["org\.opencontainers\.image\.title"\], "Portfolio Platform"/,
+  );
 });

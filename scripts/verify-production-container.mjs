@@ -148,6 +148,7 @@ try {
   assert.deepEqual(inspection.Config.Cmd, ["node", "server.js"]);
   assert.equal(inspection.Config.WorkingDir, "/app");
   assert.ok(inspection.Config.ExposedPorts?.["3000/tcp"]);
+  assert.equal(inspection.Config.Labels?.["org.opencontainers.image.title"], "Portfolio Platform");
   assert.equal(inspection.Config.Labels?.["io.frame-zero.runtime"], "standard-next-standalone");
   assert.equal(
     inspection.Config.Labels?.["org.opencontainers.image.base.digest"],
@@ -215,6 +216,7 @@ try {
     baseImage: inspection.Config.Labels["org.opencontainers.image.base.name"],
     daemonVersion,
     exitCode: stopped.State.ExitCode,
+    imageTitle: inspection.Config.Labels["org.opencontainers.image.title"],
     imageSizeBytes: inspection.Size,
     layerCount: inspection.RootFS.Layers.length,
     readOnlyRoot: true,
