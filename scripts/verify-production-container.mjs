@@ -100,7 +100,10 @@ while (stack.length > 0) {
       if (sentinel && source.includes(sentinel)) {
         throw new Error("build-context sentinel leaked into runtime: " + current);
       }
-      if (/[A-Za-z]:[\\/](?:Users|Documents|AppData)[\\/]/i.test(source)) {
+      // Framework/vendor sources can legitimately contain generic Windows-path
+      // examples. A project-local path leak can only originate in the traced
+      // application/generated artifacts, so keep this check outside node_modules.
+      if (!current.startsWith("/app/node_modules/") && /[A-Za-z]:[\\/](?:Users|Documents|AppData)[\\/]/i.test(source)) {
         throw new Error("local Windows path leaked into runtime: " + current);
       }
       if (/\.(?:cjs|js|mjs)$/i.test(current) && /(?:from\s*|require\s*\(|import\s*\()["']cloudflare:workers["']/.test(source)) {

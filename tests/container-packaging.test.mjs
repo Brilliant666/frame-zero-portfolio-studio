@@ -75,12 +75,13 @@ test("allowlisted public entries must be regular files", async (t) => {
 });
 
 test("Docker contract is default-deny, pinned, non-root, and Standard Next only", async () => {
-  const [dockerfile, dockerignore, packageJson, workflow, preparer] = await Promise.all([
+  const [dockerfile, dockerignore, packageJson, workflow, preparer, verifier] = await Promise.all([
     readFile(path.join(projectRoot, "Dockerfile"), "utf8"),
     readFile(path.join(projectRoot, ".dockerignore"), "utf8"),
     readFile(path.join(projectRoot, "package.json"), "utf8").then(JSON.parse),
     readFile(path.join(projectRoot, ".github", "workflows", "container.yml"), "utf8"),
     readFile(path.join(projectRoot, "scripts", "prepare-next-standalone.mjs"), "utf8"),
+    readFile(path.join(projectRoot, "scripts", "verify-production-container.mjs"), "utf8"),
   ]);
 
   assert.equal(dockerignore.split(/\r?\n/).find((line) => line && !line.startsWith("#")), "**");
@@ -108,4 +109,6 @@ test("Docker contract is default-deny, pinned, non-root, and Standard Next only"
   assert.equal(packageJson.scripts["test:container-contract"], "node --test tests/container-packaging.test.mjs");
   assert.equal(packageJson.scripts["verify:container"], "node scripts/verify-production-container.mjs");
   assert.doesNotMatch(preparer, /\bgit\b|execFile|child_process/);
+  assert.match(verifier, /!current\.startsWith\("\/app\/node_modules\/"\).*local Windows path leaked/s);
+  assert.match(verifier, /build-context sentinel leaked into runtime/);
 });
