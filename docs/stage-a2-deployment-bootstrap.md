@@ -141,6 +141,25 @@ Repository `npm test` remains responsible for the complete eleven-template,
 Admin V2, SiteDocumentV1, stable-ID, legacy adapter, Photo Library, Composition,
 legacy rollback, and Standard Next HTTP regression suites.
 
+The first green Linux container run for this slice recorded the following
+baseline (Docker reports image size as unpacked bytes):
+
+| Evidence | Result |
+| --- | --- |
+| Docker daemon | `28.0.4` on the GitHub-hosted Ubuntu runner |
+| Runtime UID/GID | `1000:1000` |
+| Read-only root | Passed with bounded temporary `/tmp` |
+| Image size | `280,502,347` bytes (about `267.5 MiB`) |
+| Image layers | `7` |
+| Runtime files under `/app` | `1,294` |
+| SIGTERM stop | `126 ms`, exit `143`, no OOM or SIGKILL (`137`) |
+| HTTP/filesystem inspection | Passed |
+
+The size is dominated by the pinned Debian/glibc Node base plus the traced
+Next/Sharp runtime. No arbitrary hard budget is introduced; later slices can
+compare against this baseline without trading away glibc compatibility,
+runtime correctness, or debuggability.
+
 ## Security and rollback
 
 - The endpoints are deliberately unauthenticated so an external supervisor can
