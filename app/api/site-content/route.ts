@@ -1,6 +1,5 @@
 import { eq, sql } from "drizzle-orm";
-import { env } from "cloudflare:workers";
-import { getDb } from "../../../db";
+import { getDb, getLegacyD1Database } from "../../../db";
 import { siteSettings } from "../../../db/schema";
 import { getChatGPTUser } from "../../chatgpt-auth";
 import { normalizeSiteContent, siteConfig } from "../../site-config";
@@ -11,7 +10,7 @@ const SETTINGS_ID = 1;
 const MAX_CONTENT_BYTES = 256_000;
 
 async function ensureTable() {
-  await env.DB.prepare(
+  await getLegacyD1Database().prepare(
     "CREATE TABLE IF NOT EXISTS site_settings (id INTEGER PRIMARY KEY NOT NULL, content TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)",
   ).run();
 }

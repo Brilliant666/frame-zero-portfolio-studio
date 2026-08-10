@@ -324,10 +324,20 @@ npm run photos:import -- --source "<photo-folder>"
 npm run photos:serve
 npm run photos:serve -- --port 3003
 npm run build
+npm run build:node
+npm run start:node
+npm run test:node-runtime
 npm run check:bundle
 npm run check:public
 npm run db:generate
 ```
+
+Stage A currently keeps a parallel Standard Next.js Node standalone parity
+lane. It is intentionally not the default local editing runtime yet: the target
+PostgreSQL repository belongs to Stage B, so the Node lane proves build/start
+and read-only route behavior while legacy writes fail closed. See
+[`docs/stage-a-runtime.md`](docs/stage-a-runtime.md) for the evidence matrix,
+private-photo packaging boundary, remaining cutover gaps, and rollback path.
 
 Content settings are stored in D1. Local development uses the project-local
 Miniflare database; hosted deployments use the logical `DB` binding declared in
