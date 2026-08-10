@@ -11,7 +11,8 @@
     "build": "vinext build",
     "preview": "vinext dev --hostname 127.0.0.1 --port 3001",
     "start": "vinext start",
-    "test": "npm run check:public && npm run test:contracts && npm run test:migrations && npm run test:adapters && npm run test:photos && npm run test:layouts && npm run test:composition && npm run test:admin && npm run test:polish && npm run build && npm run check:bundle && node --test tests/rendered-html.test.mjs tests/admin-rendered-html.test.mjs tests/site-content-api.test.mjs",
+    "test": "npm run check:public && npm run test:auth-poc && npm run test:contracts && npm run test:migrations && npm run test:adapters && npm run test:photos && npm run test:layouts && npm run test:composition && npm run test:admin && npm run test:polish && npm run build && npm run check:bundle && node --test tests/rendered-html.test.mjs tests/admin-rendered-html.test.mjs tests/site-content-api.test.mjs",
+    "test:auth-poc": "node --test --test-concurrency=1 tests/better-auth-cloudflare-poc.test.mjs",
     "test:contracts": "node --test tests/site-document.test.mjs",
     "test:migrations": "node --test tests/stable-id-migration.test.mjs",
     "test:adapters": "node --test tests/legacy-site-content-adapter.test.mjs",
@@ -29,6 +30,7 @@
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
+    "better-auth": "1.6.25",
     "drizzle-orm": "0.45.2",
     "next": "16.2.6",
     "react": "19.2.6",
@@ -42,6 +44,7 @@
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
     "@vitejs/plugin-rsc": "0.5.26",
+    "auth": "1.6.25",
     "drizzle-kit": "0.31.10",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
