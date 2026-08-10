@@ -10,7 +10,7 @@ const MAX_TEMPLATE_CSS = 64 * 1024;
 const EXPECTED_TEMPLATE_COUNT = 11;
 
 if (!existsSync(MANIFEST_PATH)) {
-  throw new Error("Build manifest is missing. Run `npm run build` before the bundle budget check.");
+  throw new Error("Legacy Vite build manifest is missing. Run `npm run build:legacy` before this check.");
 }
 
 const manifest = JSON.parse(readFileSync(MANIFEST_PATH, "utf8"));
@@ -60,5 +60,5 @@ const largestTemplate = templateSizes.sort(
 )[0];
 
 console.log(
-  `Build budget passed: ${templateEntries.length} lazy templates, ${(totalJs / 1024).toFixed(1)} KiB JS, ${(totalCss / 1024).toFixed(1)} KiB CSS; largest template ${(largestTemplate.jsBytes + largestTemplate.cssBytes) / 1024 < 10 ? "<10" : ((largestTemplate.jsBytes + largestTemplate.cssBytes) / 1024).toFixed(1)} KiB.`,
+  `Legacy Vite build budget passed: ${templateEntries.length} lazy templates, ${(totalJs / 1024).toFixed(1)} KiB JS, ${(totalCss / 1024).toFixed(1)} KiB CSS; largest template ${(largestTemplate.jsBytes + largestTemplate.cssBytes) / 1024 < 10 ? "<10" : ((largestTemplate.jsBytes + largestTemplate.cssBytes) / 1024).toFixed(1)} KiB.`,
 );

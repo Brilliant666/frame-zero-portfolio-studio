@@ -1,14 +1,16 @@
 # Portfolio Platform Current Status
 
 > - Updated: 2026-08-10
-> - Baseline: `main@3342589c48ba6bdd437fb763eff51fae385f48b5`
+> - Baseline: `main@7efd16be43419d81299e166a99464e9c2e1b12f4`
 
 ```text
 Current phase: SELF_HOSTED_V1
 Current stage: STAGE_A_RUNTIME
+Stage status: GATE_READY
 V1 status: NOT_LAUNCHED
 Online status: NOT_ONLINE_PREVIEW
-Next milestone: STANDARD_NEXT_NODE_PARITY
+Completed milestone: STANDARD_NEXT_NODE_PARITY
+Next milestone: DEPLOYMENT_BOOTSTRAP_READY
 Next online milestone: DEPLOYMENT_BOOTSTRAP_READY
 ```
 
@@ -26,6 +28,8 @@ Next online milestone: DEPLOYMENT_BOOTSTRAP_READY
 
 Available today:
 
+- Standard Next.js standalone as the default production build/start artifact,
+  with real HTTP route/template smoke and a Next-aware bundle gate;
 - eleven formal templates;
 - Admin V2 six-section workbench;
 - current legacy SiteContent save path;
@@ -37,7 +41,6 @@ Available today:
 
 Not yet available:
 
-- standard Next.js Node production parity;
 - PostgreSQL production persistence;
 - approved production Better Auth integration;
 - platform/public/Admin route split;
@@ -65,16 +68,15 @@ branch.
 
 ## Current execution rule
 
-Only work that directly advances `STAGE_A_RUNTIME` belongs on the current
-critical path. Other work defaults to `POST_V1_BACKLOG` unless it demonstrates
-a launch blocker.
+Stage A has complete Definition of Done evidence, but the current Stage does
+not change until a human approves the Stage gate. No Stage A2 implementation is
+authorized by this status update.
 
-Deployment Bootstrap remains downstream of standard Next.js Node parity, so
-this governance revision does not change the current Stage or next task.
-
-The exact recommended next development task is:
+The exact recommended next action is:
 
 ```text
-STAGE A / RUNTIME-01
-Standard Next.js Node Parity
+HUMAN STAGE GATE REVIEW
+
+After approval only:
+STAGE A2 / DEPLOYMENT_BOOTSTRAP
 ```
