@@ -2,6 +2,7 @@
 
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import http from "node:http";
 import https from "node:https";
 import path from "node:path";
 import process from "node:process";
@@ -124,6 +125,28 @@ function httpsRequest(port, pathname, options = {}) {
     });
     request.on("error", reject);
     request.end(options.body);
+  });
+}
+
+function httpRequest(port, pathname) {
+  return new Promise((resolve, reject) => {
+    const request = http.request({
+      headers: { Host: "portfolio.test" },
+      host: "127.0.0.1",
+      method: "GET",
+      path: pathname,
+      port,
+    }, (response) => {
+      const chunks = [];
+      response.on("data", (chunk) => chunks.push(chunk));
+      response.on("end", () => resolve({
+        body: Buffer.concat(chunks).toString("utf8"),
+        headers: response.headers,
+        status: response.statusCode,
+      }));
+    });
+    request.on("error", reject);
+    request.end();
   });
 }
 
@@ -298,12 +321,9 @@ try {
   const httpsPort = mappedPort(await compose(["port", "caddy", "443"]), 443);
   const httpPort = mappedPort(await compose(["port", "caddy", "80"]), 80);
   await waitForHttps(httpsPort);
-  const redirect = await fetch(`http://127.0.0.1:${httpPort}/`, {
-    headers: { Host: "portfolio.test" },
-    redirect: "manual",
-  });
+  const redirect = await httpRequest(httpPort, "/");
   assert.ok([301, 302, 307, 308].includes(redirect.status));
-  assert.equal(new URL(redirect.headers.get("location")).origin, "https://portfolio.test");
+  assert.equal(new URL(redirect.headers.location).origin, "https://portfolio.test");
 
   await assertPublicContract(httpsPort);
   const initialRuntime = await assertRuntimeSecurity();

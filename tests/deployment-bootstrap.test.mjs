@@ -19,6 +19,8 @@ test("the deployment verifier exercises real Compose, Caddy, lifecycle, logs, an
   }
   assert.match(verifier, /"caddy", "validate", "--config", "\/etc\/caddy\/Caddyfile"/);
   assert.match(verifier, /assertPublicContract/);
+  assert.match(verifier, /http\.request\(\{/);
+  assert.match(verifier, /headers: \{ Host: "portfolio\.test" \}/);
   assert.match(verifier, /assertRuntimeSecurity/);
   assert.match(verifier, /assertLogs/);
   assert.match(verifier, /docker\(\["image", "tag", appImageA, appImageB\]\)/);
