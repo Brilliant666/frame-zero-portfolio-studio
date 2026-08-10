@@ -1,7 +1,7 @@
 # Portfolio Platform Current Status
 
-> - Updated: 2026-08-10
-> - Baseline: `main@9c05c2b3c95788327ab5e95e4105294da89c4423`
+> - Updated: 2026-08-11
+> - Baseline: `main@b653c949f80ead050c7e36c2457bc39214ca7a14`
 
 ```text
 Current phase: SELF_HOSTED_V1
@@ -53,9 +53,8 @@ Not yet available:
 - Published SSR from the target repository;
 - hosted filesystem upload and AssetResolver;
 - `star` target-model migration;
-- a minimal Compose shell, Caddy, basic deployment logs, server-only deployment
-  configuration, deploy/update smoke, and the rest of the early Linux
-  Deployment Bootstrap;
+- target Linux execution of the reviewed Compose/Caddy shell, real public ACME
+  HTTPS, and target-server deploy/update/rollback evidence;
 - `ONLINE_PREVIEW`;
 - `CLOSED_BETA_READY` invited-client capability;
 - final production hardening and `V1_LAUNCHED`.
@@ -85,17 +84,24 @@ Completed Stage A2 capabilities are:
 ```text
 PRODUCTION_HEALTH_CONTRACT
 NON_ROOT_LINUX_CONTAINER_PACKAGING
+SERVER_ONLY_DEPLOYMENT_CONFIG
+MINIMAL_COMPOSE_CADDY_TOPOLOGY
+PUBLIC_PRIVATE_PROXY_BOUNDARY
+BASIC_APPLICATION_PROXY_LOGGING
+DEPLOY_UPDATE_ROLLBACK_SMOKE
+REPO_SIDE_BOOTSTRAP_READY
 ```
 
-The current reviewed slice is:
+The current repository-side stop gate is:
 
 ```text
-STAGE A2 / CONTAINER-01
-Non-root Standard Next standalone image packaging
+EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED
 ```
 
-The next Stage A2 slice is not authorized by this status document. It must be
-selected only after this Draft PR receives a separate human review decision.
+This is not `DEPLOYMENT_BOOTSTRAP_READY`: the target Linux server, real 80/443,
+DNS, public ACME HTTPS, and real deploy/update/rollback smoke still require a
+separate human authorization. Stage A2 therefore stays `IN_PROGRESS`, and the
+online status stays `NOT_ONLINE_PREVIEW`.
 
 See [stage-a2-deployment-bootstrap.md](stage-a2-deployment-bootstrap.md) for
 the current Definition of Done matrix and explicit external-operation boundary.

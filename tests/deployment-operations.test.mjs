@@ -51,3 +51,34 @@ test("operator CLI documents its contract and rejects the unconfigured example b
     },
   );
 });
+
+test("runbook covers every operation while governance remains externally gated", async () => {
+  const [runbook, status, stage] = await Promise.all([
+    readFile(path.join(projectRoot, "docs", "deployment-bootstrap-runbook.md"), "utf8"),
+    readFile(path.join(projectRoot, "docs", "CURRENT_STATUS.md"), "utf8"),
+    readFile(path.join(projectRoot, "docs", "stage-a2-deployment-bootstrap.md"), "utf8"),
+  ]);
+  for (const heading of [
+    "PRECHECK",
+    "BUILD / PREPARE",
+    "DEPLOY",
+    "VERIFY",
+    "UPDATE",
+    "ROLLBACK",
+    "STOP",
+    "LOG INSPECTION",
+    "HEALTH INSPECTION",
+  ]) assert.match(runbook, new RegExp(`^## ${heading.replace("/", "\\/")}$`, "m"));
+  assert.ok((runbook.match(/Expected result:/g) ?? []).length >= 9);
+  assert.ok((runbook.match(/Failure behavior:/g) ?? []).length >= 9);
+  assert.doesNotMatch(runbook, /docker compose down -v\s*```|docker volume (?:rm|prune)|docker image prune/);
+  for (const document of [runbook, status, stage]) {
+    assert.match(document, /EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED/);
+    assert.match(document, /NOT_ONLINE_PREVIEW/);
+    assert.doesNotMatch(document, /Stage status:\s*(?:`)?COMPLETE/);
+  }
+  assert.match(status, /Stage status: IN_PROGRESS/);
+  assert.match(status, /REPO_SIDE_BOOTSTRAP_READY/);
+  assert.match(stage, /CI_TLS_EVIDENCE/);
+  assert.match(stage, /REAL_PRODUCTION_HTTPS_EVIDENCE/);
+});

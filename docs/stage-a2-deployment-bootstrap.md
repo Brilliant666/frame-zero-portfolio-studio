@@ -3,7 +3,7 @@
 > - Phase: `SELF_HOSTED_V1`
 > - Stage: `STAGE_A2_DEPLOYMENT_BOOTSTRAP`
 > - Status: `IN_PROGRESS`
-> - Base: `main@9c05c2b3c95788327ab5e95e4105294da89c4423`
+> - Base: `main@b653c949f80ead050c7e36c2457bc39214ca7a14`
 > - Online maturity: `NOT_ONLINE_PREVIEW`
 
 Stage A2 establishes the smallest repeatable production shell around the
@@ -12,18 +12,19 @@ server, introduce product persistence, or expose unfinished product routes.
 
 ## Gap analysis
 
-| Definition of Done | Current evidence | Status after slice 2 |
+| Definition of Done | Current evidence | Status after BATCH-01 |
 | --- | --- | --- |
 | Package the Stage A Node artifact | Multi-stage Debian/glibc image builds the accepted Standard Next standalone without Git metadata | Container packaging complete |
-| Minimal Docker image and Compose shell | Non-root minimal image is exercised in Linux CI; Compose remains intentionally absent | Image complete; Compose open |
-| Caddy HTTPS reverse proxy | No reviewed Caddy configuration | Open |
-| Health endpoint and basic logs | Real standalone HTTP tests cover liveness and readiness; application/proxy logging remains unimplemented | Health contract complete; logs open |
-| Repeatable deploy/update smoke | No target-server procedure has been exercised | Open |
-| Server-only configuration isolation | Current client-artifact scans exist; the deployment environment contract is not defined | Open |
-| Receive Stage D routes without exposing unfinished capabilities | Stage D routes do not exist yet; Auth, hosted Admin, and upload remain unexposed | Open |
+| Minimal Docker image and Compose shell | Reviewed two-service `Caddy -> App` topology keeps App internal, non-root, read-only, and dependency-free | Repo contract and Linux CI complete; target server pending |
+| Caddy HTTPS reverse proxy | Production public-ACME config is separate from CI-only internal TLS; official image is version/digest pinned | Repo config and CI TLS complete; real ACME pending |
+| Health endpoint and basic logs | App stdout/stderr and Caddy JSON runtime/access logs are collected by Compose; sensitive-header sentinel is rejected from logs | Repo contract and Linux CI complete |
+| Repeatable deploy/update smoke | Linux verifier exercises idempotent deploy, restart, immutable release update, rollback, graceful stop, and non-destructive cleanup | Repo tooling and Linux CI complete; target smoke pending |
+| Server-only configuration isolation | Strict known-key parser, safe invalid example, explicit env file, and no accepted secrets or `NEXT_PUBLIC_*` values | Repo contract complete |
+| Receive Stage D routes without exposing unfinished capabilities | Public pages pass through; legacy SiteContent is read-only; Admin/Auth/upload/Draft/unreviewed APIs fail closed | Repo proxy boundary complete; Stage D route remains later work |
 
-`DEPLOYMENT_BOOTSTRAP_READY` is not reached by this slice. `ONLINE_PREVIEW`
-also remains blocked on both the rest of Stage A2 and Stage D.
+Repository-side work records `REPO_SIDE_BOOTSTRAP_READY`, but
+`DEPLOYMENT_BOOTSTRAP_READY` is not reached without target Linux and real ACME
+evidence. `ONLINE_PREVIEW` also remains blocked on Stage D.
 
 ## Slice 1: production health contract
 
@@ -160,6 +161,74 @@ Next/Sharp runtime. No arbitrary hard budget is introduced; later slices can
 compare against this baseline without trading away glibc compatibility,
 runtime correctness, or debuggability.
 
+## BATCH-01: repository-side deployment bootstrap
+
+The bounded Stage A2 batch adds no product service or route. Its Compose graph
+contains only the accepted Standard Next App image and the official Caddy
+proxy. App has no host port, joins only an internal backend network, runs as
+`1000:1000`, keeps a read-only root and bounded `/tmp`, drops all capabilities,
+and accepts traffic only from Caddy. Caddy is the sole ingress and persists
+only its `/data` and `/config` volumes.
+
+The official `caddy:2.11.4-alpine` multi-platform index is pinned to
+`sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648`.
+The digest and tag were verified against Docker Hub's official-image metadata
+on 2026-08-11. No third-party plugin is used.
+
+### Public and private boundary
+
+Caddy exposes only the current public contract:
+
+- public pages and packaged static files;
+- exact live/readiness endpoints;
+- GET or HEAD for the legacy public `/api/site-content` read.
+
+It returns 405 for SiteContent mutation and 404 for `/admin`, one-segment
+tenant Admin paths such as `/star/admin`, login, Auth, Draft, upload, and all
+other unreviewed APIs. Authorization, Cookie, and legacy ChatGPT auth headers
+are stripped before an allowed request reaches App. This preserves the current
+homepage without treating the current Admin/API implementation as production
+authorization.
+
+### Configuration and logging
+
+The server-only parser requires an explicit environment file and rejects
+missing, unknown, duplicate, quoted/interpolated, secret-looking, or
+`NEXT_PUBLIC_*` entries. Production is fixed to public 80/443 and the public
+ACME Caddyfile; CI is fixed to loopback ephemeral ports and the isolated
+internal-TLS Caddyfile. The checked-in example deliberately fails validation
+until an immutable reviewed release is supplied. Stage A2 accepts no secret.
+
+Both processes write to stdout/stderr. Docker's bounded JSON log driver makes
+them available through `docker compose logs`; Caddy access/runtime logs use
+JSON. Linux CI submits a synthetic Authorization/Cookie sentinel, confirms it
+does not appear in either service log, and rejects local Windows paths.
+
+### Deployment lifecycle evidence
+
+The dedicated `Deployment Bootstrap` Ubuntu gate performs real Compose and
+Caddy execution. It validates both Caddyfiles, builds App, pulls the pinned
+proxy, checks loopback-only CI port publication, exercises health/public/static
+traffic and proxy negative cases, inspects read-only/non-root/no-privilege
+runtime settings, repeats `up`, restarts App, changes release A to B, rolls B
+back to A, and verifies a graceful non-SIGKILL stop.
+
+Normal `down` omits `-v`; the verifier proves the two Caddy volumes remain.
+Only after that assertion does it remove exact, uniquely named CI volumes and
+images. It refuses unknown volume names and contains no registry push, SSH,
+production domain request, or external write.
+
+This evidence is deliberately classified as
+`CI_TLS_EVIDENCE != REAL_PRODUCTION_HTTPS_EVIDENCE`. Only an approved target
+server with its real DNS and public ACME certificate can close the latter.
+
+The operator CLI and
+[deployment runbook](deployment-bootstrap-runbook.md) expose PRECHECK,
+BUILD/PREPARE, DEPLOY, VERIFY, UPDATE, ROLLBACK, STOP, LOG, and HEALTH steps.
+Update builds an immutable release matching a clean checkout. Rollback refuses
+to build and requires the previous known-good image. Neither path removes
+volumes or data.
+
 ## Security and rollback
 
 - The endpoints are deliberately unauthenticated so an external supervisor can
@@ -174,14 +243,17 @@ runtime correctness, or debuggability.
 
 ## Remaining Stage A2 gaps
 
-Stage A2 remains `IN_PROGRESS` and `NOT_ONLINE_PREVIEW`. At least the following
-gaps remain open and require later, independently reviewed slices:
+Stage A2 remains `IN_PROGRESS` and `NOT_ONLINE_PREVIEW`. Repository-side gaps
+are complete; the remaining evidence is external:
 
-- minimal Compose shell;
-- Caddy reverse proxy and HTTPS configuration;
-- basic application/proxy logging;
-- server-only deployment configuration contract;
-- deploy/update smoke procedure and runbook.
+- preflight the approved target Linux server and its existing services;
+- approve and bind real ports 80/443 without disturbing another workload;
+- provide the external non-secret runtime configuration;
+- approve DNS changes;
+- obtain and verify real public ACME HTTPS;
+- execute target-server deploy/update/rollback smoke.
 
-This slice does not authorize any of those tasks, a real server operation,
-Stage B persistence, Auth, product route changes, hosted assets, or deployment.
+The stop status is `EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED`. This batch performs
+none of those operations and does not authorize Stage B, Auth, product route
+changes, hosted assets, deployment, `DEPLOYMENT_BOOTSTRAP_READY`, or
+`ONLINE_PREVIEW`.
