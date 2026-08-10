@@ -77,6 +77,14 @@ services:
     depends_on:
       app:
         condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl --fail --silent --show-error --insecure --resolve "$${PORTFOLIO_DOMAIN}:443:127.0.0.1" "https://$${PORTFOLIO_DOMAIN}/api/health/ready" >/dev/null
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 6
     logging:
       driver: json-file
       options:
