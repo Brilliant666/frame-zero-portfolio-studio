@@ -33,6 +33,6 @@ if (exitCode !== 0) {
 } else {
   const result = await prepareNextStandalone(projectRoot);
   console.log(
-    `Prepared Standard Next.js standalone artifact with ${result.publicFiles} tracked public files.`,
+    `Prepared Standard Next.js standalone artifact with ${result.publicFiles} allowlisted public files.`,
   );
 }

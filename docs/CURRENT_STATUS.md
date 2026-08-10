@@ -1,7 +1,7 @@
 # Portfolio Platform Current Status
 
 > - Updated: 2026-08-10
-> - Baseline: `main@8a9f6604f294381f34abe2cc130686fc2dec49b0`
+> - Baseline: `main@9c05c2b3c95788327ab5e95e4105294da89c4423`
 
 ```text
 Current phase: SELF_HOSTED_V1
@@ -32,6 +32,8 @@ Available today:
   with real HTTP route/template smoke and a Next-aware bundle gate;
 - minimal liveness and readiness HTTP contracts for future deployment
   supervision, without runtime or environment disclosure;
+- reviewed non-root Linux container packaging for the Standard Next standalone
+  artifact, with a default-deny build context and real Linux CI smoke;
 - eleven formal templates;
 - Admin V2 six-section workbench;
 - current legacy SiteContent save path;
@@ -51,8 +53,9 @@ Not yet available:
 - Published SSR from the target repository;
 - hosted filesystem upload and AssetResolver;
 - `star` target-model migration;
-- Docker/Compose packaging, Caddy, basic deployment logs, deploy/update smoke,
-  and the rest of the early Linux Deployment Bootstrap;
+- a minimal Compose shell, Caddy, basic deployment logs, server-only deployment
+  configuration, deploy/update smoke, and the rest of the early Linux
+  Deployment Bootstrap;
 - `ONLINE_PREVIEW`;
 - `CLOSED_BETA_READY` invited-client capability;
 - final production hardening and `V1_LAUNCHED`.
@@ -77,19 +80,22 @@ Only work that directly advances `STAGE_A2_DEPLOYMENT_BOOTSTRAP` belongs in the
 current production-development lane. This status does not authorize Stage B,
 later product stages, or real infrastructure operations.
 
-The current slice is:
+Completed Stage A2 capabilities are:
 
 ```text
-STAGE A2 / DEPLOYMENT-01
-Production health contract
+PRODUCTION_HEALTH_CONTRACT
+NON_ROOT_LINUX_CONTAINER_PACKAGING
 ```
 
-After this slice is merged and separately approved, the next candidate is:
+The current reviewed slice is:
 
 ```text
 STAGE A2 / CONTAINER-01
 Non-root Standard Next standalone image packaging
 ```
+
+The next Stage A2 slice is not authorized by this status document. It must be
+selected only after this Draft PR receives a separate human review decision.
 
 See [stage-a2-deployment-bootstrap.md](stage-a2-deployment-bootstrap.md) for
 the current Definition of Done matrix and explicit external-operation boundary.

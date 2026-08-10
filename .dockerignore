@@ -1,0 +1,50 @@
+# CONTAINER-01 uses a default-deny build context. Keep this list aligned with
+# Dockerfile COPY instructions and config/production-public-files.json.
+**
+
+!package.json
+!package-lock.json
+!next.config.ts
+!tsconfig.json
+!postcss.config.mjs
+
+!app/
+!app/**
+!db/
+!db/**
+!types/
+!types/**
+
+!scripts/
+!scripts/build-next-node.mjs
+!scripts/prepare-next-standalone.mjs
+
+!config/
+!config/production-public-files.json
+
+!public/
+!public/favicon.svg
+!public/file.svg
+!public/globe.svg
+!public/window.svg
+
+# These deny rules stay last so future broad source includes cannot admit
+# credentials, local state, or photography data by accident.
+**/.git
+**/.git/**
+**/.frame-zero
+**/.frame-zero/**
+**/.openai
+**/.openai/**
+**/.env
+**/.env.*
+**/.npmrc
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.pem
+**/id_ed25519
+**/id_rsa
+public/photos
+public/photos/**
+public/og.png
