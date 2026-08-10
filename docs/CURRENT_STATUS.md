@@ -1,12 +1,12 @@
 # Portfolio Platform Current Status
 
 > - Updated: 2026-08-10
-> - Baseline: `main@7efd16be43419d81299e166a99464e9c2e1b12f4`
+> - Baseline: `main@8a9f6604f294381f34abe2cc130686fc2dec49b0`
 
 ```text
 Current phase: SELF_HOSTED_V1
-Current stage: STAGE_A_RUNTIME
-Stage status: GATE_READY
+Current stage: STAGE_A2_DEPLOYMENT_BOOTSTRAP
+Stage status: IN_PROGRESS
 V1 status: NOT_LAUNCHED
 Online status: NOT_ONLINE_PREVIEW
 Completed milestone: STANDARD_NEXT_NODE_PARITY
@@ -30,6 +30,8 @@ Available today:
 
 - Standard Next.js standalone as the default production build/start artifact,
   with real HTTP route/template smoke and a Next-aware bundle gate;
+- minimal liveness and readiness HTTP contracts for future deployment
+  supervision, without runtime or environment disclosure;
 - eleven formal templates;
 - Admin V2 six-section workbench;
 - current legacy SiteContent save path;
@@ -49,7 +51,9 @@ Not yet available:
 - Published SSR from the target repository;
 - hosted filesystem upload and AssetResolver;
 - `star` target-model migration;
-- early Linux Deployment Bootstrap and `ONLINE_PREVIEW`;
+- Docker/Compose packaging, Caddy, basic deployment logs, deploy/update smoke,
+  and the rest of the early Linux Deployment Bootstrap;
+- `ONLINE_PREVIEW`;
 - `CLOSED_BETA_READY` invited-client capability;
 - final production hardening and `V1_LAUNCHED`.
 
@@ -68,15 +72,24 @@ branch.
 
 ## Current execution rule
 
-Stage A has complete Definition of Done evidence, but the current Stage does
-not change until a human approves the Stage gate. No Stage A2 implementation is
-authorized by this status update.
+Stage A and `STANDARD_NEXT_NODE_PARITY` are complete by human Gate approval.
+Only work that directly advances `STAGE_A2_DEPLOYMENT_BOOTSTRAP` belongs in the
+current production-development lane. This status does not authorize Stage B,
+later product stages, or real infrastructure operations.
 
-The exact recommended next action is:
+The current slice is:
 
 ```text
-HUMAN STAGE GATE REVIEW
-
-After approval only:
-STAGE A2 / DEPLOYMENT_BOOTSTRAP
+STAGE A2 / DEPLOYMENT-01
+Production health contract
 ```
+
+After this slice is merged and separately approved, the next candidate is:
+
+```text
+STAGE A2 / CONTAINER-01
+Non-root Standard Next standalone image packaging
+```
+
+See [stage-a2-deployment-bootstrap.md](stage-a2-deployment-bootstrap.md) for
+the current Definition of Done matrix and explicit external-operation boundary.

@@ -345,6 +345,13 @@ vinext/D1 editor and Photo Library companion remain available through
 [`docs/stage-a-runtime.md`](docs/stage-a-runtime.md) for the evidence matrix,
 private-photo packaging boundary, remaining cutover gaps, and rollback path.
 
+Stage A2 has started with a minimal server-only health contract for the
+accepted standalone artifact: `/api/health/live` and `/api/health/ready` accept
+GET and HEAD, return no-store responses, and disclose no runtime configuration.
+This does not claim Docker, Caddy, a real deployment, or `ONLINE_PREVIEW`; the
+remaining deployment gaps are tracked in
+[`docs/stage-a2-deployment-bootstrap.md`](docs/stage-a2-deployment-bootstrap.md).
+
 The legacy local editor stores content settings in its project-local Miniflare
 D1 database. The logical `DB` binding in `.openai/hosting.json` belongs to the
 explicit Cloudflare compatibility lane, not the Standard Next.js production

@@ -87,6 +87,7 @@ test("Standard Next.js standalone starts over HTTP with current route parity", a
     "utf8",
   );
   assert.doesNotMatch(publicClientManifest, /\[project\]\/app\/admin\//);
+  assert.doesNotMatch(publicClientManifest, /\[project\]\/app\/api\/health\//);
   const clientFiles = (await walkFiles(path.join(standaloneRoot, ".next", "static")))
     .filter((file) => /\.js$/.test(file));
   const clientSources = [];
@@ -122,6 +123,26 @@ test("Standard Next.js standalone starts over HTTP with current route parity", a
   child.stderr.on("data", (chunk) => logs.push(chunk));
   t.after(async () => stopChildProcess(child));
   await waitUntilReady(origin, child, logs);
+
+  for (const [pathname, status] of [
+    ["/api/health/live", "live"],
+    ["/api/health/ready", "ready"],
+  ]) {
+    const response = await fetch(`${origin}${pathname}`, { cache: "no-store" });
+    assert.equal(response.status, 200, pathname);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+    assert.match(response.headers.get("content-type") ?? "", /^application\/json\b/i);
+    assert.deepEqual(await response.json(), { status });
+
+    const headResponse = await fetch(`${origin}${pathname}`, { method: "HEAD" });
+    assert.equal(headResponse.status, 200, `HEAD ${pathname}`);
+    assert.equal(headResponse.headers.get("cache-control"), "no-store");
+    assert.equal(await headResponse.text(), "");
+
+    const mutationResponse = await fetch(`${origin}${pathname}`, { method: "POST" });
+    assert.equal(mutationResponse.status, 405, `POST ${pathname}`);
+  }
 
   const homeResponse = await fetch(`${origin}/`, { redirect: "manual" });
   assert.equal(homeResponse.status, 200);
