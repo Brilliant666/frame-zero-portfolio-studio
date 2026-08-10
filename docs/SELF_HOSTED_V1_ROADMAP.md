@@ -4,10 +4,13 @@
 > - Product authority: [PORTFOLIO_PLATFORM_NORTH_STAR.md](PORTFOLIO_PLATFORM_NORTH_STAR.md)
 > - Current stage: `STAGE_A_RUNTIME`
 > - V1 status: `NOT_LAUNCHED`
+> - Online status: `NOT_ONLINE_PREVIEW`
 
-This roadmap turns the Portfolio Platform North Star into one launch-critical
-sequence. Stages are ordered to avoid circular dependencies and to prevent one
-PR from combining several infrastructure changes.
+This roadmap turns the Portfolio Platform North Star into a launch-critical
+sequence with an early deployment lane. Stages are ordered to avoid circular
+dependencies, to prevent one PR from combining several infrastructure changes,
+and to make the real server a continuous validation environment well before
+the final V1 gate.
 
 ## 1. Current state
 
@@ -31,25 +34,51 @@ hosted uploads, or the target Linux deployment.
 PR #16 remains `KEEP_DRAFT`. It is Auth research evidence for
 Better Auth + vinext + workerd + D1, not a self-hosted production baseline.
 
-## 2. Dependency graph
+## 2. Online maturity model
+
+The project uses three distinct production maturity levels:
+
+| Status | Earliest point | Meaning |
+| --- | --- | --- |
+| `ONLINE_PREVIEW` | Stage A + Stage A2 + Stage D | Public read-only `/` and `/star` are continuously smoke-tested on the real HTTPS server; no Admin, upload, or launch claim is required |
+| `CLOSED_BETA_READY` | Stage I | A limited invited client can use login, Site-scoped Admin, Draft/Publish, hosted upload, and the migrated `star` Site; basic operational backups exist |
+| `V1_LAUNCHED` | Stage J | Every final launch, security, recovery, image-pipeline, CI, and operations gate is proven |
+
+These statuses are not interchangeable:
+
+```text
+ONLINE_PREVIEW != CLOSED_BETA_READY
+ONLINE_PREVIEW != V1_LAUNCHED
+CLOSED_BETA_READY != V1_LAUNCHED
+```
+
+## 3. Dependency graph
 
 ```mermaid
 flowchart LR
-    A["Stage A: Runtime"] --> B["Stage B: PostgreSQL"]
+    A["Stage A: Runtime"] --> A2["Stage A2: Deployment Bootstrap"]
+    A --> B["Stage B: PostgreSQL"]
     B --> C["Stage C: REUSE-01B"]
     C --> D["Stage D: Routes"]
-    D --> E["Stage E: Identity + Login"]
+    A2 --> OP["ONLINE_PREVIEW"]
+    D --> OP
+    OP --> E["Stage E: Identity + Login"]
     E --> F["Stage F: Site-scoped Admin"]
     F --> G["Stage G: Publication + SSR"]
     G --> H["Stage H: Hosted Assets"]
     H --> I["Stage I: star Migration"]
-    I --> J["Stage J: Production Canary"]
+    I --> CB["CLOSED_BETA_READY"]
+    CB --> J["Stage J: Production Hardening"]
+    J --> V1["V1_LAUNCHED"]
 ```
 
-The launch sequence is intentionally linear. Research may run in parallel only
-when it cannot change a later contract or delay the current Stage.
+Stage A2 is an early launch lane, not a new product-capability Stage. It may
+proceed after Stage A while Stages B–D continue. `ONLINE_PREVIEW` is reached
+only when both the deployment bootstrap and Stage D public routes are ready.
+Research may run in parallel only when it cannot change a later contract or
+delay the current Stage.
 
-## 3. Stage A — Runtime migration
+## 4. Stage A — Runtime migration
 
 ### Objective
 
@@ -83,7 +112,42 @@ Establish standard Next.js Node parity without changing product behavior.
 
 `STANDARD_NEXT_NODE_PARITY`
 
-## 4. Stage B — PostgreSQL foundation
+## 5. Stage A2 — Deployment bootstrap
+
+### Objective
+
+Establish the minimum real-server deployment path so future Stages validate
+against the target Linux environment continuously instead of waiting for final
+feature completion.
+
+### Definition of Done
+
+- the production Node artifact from Stage A is packaged;
+- a minimal Docker image and Compose shell, or an explicitly approved
+  equivalent runtime, starts the application on the target Linux server;
+- Caddy is the public reverse proxy and terminates HTTPS;
+- a health endpoint and basic application/proxy logs are available;
+- a repeatable deploy/update smoke procedure is documented and exercised;
+- server-only configuration remains outside client bundles and source control;
+- the bootstrap can receive the Stage D read-only routes without exposing
+  unfinished Auth, Admin, or upload capabilities.
+
+### Must not do
+
+- implement PostgreSQL domain tables;
+- integrate production Better Auth;
+- implement hosted assets or processing;
+- design the final backup architecture or full monitoring stack;
+- migrate production `star` data;
+- expose production Admin, upload, or public registration.
+
+### Milestone
+
+`DEPLOYMENT_BOOTSTRAP_READY`
+
+This milestone alone is not `ONLINE_PREVIEW`; Stage D must also complete.
+
+## 6. Stage B — PostgreSQL foundation
 
 ### Objective
 
@@ -110,7 +174,7 @@ product authentication or migrating real `star` data.
 - remove or overwrite `site_settings(id = 1)`;
 - implement Revision, hosted assets, or deployment in the same PR.
 
-## 5. Stage C — REUSE-01B Better Auth POC
+## 7. Stage C — REUSE-01B Better Auth POC
 
 ### Objective
 
@@ -145,7 +209,7 @@ Validate Better Auth on the actual target runtime and database before AUTH-01.
 Approve or reject Better Auth for production, then decide whether PR #16 is
 closed unmerged or reduced to framework-neutral historical research.
 
-## 6. Stage D — Platform and public routes
+## 8. Stage D — Platform and public routes
 
 ### Objective
 
@@ -160,7 +224,11 @@ Separate the platform landing page from the first public Site route.
 - unknown and invalid slugs fail safely;
 - server-rendering and metadata route boundaries are established;
 - all eleven templates remain available through the Site route;
-- no client-provided Site identity is trusted.
+- no client-provided Site identity is trusted;
+- `DEPLOYMENT_BOOTSTRAP_READY` has been proven;
+- the real server serves `/` and `/star` as public read-only routes over HTTPS;
+- Production Preview Smoke proves both routes healthy without exposing
+  production Admin, hosted upload, or public registration.
 
 ### Must not do
 
@@ -169,7 +237,7 @@ Separate the platform landing page from the first public Site route.
 - implement Draft/Publish persistence;
 - migrate real data or implement hosted assets.
 
-### Milestone
+### Milestones
 
 `LOCAL_MILESTONE_A`
 
@@ -178,7 +246,17 @@ http://127.0.0.1:3001/
 http://127.0.0.1:3001/star
 ```
 
-## 7. Stage E — Identity and login
+`ONLINE_PREVIEW`
+
+```text
+https://photo.cosflow.icu/
+https://photo.cosflow.icu/star
+```
+
+`ONLINE_PREVIEW` is continuously maintained from this point forward. It is not
+`CLOSED_BETA_READY` and is not `V1_LAUNCHED`.
+
+## 9. Stage E — Identity and login
 
 ### Objective
 
@@ -196,7 +274,9 @@ operator-provisioned login.
 - exact-origin and proxy-header security;
 - shared Site authorization service;
 - `star → star = ALLOW` and `alice → star = DENY` at the service/repository
-  boundary.
+  boundary;
+- Production Preview Smoke keeps `/` and `/star` healthy and adds `/login`;
+- unfinished `/:siteSlug/admin` behavior remains unexposed until Stage F.
 
 ### Must not do
 
@@ -204,7 +284,7 @@ operator-provisioned login.
 - make Better Auth own Site or business authorization;
 - implement Admin editing, publication, or assets in the same PR.
 
-## 8. Stage F — Site-scoped Admin
+## 10. Stage F — Site-scoped Admin
 
 ### Objective
 
@@ -220,7 +300,10 @@ Move the existing Admin V2 behind a stable Site route and ownership boundary.
   behavior remain intact;
 - current local photo companion remains local-only;
 - the old global `/admin` route has an explicit compatibility or retirement
-  decision.
+  decision;
+- Production Preview Smoke covers `/`, `/star`, `/login`, authorized
+  `/star/admin`, and anonymous/wrong-user denial without regressing the public
+  routes.
 
 ### Must not do
 
@@ -238,7 +321,7 @@ http://127.0.0.1:3001/login
 http://127.0.0.1:3001/star/admin
 ```
 
-## 9. Stage G — Draft, Revision, Publish, and SSR
+## 11. Stage G — Draft, Revision, Publish, and SSR
 
 ### Objective
 
@@ -259,7 +342,10 @@ content publicly.
 - editable `profile.role` is used in future public metadata, city/role empties
   are safe, and `profile.mark` is not the SEO title subject;
 - publish invalidates only relevant public cache entries;
-- current `SiteDocumentV1` remains frozen.
+- current `SiteDocumentV1` remains frozen;
+- Production Preview Smoke proves Save does not change `/star`, Publish does,
+  rollback is recoverable, and the existing public/login/Admin routes remain
+  healthy.
 
 ### Must not do
 
@@ -268,7 +354,7 @@ content publicly.
 - migrate real `star` data before the target executor is ready;
 - implement hosted storage in this stage.
 
-## 10. Stage H — Hosted assets, Sharp, and media
+## 12. Stage H — Hosted assets, Sharp, and media
 
 ### Objective
 
@@ -289,7 +375,9 @@ single-server target.
 - public versioned media, private Admin media, and private original policy;
 - filesystem traversal, symlink, MIME spoof, oversized image, and cross-Site
   tests;
-- backup and restore of asset metadata plus files.
+- backup and restore of asset metadata plus files;
+- Production Preview Smoke covers authenticated upload, generated media,
+  Published media, and every previously available public/login/Admin route.
 
 ### Must not do
 
@@ -302,7 +390,7 @@ single-server target.
 
 `HOSTED_UPLOAD_MILESTONE`
 
-## 11. Stage I — star migration
+## 13. Stage I — star migration
 
 ### Objective
 
@@ -325,7 +413,11 @@ publication, and storage model without losing data.
   with reviewed transactional semantics;
 - repeat execution is stable and does not duplicate identities;
 - old sources remain read-only through the approved retention window;
-- eleven-template and real-content parity is verified.
+- eleven-template and real-content parity is verified;
+- a basic operational PostgreSQL and hosted-asset backup exists;
+- Production Preview Smoke verifies the migrated `star` login, Admin,
+  Draft/Publish, hosted media, and public Published Site without unresolved
+  migration items.
 
 ### Must not do
 
@@ -334,16 +426,27 @@ publication, and storage model without losing data.
 - mark a blocked migration complete;
 - overwrite or delete current real data as part of the first migration pass.
 
-## 12. Stage J — Production Canary
+### Milestone
+
+`CLOSED_BETA_READY`
+
+The operator may begin limited invitation testing after this milestone. Final
+restore, rollback, monitoring, security, and V1 hardening still belong to
+Stage J.
+
+## 14. Stage J — Production hardening and final V1 launch
 
 ### Objective
 
-Deploy the complete V1 to the user-owned Linux server and prove operations,
-recovery, and rollback.
+Harden the already-running production preview, close every final operational
+and security gate, and promote `CLOSED_BETA_READY` to `V1_LAUNCHED`.
 
 ### Definition of Done
 
-- Docker Compose topology for Caddy, App, PostgreSQL, and one-shot migration;
+- the existing production preview remains continuously available; Stage J is
+  not the first deployment;
+- the Docker Compose topology for Caddy, App, PostgreSQL, and one-shot
+  migration is finalized and reviewed;
 - only Caddy publishes 80/443;
 - HTTPS and canonical host behavior;
 - server-only secret management;
@@ -354,6 +457,7 @@ recovery, and rollback.
 - migration rehearsal and previous-image application rollback;
 - `/`, `/star`, `/star/admin`, login, Publish, and media canary;
 - disk, DB, processing, backup, and 5xx minimum monitoring;
+- final security gates and the approved production image pipeline are proven;
 - Quality and Public repository safety successful on the release candidate;
 - every North Star V1 Launch Gate item is evidenced.
 
@@ -362,6 +466,8 @@ recovery, and rollback.
 - add Kubernetes, multiple app instances, Redis, object storage, custom domains,
   billing, or blue/green deployment;
 - delete persistent volumes as rollback;
+- treat prior `ONLINE_PREVIEW` or `CLOSED_BETA_READY` evidence as a substitute
+  for final recovery and security evidence;
 - declare launch before the restore drill and `star` migration are complete.
 
 ### Milestone
@@ -374,23 +480,27 @@ https://photo.cosflow.icu/star
 https://photo.cosflow.icu/star/admin
 ```
 
-## 13. Local milestone sequence
+## 15. Local and online milestone sequence
 
 | Milestone | Available after | Required URLs/capability |
 | --- | --- | --- |
 | `STANDARD_NEXT_NODE_PARITY` | Stage A | Standard Next Node build/start with current behavior |
+| `DEPLOYMENT_BOOTSTRAP_READY` | Stage A2 | Linux packaging, Caddy HTTPS, health, logs, and deploy/update smoke |
 | `LOCAL_MILESTONE_A` | Stage D | `/` and `/star` |
+| `ONLINE_PREVIEW` | Stage A + Stage A2 + Stage D | Public HTTPS `/` and `/star`, read-only smoke, no launch claim |
 | `LOCAL_MILESTONE_B` | Stage F | `/login` and authorized `/star/admin` |
 | Publication milestone | Stage G | Draft/Save/Publish/rollback and Published SSR |
 | `HOSTED_UPLOAD_MILESTONE` | Stage H | Hosted upload, processing, AssetResolver, media |
-| Migration milestone | Stage I | Real `star` and current assets in target model |
-| `V1_LAUNCHED` | Stage J | Production canary and recovery gates complete |
+| `CLOSED_BETA_READY` | Stage I | Real `star`, complete product loop, hosted media, and basic operational backup |
+| `V1_LAUNCHED` | Stage J | Production hardening and every final recovery/security gate complete |
 
-## 14. V1 Launch Gate
+## 16. V1 Launch Gate
 
 The authoritative checklist is in
 [PORTFOLIO_PLATFORM_NORTH_STAR.md](PORTFOLIO_PLATFORM_NORTH_STAR.md#17-v1-launch-gate).
 Stage J cannot declare completion while any item remains unproven.
+Neither `ONLINE_PREVIEW` nor `CLOSED_BETA_READY` is a partial waiver of this
+gate.
 
 At minimum, the final evidence bundle must include:
 
@@ -403,7 +513,7 @@ At minimum, the final evidence bundle must include:
 - HTTPS, health, backup, restore, and rollback;
 - Quality and Public repository safety.
 
-## 15. Post-V1 backlog
+## 17. Post-V1 backlog
 
 Post-V1 work is classified by evidence:
 
@@ -418,7 +528,7 @@ Examples of P2/P3 work that must not move onto the V1 critical path include
 public registration, recovery UX, analytics, custom domains, more templates,
 S3/R2, CDN, Redis, replicas, and external queues.
 
-## 16. COMPOSITION-03 resume points
+## 18. COMPOSITION-03 resume points
 
 `COMPOSITION-03` is `NOT_V1_BLOCKER`.
 
@@ -431,7 +541,7 @@ S3/R2, CDN, Redis, replicas, and external queues.
 Formal registry, persistence, Admin integration, renderer integration, and any
 Vnext document work require separate approval. `SiteDocumentV1` remains frozen.
 
-## 17. Task intake rule
+## 19. Task intake rule
 
 Every new task must record:
 
@@ -442,6 +552,7 @@ Does it introduce a V1 non-goal?
 Does it cross a later Stage?
 Does it change an Architecture Invariant?
 Does it affect templates, Admin, SiteDocument, migration, or real assets?
+After ONLINE_PREVIEW, does it preserve the existing Production Preview Smoke?
 ```
 
 If it does not advance the current Stage, stop with:

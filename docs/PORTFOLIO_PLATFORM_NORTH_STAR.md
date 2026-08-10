@@ -77,6 +77,58 @@ V1 is successful only when all of these are true:
 - the deployment, database, assets, backups, restore, and rollback paths have
   been exercised on the target Linux topology.
 
+### Online maturity definitions
+
+The production environment becomes useful before every V1 gate is complete.
+These maturity levels prevent an early public deployment from being mistaken
+for a product launch.
+
+#### `ONLINE_PREVIEW`
+
+`ONLINE_PREVIEW` proves the real public deployment path as early as possible.
+It requires:
+
+- a standard Next.js Node artifact;
+- the target Linux server;
+- Caddy HTTPS;
+- Docker Compose or an explicitly approved equivalent runtime;
+- a health check and basic logs;
+- read-only public smoke coverage for
+  `https://photo.cosflow.icu/` and
+  `https://photo.cosflow.icu/star`.
+
+It does not require production Admin exposure, hosted upload, or public
+registration. It is not a customer-ready claim.
+
+```text
+ONLINE_PREVIEW != CLOSED_BETA_READY
+ONLINE_PREVIEW != V1_LAUNCHED
+```
+
+#### `CLOSED_BETA_READY`
+
+`CLOSED_BETA_READY` means the operator may invite a limited number of real
+prospective clients to test the complete product loop. It requires:
+
+- `/login` and `/:siteSlug/admin`;
+- operator provisioning and User → Site ownership;
+- Draft and Publish;
+- hosted photo upload;
+- a public Published Site;
+- completed migration of the current `star` Site;
+- a basic operational backup for PostgreSQL and hosted assets.
+
+Closed beta readiness does not mean that final restore, rollback, monitoring,
+security, or launch hardening is complete.
+
+#### `V1_LAUNCHED`
+
+`V1_LAUNCHED` remains the final product status. It requires every item in the
+[V1 launch gate](#17-v1-launch-gate), including mature backup, a clean restore
+drill, rollback rehearsal, security gates, zero unresolved migration items,
+health and logging, CI, Public repository safety, and the approved production
+image pipeline.
+
 ## 3. Target users
 
 V1 has two operational roles:
@@ -320,6 +372,12 @@ asset backup, restore drills, and application rollback rehearsal. It does not
 require Kubernetes, a service mesh, multiple app instances, object storage, or
 blue/green deployment.
 
+Deployment begins before feature completion. After standard Next.js Node
+parity, `Stage A2 / DEPLOYMENT_BOOTSTRAP` establishes the minimum production
+shell. Stage D then makes `/` and `/star` continuously available as
+`ONLINE_PREVIEW`. Stage J hardens an environment that has already been online;
+it is not the first production deployment.
+
 ## 13. V1 required
 
 Everything in this section is `V1_REQUIRED`.
@@ -400,6 +458,21 @@ launch without a newly demonstrated V1 blocker.
 - new templates added only to expand the catalog
 
 ## 15. Launch-first governance
+
+**Deploy early, harden continuously.**
+
+The real Linux server becomes a continuing validation environment as soon as
+`ONLINE_PREVIEW` is established. From that point onward:
+
+- later work must not take the online environment down without a demonstrated
+  operational need and a recovery plan;
+- every Stage maintains the existing public production-preview smoke;
+- unfinished capabilities may remain disabled behind server-controlled feature
+  flags;
+- unfinished Auth or Admin routes must not be exposed merely because the
+  public pages are online;
+- `ONLINE_PREVIEW` must never be presented to clients as a formal product
+  launch.
 
 Every proposed task must first answer:
 
@@ -502,6 +575,9 @@ Only mark `V1_LAUNCHED` when every item below is proven:
 - Quality success
 - Public repository safety success
 
+Passing `ONLINE_PREVIEW` or `CLOSED_BETA_READY` does not waive or replace any
+item in this final gate.
+
 ## 18. Post-V1 operating model
 
 After launch, work enters `POST_V1_HARDENING` and is prioritized by production
@@ -556,7 +632,9 @@ Known conflicts resolved by this document:
 Current phase: SELF_HOSTED_V1
 Current stage: STAGE_A_RUNTIME
 V1 status: NOT_LAUNCHED
+Online status: NOT_ONLINE_PREVIEW
 Next milestone: STANDARD_NEXT_NODE_PARITY
+Next online milestone: DEPLOYMENT_BOOTSTRAP_READY
 PR #16: KEEP_DRAFT
 ```
 

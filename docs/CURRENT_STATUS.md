@@ -7,7 +7,9 @@
 Current phase: SELF_HOSTED_V1
 Current stage: STAGE_A_RUNTIME
 V1 status: NOT_LAUNCHED
+Online status: NOT_ONLINE_PREVIEW
 Next milestone: STANDARD_NEXT_NODE_PARITY
+Next online milestone: DEPLOYMENT_BOOTSTRAP_READY
 ```
 
 ## Current source of truth
@@ -44,7 +46,9 @@ Not yet available:
 - Published SSR from the target repository;
 - hosted filesystem upload and AssetResolver;
 - `star` target-model migration;
-- Linux production canary.
+- early Linux Deployment Bootstrap and `ONLINE_PREVIEW`;
+- `CLOSED_BETA_READY` invited-client capability;
+- final production hardening and `V1_LAUNCHED`.
 
 ## Current research PR
 
@@ -64,6 +68,9 @@ branch.
 Only work that directly advances `STAGE_A_RUNTIME` belongs on the current
 critical path. Other work defaults to `POST_V1_BACKLOG` unless it demonstrates
 a launch blocker.
+
+Deployment Bootstrap remains downstream of standard Next.js Node parity, so
+this governance revision does not change the current Stage or next task.
 
 The exact recommended next development task is:
 
