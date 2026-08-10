@@ -1,13 +1,18 @@
 import { env } from "cloudflare:workers";
-import { drizzle } from "drizzle-orm/d1";
+import { drizzle, type AnyD1Database } from "drizzle-orm/d1";
 import * as schema from "./schema";
 
-export function getDb() {
-  if (!env.DB) {
+export function getLegacyD1Database(): AnyD1Database {
+  const database = env.DB as AnyD1Database | undefined;
+  if (!database) {
     throw new Error(
       "Cloudflare D1 binding `DB` is unavailable. Set the `d1` field in .openai/hosting.json to `DB` or let your control plane inject the real binding values before using the database."
     );
   }
 
-  return drizzle(env.DB, { schema });
+  return database;
+}
+
+export function getDb() {
+  return drizzle(getLegacyD1Database(), { schema });
 }
