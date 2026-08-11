@@ -14,8 +14,8 @@
 
 This document is the long-lived ledger for explicit, item-by-item human product
 polish. The `NEXT` hand-off recorded when the product-experience foundation was
-accepted is now active by human authorization. No product request has been
-captured yet.
+accepted is now active by human authorization. `HR-001` is recorded below and
+is ready for human recheck.
 
 This is not an automated backlog. Codex handles exactly one concrete human
 request, validates it in proportion to risk, creates one focused commit, pushes
@@ -63,10 +63,11 @@ allowed in this lane.
 
 | ID | Date | Area | Human request | Status | Commit | Validation | Human decision |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `HR-001` | 2026-08-11 | 素材导入 | 本地素材导入只保留文件夹选择作为普通产品入口，取消产品侧高级／命令行导入入口。 | `READY_FOR_HUMAN_RECHECK` | `fix: make folder import the sole product entry` | `git diff --check`; focused Admin and photo tests; desktop/mobile browser entry validation | 待人工复检 |
 
-The bootstrap itself does not consume `HR-001`. A completed implementation may
-be reported as `READY_FOR_HUMAN_RECHECK`, while the matrix remains
-`NEEDS_POLISH`; only the human reviewer can accept it.
+The bootstrap did not consume `HR-001`; the first explicit request above does.
+A completed implementation may be reported as `READY_FOR_HUMAN_RECHECK`, while
+the matrix remains `NEEDS_POLISH`; only the human reviewer can accept it.
 
 ## Eleven-template human review matrix
 

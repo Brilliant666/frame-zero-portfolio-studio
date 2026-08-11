@@ -169,7 +169,7 @@ export default function TemplateCompositionPreview({ templateId }: { templateId:
       if (response.status === 404) {
         setAssets([]);
         setLibraryState("empty");
-        setLibraryMessage("素材库还为空；请先到“素材排版”添加照片。");
+        setLibraryMessage("素材库还为空；请先到“素材排版”选择素材文件夹。");
         return;
       }
       if (!response.ok) throw new Error(`素材库读取失败（${response.status}）`);
@@ -180,7 +180,7 @@ export default function TemplateCompositionPreview({ templateId }: { templateId:
       setLibraryState(manifest.assets.length > 0 ? "ready" : "empty");
       setLibraryMessage(manifest.assets.length > 0
         ? `已使用 ${manifest.assets.length} 张本地素材生成只读推荐。`
-        : "素材库还为空；请先到“素材排版”添加照片。");
+        : "素材库还为空；请先到“素材排版”选择素材文件夹。");
     } catch (error) {
       if (request !== requestRef.current) return;
       setLibraryState("error");

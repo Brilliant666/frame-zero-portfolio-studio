@@ -141,7 +141,7 @@ test("keeps every template on a fixed photo-slot contract with missing-image pla
   assert.match(sharedSlots, /export function PhotoPlaceholder/);
   assert.match(sharedSlots, /Math\.abs\(Math\.log\(actualRatio \/ targetRatio\)\)/);
   assert.match(layoutWorkspace, /一键智能排版/);
-  assert.match(layoutWorkspace, /刷新素材库/);
+  assert.match(layoutWorkspace, /刷新素材列表/);
   assert.match(libraryModel, /parsePhotoLibraryManifest/);
   assert.match(libraryModel, /autoComposeTemplateWorks/);
 

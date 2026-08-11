@@ -122,7 +122,7 @@ function demandShortages(profile: TemplateMaterialProfile, assets: readonly Phot
 
 function safeReason(assignment: Exclude<CompositionAssignmentResult, { status: "assigned" }>) {
   if (assignment.status === "blocked") return "锁定槽位与素材库冲突；请先检查素材排版。";
-  return "预览排版失败；请刷新素材库后重试。";
+  return "预览排版失败；请刷新素材列表后重试。";
 }
 
 /**

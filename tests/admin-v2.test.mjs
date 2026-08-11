@@ -195,12 +195,14 @@ test("the obsolete long-form Admin implementation is removed", async () => {
 });
 
 test("local photo ingest stays isolated from the shared SiteContent draft", async () => {
-  const [layout, panel, client, provider, adminLayout, css, viteConfig] = await Promise.all([
+  const [layout, panel, client, provider, adminLayout, templatePreview, previewComposition, css, viteConfig] = await Promise.all([
     source("app/admin/layout/layout-workspace.tsx"),
     source("app/admin/layout/photo-import-panel.tsx"),
     source("app/admin/layout/photo-import-client.ts"),
     source("app/admin/admin-provider.tsx"),
     source("app/admin/layout.tsx"),
+    source("app/admin/template/template-composition-preview.tsx"),
+    source("app/templates/template-preview-composition.ts"),
     source("app/admin/admin-v2.module.css"),
     source("vite.config.ts"),
   ]);
@@ -213,32 +215,38 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(layout, /request !== libraryRequestRef\.current/);
   assert.match(layout, /\["all", "landscape", "portrait", "square"\]/);
   assert.match(layout, /setLibraryMessage\("素材库还为空。"\)/);
-  assert.match(layout, /使用上方“添加照片”或“添加文件夹”把作品加入素材库/);
-  assert.match(layout, /未能读取素材库；请先处理上方错误并刷新素材库/);
+  assert.match(layout, /使用上方“选择素材文件夹”把作品加入素材库/);
+  assert.match(layout, /未能读取素材库；请先处理上方错误并刷新素材列表/);
   assert.doesNotMatch(layout, /先运行文件夹导入命令|重新执行导入命令/);
   assert.doesNotMatch(panel, /useAdmin|setContent|autoComposeTemplateWorks|\/api\/site-content|method:\s*"PUT"/);
-  assert.match(panel, /data-photo-picker="files"/);
   assert.match(panel, /data-photo-picker="folder"/);
+  assert.equal(panel.match(/data-photo-picker=/g)?.length, 1);
+  assert.doesNotMatch(panel, /data-photo-picker="files"|添加照片/);
   assert.match(panel, /multiple/);
   assert.match(panel, /webkitdirectory/);
-  assert.equal(panel.match(/aria-hidden="true"/g)?.length, 2);
-  assert.equal(panel.match(/tabIndex=\{-1\}/g)?.length, 2);
+  assert.equal(panel.match(/aria-hidden="true"/g)?.length, 1);
+  assert.equal(panel.match(/tabIndex=\{-1\}/g)?.length, 1);
   assert.match(panel, /本地照片导入仅在本机编辑模式可用/);
   assert.match(panel, /本地照片导入服务未启动/);
   assert.match(panel, /请使用 npm run dev 启动完整编辑环境/);
   assert.match(panel, /data-photo-import-health="unavailable"/);
   assert.match(panel, /本地照片导入服务暂时不可用/);
   assert.match(panel, /导入地址已配置，但当前无法连接本地照片导入服务/);
-  assert.match(panel, /高级 \/ 命令行导入/);
+  assert.match(panel, /选择素材文件夹/);
+  assert.doesNotMatch(panel, /高级 \/ 命令行导入|photos:import/);
   assert.match(panel, /新增 \{result\.added\}/);
   assert.match(panel, /已存在 \{result\.alreadyExists\}/);
   assert.match(panel, /查看失败详情/);
-  assert.match(panel, /未能添加照片/);
   assert.match(panel, /aria-label="照片导入进度"/);
-  assert.match(panel, /刷新素材库（不重新扫描文件夹）/);
-  assert.match(panel, /导入当前快照；后续增删需再次选择该文件夹/);
+  assert.match(panel, /刷新素材列表（不重新扫描文件夹）/);
+  assert.match(panel, /一次性读取/);
+  assert.match(panel, /后续增删需再次选择/);
+  assert.match(templatePreview, /请先到“素材排版”选择素材文件夹/);
+  assert.doesNotMatch(templatePreview, /添加照片/);
+  assert.match(previewComposition, /请刷新素材列表后重试/);
+  assert.doesNotMatch(previewComposition, /刷新素材库后重试/);
   assert.match(panel, /正在处理第 \$\{Math\.min\(progress\.processed \+ 1, progress\.total\)\} 张，共 \$\{progress\.total\} 张/);
-  assert.match(panel, /data-photo-import-selection=\{selectionMode\}/);
+  assert.doesNotMatch(panel, /data-photo-import-selection=\{selectionMode\}/);
   assert.match(panel, /一次性快照，不会持续同步/);
   assert.doesNotMatch(panel, />重新读取</);
   assert.doesNotMatch(client, /JSON\.stringify|FileReader|readAsDataURL|webkitRelativePath/);
@@ -266,7 +274,9 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.doesNotMatch(viteConfig, /CLOUDFLARE_INCLUDE_PROCESS_ENV|NEXT_PUBLIC_|VITE_FRAME_ZERO/);
   assert.match(css, /\.libraryStats\s*\{/);
   assert.match(css, /\.photoImportProgress\s*,/);
+  assert.match(css, /\.photoImportActions\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/s);
   assert.match(css, /\.photoImportChoiceNotes\s*\{/);
+  assert.doesNotMatch(css, /\.photoImportCli\s*\{/);
   assert.match(css, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
 });
 

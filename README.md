@@ -237,36 +237,36 @@ repository contains layout code and image metadata only, never the photographs.
 When photos are absent, every template keeps its intended composition with
 designed text placeholders.
 
-### Import a local photo library
+### Import a local photo folder
 
-For normal local editing, open **Admin → 素材排版** and use **添加照片** or
-**添加文件夹**. Multiple files and nested folders are processed one photograph at
-a time, progress remains visible, duplicate content is reported as already
-present, and the material grid refreshes automatically when the batch finishes.
-Adding material updates the local Photo Library immediately; it does not save or
-change the shared SiteContent draft and it never runs automatic layout.
+For normal local editing, open **Admin → 素材排版**, choose **选择素材文件夹**,
+and select the source folder. This is the only product-facing import entry.
+Supported files in that folder and its nested folders are processed one
+photograph at a time, progress remains visible, duplicate content is reported as
+already present, and the material grid refreshes automatically when the batch
+finishes. Adding material updates the local Photo Library immediately; it does
+not save or change the shared SiteContent draft and it never runs automatic
+layout.
 
-**添加照片** is a one-time choice of one or more files. **添加文件夹** imports a
-one-time snapshot, including supported files in nested folders; later changes to
-that computer folder are not watched or rescanned automatically. **刷新素材库**
-only reloads the generated manifest. A future remembered-source workflow must use
-a trusted local companion and keep any absolute folder path in local-only state;
-it remains `LOCAL_SOURCE_BINDING_FOLLOWUP`.
+The folder selection imports a one-time snapshot. Later changes to that computer
+folder are not watched or rescanned automatically, so select the folder again to
+import new material. **刷新素材列表** only reloads the generated manifest. A
+future remembered-source workflow must use a trusted local companion and keep
+any absolute folder path in local-only state; it remains
+`LOCAL_SOURCE_BINDING_FOLLOWUP`.
 
 The local service streams each selected file through a temporary directory into
-the same importer used by the command line. The importer deduplicates identical
-files by SHA-256, applies EXIF orientation, strips image metadata, and creates
-three colour-managed WebP variants per unique photograph. Original files and
-browser folder paths are not copied into the project or manifest. Each request is
-limited to 200 MiB; requests and manifest updates are serialized, including
-against a concurrent CLI import for the same project.
+the internal importer core. That core deduplicates identical files by SHA-256,
+applies EXIF orientation, strips image metadata, and creates three colour-managed
+WebP variants per unique photograph. Original files and browser folder paths are
+not copied into the project or manifest. Each file is limited to 200 MiB, and
+requests plus manifest updates are serialized through the same project lock.
 
-The CLI remains available for advanced automation, recovery, and intentionally
-adopting linked output directories:
-
-```bash
-npm run photos:import -- --source "<photo-folder>"
-```
+Advanced and command-line importing are not product workflows. Existing
+repository-level entry points, linked-output adoption, automatic interrupted
+write recovery, and stale-lock recovery remain internal compatibility and
+maintenance capabilities. HR-001 does not remove or replace the importer core
+used by the folder flow.
 
 Generated files stay local in `public/photos/library/`. The browser-safe index is
 `public/photos/library-manifest.json`; it contains stable asset IDs, aspect ratios,
@@ -283,24 +283,18 @@ homepage. The current compatibility manifest still keys its legacy entries by
 SHA-256 so re-imports reuse them; those hashes are migration fingerprints, not
 the future random internal Asset IDs.
 
-Normal projects keep `public/photos/` as a regular ignored directory. If an
-advanced local setup intentionally makes it a junction or symlink, the first run
-must explicitly adopt and pin that target with:
+Normal projects keep `public/photos/` as a regular ignored directory. Internal
+compatibility safeguards continue to pin an intentionally adopted junction or
+symlink with a random owner token and hashed target, preventing an accidental or
+retargeted link from receiving generated files. This is not exposed as an Admin
+import option.
 
-```bash
-npm run photos:import -- "<photo-folder>" adopt-linked-output
-```
-
-Later imports use the normal command. A random owner token plus a hashed target
-prevents an accidental or retargeted link from receiving generated files.
-
-The executable import controls are available only from the loopback Admin. A
-hosted Admin can still browse an existing manifest, but it does not call a
-visitor's `127.0.0.1`; remote object storage is a separate future scope. Manual
-**刷新素材库** and `npm run photos:serve` remain available for diagnostics. The
-standalone service defaults to port 3002 and can use another diagnostic port,
-for example `npm run photos:serve -- --port 3003`; normal `npm run dev` always
-uses automatic loopback port discovery.
+The folder import control is available only from the loopback Admin. A hosted
+Admin can still browse an existing manifest, but it does not call a visitor's
+`127.0.0.1`; remote object storage is a separate future scope. Manual
+**刷新素材列表** remains a manifest reload, while standalone service diagnostics
+remain an internal maintenance path. Normal `npm run dev` uses automatic
+loopback port discovery.
 
 After the material grid refreshes, for the active template you can:
 
@@ -327,9 +321,6 @@ npm run test:contracts
 npm run test:adapters
 npm run test:photos
 npm run test:composition
-npm run photos:import -- --source "<photo-folder>"
-npm run photos:serve
-npm run photos:serve -- --port 3003
 npm run build
 npm run start
 npm run test:node-runtime
