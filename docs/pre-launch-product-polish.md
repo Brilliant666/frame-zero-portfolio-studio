@@ -102,6 +102,14 @@ never in Git, SiteContent, the public manifest, client bundles, production
 artifacts, or a hosted service. Until that contract is proven, it remains
 `LOCAL_SOURCE_BINDING_FOLLOWUP`.
 
+Phase A browser evidence covered single-file, duplicate, multiple-file, nested
+folder, invalid-image, ignored-file, refresh, and re-entry paths. It also found
+and fixed a Windows-specific lifecycle defect where libvips could retain a
+temporary WebP file after the manifest commit, causing the committed asset to be
+misreported as failed. The importer now avoids caching source file descriptors,
+and a transient cleanup lock is retried without changing the committed import
+result.
+
 ## Deployment topology follow-up
 
 `DEPLOYMENT_TOPOLOGY_FOLLOWUP` is recorded for the future resumption of the

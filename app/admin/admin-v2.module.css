@@ -589,6 +589,9 @@
 .photoImportControls { display: grid; gap: .45rem; }
 .photoImportActions { display: flex; flex-wrap: wrap; gap: .5rem; }
 .photoImportActions button:first-child { border-color: var(--admin-v2-ink); background: var(--admin-v2-ink); color: #fff; }
+.photoImportChoiceNotes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+.photoImportChoiceNotes p { margin: 0; padding: .55rem .65rem; border-left: 2px solid var(--admin-v2-line); background: #faf8f5; color: var(--admin-v2-muted); font-size: .68rem; line-height: 1.45; }
+.photoImportChoiceNotes strong { color: var(--admin-v2-ink); }
 .photoImportHint { margin: 0; color: var(--admin-v2-muted); font-size: .7rem; line-height: 1.5; }
 .hostedImportNotice { display: grid; gap: .2rem; padding: .75rem .85rem; border-left: 3px solid #777069; background: #f5f2ee; }
 .hostedImportNotice strong { font-size: .78rem; }
@@ -1018,6 +1021,7 @@
   .libraryStats > div { padding-inline: .5rem; }
   .photoImportActions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .photoImportActions button { min-width: 0; padding-inline: .4rem; }
+  .photoImportChoiceNotes { grid-template-columns: 1fr; }
   .legacySummary { grid-template-columns: 3.5rem minmax(0, 1fr) 1.5rem; padding-inline: .75rem; }
   .legacyCard { grid-template-columns: 1fr; }
   .legacyPreview { height: 12rem; min-height: 0; }

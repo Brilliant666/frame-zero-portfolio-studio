@@ -665,6 +665,11 @@ export async function importPhotoLibrary({
   recordSourceState = true,
 }) {
   assertSupportedNodeRuntime();
+  // The local HTTP importer reads from short-lived request directories. libvips
+  // otherwise keeps recently opened source files in its file cache, which can
+  // prevent Windows from removing an already-processed upload. Keep the memory
+  // and operation caches, but never retain source file descriptors.
+  sharp.cache({ files: 0 });
   if (typeof sourceDir !== "string" || sourceDir.trim() === "") {
     throw new TypeError("sourceDir is required");
   }

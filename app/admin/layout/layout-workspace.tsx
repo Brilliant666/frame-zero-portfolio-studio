@@ -134,7 +134,7 @@ export default function LayoutWorkspace() {
       if (!response.ok) throw new Error(`素材库读取失败（${response.status}）`);
 
       const manifest = parsePhotoLibraryManifest(await response.json());
-      if (!manifest) throw new Error("素材库清单格式无效，请恢复有效清单后重新读取");
+      if (!manifest) throw new Error("素材库清单格式无效，请恢复有效清单后刷新素材库");
       if (request !== libraryRequestRef.current) return null;
       setAssets(manifest.assets);
       setAssetPage(0);
@@ -161,7 +161,7 @@ export default function LayoutWorkspace() {
 
   const refreshLibrary = useCallback(() => {
     setLibraryState("loading");
-    setLibraryMessage("正在重新读取本地素材库…");
+    setLibraryMessage("正在刷新本地素材库…");
     return loadLibrary();
   }, [loadLibrary]);
 
@@ -414,7 +414,7 @@ export default function LayoutWorkspace() {
               <strong>{assets.length === 0 ? "素材库还是空的" : "没有符合筛选条件的素材"}</strong>
               <p>{assets.length === 0
                 ? libraryState === "error"
-                  ? "未能读取素材库；请先处理上方错误并重新读取。"
+                  ? "未能读取素材库；请先处理上方错误并刷新素材库。"
                   : localPhotoImportState === "configured"
                     ? "使用上方“添加照片”或“添加文件夹”把作品加入素材库。"
                     : localPhotoImportState === "missing"

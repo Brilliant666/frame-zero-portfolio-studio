@@ -416,6 +416,42 @@ test("empty, invalid, aborted, and internal failures are recoverable and sanitiz
   await waitUntil(async () => (await fs.readdir(workspace.tempRoot)).length === 0);
 });
 
+test("a committed import is not misreported when temporary cleanup needs a retry", async (t) => {
+  const workspace = await makeWorkspace(t);
+  let immediateCleanupCalls = 0;
+  let deferredCleanupCalls = 0;
+  const { url } = await startService(t, {
+    ...workspace,
+    contract: { supportedExtensions: [".webp"] },
+    importer: async () => ({ addedAssets: 1, importedAssets: 19 }),
+    temporaryDirectoryCleanup: async () => {
+      immediateCleanupCalls += 1;
+      const error = new Error("synthetic Windows file lock");
+      error.code = "EPERM";
+      throw error;
+    },
+    deferredTemporaryDirectoryCleanup: async (temporaryDirectory) => {
+      deferredCleanupCalls += 1;
+      await fs.rm(temporaryDirectory, { recursive: true, force: true });
+    },
+  });
+
+  const response = await request({
+    url,
+    pathname: "/import",
+    method: "POST",
+    headers: { ...IMPORT_HEADERS, "X-Frame-Zero-Photo-Extension": ".webp" },
+    chunks: ["committed-photo"],
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body, { ok: true, status: "added", totalAssets: 19 });
+  await waitUntil(async () => (await fs.readdir(workspace.tempRoot)).length === 0);
+  assert.equal(immediateCleanupCalls, 1);
+  assert.equal(deferredCleanupCalls, 1);
+  assert.doesNotMatch(JSON.stringify(response.body), /EPERM|temporary|path|project/i);
+});
+
 test("chunked upload and import requests are fully serialized", async (t) => {
   const workspace = await makeWorkspace(t);
   let active = 0;
@@ -494,6 +530,30 @@ importerTest("service and CLI entry paths produce identical pipeline assets", as
     Object.fromEntries(Object.entries(cliResult.manifest.assets[0].variants)
       .map(([name, value]) => [name, { width: value.width, height: value.height }])),
   );
+});
+
+importerTest("WebP request sources release file handles before service cleanup", async (t) => {
+  const workspace = await makeWorkspace(t);
+  const { url } = await startService(t, {
+    ...workspace,
+    contract: photoImportContract,
+  });
+  const sourceBuffer = await sharp({
+    create: { width: 640, height: 640, channels: 3, background: "#5c7ca8" },
+  }).webp().toBuffer();
+
+  const response = await request({
+    url,
+    pathname: "/import",
+    method: "POST",
+    headers: { ...IMPORT_HEADERS, "X-Frame-Zero-Photo-Extension": ".webp" },
+    chunks: [sourceBuffer],
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body, { ok: true, status: "added", totalAssets: 1 });
+  assert.equal(sharp.cache().files.max, 0);
+  await waitUntil(async () => (await fs.readdir(workspace.tempRoot)).length === 0);
 });
 
 importerTest("additive service imports preserve 18 assets, deduplicate, and retain privacy", async (t) => {

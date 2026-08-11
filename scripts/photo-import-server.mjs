@@ -27,6 +27,24 @@ const IMPORT_HEADER = "x-frame-zero-local-import";
 const EXTENSION_HEADER = "x-frame-zero-photo-extension";
 const TEMP_DIRECTORY_PREFIX = "frame-zero-photo-import-";
 
+async function removeTemporaryDirectory(temporaryDirectory) {
+  await fs.rm(temporaryDirectory, {
+    recursive: true,
+    force: true,
+    maxRetries: 2,
+    retryDelay: 25,
+  });
+}
+
+async function removeTemporaryDirectoryEventually(temporaryDirectory) {
+  await fs.rm(temporaryDirectory, {
+    recursive: true,
+    force: true,
+    maxRetries: 40,
+    retryDelay: 50,
+  });
+}
+
 function parsePortValue(value, source) {
   if (typeof value !== "string" || !/^(?:0|[1-9]\d{0,4})$/.test(value)) {
     throw new TypeError(`${source} must be an integer from 0 to 65535`);
@@ -287,6 +305,8 @@ export function createPhotoImportService({
   contract = photoImportContract,
   tempRoot = os.tmpdir(),
   maximumBytes = LOCAL_PHOTO_IMPORT_MAX_BYTES,
+  temporaryDirectoryCleanup = removeTemporaryDirectory,
+  deferredTemporaryDirectoryCleanup = removeTemporaryDirectoryEventually,
 } = {}) {
   if (typeof projectRoot !== "string" || projectRoot.trim() === "") {
     throw new TypeError("projectRoot is required");
@@ -294,14 +314,33 @@ export function createPhotoImportService({
   if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 1) {
     throw new TypeError("maximumBytes must be a positive safe integer");
   }
+  if (
+    typeof temporaryDirectoryCleanup !== "function"
+    || typeof deferredTemporaryDirectoryCleanup !== "function"
+  ) {
+    throw new TypeError("temporary directory cleanup functions are required");
+  }
 
   const supportedExtensions = supportedExtensionsFromContract(contract);
   const resolvedProjectRoot = path.resolve(projectRoot);
   const resolvedTempRoot = path.resolve(tempRoot);
   const enqueueRequest = createPromiseQueue();
   const inFlight = new Set();
+  const deferredCleanups = new Set();
   let closing = false;
   let pendingListen = null;
+
+  const scheduleDeferredCleanup = (temporaryDirectory) => {
+    const task = Promise.resolve()
+      .then(() => deferredTemporaryDirectoryCleanup(temporaryDirectory))
+      .catch(() => {
+        // Keep filesystem details out of logs. A later service restart or the
+        // operating system can release the private random-name temp file.
+        console.error("A local photo import temporary file could not be removed.");
+      });
+    deferredCleanups.add(task);
+    void task.finally(() => deferredCleanups.delete(task));
+  };
 
   async function importOne(request) {
     const extension = validateImportHeaders(request, supportedExtensions);
@@ -311,9 +350,10 @@ export function createPhotoImportService({
     const temporaryDirectory = await fs.mkdtemp(path.join(resolvedTempRoot, TEMP_DIRECTORY_PREFIX));
     const temporaryFile = path.join(temporaryDirectory, `photo-${randomBytes(16).toString("hex")}${extension}`);
 
+    let result;
+    let operationError;
     try {
       await streamRequestToFile(request, temporaryFile, maximumBytes);
-      let result;
       try {
         result = await importer({
           sourceDir: temporaryDirectory,
@@ -323,15 +363,21 @@ export function createPhotoImportService({
       } catch (error) {
         throw classifyImportError(error);
       }
-      return normalizeImportResult(result);
-    } finally {
-      await fs.rm(temporaryDirectory, {
-        recursive: true,
-        force: true,
-        maxRetries: 8,
-        retryDelay: 50,
-      });
+      result = normalizeImportResult(result);
+    } catch (error) {
+      operationError = error;
     }
+
+    try {
+      await temporaryDirectoryCleanup(temporaryDirectory);
+    } catch {
+      // Importer writes are committed before it returns. A transient Windows
+      // file lock must not turn that committed success into a false failure.
+      scheduleDeferredCleanup(temporaryDirectory);
+    }
+
+    if (operationError) throw operationError;
+    return result;
   }
 
   async function handle(request, response) {
@@ -421,6 +467,7 @@ export function createPhotoImportService({
       await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
     }
     await Promise.allSettled([...inFlight]);
+    await Promise.allSettled([...deferredCleanups]);
   }
 
   return { close, listen, server };

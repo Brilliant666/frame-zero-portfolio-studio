@@ -188,7 +188,7 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(layout, /\["all", "landscape", "portrait", "square"\]/);
   assert.match(layout, /setLibraryMessage\("素材库还为空。"\)/);
   assert.match(layout, /使用上方“添加照片”或“添加文件夹”把作品加入素材库/);
-  assert.match(layout, /未能读取素材库；请先处理上方错误并重新读取/);
+  assert.match(layout, /未能读取素材库；请先处理上方错误并刷新素材库/);
   assert.doesNotMatch(layout, /先运行文件夹导入命令|重新执行导入命令/);
   assert.doesNotMatch(panel, /useAdmin|setContent|autoComposeTemplateWorks|\/api\/site-content|method:\s*"PUT"/);
   assert.match(panel, /data-photo-picker="files"/);
@@ -209,6 +209,12 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(panel, /查看失败详情/);
   assert.match(panel, /未能添加照片/);
   assert.match(panel, /aria-label="照片导入进度"/);
+  assert.match(panel, /刷新素材库（不重新扫描文件夹）/);
+  assert.match(panel, /导入当前快照；后续增删需再次选择该文件夹/);
+  assert.match(panel, /正在处理第 \$\{Math\.min\(progress\.processed \+ 1, progress\.total\)\} 张，共 \$\{progress\.total\} 张/);
+  assert.match(panel, /data-photo-import-selection=\{selectionMode\}/);
+  assert.match(panel, /一次性快照，不会持续同步/);
+  assert.doesNotMatch(panel, />重新读取</);
   assert.doesNotMatch(client, /JSON\.stringify|FileReader|readAsDataURL|webkitRelativePath/);
   assert.match(client, /body: file/);
   assert.match(client, /"content-type": "application\/octet-stream"/);
@@ -234,6 +240,7 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.doesNotMatch(viteConfig, /CLOUDFLARE_INCLUDE_PROCESS_ENV|NEXT_PUBLIC_|VITE_FRAME_ZERO/);
   assert.match(css, /\.libraryStats\s*\{/);
   assert.match(css, /\.photoImportProgress\s*,/);
+  assert.match(css, /\.photoImportChoiceNotes\s*\{/);
   assert.match(css, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
 });
 

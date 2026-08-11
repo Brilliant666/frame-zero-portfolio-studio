@@ -108,6 +108,8 @@ test("local Admin renders executable ingest only for a strictly configured loopb
   assert.match(html, /data-photo-picker="folder"[^>]*webkitdirectory=""|webkitdirectory=""[^>]*data-photo-picker="folder"/);
   assert.match(html, /\+ 添加照片/);
   assert.match(html, /\+ 添加文件夹/);
+  assert.match(html, /刷新素材库（不重新扫描文件夹）/);
+  assert.match(html, /导入当前快照；后续增删需再次选择该文件夹/);
   assert.doesNotMatch(html, /本地照片导入服务未启动/);
 });
 
