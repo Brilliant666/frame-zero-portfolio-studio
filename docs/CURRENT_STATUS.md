@@ -9,6 +9,10 @@ Current stage: STAGE_A2_DEPLOYMENT_BOOTSTRAP
 Stage status: IN_PROGRESS
 V1 status: NOT_LAUNCHED
 Online status: NOT_ONLINE_PREVIEW
+Engineering launch line: FROZEN_AT_REPO_SIDE_BOOTSTRAP_READY
+Current active priority: PRE_LAUNCH_PRODUCT_POLISH
+Current product priority: LOCAL_PRODUCT_EXPERIENCE
+External operations: NOT_AUTHORIZED
 Completed milestone: STANDARD_NEXT_NODE_PARITY
 Next milestone: DEPLOYMENT_BOOTSTRAP_READY
 Next online milestone: DEPLOYMENT_BOOTSTRAP_READY
@@ -106,5 +110,15 @@ therefore stays `IN_PROGRESS`, the online status stays `NOT_ONLINE_PREVIEW`,
 and no external operation is authorized before the current stop gate is
 explicitly cleared.
 
+Human priority has temporarily frozen the engineering launch line at
+`REPO_SIDE_BOOTSTRAP_READY` and activated `PRE_LAUNCH_PRODUCT_POLISH`. This is
+a local product-experience lane, not a new architecture Stage. Work proceeds
+through photo import, template material guidance, read-only real-library
+composition previews, explicit layout application, and eleven-template visual
+QA. It does not authorize target-server preflight, deployment, Stage B,
+PostgreSQL, production Auth, hosted upload, DNS, TLS, or production data.
+
 See [stage-a2-deployment-bootstrap.md](stage-a2-deployment-bootstrap.md) for
 the current Definition of Done matrix and explicit external-operation boundary.
+See [pre-launch-product-polish.md](pre-launch-product-polish.md) for the active
+product-experience batch and its architecture boundaries.
