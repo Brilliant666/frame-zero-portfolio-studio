@@ -1,7 +1,7 @@
 # Portfolio Platform Current Status
 
 > - Updated: 2026-08-11
-> - Baseline: `main@e40c7514efeb50a66a7836eb41272f682b395a4c`
+> - Baseline: `main@ced247e5baf19510329c4c3a084a69e6b1ab0c2c`
 
 ```text
 Current phase: SELF_HOSTED_V1
@@ -17,7 +17,7 @@ Current product priority: LOCAL_PRODUCT_EXPERIENCE
 Product experience foundation: ACCEPTED
 Automated visual QA baseline: ACCEPTED
 Pre-launch product polish: IN_PROGRESS
-Human-directed product polish: NEXT
+Human-directed product polish: ACTIVE
 Eleven-template human visual approval: PENDING
 External operations: NOT_AUTHORIZED
 Completed milestone: STANDARD_NEXT_NODE_PARITY
@@ -127,12 +127,15 @@ PostgreSQL, production Auth, hosted upload, DNS, TLS, or production data.
 
 Human review has accepted the product-experience foundation and its automated
 visual-QA baseline. That acceptance does not close
-`PRE_LAUNCH_PRODUCT_POLISH`: human-directed import, profile, preview, apply,
-spacing, crop, hierarchy, typography, and mobile polish remains the next work.
-No formal template has `HUMAN_APPROVED` status, and eleven-template human visual
-approval remains pending.
+`PRE_LAUNCH_PRODUCT_POLISH`: human-directed polish is now active and proceeds
+only from explicit, item-by-item human requests. No formal template has
+`HUMAN_APPROVED` status, and eleven-template human visual approval remains
+pending.
 
 See [stage-a2-deployment-bootstrap.md](stage-a2-deployment-bootstrap.md) for
 the current Definition of Done matrix and explicit external-operation boundary.
 See [pre-launch-product-polish.md](pre-launch-product-polish.md) for the active
 product-experience batch and its architecture boundaries.
+See [human-directed-product-polish.md](human-directed-product-polish.md) for
+the active request ledger, template review matrix, and stop-after-each-request
+protocol.
