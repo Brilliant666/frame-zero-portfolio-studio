@@ -1,0 +1,41 @@
+name: Deployment Bootstrap
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deployment-bootstrap-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deployment-bootstrap:
+    name: Compose, proxy, update, and rollback smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.1
+          cache: npm
+
+      - name: Prepare log-redaction sentinel
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentinel="deployment-log-sentinel-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "FRAME_ZERO_DEPLOYMENT_LOG_SENTINEL=$sentinel" >> "$GITHUB_ENV"
+
+      - name: Verify Linux deployment bootstrap
+        run: npm run verify:deployment-bootstrap

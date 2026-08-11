@@ -1,0 +1,65 @@
+(portfolio_public_contract) {
+	route {
+		# Health probes are public but intentionally disclose only their fixed
+		# liveness/readiness payloads.
+		@health path /api/health/live /api/health/ready
+		handle @health {
+			reverse_proxy app:3000 {
+				header_up -Authorization
+				header_up -Cookie
+				header_up -oai-authenticated-user-*
+			}
+		}
+
+		# Stage A2 must not make unfinished Admin, Auth, upload, Draft, or
+		# tenant-Admin paths reachable from the public ingress.
+		@private_known path /admin /admin/* /login /login/* /api/admin /api/admin/* /api/auth /api/auth/* /api/draft /api/draft/* /api/upload /api/upload/* /api/uploads /api/uploads/*
+		handle @private_known {
+			respond 404
+		}
+
+		@tenant_admin path_regexp tenant_admin ^/[^/]+/admin(?:/|$)
+		handle @tenant_admin {
+			respond 404
+		}
+
+		# The current public client still reads legacy SiteContent. Only that
+		# exact read is exposed; every mutation fails at the proxy boundary.
+		@site_content_mutation {
+			path /api/site-content
+			not method GET HEAD
+		}
+		handle @site_content_mutation {
+			header Allow "GET, HEAD"
+			respond 405
+		}
+
+		@site_content_read {
+			path /api/site-content
+			method GET HEAD
+		}
+		handle @site_content_read {
+			reverse_proxy app:3000 {
+				header_up -Authorization
+				header_up -Cookie
+				header_up -oai-authenticated-user-*
+			}
+		}
+
+		# No other API is part of the Stage A2 public contract.
+		@unreviewed_api path /api/*
+		handle @unreviewed_api {
+			respond 404
+		}
+
+		# Public pages and their static assets pass through unchanged. Stage D
+		# may add /:siteSlug without requiring a proxy topology rewrite.
+		handle {
+			reverse_proxy app:3000 {
+				header_up -Authorization
+				header_up -Cookie
+				header_up -oai-authenticated-user-*
+			}
+		}
+	}
+}

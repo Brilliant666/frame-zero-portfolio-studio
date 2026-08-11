@@ -1,0 +1,19 @@
+{
+	admin off
+	log default {
+		output stdout
+		format json
+		level {$PORTFOLIO_LOG_LEVEL:INFO}
+	}
+}
+
+import /etc/caddy/portfolio-proxy.caddy
+
+{$PORTFOLIO_DOMAIN} {
+	log {
+		output stdout
+		format json
+	}
+
+	import portfolio_public_contract
+}

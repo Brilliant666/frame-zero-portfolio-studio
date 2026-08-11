@@ -333,6 +333,10 @@ npm run build:legacy
 npm run test:legacy-runtime
 npm run check:bundle:legacy
 npm run check:public
+npm run deployment:validate -- /path/to/server-only.env
+npm run deployment:bootstrap -- --help
+npm run test:deployment-bootstrap
+npm run test:deployment-operations
 npm run db:generate
 ```
 
@@ -345,12 +349,16 @@ vinext/D1 editor and Photo Library companion remain available through
 [`docs/stage-a-runtime.md`](docs/stage-a-runtime.md) for the evidence matrix,
 private-photo packaging boundary, remaining cutover gaps, and rollback path.
 
-Stage A2 has started with a minimal server-only health contract for the
-accepted standalone artifact: `/api/health/live` and `/api/health/ready` accept
-GET and HEAD, return no-store responses, and disclose no runtime configuration.
-This does not claim Docker, Caddy, a real deployment, or `ONLINE_PREVIEW`; the
-remaining deployment gaps are tracked in
-[`docs/stage-a2-deployment-bootstrap.md`](docs/stage-a2-deployment-bootstrap.md).
+Stage A2 now has a repository-reviewed non-root image, strict server-only
+configuration, minimal `Caddy -> App` Compose shell, public/private proxy
+boundary, structured container logs, and Linux deploy/update/rollback smoke.
+The production Caddyfile keeps public ACME while CI uses a separate internal
+TLS file. This is `REPO_SIDE_BOOTSTRAP_READY`, not a deployment or online
+milestone: target Linux, real 80/443, DNS, public HTTPS, and target smoke remain
+`EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED`. See
+[`docs/stage-a2-deployment-bootstrap.md`](docs/stage-a2-deployment-bootstrap.md)
+and the
+[`deployment bootstrap runbook`](docs/deployment-bootstrap-runbook.md).
 
 The legacy local editor stores content settings in its project-local Miniflare
 D1 database. The logical `DB` binding in `.openai/hosting.json` belongs to the

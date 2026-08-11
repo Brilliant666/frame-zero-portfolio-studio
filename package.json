@@ -15,7 +15,7 @@
     "start": "node .next/standalone/server.js",
     "start:node": "npm run start",
     "start:legacy": "vinext start",
-    "test": "npm run check:public && npm run test:contracts && npm run test:migrations && npm run test:adapters && npm run test:photos && npm run test:layouts && npm run test:composition && npm run test:admin && npm run test:polish && npm run test:container-contract && npm run test:legacy-runtime && npm run test:node-runtime",
+    "test": "npm run check:public && npm run test:contracts && npm run test:migrations && npm run test:adapters && npm run test:photos && npm run test:layouts && npm run test:composition && npm run test:admin && npm run test:polish && npm run test:container-contract && npm run test:deployment-config && npm run test:deployment-bootstrap && npm run test:deployment-operations && npm run test:legacy-runtime && npm run test:node-runtime",
     "test:contracts": "node --test tests/site-document.test.mjs",
     "test:migrations": "node --test tests/stable-id-migration.test.mjs",
     "test:adapters": "node --test tests/legacy-site-content-adapter.test.mjs",
@@ -25,6 +25,9 @@
     "test:admin": "node --test tests/admin-state.test.mjs tests/admin-v2.test.mjs",
     "test:polish": "node --test tests/client-visible-title.test.mjs tests/polaroid-field-fit.test.mjs",
     "test:container-contract": "node --test tests/container-packaging.test.mjs",
+    "test:deployment-config": "node --test tests/deployment-config.test.mjs",
+    "test:deployment-bootstrap": "node --test tests/deployment-bootstrap.test.mjs",
+    "test:deployment-operations": "node --test tests/deployment-operations.test.mjs",
     "test:legacy-runtime": "npm run build:legacy && npm run check:bundle:legacy && node --test tests/rendered-html.test.mjs tests/admin-rendered-html.test.mjs tests/site-content-api.test.mjs",
     "test:node-runtime": "npm run build && npm run check:bundle && node --test tests/next-node-runtime.test.mjs",
     "photos:import": "node scripts/import-photo-library.mjs",
@@ -36,6 +39,9 @@
     "check:bundle:legacy": "node scripts/check-build-budget.mjs",
     "check:public": "node scripts/check-public-safety.mjs",
     "verify:container": "node scripts/verify-production-container.mjs",
+    "deployment:validate": "node scripts/validate-deployment-config.mjs",
+    "deployment:bootstrap": "node scripts/deployment-bootstrap.mjs",
+    "verify:deployment-bootstrap": "node scripts/verify-deployment-bootstrap.mjs",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {

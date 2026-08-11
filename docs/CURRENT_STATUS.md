@@ -1,7 +1,7 @@
 # Portfolio Platform Current Status
 
-> - Updated: 2026-08-10
-> - Baseline: `main@9c05c2b3c95788327ab5e95e4105294da89c4423`
+> - Updated: 2026-08-11
+> - Baseline: `main@b653c949f80ead050c7e36c2457bc39214ca7a14`
 
 ```text
 Current phase: SELF_HOSTED_V1
@@ -53,9 +53,8 @@ Not yet available:
 - Published SSR from the target repository;
 - hosted filesystem upload and AssetResolver;
 - `star` target-model migration;
-- a minimal Compose shell, Caddy, basic deployment logs, server-only deployment
-  configuration, deploy/update smoke, and the rest of the early Linux
-  Deployment Bootstrap;
+- target Linux execution of the reviewed Compose/Caddy shell, real public ACME
+  HTTPS, and target-server deploy/update/rollback evidence;
 - `ONLINE_PREVIEW`;
 - `CLOSED_BETA_READY` invited-client capability;
 - final production hardening and `V1_LAUNCHED`.
@@ -80,22 +79,32 @@ Only work that directly advances `STAGE_A2_DEPLOYMENT_BOOTSTRAP` belongs in the
 current production-development lane. This status does not authorize Stage B,
 later product stages, or real infrastructure operations.
 
-Completed Stage A2 capabilities are:
+Human-accepted completed Stage A2 capabilities are:
 
 ```text
 PRODUCTION_HEALTH_CONTRACT
 NON_ROOT_LINUX_CONTAINER_PACKAGING
+SERVER_ONLY_DEPLOYMENT_CONFIG
+MINIMAL_COMPOSE_CADDY_TOPOLOGY
+PUBLIC_PRIVATE_PROXY_BOUNDARY
+BASIC_APPLICATION_PROXY_LOGGING
+DEPLOY_UPDATE_ROLLBACK_SMOKE
+REPO_SIDE_BOOTSTRAP_READY
 ```
 
-The current reviewed slice is:
+The current stop gate is:
 
 ```text
-STAGE A2 / CONTAINER-01
-Non-root Standard Next standalone image packaging
+EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED
 ```
 
-The next Stage A2 slice is not authorized by this status document. It must be
-selected only after this Draft PR receives a separate human review decision.
+`REPO_SIDE_BOOTSTRAP_READY` is accepted repository-side evidence; it is not
+`DEPLOYMENT_BOOTSTRAP_READY`. The latter still requires approved target Linux,
+real 80/443, DNS, public ACME HTTPS, and target-server deploy/update/rollback
+smoke. `DEPLOYMENT_BOOTSTRAP_READY` is also not `ONLINE_PREVIEW`. Stage A2
+therefore stays `IN_PROGRESS`, the online status stays `NOT_ONLINE_PREVIEW`,
+and no external operation is authorized before the current stop gate is
+explicitly cleared.
 
 See [stage-a2-deployment-bootstrap.md](stage-a2-deployment-bootstrap.md) for
 the current Definition of Done matrix and explicit external-operation boundary.
