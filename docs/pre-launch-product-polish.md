@@ -118,6 +118,61 @@ Only the explicit **Apply layout to draft** action copies the reviewed mapping
 into `templateWorks[templateId]`. It does not select that template and does not
 save; the existing global **Save all changes** boundary remains authoritative.
 
+## Eleven-template material requirement matrix
+
+The requirements below come from the formal slot plans and real renderer crop
+surfaces. Counts are recommendations, not an instruction to consume every
+photo in the library.
+
+| Template | Useful / recommended / max | Best source mix | Primary visual | Material-sensitive behavior |
+| --- | --- | --- | --- | --- |
+| `cinematic-light` | 4 / 9 / 9 | 8 landscape + 1 portrait | slot 1, full-width cinematic hero | Cover crops need lateral breathing room. |
+| `neon-hud` | 4 / 9 / 9 | 8 landscape + 1 portrait | current HUD target | Any indexed image can reappear in a critical 16:9 viewport. |
+| `film-rail` | 4 / 9 / 9 | 9 landscape | opening film frame | A coherent landscape series matters more than raw library size. |
+| `manga-panels` | 4 / 9 / 9 | 8 landscape + 1 portrait | portrait cover, then wide chapters | The cover needs clean vertical title space. |
+| `prism-liquid` | 4 / 9 / 9 | 8 landscape + 1 portrait | opening prism plus panorama | Clipped edges amplify unsafe subject placement. |
+| `orbital-portal` | 4 / 8 / 8 | 8 portrait | active portrait in the portal | The same source also enters a critical 3:2 secondary crop. |
+| `archive-os` | 6 / 12 / 12 | 11 landscape + 1 portrait | initial Quick Look selection | Density is part of the identity; the list also crops to 16:9. |
+| `editorial-duet` | 4 / 9 / 9 | 8 landscape + 1 portrait | portrait cover plus three feature spreads | A consistent editorial series makes intentional whitespace work. |
+| `polaroid-field` | 5 / 9 / 9 | 8 landscape + 1 portrait | central `FRAME 05` portrait | Rotation affects fit bounds even when the slot crop is correct. |
+| `character-select` | 5 / 9 / 9 | 6 landscape + 1 portrait + ideally 2 square | selected fighter stage | Every source also enters a 1:1 roster crop. |
+| `museum-depth` | 4 / 7 / 7 | 6 landscape + 1 portrait | entrance-hall artwork | Desktop frames favor contain; the entrance and mobile still cover. |
+
+## Real-photo visual QA
+
+Phase D used the local Photo Library only as an uncommitted validation input.
+Five bounded material scenarios were exercised: landscape-heavy,
+portrait-heavy, balanced, small library, and full library. Every scenario ran
+all eleven templates at 1440x900, 1024x768, 390x844, and 320x720, for 220
+template/viewport checks. The matrix checked visual hierarchy, image rhythm,
+portrait safety, crop pressure, orientation fit, density, typography balance,
+scroll behavior, horizontal overflow, broken images, and browser console
+errors. No screenshots, manifest data, photo identifiers, paths, or real
+SiteContent are committed.
+
+### `11_TEMPLATE_VISUAL_QA_MATRIX`
+
+| Template | Photo demand / best mix | Hero behavior | Desktop | Mobile | Crop risk | Visual quality | Changes made | Remaining issue | Variant candidate? |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `cinematic-light` | 9; landscape-heavy with one portrait | Strong single opening frame | Clear cinematic hierarchy at 1440 and 1024 | Hero shortens cleanly before stacked archives | High, but real subjects remained legible with current focus | Strong when the first landscape has safe negative space | No code change required | Poorly focused edge subjects remain user-material sensitive | No |
+| `neon-hud` | 9; landscape-heavy with one portrait | Selected asset becomes a 16:9 HUD target | Dense telemetry stays subordinate to the image | Stacked target, data, and index remain scannable | High because every asset may become the target | Strong and deliberately technical | No code change required | Portrait-heavy libraries produce placeholders and harder target crops | No; current shortage feedback is sufficient |
+| `film-rail` | 9 landscapes | First frame establishes the sequence | Long editorial rail has confident rhythm | Horizontal rail remains intentional and reachable | Medium when source ratios match | Strong with a coherent landscape series | No code change required | Small libraries leave a sparse opening sequence by design | No |
+| `manga-panels` | 9; one strong portrait plus landscapes | Portrait cover anchors subsequent chapters | Panels preserve a distinct comic reading order | Chapters collapse into an effective vertical story | Medium; cover needs headroom | Strong for balanced and portrait-led sets | No code change required | Landscape-only sets cannot replace the missing cover portrait gracefully without changing the design | No |
+| `prism-liquid` | 9; landscape-heavy with one portrait | Prism hero and panorama share emphasis | Asymmetric clips stay visually controlled | Stacked cards retain the liquid identity | High at clipped corners | Good to strong when subjects avoid edges | No code change required | Edge-weighted portraits remain material-sensitive | No |
+| `orbital-portal` | 8 portraits | Active portrait is projected into a wide 3:2 portal | The portal has clear dominance, but default centre crop originally removed the subject's head | The same crop defect was visible at 390 until corrected | High: formal 2:3 slots and critical 3:2 presentation compete | Good after targeted subject-safety correction; exceptional with suitable environmental portraits | Default-centred portrait gets a portal-only `50% 32%` focus; explicit Admin focus and orbit thumbnails remain untouched | A single focus cannot always optimize both portrait card and wide portal | **Yes — `VARIANT_CANDIDATE`**, no persistence change in this batch |
+| `archive-os` | 12; dense landscape set plus one portrait | Initial Quick Look is a focal inspector, not a conventional hero | Three-pane density reads as an asset workstation | Pane switching preserves access without shrinking the desktop metaphor | Medium across grid/list secondary crops | Strong with a full library; deliberately utilitarian when small | No code change required | Small libraries visibly reduce the intended archive density | No |
+| `editorial-duet` | 9; landscape series plus portrait cover | Cover opens into spacious feature spreads | Large whitespace reads as editorial pacing | Blank intervals are more noticeable but remain coherent | Medium and aligned with formal slots | Refined with consistent material; restrained rather than dense | No code change required | Mixed visual series weaken the intended duet more than other templates | No |
+| `polaroid-field` | 9; landscape constellation around one portrait | `FRAME 05` remains the central scale and z-order anchor | FIT presents the complete constellation; the first viewport intentionally opens with typography | Mobile grid keeps all work reachable | Medium; rotation is included in FIT geometry | Distinctive and playful with a full set | No code change required in this batch | Users expecting an immediate photo hero may find the text-led first fold surprising | No |
+| `character-select` | 9; mixed set, ideally including squares | Selected fighter owns the stage while roster drives choice | Stage and roster are readable with the full library | Horizontal roster keeps selection reachable | High because all roster entries are 1:1 | Strong with face-safe material; usable placeholders when small | No code change required | The current real library has no square-specific validation input; 1:1 secondary crops remain a material gap | **Yes — `VARIANT_CANDIDATE`** for future design review only |
+| `museum-depth` | 7; six landscapes plus one portrait | Entrance art establishes a gallery journey | Contained frames and depth produce calm rhythm | Sequential full-width exhibits remain legible | Medium; mobile and entrance use cover | Strong and differentiated at both densities | No code change required | Very small libraries make the gallery intentionally quiet rather than richly curated | No |
+
+The automated matrix found no document-level horizontal overflow, broken
+images, hydration errors, or page console errors/warnings. Visual inspection
+did not justify redesigning the other ten templates. Orbital Portal was the one
+evidence-backed defect: a default-centred portrait lost its head when reused in
+the wide portal. The fix is deliberately limited to that secondary
+presentation and preserves explicit user focus.
+
 ## Local source-folder boundary
 
 Browser folder selection is a one-time import. It does not provide a reliable
