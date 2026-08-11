@@ -110,6 +110,28 @@ misreported as failed. The importer now avoids caching source file descriptors,
 and a transient cleanup lock is retried without changing the committed import
 result.
 
+## Template material profiles
+
+Phase B derives a presentation-only `TemplateMaterialProfile` for every formal
+template from its renderer, fixed slot plan, CSS crop surfaces, and responsive
+behavior. The eleven profiles deliberately do not share a generic “first nine
+photos” requirement. They record:
+
+- minimum, recommended, and maximum useful photo counts;
+- landscape, portrait, and square source demand;
+- hero/cover and other high-priority slots;
+- the formal ordered slot aspect targets;
+- secondary display crops that differ from assignment slots;
+- crop pressure and the actual mobile layout strategy.
+
+Examples of the intentional differences include the all-landscape Film Rail,
+the all-portrait Orbital Portal whose active image is also shown in a 3:2
+viewport, the twelve-item Archive OS, the central portrait in Polaroid Field,
+and Character Select's square roster crops. Admin template browsing shows the
+profile for the currently inspected candidate without selecting a template or
+changing the shared draft. The profile is not imported by `SiteDocumentV1`, the
+legacy adapter, a renderer, or persistence code.
+
 ## Deployment topology follow-up
 
 `DEPLOYMENT_TOPOLOGY_FOLLOWUP` is recorded for the future resumption of the

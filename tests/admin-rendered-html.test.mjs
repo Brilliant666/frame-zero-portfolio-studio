@@ -77,8 +77,13 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
       assert.equal(html.match(/data-template-option="[^"]+"/g)?.length, 11);
       assert.equal(html.match(/data-template-detail="[^"]+"/g)?.length, 1);
       assert.equal(html.match(/data-template-mobile-selector="true"/g)?.length, 1);
+      assert.equal(html.match(/data-template-material-profile="[^"]+"/g)?.length, 1);
       assert.doesNotMatch(html, /data-template-card=/);
       assert.match(html, /aria-label="正式页面模板"/);
+      assert.match(html, /素材准备建议/);
+      assert.match(html, /横图/);
+      assert.match(html, /竖图/);
+      assert.match(html, /方图/);
     }
     if (section === "profile") {
       assert.equal(html.match(/data-optional-brand-content="true"/g)?.length, 1);

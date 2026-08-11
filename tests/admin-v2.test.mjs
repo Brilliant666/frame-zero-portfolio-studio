@@ -119,6 +119,12 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   assert.match(template, /查看候选详情不会修改草稿/);
   assert.match(template, /素材排版可能变化/);
   assert.match(template, /不会在这里静默删除/);
+  assert.match(template, /getTemplateMaterialProfile\(inspectedTemplate\.id\)/);
+  assert.match(template, /data-template-material-profile=\{materialProfile\.templateId\}/);
+  assert.match(template, /建议 \{materialProfile\.recommendedPhotoCount\} 张/);
+  for (const requirement of ["横图", "竖图", "方图", "主视觉", "裁切压力", "手机策略"]) {
+    assert.match(template, new RegExp(requirement));
+  }
 
   assert.match(profile, /<details className=\{styles\.optionalDisclosure\}/);
   assert.match(profile, /data-optional-brand-content="true"/);
@@ -272,6 +278,8 @@ test("responsive CSS exposes a mobile section switcher and single-column layout 
   assert.match(css, /\.templateWorkbench\s*\{[^}]*grid-template-columns:\s*minmax\(13rem, 16rem\) minmax\(0, 1fr\)/s);
   assert.match(css, /\.templateList\s*\{/);
   assert.match(css, /\.templateDetail\s*\{/);
+  assert.match(css, /\.templateMaterialProfile\s*\{/);
+  assert.match(css, /\.templateMaterialDemand\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
   assert.doesNotMatch(css, /\.templateGrid|\.templateCard\b/);
   assert.match(css, /@media \(max-width: 1280px\) and \(min-width: 761px\)/);
   assert.match(css, /@media \(max-width: 960px\)\s*\{[^}]*\.packageCardHeader\s*\{[^}]*grid-template-columns:\s*1fr/s);
@@ -282,6 +290,7 @@ test("responsive CSS exposes a mobile section switcher and single-column layout 
   assert.match(css, /\.templateMobileSelector\s*\{\s*display:\s*grid/);
   assert.match(css, /grid-template-areas: "slots" "editor" "assets"/);
   assert.match(css, /@media \(max-width: 480px\)/);
+  assert.match(css, /@media \(max-width: 480px\)[\s\S]*\.templateMaterialDemand,[\s\S]*\.templateMaterialSignals\s*\{\s*grid-template-columns:\s*1fr;/);
   assert.match(css, /\.saveButtonCompact\s*\{\s*display:\s*none/);
   assert.match(css, /@media \(max-width: 480px\)[\s\S]*\.saveButtonFull\s*\{\s*display:\s*none;\s*\}[\s\S]*\.saveButtonCompact\s*\{\s*display:\s*inline;/);
   assert.match(css, /\.slotEditorBody\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;/s);
