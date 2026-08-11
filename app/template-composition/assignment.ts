@@ -7,7 +7,7 @@ import {
   type CompositionRatio,
   type CompositionSlotDefinition,
   type TemplateCompositionVariant,
-} from "./contract.js";
+} from "./contract";
 
 export const COMPOSITION_COST_SCALE = 1_000_000 as const;
 export const DEFAULT_SQUARE_PENALTY_UNITS = 80_000 as const;

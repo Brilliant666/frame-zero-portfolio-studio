@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "r
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
+import { getOrbitalPortalObjectPosition } from "./portal-focus";
 import styles from "./template.module.css";
 
 const ORBIT_RATIOS = getTemplateSlotRatios("orbital-portal");
@@ -17,6 +18,7 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
   const safeActiveIndex = filledOrbitSlots.length === 0 ? 0 : Math.min(activeIndex, filledOrbitSlots.length - 1);
   const activeSlot = filledOrbitSlots[safeActiveIndex] ?? orbitSlots[0];
   const activeWork = activeSlot.work;
+  const activePortalObjectPosition = activeWork ? getOrbitalPortalObjectPosition(activeWork) : undefined;
   const move = useCallback((direction: -1 | 1) => {
     if (filledOrbitSlots.length === 0) return;
     setActiveIndex((index) => (Math.min(index, filledOrbitSlots.length - 1) + direction + filledOrbitSlots.length) % filledOrbitSlots.length);
@@ -61,7 +63,8 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
                 width={activeWork.previewWidth}
                 height={activeWork.previewHeight}
                 alt={activeWork.subtitle}
-                style={{ objectPosition: activeWork.position }}
+                style={{ objectPosition: activePortalObjectPosition }}
+                data-portal-focus={activePortalObjectPosition === activeWork.position ? "source" : "portrait-safe-default"}
                 fetchPriority="high"
               />
             </button>

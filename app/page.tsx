@@ -1,22 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getClientVisiblePortfolioTitle } from "./client-visible-title";
-import { isTemplateId, normalizeSiteContent, siteConfig, type SiteContent, type TemplateId, type Work } from "./site-config";
+import { isTemplateId, normalizeSiteContent, siteConfig, type SiteContent, type TemplateId } from "./site-config";
 import { getTemplateCatalogItem } from "./templates/catalog";
 import Lightbox from "./templates/shared/lightbox";
 import { buildPhotoSlots } from "./templates/shared/photo-slots";
+import { useTemplateInteractions } from "./templates/shared/use-template-interactions";
 import TemplateRenderer from "./templates/template-renderer";
 
 export default function Home() {
   const [content, setContent] = useState<SiteContent>(siteConfig);
   const [previewTemplate, setPreviewTemplate] = useState<TemplateId | null>(null);
-  const [activeWork, setActiveWork] = useState<Work | null>(null);
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [booted, setBooted] = useState(false);
-  const lightboxRef = useRef<HTMLDivElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const isLightboxOpen = activeWork !== null;
   const templateId = previewTemplate ?? content.activeTemplate;
   const templatePlan = getTemplateCatalogItem(templateId);
   const works = useMemo(() => {
@@ -33,6 +29,15 @@ export default function Home() {
       templatePlan.slotRatios,
     ).flatMap((slot) => slot.work ? [{ ...slot.work, slotIndex: slot.index }] : []);
   }, [content.templateWorks, content.works, templateId, templatePlan.photoSlots, templatePlan.slotRatios]);
+  const {
+    activeWork,
+    closeButtonRef,
+    copiedKey,
+    copyText,
+    lightboxRef,
+    moveActiveWork,
+    setActiveWork,
+  } = useTemplateInteractions(works);
   const packages = useMemo(() => content.packages.filter((item) => item.enabled), [content.packages]);
   const bookingTemplate = useMemo(
     () => ["【约拍任务申请】", ...content.bookingFields].join("\n"),
@@ -63,7 +68,7 @@ export default function Home() {
       if (previewTimer !== undefined) window.clearTimeout(previewTimer);
       controller.abort();
     };
-  }, []);
+  }, [setActiveWork]);
 
   useEffect(() => {
     let skipBoot = window.matchMedia("(max-width: 560px)").matches;
@@ -90,84 +95,6 @@ export default function Home() {
 
     return () => window.clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    if (!isLightboxOpen) return;
-
-    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const focusTimer = window.setTimeout(() => closeButtonRef.current?.focus(), 0);
-
-    const moveWork = (direction: -1 | 1) => {
-      setActiveWork((current) => {
-        if (!current || works.length === 0) return current;
-        const index = works.findIndex((work) => work.code === current.code);
-        return works[(index + direction + works.length) % works.length];
-      });
-    };
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setActiveWork(null);
-      if (event.key === "ArrowLeft") moveWork(-1);
-      if (event.key === "ArrowRight") moveWork(1);
-
-      if (event.key === "Tab" && lightboxRef.current) {
-        const focusable = Array.from(
-          lightboxRef.current.querySelectorAll<HTMLElement>("button, [href], [tabindex]:not([tabindex='-1'])"),
-        ).filter((element) => !element.hasAttribute("disabled"));
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (!first || !last) return;
-
-        if (event.shiftKey && document.activeElement === first) {
-          event.preventDefault();
-          last.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
-          event.preventDefault();
-          first.focus();
-        }
-      }
-    };
-
-    document.body.classList.add("is-locked");
-    window.addEventListener("keydown", onKeyDown);
-
-    return () => {
-      window.clearTimeout(focusTimer);
-      document.body.classList.remove("is-locked");
-      window.removeEventListener("keydown", onKeyDown);
-      previouslyFocused?.focus();
-    };
-  }, [isLightboxOpen, works]);
-
-  const copyText = async (value: string, key: string) => {
-    let didCopy = false;
-
-    try {
-      await navigator.clipboard.writeText(value);
-      didCopy = true;
-    } catch {
-      const textarea = document.createElement("textarea");
-      textarea.value = value;
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      didCopy = document.execCommand("copy");
-      textarea.remove();
-    }
-
-    if (!didCopy) return;
-    setCopiedKey(key);
-    window.setTimeout(() => setCopiedKey(null), 2200);
-  };
-
-  const moveActiveWork = (direction: -1 | 1) => {
-    setActiveWork((current) => {
-      if (!current || works.length === 0) return current;
-      const index = works.findIndex((work) => work.code === current.code);
-      return works[(index + direction + works.length) % works.length];
-    });
-  };
 
   return (
     <>

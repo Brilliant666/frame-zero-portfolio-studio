@@ -2,9 +2,22 @@
 
 import { useState } from "react";
 import { isTemplateId, templateCatalog, type TemplateId } from "../../site-config";
+import {
+  getTemplateMaterialProfile,
+  type TemplateMaterialProfile,
+} from "../../templates/material-profiles";
 import { AdminSection } from "../admin-form";
 import { useAdmin } from "../admin-provider";
 import styles from "../admin-v2.module.css";
+import TemplateCompositionPreview from "./template-composition-preview";
+
+const mobileModeLabels: Record<TemplateMaterialProfile["mobileBehavior"]["mode"], string> = {
+  stack: "顺序堆叠",
+  "horizontal-rail": "横向轨道",
+  "pane-switch": "分栏切换",
+  "fit-grid": "完整网格",
+  "stage-roster": "主舞台 + 阵列",
+};
 
 export default function TemplateEditor() {
   const { content, savedContent, setContent } = useAdmin();
@@ -13,6 +26,7 @@ export default function TemplateEditor() {
   const savedTemplate = templateCatalog.find((template) => template.id === savedContent.activeTemplate);
   const draftTemplate = templateCatalog.find((template) => template.id === content.activeTemplate);
   const inspectedTemplate = templateCatalog.find((template) => template.id === inspectedId) ?? templateCatalog[0];
+  const materialProfile = getTemplateMaterialProfile(inspectedTemplate.id);
   const inspectedIsSaved = savedContent.activeTemplate === inspectedTemplate.id;
   const inspectedIsDraft = content.activeTemplate === inspectedTemplate.id;
 
@@ -135,6 +149,72 @@ export default function TemplateEditor() {
                 <div><dt>照片槽位</dt><dd>{inspectedTemplate.photoSlots} 个</dd></div>
                 <div><dt>比例计划</dt><dd>{inspectedTemplate.photoRatios}</dd></div>
               </dl>
+
+              <section
+                className={styles.templateMaterialProfile}
+                data-template-material-profile={materialProfile.templateId}
+                aria-labelledby={`template-material-title-${materialProfile.templateId}`}
+              >
+                <div className={styles.templateMaterialHeader}>
+                  <div>
+                    <span>MATERIAL PROFILE</span>
+                    <h4 id={`template-material-title-${materialProfile.templateId}`}>素材准备建议</h4>
+                  </div>
+                  <strong>建议 {materialProfile.recommendedPhotoCount} 张</strong>
+                </div>
+                <p>
+                  最少 {materialProfile.minimumUsefulPhotoCount} 张可形成有效页面；
+                  素材充足时最多使用 {materialProfile.maximumUsefulPhotoCount} 张。
+                </p>
+                <dl className={styles.templateMaterialDemand}>
+                  {([
+                    ["横图", materialProfile.landscapeDemand],
+                    ["竖图", materialProfile.portraitDemand],
+                    ["方图", materialProfile.squareDemand],
+                  ] as const).map(([label, demand]) => (
+                    <div key={label}>
+                      <dt>{label}</dt>
+                      <dd>{demand.recommended > 0 ? `建议 ${demand.recommended} 张` : "可选回退"}</dd>
+                      <small>{demand.minimum > 0 ? `至少 ${demand.minimum} 张 · ` : ""}{demand.note}</small>
+                    </div>
+                  ))}
+                </dl>
+                <div className={styles.templateMaterialSignals}>
+                  <div>
+                    <span>主视觉</span>
+                    <strong>{materialProfile.heroSlotCount > 0 ? `${materialProfile.heroSlotCount} 张` : "无固定主视觉"}</strong>
+                  </div>
+                  <div data-crop-pressure={materialProfile.cropPressure.level}>
+                    <span>裁切压力</span>
+                    <strong>{{ low: "低", medium: "中", high: "高" }[materialProfile.cropPressure.level]}</strong>
+                  </div>
+                  <div>
+                    <span>手机策略</span>
+                    <strong>{mobileModeLabels[materialProfile.mobileBehavior.mode]}</strong>
+                  </div>
+                </div>
+                <ul className={styles.templateMaterialNotes}>
+                  {materialProfile.visualPriority.map((priority) => (
+                    <li key={priority.slotIndex}>
+                      <strong>槽位 {String(priority.slotIndex + 1).padStart(2, "0")}</strong>
+                      <span>{priority.note}</span>
+                    </li>
+                  ))}
+                  <li><strong>裁切</strong><span>{materialProfile.cropPressure.note}</span></li>
+                  <li><strong>手机</strong><span>{materialProfile.mobileBehavior.note}</span></li>
+                  {materialProfile.secondaryPresentations.map((presentation) => (
+                    <li key={`${presentation.target}-${presentation.slotIndexes.join("-")}`}>
+                      <strong>二次展示 {presentation.target}</strong>
+                      <span>{presentation.note}</span>
+                    </li>
+                  ))}
+                  {materialProfile.optionalNotes.map((note) => (
+                    <li key={note}><strong>建议</strong><span>{note}</span></li>
+                  ))}
+                </ul>
+              </section>
+
+              <TemplateCompositionPreview templateId={inspectedTemplate.id} />
             </div>
 
             <div className={styles.templateDetailActions}>

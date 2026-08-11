@@ -75,8 +75,9 @@ test("the six editors retain ownership of every legacy SiteContent root field", 
 });
 
 test("template browsing, package disclosures, layout tools, and legacy controls keep their required semantics", async () => {
-  const [template, profile, packages, layout, advanced, resetDialog] = await Promise.all([
+  const [template, templatePreview, profile, packages, layout, advanced, resetDialog] = await Promise.all([
     source("app/admin/template/template-editor.tsx"),
+    source("app/admin/template/template-composition-preview.tsx"),
     source("app/admin/profile/profile-editor.tsx"),
     source("app/admin/packages/packages-editor.tsx"),
     source("app/admin/layout/layout-workspace.tsx"),
@@ -119,6 +120,31 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   assert.match(template, /查看候选详情不会修改草稿/);
   assert.match(template, /素材排版可能变化/);
   assert.match(template, /不会在这里静默删除/);
+  assert.match(template, /getTemplateMaterialProfile\(inspectedTemplate\.id\)/);
+  assert.match(template, /data-template-material-profile=\{materialProfile\.templateId\}/);
+  assert.match(template, /建议 \{materialProfile\.recommendedPhotoCount\} 张/);
+  for (const requirement of ["横图", "竖图", "方图", "主视觉", "裁切压力", "手机策略"]) {
+    assert.match(template, new RegExp(requirement));
+  }
+  assert.match(template, /<TemplateCompositionPreview templateId=\{inspectedTemplate\.id\}/);
+  assert.match(templatePreview, /planTemplateCompositionPreview/);
+  assert.match(templatePreview, /data-preview-readonly="true"/);
+  assert.match(templatePreview, /data-template-preview-apply=\{templateId\}/);
+  assert.match(templatePreview, /打开真实模板预览/);
+  assert.match(templatePreview, /<TemplateRenderer/);
+  assert.match(templatePreview, /应用此排版到草稿/);
+  assert.match(templatePreview, /仍需“保存全部修改”才会持久化/);
+  assert.match(templatePreview, /setContent\(\(current\) => applyTemplateCompositionPreview\(current, planned\)\)/);
+  assert.match(templatePreview, /activeTemplate: preview\.templateId/);
+  assert.match(templatePreview, /data-hero-missing=\{planned\.heroMissingCount\}/);
+  assert.match(templatePreview, /主视觉 \{planned\.heroMissingCount\} 张/);
+  assert.match(templatePreview, /<Lightbox/);
+  assert.doesNotMatch(templatePreview, /onOpenWork=\{\(\) => \{\}\}|method:\s*"PUT"|\/api\/site-content/);
+  const previewApplyHandler = templatePreview.slice(
+    templatePreview.indexOf("const applyPreview"),
+    templatePreview.indexOf("return (", templatePreview.indexOf("const applyPreview")),
+  );
+  assert.doesNotMatch(previewApplyHandler, /activeTemplate|chooseTemplate|fetch\(/);
 
   assert.match(profile, /<details className=\{styles\.optionalDisclosure\}/);
   assert.match(profile, /data-optional-brand-content="true"/);
@@ -188,7 +214,7 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(layout, /\["all", "landscape", "portrait", "square"\]/);
   assert.match(layout, /setLibraryMessage\("素材库还为空。"\)/);
   assert.match(layout, /使用上方“添加照片”或“添加文件夹”把作品加入素材库/);
-  assert.match(layout, /未能读取素材库；请先处理上方错误并重新读取/);
+  assert.match(layout, /未能读取素材库；请先处理上方错误并刷新素材库/);
   assert.doesNotMatch(layout, /先运行文件夹导入命令|重新执行导入命令/);
   assert.doesNotMatch(panel, /useAdmin|setContent|autoComposeTemplateWorks|\/api\/site-content|method:\s*"PUT"/);
   assert.match(panel, /data-photo-picker="files"/);
@@ -209,6 +235,12 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(panel, /查看失败详情/);
   assert.match(panel, /未能添加照片/);
   assert.match(panel, /aria-label="照片导入进度"/);
+  assert.match(panel, /刷新素材库（不重新扫描文件夹）/);
+  assert.match(panel, /导入当前快照；后续增删需再次选择该文件夹/);
+  assert.match(panel, /正在处理第 \$\{Math\.min\(progress\.processed \+ 1, progress\.total\)\} 张，共 \$\{progress\.total\} 张/);
+  assert.match(panel, /data-photo-import-selection=\{selectionMode\}/);
+  assert.match(panel, /一次性快照，不会持续同步/);
+  assert.doesNotMatch(panel, />重新读取</);
   assert.doesNotMatch(client, /JSON\.stringify|FileReader|readAsDataURL|webkitRelativePath/);
   assert.match(client, /body: file/);
   assert.match(client, /"content-type": "application\/octet-stream"/);
@@ -234,6 +266,7 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.doesNotMatch(viteConfig, /CLOUDFLARE_INCLUDE_PROCESS_ENV|NEXT_PUBLIC_|VITE_FRAME_ZERO/);
   assert.match(css, /\.libraryStats\s*\{/);
   assert.match(css, /\.photoImportProgress\s*,/);
+  assert.match(css, /\.photoImportChoiceNotes\s*\{/);
   assert.match(css, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
 });
 
@@ -265,6 +298,11 @@ test("responsive CSS exposes a mobile section switcher and single-column layout 
   assert.match(css, /\.templateWorkbench\s*\{[^}]*grid-template-columns:\s*minmax\(13rem, 16rem\) minmax\(0, 1fr\)/s);
   assert.match(css, /\.templateList\s*\{/);
   assert.match(css, /\.templateDetail\s*\{/);
+  assert.match(css, /\.templateMaterialProfile\s*\{/);
+  assert.match(css, /\.templateMaterialDemand\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+  assert.match(css, /\.templateCompositionPreview\s*\{/);
+  assert.match(css, /\.templatePreviewSlotMap\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+  assert.match(css, /\.templatePreviewDialog\s*\{/);
   assert.doesNotMatch(css, /\.templateGrid|\.templateCard\b/);
   assert.match(css, /@media \(max-width: 1280px\) and \(min-width: 761px\)/);
   assert.match(css, /@media \(max-width: 960px\)\s*\{[^}]*\.packageCardHeader\s*\{[^}]*grid-template-columns:\s*1fr/s);
@@ -275,6 +313,8 @@ test("responsive CSS exposes a mobile section switcher and single-column layout 
   assert.match(css, /\.templateMobileSelector\s*\{\s*display:\s*grid/);
   assert.match(css, /grid-template-areas: "slots" "editor" "assets"/);
   assert.match(css, /@media \(max-width: 480px\)/);
+  assert.match(css, /@media \(max-width: 480px\)[\s\S]*\.templateMaterialDemand,[\s\S]*\.templateMaterialSignals\s*\{\s*grid-template-columns:\s*1fr;/);
+  assert.match(css, /@media \(max-width: 480px\)[\s\S]*\.templatePreviewSlotMap\s*\{\s*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.saveButtonCompact\s*\{\s*display:\s*none/);
   assert.match(css, /@media \(max-width: 480px\)[\s\S]*\.saveButtonFull\s*\{\s*display:\s*none;\s*\}[\s\S]*\.saveButtonCompact\s*\{\s*display:\s*inline;/);
   assert.match(css, /\.slotEditorBody\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;/s);

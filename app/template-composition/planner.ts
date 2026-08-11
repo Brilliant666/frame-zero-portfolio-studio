@@ -2,7 +2,7 @@ import {
   validateCompositionVariantRegistry,
   type RegistryValidationError,
   type TemplateCompositionVariant,
-} from "./contract.js";
+} from "./contract";
 import {
   assignComposition,
   type AssignmentInputIssue,
@@ -11,7 +11,7 @@ import {
   type CompositionPlacementIntent,
   type CompositionSlotAssignment,
   type LockedConflict,
-} from "./assignment.js";
+} from "./assignment";
 
 export const COMPOSITION_PLANNER_MODES = Object.freeze([
   "KEEP_CURRENT_VARIANT",

@@ -246,6 +246,13 @@ present, and the material grid refreshes automatically when the batch finishes.
 Adding material updates the local Photo Library immediately; it does not save or
 change the shared SiteContent draft and it never runs automatic layout.
 
+**添加照片** is a one-time choice of one or more files. **添加文件夹** imports a
+one-time snapshot, including supported files in nested folders; later changes to
+that computer folder are not watched or rescanned automatically. **刷新素材库**
+only reloads the generated manifest. A future remembered-source workflow must use
+a trusted local companion and keep any absolute folder path in local-only state;
+it remains `LOCAL_SOURCE_BINDING_FOLLOWUP`.
+
 The local service streams each selected file through a temporary directory into
 the same importer used by the command line. The importer deduplicates identical
 files by SHA-256, applies EXIF orientation, strips image metadata, and creates
@@ -290,7 +297,7 @@ prevents an accidental or retargeted link from receiving generated files.
 The executable import controls are available only from the loopback Admin. A
 hosted Admin can still browse an existing manifest, but it does not call a
 visitor's `127.0.0.1`; remote object storage is a separate future scope. Manual
-**重新读取** and `npm run photos:serve` remain available for diagnostics. The
+**刷新素材库** and `npm run photos:serve` remain available for diagnostics. The
 standalone service defaults to port 3002 and can use another diagnostic port,
 for example `npm run photos:serve -- --port 3003`; normal `npm run dev` always
 uses automatic loopback port discovery.

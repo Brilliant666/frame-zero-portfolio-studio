@@ -83,7 +83,7 @@ test("the example is safe but deliberately unusable until its immutable release 
 });
 
 test("the minimal Compose topology contains only hardened App and Caddy services", async () => {
-  const compose = await readFile(path.join(projectRoot, "deploy", "compose.yaml"), "utf8");
+  const compose = (await readFile(path.join(projectRoot, "deploy", "compose.yaml"), "utf8")).replaceAll("\r\n", "\n");
   const services = compose.match(/^services:\r?\n([\s\S]+?)^networks:/m)?.[1] ?? "";
   assert.match(compose, /^  app:\r?$/m);
   assert.match(compose, /^  caddy:\r?$/m);

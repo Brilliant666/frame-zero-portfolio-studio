@@ -1,7 +1,7 @@
 # Portfolio Platform Current Status
 
 > - Updated: 2026-08-11
-> - Baseline: `main@b653c949f80ead050c7e36c2457bc39214ca7a14`
+> - Baseline: `main@e40c7514efeb50a66a7836eb41272f682b395a4c`
 
 ```text
 Current phase: SELF_HOSTED_V1
@@ -9,6 +9,17 @@ Current stage: STAGE_A2_DEPLOYMENT_BOOTSTRAP
 Stage status: IN_PROGRESS
 V1 status: NOT_LAUNCHED
 Online status: NOT_ONLINE_PREVIEW
+Engineering launch line: FROZEN_AT_REPO_SIDE_BOOTSTRAP_READY
+Repo-side bootstrap ready: ACCEPTED
+Deployment bootstrap ready: NOT_REACHED
+Current active priority: PRE_LAUNCH_PRODUCT_POLISH
+Current product priority: LOCAL_PRODUCT_EXPERIENCE
+Product experience foundation: ACCEPTED
+Automated visual QA baseline: ACCEPTED
+Pre-launch product polish: IN_PROGRESS
+Human-directed product polish: NEXT
+Eleven-template human visual approval: PENDING
+External operations: NOT_AUTHORIZED
 Completed milestone: STANDARD_NEXT_NODE_PARITY
 Next milestone: DEPLOYMENT_BOOTSTRAP_READY
 Next online milestone: DEPLOYMENT_BOOTSTRAP_READY
@@ -106,5 +117,22 @@ therefore stays `IN_PROGRESS`, the online status stays `NOT_ONLINE_PREVIEW`,
 and no external operation is authorized before the current stop gate is
 explicitly cleared.
 
+Human priority has temporarily frozen the engineering launch line at
+`REPO_SIDE_BOOTSTRAP_READY` and activated `PRE_LAUNCH_PRODUCT_POLISH`. This is
+a local product-experience lane, not a new architecture Stage. Work proceeds
+through photo import, template material guidance, read-only real-library
+composition previews, explicit layout application, and eleven-template visual
+QA. It does not authorize target-server preflight, deployment, Stage B,
+PostgreSQL, production Auth, hosted upload, DNS, TLS, or production data.
+
+Human review has accepted the product-experience foundation and its automated
+visual-QA baseline. That acceptance does not close
+`PRE_LAUNCH_PRODUCT_POLISH`: human-directed import, profile, preview, apply,
+spacing, crop, hierarchy, typography, and mobile polish remains the next work.
+No formal template has `HUMAN_APPROVED` status, and eleven-template human visual
+approval remains pending.
+
 See [stage-a2-deployment-bootstrap.md](stage-a2-deployment-bootstrap.md) for
 the current Definition of Done matrix and explicit external-operation boundary.
+See [pre-launch-product-polish.md](pre-launch-product-polish.md) for the active
+product-experience batch and its architecture boundaries.

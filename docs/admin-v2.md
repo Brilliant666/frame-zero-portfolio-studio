@@ -37,7 +37,8 @@ legacy `SiteContent`、`/api/site-content` 和 `site_settings(id = 1)` 行为不
 - 每个套餐的主页标题始终以可编辑输入显示，其他套餐字段继续使用有文字状态的 disclosure；旧版作品只在高级设置中按需展开。
 - `npm run dev` 先在 `127.0.0.1` 的系统分配空闲端口启动独立素材导入服务，等待可信 IPC ready 后再把实际 origin 仅注入 Admin server；浏览器选择的单张、多张或文件夹照片仍逐张流式交给现有 Sharp importer，用户无需管理 companion port，整个合法 manifest 仍是自动排版候选集，不增加 approved pool。
 - 单文件上限为 200 MiB；服务请求和同一项目的 manifest 写入均串行，临时文件在成功、失败或中断后清理。
-- 导入照片立即更新本地 Photo Library，但不修改 SiteContent draft、不触发自动排版，也不需要点击“保存全部修改”；导入结束只重新读取 manifest。
+- “添加照片”是本次单张或多张选择；“添加文件夹”是包含嵌套目录的本次快照，后续文件变化不会自动同步。普通浏览器不会提供可安全持久化的绝对目录路径，记住并重扫来源仍是 `LOCAL_SOURCE_BINDING_FOLLOWUP`。
+- 导入照片立即更新本地 Photo Library，但不修改 SiteContent draft、不触发自动排版，也不需要点击“保存全部修改”；导入结束自动刷新 manifest。“刷新素材库”也只重新读取 manifest，不会扫描电脑文件夹。
 - 远程 Admin 不提供可执行的本机导入控件；本轮不增加云端素材 API、对象存储、删除能力或 repository。
 - 恢复示例数据必须通过原生 dialog 二次确认；确认只替换当前 draft，不立即写数据库。
 - 手机端可以访问全部内容和基础操作；专业级三栏排版仍以桌面端效率为优先。
