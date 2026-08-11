@@ -28,6 +28,15 @@ function photo(name, contents = name) {
   return Object.assign(new Blob([contents]), { name });
 }
 
+function folderPhoto(name, webkitRelativePath, contents = name) {
+  const file = photo(name, contents);
+  Object.defineProperty(file, "webkitRelativePath", {
+    configurable: true,
+    value: webkitRelativePath,
+  });
+  return file;
+}
+
 function jsonResponse(value, status = 200) {
   return new Response(JSON.stringify(value), {
     status,
@@ -57,7 +66,7 @@ test("the browser and loopback service share limits without a fixed client origi
   assert.equal(requestedUrl, `${configuredOrigin}/health`);
 });
 
-test("the browser selection accepts the importer whitelist without reading folder paths", async (t) => {
+test("file selection accepts the importer whitelist without inventing folder metadata", async (t) => {
   const {
     getLocalPhotoImportExtension,
     localPhotoImportExtensions,
@@ -69,24 +78,78 @@ test("the browser selection accepts the importer whitelist without reading folde
   assert.equal(getLocalPhotoImportExtension("PORTRAIT.JPEG"), ".jpeg");
   assert.equal(getLocalPhotoImportExtension("camera.cr3"), null);
 
-  const nested = photo("portrait.jpg");
-  Object.defineProperty(nested, "webkitRelativePath", {
-    get() { throw new Error("the temporary folder path must not be inspected"); },
-  });
+  const portrait = photo("portrait.jpg");
   const selection = selectLocalPhotoImportFiles({
-    0: nested,
+    0: portrait,
     1: photo("notes.txt"),
     length: 2,
   });
-  assert.deepEqual(selection.accepted, [nested]);
+  assert.deepEqual(selection.accepted, [portrait]);
   assert.equal(selection.ignored, 1);
+  assert.equal(selection.nestedFileCount, 0);
+  assert.equal(selection.uniqueSubfolderCount, 0);
+});
+
+test("folder preflight counts accepted nested photos and unique subfolders", async (t) => {
+  const { selectLocalPhotoImportFiles } = await importPhotoImportClient(t);
+  const root = folderPhoto("cover.jpg", "Selected/cover.jpg");
+  const secondLevel = folderPhoto("portrait.png", "Selected/portraits/portrait.png");
+  const sameSubfolder = folderPhoto("detail.jpeg", "Selected/portraits/detail.jpeg");
+  const thirdLevel = folderPhoto("scene.webp", "Selected/portraits/series/scene.webp");
+  const sibling = folderPhoto("event.avif", "Selected/events/event.avif");
+  const ignored = folderPhoto("notes.txt", "Selected/portraits/notes.txt");
+
+  const selection = selectLocalPhotoImportFiles([
+    root,
+    secondLevel,
+    sameSubfolder,
+    thirdLevel,
+    sibling,
+    ignored,
+  ]);
+
+  assert.deepEqual(selection.accepted, [root, secondLevel, sameSubfolder, thirdLevel, sibling]);
+  assert.equal(selection.ignored, 1);
+  assert.equal(selection.nestedFileCount, 4);
+  assert.equal(selection.uniqueSubfolderCount, 3);
+  assert.deepEqual(Object.keys(selection).sort(), [
+    "accepted",
+    "ignored",
+    "nestedFileCount",
+    "uniqueSubfolderCount",
+  ]);
+});
+
+test("folder preflight ignores untrusted relative paths without rejecting photo bytes", async (t) => {
+  const { selectLocalPhotoImportFiles } = await importPhotoImportClient(t);
+  const unsafe = [
+    folderPhoto("absolute.jpg", "/private/absolute.jpg"),
+    folderPhoto("drive.jpg", ["C:", "private", "drive.jpg"].join("/")),
+    folderPhoto("escape.jpg", "Selected/../escape.jpg"),
+    folderPhoto("dot.jpg", "Selected/./dot.jpg"),
+    folderPhoto("windows.jpg", "Selected\\private\\windows.jpg"),
+    folderPhoto("empty.jpg", "Selected//empty.jpg"),
+    folderPhoto("mismatch.jpg", "Selected/private/other.jpg"),
+  ];
+  const throwing = photo("throwing.jpg");
+  Object.defineProperty(throwing, "webkitRelativePath", {
+    get() { throw new Error("synthetic hostile getter"); },
+  });
+  unsafe.push(throwing);
+
+  const selection = selectLocalPhotoImportFiles(unsafe);
+
+  assert.deepEqual(selection.accepted, unsafe);
+  assert.equal(selection.ignored, 0);
+  assert.equal(selection.nestedFileCount, 0);
+  assert.equal(selection.uniqueSubfolderCount, 0);
 });
 
 test("a batch performs one raw sequential request per photo and refreshes once", async (t) => {
   const { runLocalPhotoImport } = await importPhotoImportClient(t);
   const files = [
-    photo("private-name.jpg", "first"),
-    photo("duplicate.PNG", "second"),
+    folderPhoto("private-name.jpg", "Private folder/people/private-name.jpg", "first"),
+    folderPhoto("duplicate.PNG", "Private folder/duplicate.PNG", "second"),
     photo("broken.heic", "third"),
   ];
   const requests = [];
@@ -135,6 +198,7 @@ test("a batch performs one raw sequential request per photo and refreshes once",
     libraryTotal: 19,
     refreshFailed: false,
   });
+  assert.doesNotMatch(JSON.stringify(result), /Private folder|people|webkitRelativePath/i);
 
   requests.forEach(({ url, init }, index) => {
     assert.equal(url, `${configuredOrigin}/import`);
@@ -144,7 +208,7 @@ test("a batch performs one raw sequential request per photo and refreshes once",
     assert.equal(init.headers["x-frame-zero-local-import"], "1");
     assert.equal(init.headers["x-frame-zero-photo-extension"], [".jpg", ".png", ".heic"][index]);
     const transmittedMetadata = JSON.stringify({ url, headers: init.headers });
-    assert.doesNotMatch(transmittedMetadata, /private-name|duplicate|broken|webkitRelativePath|base64/i);
+    assert.doesNotMatch(transmittedMetadata, /private-name|duplicate|broken|Private folder|people|webkitRelativePath|base64/i);
   });
 });
 

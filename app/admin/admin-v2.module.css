@@ -806,6 +806,58 @@
 .photoImportChoiceNotes strong { color: var(--admin-v2-ink); }
 .photoImportChoiceNotes small { color: var(--admin-v2-muted); font-size: .66rem; font-weight: 500; line-height: 1.4; }
 .photoImportHint { margin: 0; color: var(--admin-v2-muted); font-size: .7rem; line-height: 1.5; }
+.photoImportPreflight {
+  display: grid;
+  gap: .75rem;
+  padding: .85rem;
+  border: 1px solid #c96d31;
+  background: #fffaf4;
+}
+.photoImportPreflightHeader { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
+.photoImportPreflightHeader > div { display: grid; min-width: 0; gap: .2rem; }
+.photoImportPreflightHeader strong { font-size: .82rem; }
+.photoImportPreflightHeader p,
+.photoImportPreflightNote { margin: 0; color: var(--admin-v2-muted); font-size: .7rem; line-height: 1.5; }
+.photoImportPreflightHeader > span {
+  flex: 0 0 auto;
+  padding: .25rem .4rem;
+  border: 1px solid #e2b992;
+  background: #fff;
+  font: 700 .62rem var(--font-geist-mono), monospace;
+  text-transform: uppercase;
+}
+.photoImportPreflightStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  border: 1px solid var(--admin-v2-line);
+  background: #fff;
+}
+.photoImportPreflightStats > div { display: grid; gap: .1rem; padding: .55rem .65rem; border-right: 1px solid var(--admin-v2-line); }
+.photoImportPreflightStats > div:last-child { border-right: 0; }
+.photoImportPreflightStats dt { color: var(--admin-v2-muted); font: 700 .62rem var(--font-geist-mono), monospace; }
+.photoImportPreflightStats dd { margin: 0; font: 700 .92rem var(--font-geist-mono), monospace; }
+.photoImportPreviewGrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .45rem; }
+.photoImportPreviewItem { display: grid; min-width: 0; gap: .28rem; margin: 0; }
+.photoImportPreviewItem img,
+.photoImportPreviewFallback {
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  border: 1px solid var(--admin-v2-line);
+  background: #eee9e3;
+}
+.photoImportPreviewItem img { display: block; object-fit: cover; }
+.photoImportPreviewFallback { display: grid; place-items: center; padding: .35rem; color: var(--admin-v2-muted); font-size: .62rem; text-align: center; }
+.photoImportPreviewItem figcaption {
+  overflow: hidden;
+  color: var(--admin-v2-muted);
+  font: 600 .62rem var(--font-geist-mono), monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.photoImportPreviewLimit { color: var(--admin-v2-muted); font-size: .66rem; line-height: 1.45; }
+.photoImportPreflightActions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(0, 1.35fr); gap: .45rem; }
+.photoImportPreflightActions button:last-child { border-color: var(--admin-v2-ink); background: var(--admin-v2-ink); color: #fff; }
 .hostedImportNotice { display: grid; gap: .2rem; padding: .75rem .85rem; border-left: 3px solid #777069; background: #f5f2ee; }
 .hostedImportNotice strong { font-size: .78rem; }
 .hostedImportNotice p { margin: 0; color: var(--admin-v2-muted); font-size: .72rem; }
@@ -834,6 +886,7 @@
 .libraryImportHeader > button,
 .photoImportActions button,
 .photoImportChoiceNotes button,
+.photoImportPreflightActions button,
 .layoutActions button,
 .slotControls button,
 .libraryFilters button,
@@ -849,6 +902,7 @@
 .libraryImportHeader > button:disabled,
 .photoImportActions button:disabled,
 .photoImportChoiceNotes button:disabled,
+.photoImportPreflightActions button:disabled,
 .layoutActions button:disabled,
 .slotControls button:disabled,
 .assetPick:disabled,
@@ -1087,6 +1141,7 @@
 .libraryImportHeader > button:focus-visible,
 .photoImportActions button:focus-visible,
 .photoImportChoiceNotes button:focus-visible,
+.photoImportPreflightActions button:focus-visible,
 .photoImportResult summary:focus-visible,
 .layoutActions button:focus-visible,
 .slotControls button:focus-visible,
@@ -1187,6 +1242,8 @@
   .dangerZone,
   .dangerHeader { display: grid; grid-template-columns: 1fr; }
   .dangerButton { width: 100%; }
+  .photoImportPreviewGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .photoImportPreflightActions { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {
@@ -1241,6 +1298,12 @@
   .focusRanges,
   .libraryToolbar { grid-template-columns: 1fr; }
   .photoImportChoiceNotes { grid-template-columns: 1fr; }
+  .photoImportPreflightHeader { display: grid; }
+  .photoImportPreflightHeader > span { width: fit-content; }
+  .photoImportPreflightStats { grid-template-columns: 1fr; }
+  .photoImportPreflightStats > div { border-right: 0; border-bottom: 1px solid var(--admin-v2-line); }
+  .photoImportPreflightStats > div:last-child { border-bottom: 0; }
+  .photoImportPreviewGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .slotControls { grid-template-columns: 1fr; }
   .slotLock { min-height: 2.75rem; }
   .libraryFilters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }

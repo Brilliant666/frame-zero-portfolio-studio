@@ -99,14 +99,14 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
     if (section === "layout") {
       assert.match(html, /data-local-photo-import="missing"/);
       assert.match(html, /本地照片导入服务未启动/);
-      assert.doesNotMatch(html, /data-add-materials-trigger=|data-photo-picker=|选择照片|选择文件夹|高级 \/ 命令行导入|photos:import/);
+      assert.doesNotMatch(html, /data-add-materials-trigger=|data-photo-picker=|data-photo-import-preflight=|选择照片|选择文件夹|确认导入|重新选择|高级 \/ 命令行导入|photos:import/);
       assert.match(html, /aria-label="素材库画幅统计"/);
     }
     assert.doesNotMatch(html, /admin-section-placeholder/);
   });
 }
 
-test("local Admin renders one add-materials entry with photo and folder choices", async () => {
+test("local Admin renders one add-materials entry that stages photo and folder choices", async () => {
   const { response, html } = await renderAdmin(
     "/admin/layout",
     undefined,
@@ -121,10 +121,14 @@ test("local Admin renders one add-materials entry with photo and folder choices"
   assert.equal(html.match(/data-photo-picker="files"/g)?.length, 1);
   assert.equal(html.match(/data-photo-picker="folder"/g)?.length, 1);
   const photoPickerTag = html.match(/<input[^>]*data-photo-picker="files"[^>]*>/)?.[0] ?? "";
+  const folderPickerTag = html.match(/<input[^>]*data-photo-picker="folder"[^>]*>/)?.[0] ?? "";
+  assert.match(photoPickerTag, /\saccept="[^"]+"/);
   assert.doesNotMatch(photoPickerTag, /webkitdirectory/);
+  assert.doesNotMatch(folderPickerTag, /\saccept=/);
   assert.match(html, /data-photo-picker="folder"[^>]*webkitdirectory=""|webkitdirectory=""[^>]*data-photo-picker="folder"/);
   assert.match(html, /选择照片/);
   assert.match(html, /选择文件夹/);
+  assert.doesNotMatch(html, /data-photo-import-preflight=|确认导入|重新选择/);
   assert.doesNotMatch(html, /高级 \/ 命令行导入|photos:import/);
   assert.match(html, /刷新素材列表（不重新扫描文件夹）/);
   assert.match(html, /一次性读取/);
@@ -155,7 +159,7 @@ test("local Admin rejects malformed or non-loopback import origins", async (t) =
       const { response, html } = await renderAdmin("/admin/layout", undefined, origin);
       assert.equal(response.status, 200);
       assert.match(html, /data-local-photo-import="missing"/);
-      assert.doesNotMatch(html, /data-add-materials-trigger=|data-photo-picker=|选择照片|选择文件夹|高级 \/ 命令行导入|photos:import/);
+      assert.doesNotMatch(html, /data-add-materials-trigger=|data-photo-picker=|data-photo-import-preflight=|选择照片|选择文件夹|确认导入|重新选择|高级 \/ 命令行导入|photos:import/);
     });
   }
 });
@@ -168,8 +172,8 @@ test("hosted Admin renders no executable local photo ingest controls", async () 
   assert.equal(response.status, 200);
   assert.match(html, /data-local-photo-import="hosted"/);
   assert.match(html, /本地照片导入仅在本机编辑模式可用/);
-  assert.doesNotMatch(html, /data-add-materials-trigger=|data-photo-picker=/);
-  assert.doesNotMatch(html, /选择照片|选择文件夹|高级 \/ 命令行导入|photos:import/);
+  assert.doesNotMatch(html, /data-add-materials-trigger=|data-photo-picker=|data-photo-import-preflight=/);
+  assert.doesNotMatch(html, /选择照片|选择文件夹|确认导入|重新选择|高级 \/ 命令行导入|photos:import/);
   assert.match(html, /aria-label="保存全部修改"/);
 });
 
@@ -180,5 +184,5 @@ test("a local-looking hosted hostname cannot enable the loopback controls", asyn
   }, "http://127.0.0.1:43127");
   assert.equal(response.status, 200);
   assert.match(html, /data-local-photo-import="hosted"/);
-  assert.doesNotMatch(html, /data-add-materials-trigger=|data-photo-picker=|选择照片|选择文件夹|高级 \/ 命令行导入|photos:import/);
+  assert.doesNotMatch(html, /data-add-materials-trigger=|data-photo-picker=|data-photo-import-preflight=|选择照片|选择文件夹|确认导入|重新选择|高级 \/ 命令行导入|photos:import/);
 });

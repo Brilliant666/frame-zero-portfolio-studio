@@ -246,11 +246,19 @@ nested folders. A folder is only a batch source: every accepted item becomes a
 photograph in the same local material library, and no folder object or source
 path becomes product data.
 
-Selected photographs are processed one at a time, progress remains visible,
-duplicate content is reported as already present, and the material grid refreshes
-automatically when the batch finishes. Adding material updates the local Photo
-Library immediately; it does not save or change the shared SiteContent draft and
-it never runs automatic layout.
+Both choices enter the same Web `FileList` batch path. Folder selection is a
+capability enhancement on that path, not a separate importer or a browser-name
+branch. After selection, Admin first shows the pending batch for review. Nothing
+is imported until the user confirms it; cancelling or replacing the pending
+selection leaves the library unchanged.
+
+After confirmation, accepted photographs are processed one at a time, progress
+remains visible, and the material grid refreshes automatically when the batch
+finishes. The result summary distinguishes **本次新增**, **重复跳过**, and
+**素材库总计**. Duplicate means identical file content, so a differently named
+copy or the same photograph selected through another folder can be skipped.
+Adding material updates the local Photo Library; it does not save or change the
+shared SiteContent draft and it never runs automatic layout.
 
 The folder selection imports a one-time snapshot. Later changes to that computer
 folder are not watched or rescanned automatically, so select the folder again to
@@ -270,7 +278,8 @@ Advanced and command-line importing are not product workflows. Existing
 repository-level entry points, linked-output adoption, automatic interrupted
 write recovery, and stale-lock recovery remain internal compatibility and
 maintenance capabilities. HR-001 did not remove or replace the importer core;
-HR-002 reuses that same core for both photograph and folder selection.
+HR-002 reuses that same core for both photograph and folder selection, and
+HR-003 adds review and explicit confirmation before either batch starts.
 
 Generated files stay local in `public/photos/library/`. The browser-safe index is
 `public/photos/library-manifest.json`; it contains stable asset IDs, aspect ratios,

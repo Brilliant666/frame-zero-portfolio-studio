@@ -229,6 +229,16 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(panel, /data-photo-picker="files"/);
   assert.match(panel, /data-photo-picker="folder"/);
   assert.equal(panel.match(/data-photo-picker=/g)?.length, 2);
+  const photoPickerSource = panel.slice(
+    panel.indexOf('data-photo-picker="files"'),
+    panel.indexOf("/>", panel.indexOf('data-photo-picker="files"')),
+  );
+  const folderPickerSource = panel.slice(
+    panel.indexOf('data-photo-picker="folder"'),
+    panel.indexOf("/>", panel.indexOf('data-photo-picker="folder"')),
+  );
+  assert.match(photoPickerSource, /accept=\{localPhotoImportAccept\}/);
+  assert.doesNotMatch(folderPickerSource, /\baccept=/);
   assert.match(panel, /选择照片/);
   assert.match(panel, /选择文件夹/);
   assert.equal(panel.match(/\bmultiple\b/g)?.length, 2);
@@ -237,6 +247,39 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(panel, /handleSelection\(event, "folder"\)/);
   assert.equal(panel.match(/aria-hidden="true"/g)?.length, 2);
   assert.equal(panel.match(/tabIndex=\{-1\}/g)?.length, 2);
+  const selectionHandler = panel.match(/const handleSelection = \([\s\S]*?^  \};/m)?.[0] ?? "";
+  const confirmationHandler = panel.match(/const confirmPendingImport = [\s\S]*?^  \};/m)?.[0] ?? "";
+  const reselectHandler = panel.match(/const reselectPendingImport = [\s\S]*?^  \};/m)?.[0] ?? "";
+  assert.notEqual(selectionHandler, "", "photo selection must have an explicit handler");
+  assert.match(selectionHandler, /setPendingBatch/);
+  assert.match(selectionHandler, /if \(files\.length === 0\)/);
+  assert.match(selectionHandler, /未收到文件/);
+  assert.match(selectionHandler, /mode === "folder"/);
+  assert.doesNotMatch(selectionHandler, /beginImport\(|runLocalPhotoImport\(|confirmPendingImport\(/);
+  assert.notEqual(confirmationHandler, "", "pending selection must require explicit confirmation");
+  assert.match(confirmationHandler, /beginImport\(/);
+  assert.match(confirmationHandler, /pendingBatch/);
+  assert.notEqual(reselectHandler, "", "reselect must preserve the pending batch if the chooser is cancelled");
+  assert.doesNotMatch(reselectHandler, /setPendingBatch\(null\)/);
+  assert.match(panel, /URL\.revokeObjectURL/);
+  assert.match(panel, /function createPhotoPreviewUrl/);
+  assert.match(panel, /const photoImportPreviewLimit = 24/);
+  assert.match(panel, /data-photo-import-preflight="true"/);
+  assert.match(panel, /data-photo-import-preview-item/);
+  assert.match(panel, /pendingBatch\.files\.length/);
+  assert.match(panel, /pendingBatch\.ignored/);
+  assert.match(panel, /pendingBatch\.subdirectoryCount/);
+  assert.match(panel, /pendingBatch\.files\.slice\(0, photoImportPreviewLimit\)/);
+  assert.match(panel, /待处理/);
+  assert.match(panel, /忽略/);
+  assert.match(panel, /子目录/);
+  assert.match(panel, /最多(?:显示|预览)?\s*24 张/);
+  assert.match(panel, /确认导入/);
+  assert.match(panel, /取消/);
+  assert.match(panel, /重新选择/);
+  assert.match(panel, /onClick=\{confirmPendingImport\}/);
+  assert.match(panel, /onClick=\{cancelPendingImport\}/);
+  assert.match(panel, /onClick=\{reselectPendingImport\}/);
   assert.match(panel, /本地照片导入仅在本机编辑模式可用/);
   assert.match(panel, /本地照片导入服务未启动/);
   assert.match(panel, /请使用 npm run dev 启动完整编辑环境/);
@@ -244,8 +287,10 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(panel, /本地照片导入服务暂时不可用/);
   assert.match(panel, /导入地址已配置，但当前无法连接本地照片导入服务/);
   assert.doesNotMatch(panel, /高级 \/ 命令行导入|photos:import/);
-  assert.match(panel, /新增 \{result\.added\}/);
-  assert.match(panel, /已存在 \{result\.alreadyExists\}/);
+  assert.match(panel, /本次新增 \{result\.added\}/);
+  assert.match(panel, /重复跳过 \{result\.alreadyExists\}/);
+  assert.match(panel, /素材库总计 \$\{result\.libraryTotal\} 张/);
+  assert.doesNotMatch(panel, /已存在/);
   assert.match(panel, /查看失败详情/);
   assert.match(panel, /aria-label="照片导入进度"/);
   assert.match(panel, /刷新素材列表（不重新扫描文件夹）/);
@@ -258,7 +303,10 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(panel, /data-photo-import-selection=\{selectionMode\}/);
   assert.match(panel, /一次性快照，不会持续同步/);
   assert.doesNotMatch(panel, />重新读取</);
-  assert.doesNotMatch(client, /JSON\.stringify|FileReader|readAsDataURL|webkitRelativePath/);
+  assert.doesNotMatch(client, /JSON\.stringify|FileReader|readAsDataURL/);
+  assert.match(client, /readSafeLocalRelativePath/);
+  const transportClient = client.slice(client.indexOf("export async function runLocalPhotoImport"));
+  assert.doesNotMatch(transportClient, /webkitRelativePath/);
   assert.match(client, /body: file/);
   assert.match(client, /"content-type": "application\/octet-stream"/);
   assert.match(client, /"x-frame-zero-local-import": "1"/);

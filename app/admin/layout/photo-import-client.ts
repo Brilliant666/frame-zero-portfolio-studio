@@ -14,7 +14,10 @@ export const localPhotoImportAccept = localPhotoImportExtensions.join(",");
 
 const supportedExtensions = new Set<string>(localPhotoImportExtensions);
 
-export type LocalPhotoImportFile = Blob & Readonly<{ name: string }>;
+export type LocalPhotoImportFile = Blob & Readonly<{
+  name: string;
+  webkitRelativePath?: string;
+}>;
 
 export type PhotoImportFailure = Readonly<{
   index: number;
@@ -57,16 +60,61 @@ export function getLocalPhotoImportExtension(name: string) {
   return supportedExtensions.has(extension) ? extension : null;
 }
 
+function readSafeLocalRelativePath(file: LocalPhotoImportFile) {
+  let relativePath: unknown;
+  try {
+    relativePath = file.webkitRelativePath;
+  } catch {
+    return null;
+  }
+
+  if (
+    typeof relativePath !== "string"
+    || relativePath.length === 0
+    || relativePath.startsWith("/")
+    || relativePath.includes("\\")
+    || /[\0-\x1f\x7f]/.test(relativePath)
+    || /^[a-z]:/i.test(relativePath)
+  ) return null;
+
+  const segments = relativePath.split("/");
+  if (
+    segments.length < 2
+    || segments.some((segment) => segment.length === 0 || segment === "." || segment === "..")
+    || segments.at(-1) !== file.name
+  ) return null;
+
+  return segments;
+}
+
 export function selectLocalPhotoImportFiles(files: ArrayLike<LocalPhotoImportFile>) {
   const accepted: LocalPhotoImportFile[] = [];
+  const subfolders = new Set<string>();
+  let nestedFileCount = 0;
   let ignored = 0;
 
   for (const file of Array.from(files)) {
-    if (getLocalPhotoImportExtension(file.name)) accepted.push(file);
-    else ignored += 1;
+    if (!getLocalPhotoImportExtension(file.name)) {
+      ignored += 1;
+      continue;
+    }
+
+    accepted.push(file);
+    const relativePath = readSafeLocalRelativePath(file);
+    if (!relativePath || relativePath.length < 3) continue;
+
+    nestedFileCount += 1;
+    for (let depth = 2; depth < relativePath.length; depth += 1) {
+      subfolders.add(relativePath.slice(0, depth).join("/"));
+    }
   }
 
-  return { accepted, ignored };
+  return {
+    accepted,
+    ignored,
+    nestedFileCount,
+    uniqueSubfolderCount: subfolders.size,
+  };
 }
 
 function emptyProgress(total: number): PhotoImportProgress {
