@@ -20,6 +20,7 @@ export type TemplateMaterialPriority = Readonly<{
 export type TemplateSecondaryPresentation = Readonly<{
   slotIndexes: readonly number[];
   target: PhotoRatio | "1:1" | "variable";
+  critical: boolean;
   note: string;
 }>;
 
@@ -81,7 +82,7 @@ const profileMetadata = {
     cropPressure: { level: "high", note: "任一索引图都可能进入固定 16:9 主视窗。" },
     mobileBehavior: { mode: "stack", note: "主视窗、目标信息和索引在窄屏纵向排列。" },
     secondaryPresentations: [
-      { slotIndexes: allSlots(9), target: "16:9", note: "被选中的任意素材会进入横向 HUD 主视窗。" },
+      { slotIndexes: allSlots(9), target: "16:9", critical: true, note: "被选中的任意素材会进入横向 HUD 主视窗。" },
     ],
     optionalNotes: ["人物居中或已设置 focus 的图片更适合作为可切换主视图。"],
   },
@@ -132,7 +133,7 @@ const profileMetadata = {
     cropPressure: { level: "high", note: "固定 3:2 主视窗与不规则 clip-path 会放大边缘裁切。" },
     mobileBehavior: { mode: "stack", note: "流体组图在手机端拆成纵向卡组，保留主次。" },
     secondaryPresentations: [
-      { slotIndexes: [0], target: "3:2", note: "首槽始终进入固定 3:2 棱镜主视窗。" },
+      { slotIndexes: [0], target: "3:2", critical: true, note: "首槽始终进入固定 3:2 棱镜主视窗。" },
     ],
     optionalNotes: ["主图与全景图应避免把关键主体压在画面四角。"],
   },
@@ -149,7 +150,7 @@ const profileMetadata = {
     cropPressure: { level: "high", note: "2:3 槽位素材还会进入 3:2 门户主视图，必须关注 focus。" },
     mobileBehavior: { mode: "stack", note: "门户与轨道卡在手机端转为单列/四列可选布局。" },
     secondaryPresentations: [
-      { slotIndexes: allSlots(8), target: "3:2", note: "被激活的任意竖图会再次进入横向门户。" },
+      { slotIndexes: allSlots(8), target: "3:2", critical: true, note: "被激活的任意竖图会再次进入横向门户。" },
     ],
     optionalNotes: ["优先使用环境留白足够的全身或半身竖图，并校准焦点。"],
   },
@@ -166,7 +167,7 @@ const profileMetadata = {
     cropPressure: { level: "medium", note: "Quick Look 保留原方向，网格 3:2、列表 16:9 会产生二次裁切。" },
     mobileBehavior: { mode: "pane-switch", note: "桌面三栏在手机端变为素材/检查器分页切换。" },
     secondaryPresentations: [
-      { slotIndexes: allSlots(12), target: "16:9", note: "列表视图中的所有缩略图统一为 16:9。" },
+      { slotIndexes: allSlots(12), target: "16:9", critical: false, note: "列表视图中的所有缩略图统一为 16:9。" },
     ],
     optionalNotes: ["数量越接近 12 张，档案系统的密度与检索感越完整。"],
   },
@@ -208,9 +209,9 @@ const profileMetadata = {
     minimumUsefulPhotoCount: 5,
     recommendedPhotoCount: 9,
     heroSlotCount: 1,
-    landscapeDemand: { minimum: 3, recommended: 6, note: "角色档案与大部分正式槽位仍以横图为主。" },
+    landscapeDemand: { minimum: 4, recommended: 6, note: "角色档案与大部分正式槽位仍以横图为主。" },
     portraitDemand: { minimum: 1, recommended: 1, note: "一张竖图适合强角色立绘。" },
-    squareDemand: { minimum: 1, recommended: 2, note: "方图能降低九宫格角色头像的二次裁切。" },
+    squareDemand: { minimum: 0, recommended: 2, note: "方图能降低九宫格角色头像的二次裁切。" },
     visualPriority: [
       { slotIndex: 0, level: "critical", role: "hero", note: "首次选中的 Fighter 主舞台。" },
       { slotIndex: 4, level: "high", role: "feature", note: "唯一正式竖图槽，适合角色立绘。" },
@@ -218,8 +219,8 @@ const profileMetadata = {
     cropPressure: { level: "high", note: "九宫格统一 1:1，主舞台和档案区又使用不同裁切面。" },
     mobileBehavior: { mode: "stage-roster", note: "主舞台保持优先，角色阵列在窄屏转为可横向选择。" },
     secondaryPresentations: [
-      { slotIndexes: allSlots(9), target: "1:1", note: "全部素材都会进入方形角色阵列缩略图。" },
-      { slotIndexes: allSlots(9), target: "variable", note: "激活图还会进入随素材方向调整宽度的主舞台。" },
+      { slotIndexes: allSlots(9), target: "1:1", critical: false, note: "全部素材都会进入方形角色阵列缩略图。" },
+      { slotIndexes: allSlots(9), target: "variable", critical: true, note: "激活图还会进入随素材方向调整宽度的主舞台。" },
     ],
     optionalNotes: ["人脸或角色主体应靠近 focus，避免九宫格切掉头部与武器。"],
   },

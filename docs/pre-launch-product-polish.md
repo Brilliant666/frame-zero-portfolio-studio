@@ -92,6 +92,32 @@ non-persistent metadata. If a useful preview would require changing
 `SiteDocumentV1` or formal Composition persistence, work stops at the relevant
 architecture decision gate.
 
+## Real-library composition preview
+
+Phase C connects the accepted pure Composition assignment engine to a local-only,
+ephemeral `classic-preview` registry derived from each material profile. It is
+not a production Variant registry and its ID is never written to SiteContent or
+`SiteDocumentV1`. The preview:
+
+- reads the validated local photo manifest without uploading it;
+- evaluates all formal slots deterministically, including compatible existing
+  intent, explicit locks, critical slots, and supported secondary crop targets;
+- uses the same Composition assignment algorithm as the planner foundation; the
+  preview does not introduce a second matcher or run Variant recommendation;
+- preserves placeholders instead of forcing the wrong orientation;
+- reports the exact number of used photos and recommended landscape, portrait,
+  square, or primary-visual shortages;
+- renders both a compact slot map and the real formal template in a modal using
+  the user's current content and local derivatives;
+- preserves the formal template's photo lightbox and copy interactions inside
+  the read-only preview;
+- leaves template selection, `activeTemplate`, `templateWorks`, dirty state,
+  and persistence untouched while browsing.
+
+Only the explicit **Apply layout to draft** action copies the reviewed mapping
+into `templateWorks[templateId]`. It does not select that template and does not
+save; the existing global **Save all changes** boundary remains authoritative.
+
 ## Local source-folder boundary
 
 Browser folder selection is a one-time import. It does not provide a reliable

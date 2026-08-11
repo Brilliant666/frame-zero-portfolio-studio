@@ -45,7 +45,11 @@ async function transpileTo(sourceRelativePath, outputName) {
     (diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error,
   );
   assert.deepEqual(diagnosticsText(errors), [], `${sourceRelativePath} must transpile`);
-  await fs.writeFile(path.join(compiledDirectory, outputName), result.outputText, "utf8");
+  const output = result.outputText
+    .replaceAll('from "./contract"', 'from "./contract.js"')
+    .replaceAll('from "./assignment"', 'from "./assignment.js"')
+    .replaceAll('from "./planner"', 'from "./planner.js"');
+  await fs.writeFile(path.join(compiledDirectory, outputName), output, "utf8");
 }
 
 test.before(async () => {

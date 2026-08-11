@@ -92,12 +92,21 @@ export function inspectNextBuild(projectRoot = process.cwd()) {
   const jsFiles = listFiles(chunksRoot, ".js");
   const jsSources = new Map(jsFiles.map((filePath) => [filePath, readFileSync(filePath, "utf8")]));
   const eagerPageChunks = new Set(pageEntryJs.map((filePath) => filePath.replaceAll("/", path.sep)));
+  const pageEntrySources = pageEntryJs.flatMap((relativePath) => {
+    const fullPath = path.join(nextRoot, relativePath.replaceAll("/", path.sep));
+    return existsSync(fullPath) ? [readFileSync(fullPath, "utf8")] : [];
+  });
+  const pageLazyChunks = new Set(
+    pageEntrySources.flatMap((source) => source.match(/static\/chunks\/[^"']+\.js/g) ?? []),
+  );
   const templateChunks = [];
   const templateSizes = [];
 
   for (const templateId of TEMPLATE_IDS) {
     const candidates = [...jsSources.entries()].filter(([filePath, source]) => {
-      if (eagerPageChunks.has(path.relative(nextRoot, filePath))) return false;
+      const relativePath = path.relative(nextRoot, filePath);
+      if (eagerPageChunks.has(relativePath)) return false;
+      if (!pageLazyChunks.has(relativePath.replaceAll(path.sep, "/"))) return false;
       if (!source.includes(templateId)) return false;
       return TEMPLATE_IDS.filter((candidate) => source.includes(candidate)).length === 1;
     });

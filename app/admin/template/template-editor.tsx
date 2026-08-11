@@ -9,6 +9,7 @@ import {
 import { AdminSection } from "../admin-form";
 import { useAdmin } from "../admin-provider";
 import styles from "../admin-v2.module.css";
+import TemplateCompositionPreview from "./template-composition-preview";
 
 const mobileModeLabels: Record<TemplateMaterialProfile["mobileBehavior"]["mode"], string> = {
   stack: "顺序堆叠",
@@ -212,6 +213,8 @@ export default function TemplateEditor() {
                   ))}
                 </ul>
               </section>
+
+              <TemplateCompositionPreview templateId={inspectedTemplate.id} />
             </div>
 
             <div className={styles.templateDetailActions}>

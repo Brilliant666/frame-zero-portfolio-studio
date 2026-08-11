@@ -75,8 +75,9 @@ test("the six editors retain ownership of every legacy SiteContent root field", 
 });
 
 test("template browsing, package disclosures, layout tools, and legacy controls keep their required semantics", async () => {
-  const [template, profile, packages, layout, advanced, resetDialog] = await Promise.all([
+  const [template, templatePreview, profile, packages, layout, advanced, resetDialog] = await Promise.all([
     source("app/admin/template/template-editor.tsx"),
+    source("app/admin/template/template-composition-preview.tsx"),
     source("app/admin/profile/profile-editor.tsx"),
     source("app/admin/packages/packages-editor.tsx"),
     source("app/admin/layout/layout-workspace.tsx"),
@@ -125,6 +126,25 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   for (const requirement of ["横图", "竖图", "方图", "主视觉", "裁切压力", "手机策略"]) {
     assert.match(template, new RegExp(requirement));
   }
+  assert.match(template, /<TemplateCompositionPreview templateId=\{inspectedTemplate\.id\}/);
+  assert.match(templatePreview, /planTemplateCompositionPreview/);
+  assert.match(templatePreview, /data-preview-readonly="true"/);
+  assert.match(templatePreview, /data-template-preview-apply=\{templateId\}/);
+  assert.match(templatePreview, /打开真实模板预览/);
+  assert.match(templatePreview, /<TemplateRenderer/);
+  assert.match(templatePreview, /应用此排版到草稿/);
+  assert.match(templatePreview, /仍需“保存全部修改”才会持久化/);
+  assert.match(templatePreview, /setContent\(\(current\) => applyTemplateCompositionPreview\(current, planned\)\)/);
+  assert.match(templatePreview, /activeTemplate: preview\.templateId/);
+  assert.match(templatePreview, /data-hero-missing=\{planned\.heroMissingCount\}/);
+  assert.match(templatePreview, /主视觉 \{planned\.heroMissingCount\} 张/);
+  assert.match(templatePreview, /<Lightbox/);
+  assert.doesNotMatch(templatePreview, /onOpenWork=\{\(\) => \{\}\}|method:\s*"PUT"|\/api\/site-content/);
+  const previewApplyHandler = templatePreview.slice(
+    templatePreview.indexOf("const applyPreview"),
+    templatePreview.indexOf("return (", templatePreview.indexOf("const applyPreview")),
+  );
+  assert.doesNotMatch(previewApplyHandler, /activeTemplate|chooseTemplate|fetch\(/);
 
   assert.match(profile, /<details className=\{styles\.optionalDisclosure\}/);
   assert.match(profile, /data-optional-brand-content="true"/);
@@ -280,6 +300,9 @@ test("responsive CSS exposes a mobile section switcher and single-column layout 
   assert.match(css, /\.templateDetail\s*\{/);
   assert.match(css, /\.templateMaterialProfile\s*\{/);
   assert.match(css, /\.templateMaterialDemand\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+  assert.match(css, /\.templateCompositionPreview\s*\{/);
+  assert.match(css, /\.templatePreviewSlotMap\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+  assert.match(css, /\.templatePreviewDialog\s*\{/);
   assert.doesNotMatch(css, /\.templateGrid|\.templateCard\b/);
   assert.match(css, /@media \(max-width: 1280px\) and \(min-width: 761px\)/);
   assert.match(css, /@media \(max-width: 960px\)\s*\{[^}]*\.packageCardHeader\s*\{[^}]*grid-template-columns:\s*1fr/s);
@@ -291,6 +314,7 @@ test("responsive CSS exposes a mobile section switcher and single-column layout 
   assert.match(css, /grid-template-areas: "slots" "editor" "assets"/);
   assert.match(css, /@media \(max-width: 480px\)/);
   assert.match(css, /@media \(max-width: 480px\)[\s\S]*\.templateMaterialDemand,[\s\S]*\.templateMaterialSignals\s*\{\s*grid-template-columns:\s*1fr;/);
+  assert.match(css, /@media \(max-width: 480px\)[\s\S]*\.templatePreviewSlotMap\s*\{\s*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.saveButtonCompact\s*\{\s*display:\s*none/);
   assert.match(css, /@media \(max-width: 480px\)[\s\S]*\.saveButtonFull\s*\{\s*display:\s*none;\s*\}[\s\S]*\.saveButtonCompact\s*\{\s*display:\s*inline;/);
   assert.match(css, /\.slotEditorBody\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;/s);
