@@ -79,37 +79,32 @@ Only work that directly advances `STAGE_A2_DEPLOYMENT_BOOTSTRAP` belongs in the
 current production-development lane. This status does not authorize Stage B,
 later product stages, or real infrastructure operations.
 
-Human-accepted completed Stage A2 capabilities remain:
+Human-accepted completed Stage A2 capabilities are:
 
 ```text
 PRODUCTION_HEALTH_CONTRACT
 NON_ROOT_LINUX_CONTAINER_PACKAGING
-```
-
-BATCH-01 has implemented the following candidate capabilities, pending the
-complete required Linux CI rerun and human review:
-
-```text
 SERVER_ONLY_DEPLOYMENT_CONFIG
 MINIMAL_COMPOSE_CADDY_TOPOLOGY
 PUBLIC_PRIVATE_PROXY_BOUNDARY
 BASIC_APPLICATION_PROXY_LOGGING
 DEPLOY_UPDATE_ROLLBACK_SMOKE
+REPO_SIDE_BOOTSTRAP_READY
 ```
 
-The current repository-side gate is:
+The current stop gate is:
 
 ```text
-REQUIRED_CI_AND_HUMAN_REVIEW_PENDING
+EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED
 ```
 
-This branch does not yet claim `REPO_SIDE_BOOTSTRAP_READY` or
-`EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED`. Those conclusions require the full
-Linux deploy/update/rollback gate to pass and a subsequent human acceptance.
-Even after that acceptance, `DEPLOYMENT_BOOTSTRAP_READY` still requires target
-Linux, real 80/443, DNS, public ACME HTTPS, and target-server smoke. Stage A2
-therefore stays `IN_PROGRESS`, and the online status stays
-`NOT_ONLINE_PREVIEW`.
+`REPO_SIDE_BOOTSTRAP_READY` is accepted repository-side evidence; it is not
+`DEPLOYMENT_BOOTSTRAP_READY`. The latter still requires approved target Linux,
+real 80/443, DNS, public ACME HTTPS, and target-server deploy/update/rollback
+smoke. `DEPLOYMENT_BOOTSTRAP_READY` is also not `ONLINE_PREVIEW`. Stage A2
+therefore stays `IN_PROGRESS`, the online status stays `NOT_ONLINE_PREVIEW`,
+and no external operation is authorized before the current stop gate is
+explicitly cleared.
 
 See [stage-a2-deployment-bootstrap.md](stage-a2-deployment-bootstrap.md) for
 the current Definition of Done matrix and explicit external-operation boundary.

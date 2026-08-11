@@ -14,19 +14,20 @@ server, introduce product persistence, or expose unfinished product routes.
 
 | Definition of Done | Current evidence | Status after BATCH-01 |
 | --- | --- | --- |
-| Package the Stage A Node artifact | Multi-stage Debian/glibc image builds the accepted Standard Next standalone without Git metadata | Container packaging complete |
-| Minimal Docker image and Compose shell | Reviewed two-service `Caddy -> App` topology keeps App internal, non-root, read-only, and dependency-free | Implemented; complete required Linux lifecycle CI pending |
-| Caddy HTTPS reverse proxy | Production public-ACME config is separate from CI-only internal TLS; official image is version/digest pinned | Implemented; required CI rerun and real ACME both pending |
-| Health endpoint and basic logs | App stdout/stderr and Caddy JSON runtime/access logs are collected by Compose; the verifier checks a sensitive-header sentinel | Implemented; complete required logging/lifecycle CI pending |
-| Repeatable deploy/update smoke | Linux verifier defines idempotent deploy, restart, immutable release update, rollback, graceful stop, and non-destructive cleanup | Implemented; update and rollback lack complete Linux evidence |
-| Server-only configuration isolation | Strict known-key parser, safe invalid example, explicit env file, and no accepted secrets or `NEXT_PUBLIC_*` values | Repo contract complete |
-| Receive Stage D routes without exposing unfinished capabilities | Public pages pass through; legacy SiteContent is read-only; Admin/Auth/upload/Draft/unreviewed APIs fail closed | Implemented with partial Linux evidence; full required gate pending |
+| Package the Stage A Node artifact | Multi-stage Debian/glibc image builds the accepted Standard Next standalone without Git metadata | Verified and accepted |
+| Minimal Docker image and Compose shell | Reviewed two-service `Caddy -> App` topology keeps App internal, non-root, read-only, and dependency-free | Repo contract and Linux CI verified and accepted; target-server evidence pending |
+| Caddy HTTPS reverse proxy | Production public-ACME config is separate from CI-only internal TLS; official image is version/digest pinned | Production config and CI TLS verified and accepted; real public ACME pending |
+| Health endpoint and basic logs | App stdout/stderr and Caddy JSON runtime/access logs are collected by Compose; the verifier checks a sensitive-header sentinel | Repo contract and Linux CI verified and accepted |
+| Repeatable deploy/update smoke | Linux verifier proves idempotent deploy, restart, immutable release update, rollback, graceful stop, and non-destructive cleanup | Repo tooling and Linux CI lifecycle verified and accepted; target-server lifecycle pending |
+| Server-only configuration isolation | Strict known-key parser, safe invalid example, explicit env file, and no accepted secrets or `NEXT_PUBLIC_*` values | Verified and accepted |
+| Receive Stage D routes without exposing unfinished capabilities | Public pages pass through; legacy SiteContent is read-only; Admin/Auth/upload/Draft/unreviewed APIs fail closed | Repo contract and Linux CI verified and accepted; Stage D routes remain later work |
 
-The repository does not yet claim `REPO_SIDE_BOOTSTRAP_READY` or
-`EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED`. The implemented candidates still need
-the complete required Linux CI rerun and human acceptance.
-`DEPLOYMENT_BOOTSTRAP_READY` additionally requires target Linux and real ACME
-evidence. `ONLINE_PREVIEW` also remains blocked on Stage D.
+Human review has accepted `REPO_SIDE_BOOTSTRAP_READY`. The current stop gate is
+`EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED`. This does not establish
+`DEPLOYMENT_BOOTSTRAP_READY`, which still requires approved target Linux,
+real 80/443 binding, real DNS, real public ACME HTTPS, and target-server
+deploy/update/rollback smoke. `DEPLOYMENT_BOOTSTRAP_READY` is not
+`ONLINE_PREVIEW`; Stage D also remains later work.
 
 ## Slice 1: production health contract
 
@@ -204,9 +205,9 @@ until an immutable reviewed release is supplied. Stage A2 accepts no secret.
 Both processes write to stdout/stderr. Docker's bounded JSON log driver makes
 them available through `docker compose logs`; Caddy access/runtime logs use
 JSON. The Linux verifier submits a synthetic Authorization/Cookie sentinel and
-is designed to reject that sentinel or local Windows paths in service logs.
-The required recovery run must complete those assertions before this logging
-candidate is treated as verified.
+rejects that sentinel or local Windows paths in service logs. The required
+Linux recovery run completed those assertions, so the repository-side logging
+contract is verified and accepted.
 
 ### Deployment lifecycle evidence
 
@@ -218,18 +219,20 @@ read-only/non-root/no-privilege runtime settings, repeats `up`, restarts App,
 changes release A to B, rolls B back to A, and verifies a graceful
 non-SIGKILL stop.
 
-The latest pre-recovery Linux run completed config validation, image
-pull/build, Compose startup, CI HTTPS, public/private route checks, runtime
-security inspection, and production of structured Caddy access records. It
-then stopped on an overly exact access-logger-name assertion before idempotent
-`up`, restart, update, rollback, graceful stop, and volume-preservation
-evidence. Failure cleanup removed the isolated test resources.
+The final required Linux run completed config validation, image pull/build,
+Compose startup, CI HTTPS, public/private route checks, runtime security and
+structured-log inspection, idempotent `up`, App restart, immutable release
+update, rollback, graceful stop, volume preservation, and isolated cleanup. It
+confirmed zero App host ports, two retained Caddy volumes after normal `down`,
+and no sensitive-header sentinel in logs. Human review accepted that complete
+record as repository-side deploy/update/rollback evidence.
 
-Normal `down` is implemented without `-v`; the verifier is designed to prove
+Normal `down` is implemented without `-v`; the verifier proves
 the two Caddy volumes remain before removing exact, uniquely named CI volumes
 and images. It refuses unknown volume names and contains no registry push,
 SSH, production domain request, or external write. These lifecycle claims stay
-pending until the recovery run reaches the final evidence record.
+bounded to repository tooling and GitHub-hosted Linux CI; target-server
+lifecycle evidence remains pending.
 
 This evidence is deliberately classified as
 `CI_TLS_EVIDENCE != REAL_PRODUCTION_HTTPS_EVIDENCE`. Only an approved target
@@ -256,14 +259,9 @@ volumes or data.
 
 ## Remaining Stage A2 gaps
 
-Stage A2 remains `IN_PROGRESS` and `NOT_ONLINE_PREVIEW`. The current
-repository-side gaps are:
-
-- complete the required Deployment Bootstrap CI rerun through update,
-  rollback, graceful stop, volume preservation, and isolated cleanup;
-- obtain human acceptance of that complete evidence.
-
-Only after those gates may the remaining external evidence be considered:
+Stage A2 remains `IN_PROGRESS` and `NOT_ONLINE_PREVIEW`. Human review has
+accepted `REPO_SIDE_BOOTSTRAP_READY`; the current stop gate is
+`EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED`. The remaining evidence is external:
 
 - preflight the approved target Linux server and its existing services;
 - approve and bind real ports 80/443 without disturbing another workload;
@@ -272,7 +270,8 @@ Only after those gates may the remaining external evidence be considered:
 - obtain and verify real public ACME HTTPS;
 - execute target-server deploy/update/rollback smoke.
 
-This recovery does not claim `REPO_SIDE_BOOTSTRAP_READY` or
-`EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED`. It performs none of the external
-operations and does not authorize Stage B, Auth, product route changes, hosted
-assets, deployment, `DEPLOYMENT_BOOTSTRAP_READY`, or `ONLINE_PREVIEW`.
+`REPO_SIDE_BOOTSTRAP_READY` does not equal `DEPLOYMENT_BOOTSTRAP_READY`, and
+`DEPLOYMENT_BOOTSTRAP_READY` does not equal `ONLINE_PREVIEW`. This repository
+work performed none of the external operations and does not authorize Stage B,
+Auth, product route changes, hosted assets, deployment,
+`DEPLOYMENT_BOOTSTRAP_READY`, or `ONLINE_PREVIEW`.
