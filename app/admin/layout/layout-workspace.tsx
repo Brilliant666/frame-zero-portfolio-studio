@@ -416,7 +416,7 @@ export default function LayoutWorkspace() {
                 ? libraryState === "error"
                   ? "未能读取素材库；请先处理上方错误并刷新素材列表。"
                   : localPhotoImportState === "configured"
-                    ? "使用上方“选择素材文件夹”把作品加入素材库。"
+                    ? "使用上方“添加素材”把照片或文件夹加入素材库。"
                     : localPhotoImportState === "missing"
                       ? "本地照片导入服务未启动；请使用 npm run dev 启动完整编辑环境。"
                       : "当前没有可用的素材。"

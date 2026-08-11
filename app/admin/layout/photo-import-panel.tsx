@@ -12,6 +12,7 @@ import {
 } from "./photo-import-client";
 
 type PhotoLibraryState = "loading" | "ready" | "empty" | "error";
+type PhotoImportSelectionMode = "photos" | "folder";
 
 export type PhotoLibraryStats = Readonly<{
   total: number;
@@ -43,21 +44,29 @@ export default function PhotoImportPanel({
   onRefresh,
   stats,
 }: PhotoImportPanelProps) {
+  const addMaterialsTriggerRef = useRef<HTMLButtonElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const batchActiveRef = useRef(false);
+  const [addMaterialsOpen, setAddMaterialsOpen] = useState(false);
   const [progress, setProgress] = useState<PhotoImportProgress | null>(null);
   const [result, setResult] = useState<PhotoImportResult | null>(null);
   const [batchError, setBatchError] = useState<string | null>(null);
   const [healthError, setHealthError] = useState<string | null>(null);
   const [ignoredFiles, setIgnoredFiles] = useState(0);
+  const [selectionMode, setSelectionMode] = useState<PhotoImportSelectionMode>("photos");
 
-  const beginImport = async (files: ArrayLike<File> | null) => {
+  const beginImport = async (
+    files: ArrayLike<File> | null,
+    mode: PhotoImportSelectionMode,
+  ) => {
     if (
       localPhotoImportState !== "configured"
       || !localPhotoImportOrigin
       || batchActiveRef.current
       || !files
     ) return;
+    setSelectionMode(mode);
     const selection = selectLocalPhotoImportFiles(files);
     if (selection.accepted.length === 0) {
       setProgress(null);
@@ -86,7 +95,7 @@ export default function PhotoImportPanel({
       if (error instanceof LocalPhotoImportUnavailableError) {
         setHealthError("导入地址已配置，但当前无法连接本地照片导入服务。请确认 npm run dev 正在运行。");
       } else {
-        setBatchError("素材文件夹读取未能完成，请重试。");
+        setBatchError("素材添加未能完成，请重试。");
       }
     } finally {
       batchActiveRef.current = false;
@@ -94,21 +103,31 @@ export default function PhotoImportPanel({
     }
   };
 
-  const handleSelection = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleSelection = (
+    event: ChangeEvent<HTMLInputElement>,
+    mode: PhotoImportSelectionMode,
+  ) => {
     const files = event.currentTarget.files ? Array.from(event.currentTarget.files) : null;
     event.currentTarget.value = "";
-    void beginImport(files);
+    setAddMaterialsOpen(false);
+    requestAnimationFrame(() => addMaterialsTriggerRef.current?.focus());
+    void beginImport(files, mode);
   };
 
   const refreshDisabled = importing || libraryState === "loading";
   const processingLabel = progress && progress.processed === progress.total
     ? "正在刷新素材列表…"
-    : "正在读取素材文件夹";
+    : selectionMode === "folder"
+      ? "正在读取素材文件夹"
+      : "正在添加照片";
   const progressPosition = progress
     ? progress.processed === progress.total
       ? `已处理 ${progress.total} 张，正在刷新素材列表`
       : `正在处理第 ${Math.min(progress.processed + 1, progress.total)} 张，共 ${progress.total} 张`
     : "正在连接本地服务…";
+  const selectionLabel = selectionMode === "folder"
+    ? "素材文件夹（一次性快照，不会持续同步）"
+    : "照片选择（单张或多张）";
 
   return (
     <section
@@ -143,16 +162,55 @@ export default function PhotoImportPanel({
 
       {localPhotoImportState === "configured" && localPhotoImportOrigin ? (
         <div className={styles.photoImportControls}>
-          <div className={styles.photoImportActions} aria-label="选择素材文件夹">
+          <div className={styles.photoImportActions}>
+            <button
+              ref={addMaterialsTriggerRef}
+              type="button"
+              data-add-materials-trigger="true"
+              aria-controls="local-photo-import-choices"
+              aria-expanded={addMaterialsOpen}
+              onClick={() => setAddMaterialsOpen((open) => !open)}
+              disabled={importing}
+            >
+              添加素材
+            </button>
+          </div>
+          <div
+            id="local-photo-import-choices"
+            className={styles.photoImportChoiceNotes}
+            role="group"
+            aria-label="选择素材添加方式"
+            hidden={!addMaterialsOpen}
+          >
             <button
               type="button"
-              aria-describedby="local-photo-import-choices"
+              onClick={() => photoInputRef.current?.click()}
+              disabled={importing}
+            >
+              <strong>选择照片</strong>
+              <small>默认方式 · 可选择一张或多张</small>
+            </button>
+            <button
+              type="button"
               onClick={() => folderInputRef.current?.click()}
               disabled={importing}
             >
-              选择素材文件夹
+              <strong>选择文件夹</strong>
+              <small>一次性读取文件夹及子文件夹</small>
             </button>
           </div>
+          <input
+            ref={photoInputRef}
+            className="sr-only"
+            data-photo-picker="files"
+            type="file"
+            aria-hidden="true"
+            tabIndex={-1}
+            accept={localPhotoImportAccept}
+            multiple
+            disabled={importing}
+            onChange={(event) => handleSelection(event, "photos")}
+          />
           <input
             ref={folderInputRef}
             className="sr-only"
@@ -163,14 +221,11 @@ export default function PhotoImportPanel({
             accept={localPhotoImportAccept}
             multiple
             disabled={importing}
-            onChange={handleSelection}
+            onChange={(event) => handleSelection(event, "folder")}
             {...directoryInputAttributes}
           />
-          <div id="local-photo-import-choices" className={styles.photoImportChoiceNotes}>
-            <p><strong>一次性读取</strong> 读取所选文件夹及子文件夹中的当前照片；后续增删需再次选择，素材库不会自动同步。</p>
-          </div>
           <p className={styles.photoImportHint}>
-            支持 JPG、JPEG、PNG、WebP、AVIF、HEIC、HEIF、TIFF；暂不支持相机 RAW。照片会立即加入本地素材库，不会自动修改或保存主页排版。
+            默认可添加一张或多张照片；文件夹按当前内容一次性读取，后续增删需再次选择。支持 JPG、JPEG、PNG、WebP、AVIF、HEIC、HEIF、TIFF；暂不支持相机 RAW。添加素材不会自动修改或保存主页排版。
           </p>
         </div>
       ) : localPhotoImportState === "missing" ? (
@@ -210,7 +265,7 @@ export default function PhotoImportPanel({
         <div
           className={styles.photoImportResult}
           data-partial={result.failed > 0 || result.refreshFailed}
-          data-photo-import-selection="folder"
+          data-photo-import-selection={selectionMode}
           role="status"
           aria-live="polite"
         >
@@ -223,7 +278,7 @@ export default function PhotoImportPanel({
             新增 {result.added} · 已存在 {result.alreadyExists} · 失败 {result.failed}
             {result.libraryTotal === null ? "" : ` · 素材库现有 ${result.libraryTotal} 张`}
           </p>
-          <small>本次来源：素材文件夹（一次性快照，不会持续同步）</small>
+          <small>本次来源：{selectionLabel}</small>
           {ignoredFiles > 0 ? <small>另有 {ignoredFiles} 个非照片文件已忽略。</small> : null}
           {result.refreshFailed ? <small>照片处理已完成，但素材列表刷新失败；请稍后刷新素材列表。</small> : null}
           {result.failures.length > 0 ? (

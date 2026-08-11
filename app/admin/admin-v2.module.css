@@ -799,9 +799,12 @@
 .photoImportControls { display: grid; gap: .45rem; }
 .photoImportActions { display: grid; grid-template-columns: minmax(0, 1fr); gap: .5rem; }
 .photoImportActions button:only-child { width: 100%; border-color: var(--admin-v2-ink); background: var(--admin-v2-ink); color: #fff; }
-.photoImportChoiceNotes { display: grid; gap: .5rem; }
-.photoImportChoiceNotes p { margin: 0; padding: .55rem .65rem; border-left: 2px solid var(--admin-v2-line); background: #faf8f5; color: var(--admin-v2-muted); font-size: .68rem; line-height: 1.45; }
+.photoImportChoiceNotes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+.photoImportChoiceNotes[hidden] { display: none; }
+.photoImportChoiceNotes button { display: grid; min-width: 0; gap: .18rem; text-align: left; }
+.photoImportChoiceNotes button:first-child { border-color: #c96d31; background: #fff8f1; }
 .photoImportChoiceNotes strong { color: var(--admin-v2-ink); }
+.photoImportChoiceNotes small { color: var(--admin-v2-muted); font-size: .66rem; font-weight: 500; line-height: 1.4; }
 .photoImportHint { margin: 0; color: var(--admin-v2-muted); font-size: .7rem; line-height: 1.5; }
 .hostedImportNotice { display: grid; gap: .2rem; padding: .75rem .85rem; border-left: 3px solid #777069; background: #f5f2ee; }
 .hostedImportNotice strong { font-size: .78rem; }
@@ -830,6 +833,7 @@
 .photoImportError { border-left: 3px solid #a23a20; background: #fff4f1; }
 .libraryImportHeader > button,
 .photoImportActions button,
+.photoImportChoiceNotes button,
 .layoutActions button,
 .slotControls button,
 .libraryFilters button,
@@ -844,6 +848,7 @@
 }
 .libraryImportHeader > button:disabled,
 .photoImportActions button:disabled,
+.photoImportChoiceNotes button:disabled,
 .layoutActions button:disabled,
 .slotControls button:disabled,
 .assetPick:disabled,
@@ -1081,6 +1086,7 @@
 .slotListButton:focus-visible,
 .libraryImportHeader > button:focus-visible,
 .photoImportActions button:focus-visible,
+.photoImportChoiceNotes button:focus-visible,
 .photoImportResult summary:focus-visible,
 .layoutActions button:focus-visible,
 .slotControls button:focus-visible,
@@ -1234,6 +1240,7 @@
   .slotFields,
   .focusRanges,
   .libraryToolbar { grid-template-columns: 1fr; }
+  .photoImportChoiceNotes { grid-template-columns: 1fr; }
   .slotControls { grid-template-columns: 1fr; }
   .slotLock { min-height: 2.75rem; }
   .libraryFilters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }

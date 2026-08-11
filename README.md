@@ -237,16 +237,20 @@ repository contains layout code and image metadata only, never the photographs.
 When photos are absent, every template keeps its intended composition with
 designed text placeholders.
 
-### Import a local photo folder
+### Add local materials
 
-For normal local editing, open **Admin → 素材排版**, choose **选择素材文件夹**,
-and select the source folder. This is the only product-facing import entry.
-Supported files in that folder and its nested folders are processed one
-photograph at a time, progress remains visible, duplicate content is reported as
-already present, and the material grid refreshes automatically when the batch
-finishes. Adding material updates the local Photo Library immediately; it does
-not save or change the shared SiteContent draft and it never runs automatic
-layout.
+For normal local editing, open **Admin → 素材排版** and choose the single
+**添加素材** entry. Expand it and use **选择照片** for one or more photographs,
+or **选择文件夹** for a one-time batch that includes supported photographs in
+nested folders. A folder is only a batch source: every accepted item becomes a
+photograph in the same local material library, and no folder object or source
+path becomes product data.
+
+Selected photographs are processed one at a time, progress remains visible,
+duplicate content is reported as already present, and the material grid refreshes
+automatically when the batch finishes. Adding material updates the local Photo
+Library immediately; it does not save or change the shared SiteContent draft and
+it never runs automatic layout.
 
 The folder selection imports a one-time snapshot. Later changes to that computer
 folder are not watched or rescanned automatically, so select the folder again to
@@ -265,8 +269,8 @@ requests plus manifest updates are serialized through the same project lock.
 Advanced and command-line importing are not product workflows. Existing
 repository-level entry points, linked-output adoption, automatic interrupted
 write recovery, and stale-lock recovery remain internal compatibility and
-maintenance capabilities. HR-001 does not remove or replace the importer core
-used by the folder flow.
+maintenance capabilities. HR-001 did not remove or replace the importer core;
+HR-002 reuses that same core for both photograph and folder selection.
 
 Generated files stay local in `public/photos/library/`. The browser-safe index is
 `public/photos/library-manifest.json`; it contains stable asset IDs, aspect ratios,
