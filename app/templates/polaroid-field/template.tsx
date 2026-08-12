@@ -70,7 +70,10 @@ export default function PolaroidFieldTemplate({
   onCopy,
   onOpenWork,
 }: TemplateProps) {
-  const fieldSlots = useMemo(() => buildPhotoSlots(works, POLAROID_RATIOS), [works]);
+  const fieldSlots = useMemo(
+    () => buildPhotoSlots(works, POLAROID_RATIOS, { templateId: "polaroid-field" }),
+    [works],
+  );
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);

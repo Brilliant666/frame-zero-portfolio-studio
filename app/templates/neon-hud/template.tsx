@@ -21,7 +21,7 @@ export default function NeonHudTemplate({
   onOpenWork,
 }: TemplateProps) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const photoSlots = buildPhotoSlots(works, neonRatios);
+  const photoSlots = buildPhotoSlots(works, neonRatios, { templateId: "neon-hud" });
   const safeIndex = Math.min(Math.max(activeIndex, 0), photoSlots.length - 1);
   const activeSlot = photoSlots[safeIndex];
   const activeWork = activeSlot.work;

@@ -107,6 +107,8 @@
   gap: .35rem;
   padding: .72rem .9rem;
   background: #fff;
+  color: var(--admin-v2-ink);
+  cursor: pointer;
 }
 
 .previewText { display: inline; }
@@ -327,7 +329,6 @@
 .templateDetailActions button:focus-visible,
 .templateCompositionPreviewHeader button:focus-visible,
 .templateCompositionPreviewActions button:focus-visible,
-.templatePreviewDialogToolbar button:focus-visible,
 .optionalSummary:focus-visible,
 .packageTitleEditor input:focus-visible,
 .disclosureSummary:focus-visible,
@@ -587,6 +588,7 @@
   white-space: nowrap;
 }
 .templateCompositionPreviewActions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .45rem; }
+.templateCompositionPreviewActions[data-action-count="1"] { grid-template-columns: minmax(0, 1fr); }
 .templateCompositionPreviewActions button {
   min-height: 2.75rem;
   padding: .6rem .75rem;
@@ -601,51 +603,7 @@
 .templateCompositionPreviewActions button:disabled { border-color: var(--admin-v2-line); background: #e5e0da; color: var(--admin-v2-muted); cursor: default; }
 .templateCompositionPreviewBoundary { margin: 0; color: var(--admin-v2-muted); font-size: .68rem; line-height: 1.55; }
 .templateCompositionPreviewEmpty { display: grid; min-height: 8rem; place-items: center; padding: 1rem; border: 1px dashed #b9b0a7; color: var(--admin-v2-muted); font-size: .75rem; text-align: center; }
-.templatePreviewDialog {
-  inset: 0;
-  width: 100vw;
-  max-width: none;
-  height: 100dvh;
-  max-height: none;
-  margin: 0;
-  padding: 0;
-  overflow: auto;
-  border: 0;
-  background: #090909;
-  color: #fff;
-}
-.templatePreviewDialog::backdrop { background: rgba(10, 8, 7, .86); }
-.templatePreviewDialogToolbar {
-  position: sticky;
-  z-index: 2147483647;
-  top: 0;
-  display: flex;
-  min-height: 3.75rem;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: .65rem 1rem;
-  border-bottom: 1px solid rgba(255,255,255,.24);
-  background: rgba(21, 17, 14, .95);
-  color: #fff;
-  backdrop-filter: blur(14px);
-}
-.templatePreviewDialogToolbar > div { display: grid; gap: .12rem; }
-.templatePreviewDialogToolbar strong { font-size: .8rem; }
-.templatePreviewDialogToolbar span { color: rgba(255,255,255,.68); font-size: .68rem; }
-.templatePreviewDialogToolbar button {
-  flex: 0 0 auto;
-  min-height: 2.5rem;
-  padding: .55rem .75rem;
-  border: 1px solid #fff;
-  background: #fff;
-  color: #17120f;
-  font-size: .72rem;
-  font-weight: 800;
-  cursor: pointer;
-}
-.templatePreviewDialogSurface { min-height: calc(100dvh - 3.75rem); overflow: clip; }
-.templateDetailActions { display: grid; grid-template-columns: minmax(0, 1fr) auto; border-top: 1px solid var(--admin-v2-line); }
+.templateDetailActions { display: grid; grid-template-columns: minmax(0, 1fr); border-top: 1px solid var(--admin-v2-line); }
 .templateDetailActions button,
 .templateDetailActions a,
 .secondaryButton {
@@ -662,7 +620,7 @@
 }
 .templateDetailActions button { border: 0; }
 .templateDetailActions button:disabled { background: #e5e0da; color: var(--admin-v2-muted); cursor: default; }
-.templateDetailActions a { border: 0; border-left: 1px solid var(--admin-v2-line); background: #fff; color: var(--admin-v2-ink); }
+.templateDetailActions a { border: 0; background: var(--admin-v2-ink); color: #fff; }
 
 .optionalDisclosure { border: 1px solid var(--admin-v2-line); background: #fff; }
 .optionalSummary {
@@ -1308,17 +1266,15 @@
   .templateSelectionSummary > div + div { border-top: 1px solid var(--admin-v2-line); border-left: 0; }
   .templateDetailFacts div { grid-template-columns: 1fr; gap: .2rem; }
   .templateDetailActions { grid-template-columns: 1fr; }
-  .templateDetailActions a { border-top: 1px solid var(--admin-v2-line); border-left: 0; }
+  .templateDetailActions a { border-left: 0; }
   .templateMaterialHeader { align-items: start; flex-direction: column; gap: .5rem; }
   .templateMaterialDemand,
   .templateMaterialSignals { grid-template-columns: 1fr; }
   .templateMaterialSignals > div + div { border-top: 1px solid var(--admin-v2-line); border-left: 0; }
   .templateMaterialNotes li { grid-template-columns: 1fr; gap: .12rem; }
   .templateCompositionPreviewHeader,
-  .templatePreviewShortages,
-  .templatePreviewDialogToolbar { align-items: stretch; flex-direction: column; }
-  .templateCompositionPreviewHeader button,
-  .templatePreviewDialogToolbar button { width: 100%; }
+  .templatePreviewShortages { align-items: stretch; flex-direction: column; }
+  .templateCompositionPreviewHeader button { width: 100%; }
   .templateCompositionPreviewSummary { grid-template-columns: 1fr; }
   .templateCompositionPreviewSummary > div + div { border-top: 1px solid var(--admin-v2-line); border-left: 0; }
   .templatePreviewShortages ul { display: grid; }

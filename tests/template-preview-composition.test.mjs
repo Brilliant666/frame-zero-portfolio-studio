@@ -197,6 +197,45 @@ test("character preview keeps intentional placeholders for every partial library
   }
 });
 
+test("hybrid previews adapt only ordinary gallery slots and preserve each template's structural slots", async (t) => {
+  const { planTemplateCompositionPreview, templateCatalog } = await importPreviewModule(t);
+  const structuralSlots = new Map([
+    ["cinematic-light", [0, 8]],
+    ["neon-hud", [0, 8]],
+    ["film-rail", Array.from({ length: 9 }, (_, index) => index)],
+    ["manga-panels", [0, 2, 6]],
+    ["prism-liquid", [0, 1, 5]],
+    ["orbital-portal", Array.from({ length: 8 }, (_, index) => index)],
+    ["archive-os", [0]],
+    ["editorial-duet", [0, 2, 5, 8]],
+    ["polaroid-field", [4, 8]],
+    ["character-select", []],
+    ["museum-depth", [0, 2]],
+  ]);
+
+  for (const template of templateCatalog) {
+    const fixed = new Set(structuralSlots.get(template.id));
+    for (const [orientation, ratio] of [["portrait", 2 / 3], ["landscape", 3 / 2]]) {
+      const assets = Array.from({ length: template.photoSlots }, (_, index) => photoAsset(
+        `${template.id}-${orientation}-${String(index).padStart(2, "0")}`,
+        ratio,
+      ));
+      const preview = planTemplateCompositionPreview({ templateId: template.id, assets });
+      assert.equal(preview.status, "planned", `${template.id} ${orientation}`);
+      const occupied = new Set(preview.assignments.flatMap(({ assetId, slotIndex }) => assetId ? [slotIndex] : []));
+      for (let slotIndex = 0; slotIndex < template.photoSlots; slotIndex += 1) {
+        const fixedOrientation = template.slotRatios[slotIndex] === "2:3" ? "portrait" : "landscape";
+        const shouldFill = !fixed.has(slotIndex) || fixedOrientation === orientation;
+        assert.equal(
+          occupied.has(slotIndex),
+          shouldFill,
+          `${template.id} ${orientation} slot ${slotIndex} must ${shouldFill ? "fill" : "stay empty"}`,
+        );
+      }
+    }
+  }
+});
+
 test("valid locks survive preview while missing locked assets block explicitly", async (t) => {
   const { planTemplateCompositionPreview } = await importPreviewModule(t);
   const assets = completeLibrary();
@@ -268,14 +307,36 @@ test("preview is read-only and explicit apply changes only one local draft layou
   assert.notEqual(applied.templateWorks["film-rail"], preview.works, "the editable draft must not alias frozen preview works");
 });
 
-test("preview modules contain no persistence or network implementation", async () => {
-  const [planner, previewComponent] = await Promise.all([
+test("preview modules separate read-only candidate effects from layout-only draft adoption", async () => {
+  const [planner, layoutPreview, candidatePreview, draftPreview, draftPreviewDialog, templatePreviewDialog] = await Promise.all([
     readSource("app/templates/template-preview-composition.ts"),
     readSource("app/admin/template/template-composition-preview.tsx"),
+    readSource("app/admin/template/template-effect-preview.tsx"),
+    readSource("app/admin/draft-preview.tsx"),
+    readSource("app/admin/draft-preview-dialog.tsx"),
+    readSource("app/admin/template-preview-dialog.tsx"),
   ]);
   assert.match(planner, /assignComposition\(/);
   assert.doesNotMatch(planner, /fetch\(|XMLHttpRequest|method:\s*"PUT"|\/api\/site-content/);
-  assert.match(previewComponent, /data-preview-readonly="true"/);
-  assert.match(previewComponent, /应用此排版到草稿/);
-  assert.doesNotMatch(previewComponent, /method:\s*"PUT"|\/api\/site-content/);
+  assert.match(layoutPreview, /data-layout-composition-preview=\{templateId\}/);
+  assert.match(layoutPreview, /生成排版建议/);
+  assert.match(layoutPreview, /预览推荐排版/);
+  assert.match(layoutPreview, /采用推荐到草稿/);
+  assert.match(layoutPreview, /applyTemplateCompositionPreview\(current, planned\)/);
+  assert.match(candidatePreview, /data-preview-readonly="true"/);
+  assert.match(candidatePreview, /查看模板效果/);
+  assert.doesNotMatch(candidatePreview, /planTemplateCompositionPreview|applyTemplateCompositionPreview|setContent|templateWorks|assets|library/);
+  assert.match(draftPreview, /dynamic\(\(\) => import\("\.\/draft-preview-dialog"\)/);
+  assert.doesNotMatch(draftPreview, /TemplateRenderer|Lightbox|buildPhotoSlots|useAdmin/);
+  assert.match(draftPreviewDialog, /previewSource="draft"/);
+  assert.match(draftPreviewDialog, /content\.templateWorks\[templateId\]/);
+  assert.match(draftPreviewDialog, /buildPhotoSlots\(/);
+  assert.doesNotMatch(draftPreviewDialog, /TemplateRenderer|Lightbox|admin-v2\.module\.css/);
+  assert.match(templatePreviewDialog, /data-preview-source=\{previewSource\}/);
+  assert.match(templatePreviewDialog, /<TemplateRenderer/);
+  assert.match(templatePreviewDialog, /template-preview-dialog\.module\.css/);
+  assert.doesNotMatch(templatePreviewDialog, /admin-v2\.module\.css/);
+  assert.doesNotMatch(`${draftPreview}\n${draftPreviewDialog}\n${templatePreviewDialog}`, /fetch\(|method:\s*"PUT"|setContent|planTemplateCompositionPreview/);
+  assert.doesNotMatch(layoutPreview, /method:\s*"PUT"|\/api\/site-content/);
+  assert.doesNotMatch(layoutPreview, /TemplateRenderer|Lightbox|useTemplateInteractions/);
 });

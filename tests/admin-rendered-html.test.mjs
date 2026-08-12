@@ -66,6 +66,10 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
     assert.match(html, /<link rel="icon" href="(?:https?:\/\/[^\"]+)?\/favicon\.svg"\/>/);
     assert.match(html, /aria-label="保存全部修改"/);
     assert.match(html, /title="保存全部修改"/);
+    assert.equal(html.match(/aria-label="保存全部修改"/g)?.length, 1);
+    assert.match(html, /data-admin-draft-preview-trigger="true"/);
+    assert.match(html, /预览当前草稿/);
+    assert.doesNotMatch(html, /查看已保存主页|预览当前主页/);
     assert.equal(html.match(/<h1\b/g)?.length, 1);
     assert.equal(html.match(/data-admin-section="[^"]+"/g)?.length, 1);
     assert.match(html, new RegExp(`data-admin-section="${section}"`));
@@ -78,17 +82,22 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
       assert.equal(html.match(/data-template-detail="[^"]+"/g)?.length, 1);
       assert.equal(html.match(/data-template-mobile-selector="true"/g)?.length, 1);
       assert.equal(html.match(/data-template-material-profile="[^"]+"/g)?.length, 1);
-      assert.equal(html.match(/data-template-composition-preview="[^"]+"/g)?.length, 1);
+      assert.equal(html.match(/data-template-candidate-preview="[^"]+"/g)?.length, 1);
+      assert.equal(html.match(/data-template-candidate-preview-trigger="[^"]+"/g)?.length, 1);
+      assert.equal(html.match(/data-template-candidate-preview-dialog="[^"]+"/g)?.length ?? 0, 0,
+        "the heavy candidate dialog must be loaded only after an explicit preview action");
       assert.match(html, /data-preview-readonly="true"/);
+      assert.doesNotMatch(html, /data-layout-composition-preview=|data-layout-preview-apply=/);
       assert.doesNotMatch(html, /data-template-card=/);
       assert.match(html, /aria-label="正式页面模板"/);
       assert.match(html, /素材准备建议/);
       assert.match(html, /横图/);
       assert.match(html, /竖图/);
       assert.match(html, /方图/);
-      assert.match(html, /当前素材排版预览/);
-      assert.match(html, /正在为/);
-      assert.match(html, /准备预览/);
+      assert.match(html, /查看模板效果/);
+      assert.match(html, /设为主页模板/);
+      assert.match(html, /下一步：素材排版/);
+      assert.doesNotMatch(html, /独立预览|应用此排版到草稿/);
     }
     if (section === "profile") {
       assert.equal(html.match(/data-optional-brand-content="true"/g)?.length, 1);
@@ -97,6 +106,11 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
       assert.equal(html.match(/data-package-title-input="\d+"/g)?.length, 3);
     }
     if (section === "layout") {
+      assert.equal(html.match(/data-layout-composition-preview="[^"]+"/g)?.length, 1);
+      assert.equal(html.match(/data-layout-preview-generate="[^"]+"/g)?.length, 1);
+      assert.doesNotMatch(html, /data-template-candidate-preview=/);
+      assert.match(html, /生成排版建议/);
+      assert.doesNotMatch(html, /应用此排版到草稿/);
       assert.match(html, /data-local-photo-import="missing"/);
       assert.match(html, /本地照片导入服务未启动/);
       assert.doesNotMatch(html, /data-add-materials-trigger=|data-photo-picker=|data-photo-import-preflight=|选择照片|选择文件夹|确认导入|重新选择|高级 \/ 命令行导入|photos:import/);

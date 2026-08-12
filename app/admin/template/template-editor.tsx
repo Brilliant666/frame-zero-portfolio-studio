@@ -9,7 +9,7 @@ import {
 import { AdminSection } from "../admin-form";
 import { useAdmin } from "../admin-provider";
 import styles from "../admin-v2.module.css";
-import TemplateCompositionPreview from "./template-composition-preview";
+import TemplateEffectPreview from "./template-effect-preview";
 
 const mobileModeLabels: Record<TemplateMaterialProfile["mobileBehavior"]["mode"], string> = {
   stack: "顺序堆叠",
@@ -67,7 +67,7 @@ export default function TemplateEditor() {
         </div>
 
         <div className={styles.templateNotice} role="note">
-          查看候选详情不会修改草稿；只有点击“选择此模板”才会更新当前草稿。模板槽位数量或比例可能不同，
+          查看候选详情不会修改草稿；只有点击“设为主页模板”才会更新当前草稿。模板槽位数量或比例可能不同，
           当前主页的素材排版可能变化；各模板已有的显式槽位排版会继续保留，不会在这里静默删除。
         </div>
 
@@ -171,6 +171,7 @@ export default function TemplateEditor() {
                     ["横图", materialProfile.landscapeDemand],
                     ["竖图", materialProfile.portraitDemand],
                     ["方图", materialProfile.squareDemand],
+                    ["任意方向", materialProfile.sourceAdaptiveDemand],
                   ] as const).map(([label, demand]) => (
                     <div key={label}>
                       <dt>{label}</dt>
@@ -214,25 +215,21 @@ export default function TemplateEditor() {
                 </ul>
               </section>
 
-              <TemplateCompositionPreview templateId={inspectedTemplate.id} />
+              <TemplateEffectPreview templateId={inspectedTemplate.id} />
             </div>
 
-            <div className={styles.templateDetailActions}>
-              <button
-                type="button"
-                onClick={() => chooseTemplate(inspectedTemplate.id)}
-                disabled={inspectedIsDraft}
-              >
-                {inspectedIsDraft ? "当前草稿模板" : "选择此模板"}
-              </button>
-              <a
-                href={`/?template=${inspectedTemplate.id}`}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`独立预览${inspectedTemplate.name}`}
-              >
-                独立预览 <span aria-hidden="true">↗</span>
-              </a>
+            <div className={styles.templateDetailActions} data-template-primary-action="true">
+              {inspectedIsDraft ? (
+                <a href="/admin/layout">下一步：素材排版 <span aria-hidden="true">→</span></a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => chooseTemplate(inspectedTemplate.id)}
+                  title="只更新当前草稿，不会自动保存"
+                >
+                  设为主页模板
+                </button>
+              )}
             </div>
           </article>
         </div>

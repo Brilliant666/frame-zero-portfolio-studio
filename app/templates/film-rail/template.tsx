@@ -21,7 +21,7 @@ export default function FilmRailTemplate({
   onOpenWork,
 }: TemplateProps) {
   const railRef = useRef<HTMLDivElement>(null);
-  const filmSlots = buildPhotoSlots(works, filmRatios);
+  const filmSlots = buildPhotoSlots(works, filmRatios, { templateId: "film-rail" });
   const leadSlot = filmSlots.find((slot) => slot.work) ?? filmSlots[0];
   const leadWork = leadSlot.work;
 

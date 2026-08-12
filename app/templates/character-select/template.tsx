@@ -32,7 +32,7 @@ export default function CharacterSelectTemplate({ content, works, packages, book
   const photoSlots = useMemo(() => buildPhotoSlots(
     works,
     CHARACTER_RATIOS,
-    { adaptiveToSourceOrientation: true },
+    { templateId: "character-select" },
   ), [works]);
   const photoRows = useMemo(() => groupSourceOrientationSlots(photoSlots), [photoSlots]);
   const availableIndexes = useMemo(() => photoSlots.filter((slot) => slot.work).map((slot) => slot.index), [photoSlots]);

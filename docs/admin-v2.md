@@ -7,10 +7,10 @@ legacy `SiteContent`、`/api/site-content` 和 `site_settings(id = 1)` 行为不
 
 | 路由 | 负责内容 |
 | --- | --- |
-| `/admin/template` | `activeTemplate`，模板查看、选择和独立预览 |
+| `/admin/template` | `activeTemplate`，模板查看、效果预览与主页模板选择；不修改 `templateWorks` |
 | `/admin/profile` | `profile`、`hero`、`trustItems`、`statement` |
 | `/admin/packages` | `packages` |
-| `/admin/layout` | `templateWorks`、现有照片 manifest 与本机素材导入入口 |
+| `/admin/layout` | `templateWorks`、排版建议／预览／采用、现有照片 manifest 与本机素材导入入口 |
 | `/admin/contact` | `contact`、`social`、`bookingFields` |
 | `/admin/advanced` | legacy `works` 与恢复示例草稿 |
 
@@ -23,6 +23,7 @@ legacy `SiteContent`、`/api/site-content` 和 `site_settings(id = 1)` 行为不
 - 无修改、读取失败、读取降级或正在保存时不会发送 PUT。
 - 保存仍只发送 `PUT /api/site-content` 和 `{ content: SiteContent }`。
 - 顶栏“保存全部修改”保存六个分区共享的完整 draft；窄屏可缩短可见文案，但无障碍名称仍保留完整语义。
+- 顶栏是 Admin 唯一的 SiteContent 持久化入口；“预览当前草稿”在只读 modal 中直接预览当前内存 draft，不读取已保存主页、不发送保存请求，也不改变 draft。
 - 保存失败保留 draft；保存期间产生的新编辑不会被较早的服务器响应覆盖。
 - `Ctrl+S` / `Cmd+S` 阻止浏览器保存网页并触发同一保存操作。
 - 有未保存修改时使用浏览器 `beforeunload` 保护真实离开或刷新；Admin 内部分区切换不弹窗。
@@ -32,7 +33,8 @@ legacy `SiteContent`、`/api/site-content` 和 `site_settings(id = 1)` 行为不
 
 - Admin 顶栏、认证门禁和页面 metadata 使用通用的内容管理标题，不把当前示例站品牌写入后台系统身份。
 - 桌面端使用 sticky sidebar；移动端使用紧凑的原生 section selector。
-- 11 个正式模板使用紧凑选择列表，同一时间只展开当前查看候选的完整详情；已保存、当前 draft 与正在查看三个状态分别显示。浏览候选不会修改 draft，只有“选择此模板”会修改 draft，独立预览也不会修改 draft。
+- 11 个正式模板使用紧凑选择列表，同一时间只展开当前查看候选的完整详情；已保存、当前 draft 与正在查看三个状态分别显示。浏览候选和“查看模板效果”不会修改 draft，只有“设为主页模板”会修改 `activeTemplate`；模板分区不得生成、采用或写入 `templateWorks`。选择后以“下一步：素材排版”进入当前主页模板的排版流程。
+- 素材排版分区独占 `templateWorks` 编辑。推荐流程使用“生成排版建议／预览推荐排版／采用推荐到草稿”的明确阶段：生成和预览均不得修改 draft，只有采用才更新当前 `activeTemplate` 对应的排版，并且仍须使用顶栏“保存全部修改”才能持久化。手动槽位、焦点、锁定和清空同样只更新共享 draft。
 - 基本资料优先展示摄影师、Hero 与信任信息；`profile.brand`、`profile.mark` 和 `statement` 保留原契约，但收进默认关闭的可选品牌内容。
 - 每个套餐的主页标题始终以可编辑输入显示，其他套餐字段继续使用有文字状态的 disclosure；旧版作品只在高级设置中按需展开。
 - `npm run dev` 先在 `127.0.0.1` 的系统分配空闲端口启动独立素材导入服务，等待可信 IPC ready 后再把实际 origin 仅注入 Admin server；“选择照片”和“选择文件夹”都进入同一条 Web `FileList` 批次链路，文件夹选择只是在该链路上增加目录选择 capability，不建立独立 importer，也不按浏览器名称分支。确认后，其中受支持的照片仍逐张流式交给现有 Sharp importer 核心，用户无需管理 companion port，整个合法 manifest 仍是自动排版候选集，不增加 approved pool。
@@ -42,7 +44,7 @@ legacy `SiteContent`、`/api/site-content` 和 `site_settings(id = 1)` 行为不
 - 确认导入后更新本地 Photo Library，但不修改 SiteContent draft、不触发自动排版，也不需要点击“保存全部修改”；导入结束自动刷新素材库。结果摘要使用“本次新增 / 恢复可用 / 重复跳过 / 可用素材总计”，其中重复按文件内容判断，不暗示不同文件名或不同文件夹一定是新素材。“刷新素材列表”只重新读取素材库，不会扫描电脑文件夹。
 - `.frame-zero/photo-library-catalog.json` 是本机私有权威管理索引，保存经过严格校验且可供浏览器使用的素材元数据，以及不透明批次 ID、照片／文件夹来源类型、首次导入顺序、时间、修订计数及回收站状态；不记录或返回文件名、文件夹名、相对路径或绝对路径。公开 manifest 由其中的在库素材派生；旧素材的历史导入顺序无法恢复时明确标为未知，不伪造日期或文件夹分类。
 - 素材库支持按已知导入顺序排序、按批次筛选，并同时显示当前 draft 与已保存内容的引用数量。“移到回收站”会阻止素材继续参与新选择和自动排版，但保留其响应式文件以及既有页面引用；“恢复”回到原导入位置。本机 UI 不提供不可逆的物理清理。
-- 第一阶段的主要分配目标统一为横图 3:2、竖图 2:3；16:9 只作为模板可选的展示裁切保留。真实宽高及方图方向仍按源文件保存，不在导入时伪造成 3:2/2:3。`character-select` 使用三行等高的 justified roster，让任意九张横／竖图均以 3:2 或 2:3 展示，不再强制 1:1。
+- 第一阶段的主要分配目标统一为横图 3:2、竖图 2:3；16:9 只作为模板可选的展示裁切保留。真实宽高及方图方向仍按源文件保存，不在导入时伪造成 3:2/2:3。方向策略按模板而不是全局横图偏好决定：`film-rail` 保持全横向、`orbital-portal` 保持全竖向、`character-select` 全槽按来源方向自适应；其余八个模板保留 hero／cover／结构性槽的固定方向，普通 gallery 槽按来源横图 3:2／竖图 2:3 自适应。全部 11 个模板仍须使用真实横竖组合复检 desktop/mobile 裁切与视觉层级。
 - Admin 不再把高级或命令行导入呈现为产品流程。现有 importer 核心、中断写入恢复、陈旧锁恢复、链接输出兼容与独立诊断入口仅作为内部兼容和维护能力保留；HR-002 统一本机产品入口，HR-003 在同一底层处理链路前增加批次预览与明确确认。
 - 远程 Admin 不提供可执行的本机导入或管理控件；本轮不增加云端素材 API、对象存储、不可逆物理清理或 repository。
 - 恢复示例数据必须通过原生 dialog 二次确认；确认只替换当前 draft，不立即写数据库。

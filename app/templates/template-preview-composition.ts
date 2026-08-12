@@ -8,11 +8,16 @@ import {
   type TemplateCompositionVariant,
 } from "../template-composition/contract";
 import {
-  isSourceOrientationAdaptiveTemplate,
   normalizePrimaryAssignmentRatio,
   primaryPhotoRatioForOrientation,
+  templateSlotOrientationMode,
 } from "../photo-ratio-policy";
-import { assetToWork, type PhotoAsset, type PhotoOrientation } from "../photo-library";
+import {
+  assetToWork,
+  autoComposeTemplateWorks,
+  type PhotoAsset,
+  type PhotoOrientation,
+} from "../photo-library";
 import type { SiteContent, Work } from "../site-config";
 import type { TemplateId } from "./catalog";
 import {
@@ -69,30 +74,29 @@ function adaptivePreviewRatios(
   assets: readonly PhotoAsset[],
   existingWorks: readonly Work[],
 ) {
-  if (!isSourceOrientationAdaptiveTemplate(profile.templateId)) return profile.slotAspectTargets;
+  const isAdaptiveSlot = (slotIndex: number) => (
+    templateSlotOrientationMode(profile.templateId, slotIndex) === "source-adaptive"
+  );
+  if (!profile.slotAspectTargets.some((_, slotIndex) => isAdaptiveSlot(slotIndex))) {
+    return profile.slotAspectTargets;
+  }
 
-  const ratios = profile.slotAspectTargets.map(normalizePrimaryAssignmentRatio);
+  const ratios = profile.slotAspectTargets.map((ratio, slotIndex) => (
+    isAdaptiveSlot(slotIndex) ? normalizePrimaryAssignmentRatio(ratio) : ratio
+  ));
   const assetById = new Map(assets.map((asset) => [asset.id, asset]));
-  const usedAssetIds = new Set<string>();
-  const occupiedSlots = new Set<number>();
-
-  existingWorks.forEach((work, fallbackIndex) => {
-    if (!work.assetId) return;
-    const asset = assetById.get(work.assetId);
-    if (!asset || usedAssetIds.has(asset.id)) return;
+  const stableAssets = [...assets].sort((left, right) => left.id.localeCompare(right.id));
+  const plannedWorks = autoComposeTemplateWorks(
+    stableAssets,
+    profile.slotAspectTargets,
+    existingWorks.map((work) => ({ ...work, locked: true })),
+    { templateId: profile.templateId },
+  );
+  for (const [fallbackIndex, work] of plannedWorks.entries()) {
     const slotIndex = Number.isInteger(work.slotIndex) ? work.slotIndex as number : fallbackIndex;
-    if (slotIndex < 0 || slotIndex >= ratios.length || occupiedSlots.has(slotIndex)) return;
-    ratios[slotIndex] = primaryPhotoRatioForOrientation(asset.orientation);
-    occupiedSlots.add(slotIndex);
-    usedAssetIds.add(asset.id);
-  });
-
-  const openSlots = ratios.flatMap((_, slotIndex) => occupiedSlots.has(slotIndex) ? [] : [slotIndex]);
-  const availableAssets = assets
-    .filter((asset) => !usedAssetIds.has(asset.id))
-    .sort((left, right) => left.id.localeCompare(right.id));
-  for (let index = 0; index < Math.min(openSlots.length, availableAssets.length); index += 1) {
-    ratios[openSlots[index]] = primaryPhotoRatioForOrientation(availableAssets[index].orientation);
+    if (!isAdaptiveSlot(slotIndex) || !work.assetId) continue;
+    const asset = assetById.get(work.assetId);
+    if (asset) ratios[slotIndex] = primaryPhotoRatioForOrientation(asset.orientation);
   }
   return Object.freeze(ratios);
 }

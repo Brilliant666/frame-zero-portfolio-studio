@@ -75,7 +75,10 @@ export default function ArchiveOsTemplate({
     });
   }, [filter, query, works]);
 
-  const archiveSlots = useMemo(() => buildPhotoSlots(filteredWorks, ARCHIVE_RATIOS), [filteredWorks]);
+  const archiveSlots = useMemo(
+    () => buildPhotoSlots(filteredWorks, ARCHIVE_RATIOS, { templateId: "archive-os" }),
+    [filteredWorks],
+  );
   const visibleWorks = useMemo(() => archiveSlots.flatMap((slot) => slot.work ? [slot.work] : []), [archiveSlots]);
   const selectedWork = visibleWorks.find((work) => work.code === selectedCode) ?? visibleWorks[0];
   const showSearchEmpty = filteredWorks.length === 0 && (filter !== "all" || query.trim().length > 0);

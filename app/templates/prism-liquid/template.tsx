@@ -12,7 +12,10 @@ const PRISM_RATIOS = getTemplateSlotRatios("prism-liquid");
 
 export default function PrismLiquidTemplate({ content, works, packages, bookingTemplate, copiedKey, onCopy, onOpenWork }: TemplateProps) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const gallerySlots = useMemo(() => buildPhotoSlots(works, PRISM_RATIOS), [works]);
+  const gallerySlots = useMemo(
+    () => buildPhotoSlots(works, PRISM_RATIOS, { templateId: "prism-liquid" }),
+    [works],
+  );
   const displayedSlots = useMemo(() => gallerySlots.filter((slot) => slot.work), [gallerySlots]);
   const displayedWorks = useMemo(() => displayedSlots.map((slot) => slot.work!), [displayedSlots]);
   const safeActiveIndex = displayedSlots.length === 0 ? 0 : Math.min(activeIndex, displayedSlots.length - 1);

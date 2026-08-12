@@ -3,6 +3,7 @@ import {
   type PhotoRatio,
   type TemplateId,
 } from "./catalog";
+import { templateSlotOrientationMode } from "../photo-ratio-policy";
 
 export type TemplateMaterialDemand = Readonly<{
   minimum: number;
@@ -33,6 +34,7 @@ export type TemplateMaterialProfile = Readonly<{
   landscapeDemand: TemplateMaterialDemand;
   portraitDemand: TemplateMaterialDemand;
   squareDemand: TemplateMaterialDemand;
+  sourceAdaptiveDemand: TemplateMaterialDemand;
   slotAspectTargets: readonly PhotoRatio[];
   visualPriority: readonly TemplateMaterialPriority[];
   cropPressure: Readonly<{
@@ -47,7 +49,10 @@ export type TemplateMaterialProfile = Readonly<{
   optionalNotes: readonly string[];
 }>;
 
-type ProfileMetadata = Omit<TemplateMaterialProfile, "templateId" | "maximumUsefulPhotoCount" | "slotAspectTargets">;
+type ProfileMetadata = Omit<
+  TemplateMaterialProfile,
+  "templateId" | "maximumUsefulPhotoCount" | "slotAspectTargets" | "sourceAdaptiveDemand"
+>;
 
 const allSlots = (count: number) => Object.freeze(Array.from({ length: count }, (_, index) => index));
 
@@ -245,10 +250,61 @@ function freezeDemand(demand: TemplateMaterialDemand) {
   return Object.freeze({ ...demand });
 }
 
+function orientationDemandsForPolicy(
+  templateId: TemplateId,
+  slotRatios: readonly PhotoRatio[],
+  metadata: ProfileMetadata,
+) {
+  const adaptiveSlotCount = slotRatios.filter(
+    (_, slotIndex) => templateSlotOrientationMode(templateId, slotIndex) === "source-adaptive",
+  ).length;
+  if (adaptiveSlotCount === 0) {
+    return {
+      landscapeDemand: metadata.landscapeDemand,
+      portraitDemand: metadata.portraitDemand,
+      squareDemand: metadata.squareDemand,
+      sourceAdaptiveDemand: {
+        minimum: 0,
+        recommended: 0,
+        note: "该模板保持固定方向构图，不使用来源方向自适应槽位。",
+      },
+    };
+  }
+
+  const fixedRatios = slotRatios.filter(
+    (_, slotIndex) => templateSlotOrientationMode(templateId, slotIndex) === "fixed",
+  );
+  const fixedLandscapeCount = fixedRatios.filter((ratio) => ratio !== "2:3").length;
+  const fixedPortraitCount = fixedRatios.length - fixedLandscapeCount;
+  return {
+    landscapeDemand: {
+      minimum: fixedLandscapeCount,
+      recommended: fixedLandscapeCount,
+      note: "仅结构性横向槽位需要固定横图；普通图集槽位可使用任意来源方向。",
+    },
+    portraitDemand: {
+      minimum: fixedPortraitCount,
+      recommended: fixedPortraitCount,
+      note: "仅结构性竖向槽位需要固定竖图；普通图集槽位可使用任意来源方向。",
+    },
+    squareDemand: {
+      minimum: 0,
+      recommended: 0,
+      note: "方图可作为普通图集槽位的回退，并以 3:2 主目标展示。",
+    },
+    sourceAdaptiveDemand: {
+      minimum: Math.max(0, metadata.minimumUsefulPhotoCount - fixedRatios.length),
+      recommended: Math.max(0, metadata.recommendedPhotoCount - fixedRatios.length),
+      note: "普通图集槽位按来源方向展示：横图 3:2、竖图 2:3，不要求预先凑齐固定横竖配额。",
+    },
+  };
+}
+
 function freezeProfile(templateId: TemplateId): TemplateMaterialProfile {
   const catalog = templateCatalog.find((template) => template.id === templateId);
   if (!catalog) throw new Error(`Missing template catalog entry for ${templateId}.`);
   const metadata = profileMetadata[templateId];
+  const demands = orientationDemandsForPolicy(templateId, catalog.slotRatios, metadata);
 
   return Object.freeze({
     templateId,
@@ -256,9 +312,10 @@ function freezeProfile(templateId: TemplateId): TemplateMaterialProfile {
     recommendedPhotoCount: metadata.recommendedPhotoCount,
     maximumUsefulPhotoCount: catalog.photoSlots,
     heroSlotCount: metadata.heroSlotCount,
-    landscapeDemand: freezeDemand(metadata.landscapeDemand),
-    portraitDemand: freezeDemand(metadata.portraitDemand),
-    squareDemand: freezeDemand(metadata.squareDemand),
+    landscapeDemand: freezeDemand(demands.landscapeDemand),
+    portraitDemand: freezeDemand(demands.portraitDemand),
+    squareDemand: freezeDemand(demands.squareDemand),
+    sourceAdaptiveDemand: freezeDemand(demands.sourceAdaptiveDemand),
     slotAspectTargets: Object.freeze([...catalog.slotRatios]),
     visualPriority: Object.freeze(metadata.visualPriority.map((priority) => Object.freeze({ ...priority }))),
     cropPressure: Object.freeze({ ...metadata.cropPressure }),

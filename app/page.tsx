@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getClientVisiblePortfolioTitle } from "./client-visible-title";
-import { isSourceOrientationAdaptiveTemplate } from "./photo-ratio-policy";
 import { isTemplateId, normalizeSiteContent, siteConfig, type SiteContent, type TemplateId } from "./site-config";
 import { getTemplateCatalogItem } from "./templates/catalog";
 import Lightbox from "./templates/shared/lightbox";
@@ -28,7 +27,7 @@ export default function Home() {
     return buildPhotoSlots(
       content.works.filter((work) => work.enabled),
       templatePlan.slotRatios,
-      { adaptiveToSourceOrientation: isSourceOrientationAdaptiveTemplate(templateId) },
+      { templateId },
     ).flatMap((slot) => slot.work ? [{ ...slot.work, slotIndex: slot.index }] : []);
   }, [content.templateWorks, content.works, templateId, templatePlan.photoSlots, templatePlan.slotRatios]);
   const {

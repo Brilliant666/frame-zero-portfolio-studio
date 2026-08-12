@@ -22,7 +22,7 @@ export default function CinematicLightTemplate({
 }: TemplateProps) {
   const heroTitle = content.hero.title.trim().split(/\s+/);
   const heroTitleLead = heroTitle.shift() ?? "";
-  const photoSlots = buildPhotoSlots(works, cinematicRatios);
+  const photoSlots = buildPhotoSlots(works, cinematicRatios, { templateId: "cinematic-light" });
   const heroSlot = photoSlots[0];
   const heroWork = heroSlot.work;
   const statementSlot = photoSlots[photoSlots.length - 1];

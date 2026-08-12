@@ -23,7 +23,7 @@ export default function MangaPanelsTemplate({
   onCopy,
   onOpenWork,
 }: TemplateProps) {
-  const storyboardSlots = buildPhotoSlots(works, mangaRatios);
+  const storyboardSlots = buildPhotoSlots(works, mangaRatios, { templateId: "manga-panels" });
   const leadSlot = storyboardSlots[0];
   const leadWork = leadSlot.work;
 

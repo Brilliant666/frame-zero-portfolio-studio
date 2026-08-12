@@ -22,7 +22,10 @@ export default function EditorialDuetTemplate({
 }: TemplateProps) {
   const rootRef = useRef<HTMLElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-  const photoSlots = useMemo(() => buildPhotoSlots(works, EDITORIAL_RATIOS), [works]);
+  const photoSlots = useMemo(
+    () => buildPhotoSlots(works, EDITORIAL_RATIOS, { templateId: "editorial-duet" }),
+    [works],
+  );
   const coverSlot = photoSlots[0];
   const chapterSlots = photoSlots.slice(1);
   const safeIndex = Math.min(activeIndex, chapterSlots.length - 1);

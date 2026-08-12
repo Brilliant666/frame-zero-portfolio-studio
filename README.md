@@ -203,8 +203,12 @@ The [ADMIN-V2 / DESIGN-01 workbench](docs/admin-v2.md) divides the editor into
 six focused routes for templates, profile, packages, layout, contact, and
 advanced compatibility controls. All routes share one client-side draft and
 the existing save endpoint; the single top-bar action saves all changes across
-the six sections. The template route uses a compact eleven-item
-selector and expands only one candidate detail at a time. Desktop editing uses a
+the six sections, while **预览当前草稿** shows that in-memory draft without
+persisting it. The template route uses a compact eleven-item selector and
+expands only one candidate detail at a time; it only changes the homepage
+template choice. Recommended composition, preview, adoption, and all
+`templateWorks` editing belong to **素材排版**, where generating or previewing a
+recommendation remains read-only until **采用推荐到草稿** is chosen. Desktop editing uses a
 persistent sidebar; mobile keeps every section accessible through a compact
 switcher, while complex photo layout remains desktop-first. The Admin structure
 does not change `SiteContent`, the write payload, D1 schema, or template catalog.
@@ -311,8 +315,14 @@ Primary assignment treats landscape material as 3:2 and portrait material as
 2:3. A 16:9 shape remains an approved presentation crop where a template needs
 it, rather than a separate source category. The importer still preserves true
 dimensions and square orientation metadata instead of falsifying the source.
-`character-select` uses three justified rows whose cards remain 3:2 or 2:3 for
-all nine source-orientation combinations; it no longer forces a 1:1 roster.
+Direction is template-specific rather than a global landscape preference:
+`film-rail` stays landscape-only, `orbital-portal` stays portrait-only, and
+`character-select` adapts every slot to its source. The other eight templates
+keep structural hero/cover slots fixed while ordinary gallery slots adapt to
+source-oriented 3:2 or 2:3 presentation. `character-select` uses three justified
+rows for all nine source-orientation combinations and no longer forces a 1:1
+roster. All eleven templates still require real-material desktop/mobile human
+review before approval.
 
 Imports are additive: choosing the wrong folder, temporarily losing a source file,
 or hitting one damaged photograph will not delete assets already used by a saved
@@ -335,7 +345,7 @@ loopback port discovery.
 
 After the material grid refreshes, for the active template you can:
 
-- create an initial ratio-aware layout with **一键智能排版**;
+- generate, preview, and explicitly adopt a ratio-aware recommendation into the current draft;
 - pick or replace a specific fixed slot manually;
 - swap adjacent slots, remove a photograph, or lock it before recomposing;
 - click the subject in a crop preview, or use the two sliders, to set its focal point;

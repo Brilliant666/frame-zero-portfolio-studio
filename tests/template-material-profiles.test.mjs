@@ -16,6 +16,7 @@ async function importMaterialProfiles(t) {
 
   for (const [relativePath, outputName] of [
     ["app/templates/catalog.ts", "catalog.mjs"],
+    ["app/photo-ratio-policy.ts", "photo-ratio-policy.mjs"],
     ["app/templates/material-profiles.ts", "material-profiles.mjs"],
   ]) {
     const input = await source(relativePath);
@@ -27,6 +28,7 @@ async function importMaterialProfiles(t) {
       fileName: relativePath,
     }).outputText;
     output = output.replaceAll('from "./catalog"', 'from "./catalog.mjs"');
+    output = output.replaceAll('from "../photo-ratio-policy"', 'from "./photo-ratio-policy.mjs"');
     await fs.writeFile(path.join(directory, outputName), output, "utf8");
   }
 
@@ -59,21 +61,25 @@ test("all eleven templates expose bounded, immutable material profiles", async (
     assert.ok(profile.recommendedPhotoCount <= profile.maximumUsefulPhotoCount);
     assert.ok(profile.heroSlotCount >= 0 && profile.heroSlotCount <= profile.maximumUsefulPhotoCount);
 
-    const demands = [profile.landscapeDemand, profile.portraitDemand, profile.squareDemand];
+    const demands = [
+      profile.landscapeDemand,
+      profile.portraitDemand,
+      profile.squareDemand,
+      profile.sourceAdaptiveDemand,
+    ];
     for (const demand of demands) {
       assert.ok(Number.isSafeInteger(demand.minimum) && demand.minimum >= 0);
       assert.ok(Number.isSafeInteger(demand.recommended) && demand.recommended >= demand.minimum);
       assert.ok(demand.note.length > 0);
       assert.ok(Object.isFrozen(demand));
     }
-    const orientationAdaptive = catalog.id === "character-select";
     assert.equal(
       demands.reduce((total, demand) => total + demand.minimum, 0),
-      orientationAdaptive ? 0 : profile.minimumUsefulPhotoCount,
+      profile.minimumUsefulPhotoCount,
     );
     assert.equal(
       demands.reduce((total, demand) => total + demand.recommended, 0),
-      orientationAdaptive ? 0 : profile.recommendedPhotoCount,
+      profile.recommendedPhotoCount,
     );
 
     const prioritySlots = profile.visualPriority.map(({ slotIndex }) => slotIndex);
@@ -97,6 +103,7 @@ test("all eleven templates expose bounded, immutable material profiles", async (
     assert.ok(Object.isFrozen(profile.visualPriority));
     assert.ok(Object.isFrozen(profile.cropPressure));
     assert.ok(Object.isFrozen(profile.mobileBehavior));
+    assert.ok(Object.isFrozen(profile.sourceAdaptiveDemand));
     assert.ok(Object.isFrozen(profile.secondaryPresentations));
     assert.ok(Object.isFrozen(profile.optionalNotes));
   }
@@ -127,6 +134,21 @@ test("material profiles preserve differentiated implementation-driven demands", 
   );
   assert.ok(character.secondaryPresentations.some(({ target }) => target === "variable"));
   assert.ok(character.secondaryPresentations.every(({ target }) => target !== "1:1"));
+  assert.deepEqual(
+    [character.sourceAdaptiveDemand.minimum, character.sourceAdaptiveDemand.recommended],
+    [5, 9],
+  );
+
+  const cinematic = getTemplateMaterialProfile("cinematic-light");
+  assert.deepEqual(
+    [cinematic.landscapeDemand.recommended, cinematic.portraitDemand.recommended, cinematic.sourceAdaptiveDemand.recommended],
+    [2, 0, 7],
+  );
+  const manga = getTemplateMaterialProfile("manga-panels");
+  assert.deepEqual(
+    [manga.landscapeDemand.recommended, manga.portraitDemand.recommended, manga.sourceAdaptiveDemand.recommended],
+    [2, 1, 6],
+  );
 
   assert.equal(getTemplateMaterialProfile("archive-os").recommendedPhotoCount, 12);
   assert.equal(getTemplateMaterialProfile("museum-depth").recommendedPhotoCount, 7);

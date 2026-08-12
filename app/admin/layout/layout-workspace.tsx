@@ -12,7 +12,6 @@ import {
 } from "react";
 import {
   assetToWork,
-  autoComposeTemplateWorks,
   formatFocusPosition,
   isPhotoAssetCompatibleWithSlot,
   isWorkCompatibleWithSlot,
@@ -22,15 +21,17 @@ import {
 } from "../../photo-library";
 import { buildPhotoAssetReferenceMap } from "../../photo-library-references";
 import {
-  isSourceOrientationAdaptiveTemplate,
+  hasSourceOrientationAdaptiveSlots,
   normalizePrimaryAssignmentRatio,
   primaryPhotoRatioForDimensions,
+  templateSlotOrientationMode,
 } from "../../photo-ratio-policy";
 import type { Work } from "../../site-config";
 import { getTemplateCatalogItem } from "../../templates/catalog";
 import { AdminSection } from "../admin-form";
 import { useAdmin } from "../admin-provider";
 import styles from "../admin-v2.module.css";
+import { LayoutCompositionPreview } from "../template/template-composition-preview";
 import PhotoImportPanel, { type PhotoLibraryStats } from "./photo-import-panel";
 import {
   loadLocalPhotoLibrary,
@@ -144,9 +145,12 @@ export default function LayoutWorkspace() {
   }, [selectedBySlot]);
 
   const activeWork = selectedBySlot.get(activeSlot);
-  const adaptiveToSourceOrientation = isSourceOrientationAdaptiveTemplate(content.activeTemplate);
+  const hasAdaptiveGallerySlots = hasSourceOrientationAdaptiveSlots(content.activeTemplate);
+  const slotUsesSourceOrientation = (slotIndex: number) => (
+    templateSlotOrientationMode(content.activeTemplate, slotIndex) === "source-adaptive"
+  );
   const slotPresentationRatio = (slotIndex: number, work: Work | undefined) => (
-    adaptiveToSourceOrientation
+    slotUsesSourceOrientation(slotIndex)
       ? work
         ? primaryPhotoRatioForDimensions(work.previewWidth, work.previewHeight)
           ?? normalizePrimaryAssignmentRatio(template.slotRatios[slotIndex])
@@ -154,6 +158,7 @@ export default function LayoutWorkspace() {
       : template.slotRatios[slotIndex]
   );
   const activeRatio = slotPresentationRatio(activeSlot, activeWork);
+  const activeSlotUsesSourceOrientation = slotUsesSourceOrientation(activeSlot);
   const activeFocus = parseFocusPosition(activeWork?.position ?? "50% 50%");
 
   const activeItems = useMemo(
@@ -340,7 +345,7 @@ export default function LayoutWorkspace() {
   };
 
   const assignAsset = (asset: PhotoAsset) => {
-    if (!isPhotoAssetCompatibleWithSlot(asset, activeRatio, adaptiveToSourceOrientation)) return;
+    if (!isPhotoAssetCompatibleWithSlot(asset, activeRatio, activeSlotUsesSourceOrientation)) return;
     updateTemplateWorks((works) => {
       const existing = works.find((work) => work.assetId === asset.id);
       const remaining = works.filter((work, index) => (
@@ -360,8 +365,8 @@ export default function LayoutWorkspace() {
     const destinationWork = selectedBySlot.get(destination);
     return Boolean(
       sourceWork
-      && isWorkCompatibleWithSlot(sourceWork, template.slotRatios[destination], adaptiveToSourceOrientation)
-      && (!destinationWork || isWorkCompatibleWithSlot(destinationWork, template.slotRatios[slotIndex], adaptiveToSourceOrientation)),
+      && isWorkCompatibleWithSlot(sourceWork, template.slotRatios[destination], slotUsesSourceOrientation(destination))
+      && (!destinationWork || isWorkCompatibleWithSlot(destinationWork, template.slotRatios[slotIndex], slotUsesSourceOrientation(slotIndex))),
     );
   };
 
@@ -385,15 +390,6 @@ export default function LayoutWorkspace() {
     updateSlot(activeSlot, { position: formatFocusPosition(x, y) });
   };
 
-  const autoCompose = () => {
-    updateTemplateWorks((works) => autoComposeTemplateWorks(
-      assets,
-      template.slotRatios,
-      works,
-      { adaptiveToSourceOrientation },
-    ));
-  };
-
   const resetLayout = () => {
     updateTemplateWorks(() => []);
   };
@@ -402,8 +398,8 @@ export default function LayoutWorkspace() {
     <AdminSection
       eyebrow="LAYOUT"
       title="素材排版"
-      description={adaptiveToSourceOrientation
-        ? `为“${template.name}”的固定槽位安排已有本地素材；横图按 3:2、竖图按 2:3 自适应展示。`
+      description={hasAdaptiveGallerySlots
+        ? `为“${template.name}”安排已有本地素材；结构槽位保持设计方向，普通图集槽位按横图 3:2、竖图 2:3 自适应展示。`
         : `为“${template.name}”的固定槽位安排已有本地素材；比例不合适时宁可留白。`}
     >
       <p className={styles.mobileLayoutNote}>手机可查看并完成基础调整；复杂素材排版建议使用桌面端。</p>
@@ -423,10 +419,18 @@ export default function LayoutWorkspace() {
         <div><span>当前模板</span><strong>{template.name}</strong><small>{template.photoRatios}</small></div>
         <div><span>排版状态</span><strong>{layoutConfigured ? `${selectedBySlot.size} / ${template.photoSlots} 已排版` : "沿用旧版作品"}</strong><small>正在编辑槽位 {String(activeSlot + 1).padStart(2, "0")}</small></div>
         <div className={styles.layoutActions}>
-          <button type="button" onClick={autoCompose} disabled={isImporting || assets.length === 0}>一键智能排版</button>
           <button type="button" onClick={resetLayout}>清空本模板</button>
         </div>
       </div>
+
+      <LayoutCompositionPreview
+        templateId={content.activeTemplate}
+        assets={assets}
+        libraryState={libraryState}
+        libraryMessage={libraryMessage}
+        busy={isImporting}
+        onRefresh={refreshLibrary}
+      />
 
       <div className={styles.layoutWorkspace}>
         <section className={styles.slotPane} aria-labelledby="slot-list-heading">
@@ -513,7 +517,7 @@ export default function LayoutWorkspace() {
             <div className={styles.emptyEditor}>
               <span>{activeRatio}</span>
               <strong>此槽位尚未安排素材</strong>
-              <p>从右侧素材库选择一张方向兼容的照片，或使用一键智能排版。</p>
+              <p>从右侧素材库选择一张方向兼容的照片，或先生成排版建议并采用到草稿。</p>
             </div>
           )}
         </section>
@@ -564,7 +568,7 @@ export default function LayoutWorkspace() {
                   const asset = item.asset;
                   const selectedSlot = selectedAssetSlots.get(asset.id);
                   const compatible = libraryView === "active"
-                    && isPhotoAssetCompatibleWithSlot(asset, activeRatio, adaptiveToSourceOrientation);
+                    && isPhotoAssetCompatibleWithSlot(asset, activeRatio, activeSlotUsesSourceOrientation);
                   const references = referenceMap.get(asset.id) ?? { draft: [], saved: [] };
                   const pickHint = libraryView === "archived"
                     ? "素材在回收站中，恢复后可重新使用"

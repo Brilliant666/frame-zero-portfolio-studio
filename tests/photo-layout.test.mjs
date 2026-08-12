@@ -68,6 +68,57 @@ test("template catalog slot counts stay aligned with their ratio contracts", asy
   }
 });
 
+test("all eleven templates expose the approved per-slot orientation policy", async (t) => {
+  const { templateSlotOrientationMode } = await importTypeScriptModule(t, "app/photo-ratio-policy.ts");
+  const expectedFixedSlots = {
+    "cinematic-light": [0, 8],
+    "neon-hud": [0, 8],
+    "film-rail": "all",
+    "manga-panels": [0, 2, 6],
+    "prism-liquid": [0, 1, 5],
+    "orbital-portal": "all",
+    "archive-os": [0],
+    "editorial-duet": [0, 2, 5, 8],
+    "polaroid-field": [4, 8],
+    "character-select": [],
+    "museum-depth": [0, 2],
+  };
+  const { templateCatalog } = await importTypeScriptModule(t, "app/templates/catalog.ts");
+
+  for (const template of templateCatalog) {
+    const fixed = expectedFixedSlots[template.id];
+    assert.ok(fixed, template.id);
+    for (let slotIndex = 0; slotIndex < template.photoSlots; slotIndex += 1) {
+      assert.equal(
+        templateSlotOrientationMode(template.id, slotIndex),
+        fixed === "all" || fixed.includes(slotIndex) ? "fixed" : "source-adaptive",
+        `${template.id} slot ${slotIndex}`,
+      );
+    }
+  }
+});
+
+test("hybrid auto composition reserves structural slots and accepts either direction in gallery slots", async (t) => {
+  const { autoComposeTemplateWorks } = await importTypeScriptModule(t, "app/photo-library.ts");
+  const { templateCatalog } = await importTypeScriptModule(t, "app/templates/catalog.ts");
+  const hybridIds = [
+    "cinematic-light", "neon-hud", "manga-panels", "prism-liquid", "archive-os",
+    "editorial-duet", "polaroid-field", "museum-depth",
+  ];
+  const assets = Array.from({ length: 12 }, (_, index) => index % 2 === 0
+    ? asset(`landscape-${index}`, 3 / 2, "landscape")
+    : asset(`portrait-${index}`, 2 / 3, "portrait"));
+
+  for (const templateId of hybridIds) {
+    const template = templateCatalog.find(({ id }) => id === templateId);
+    const works = autoComposeTemplateWorks(assets, template.slotRatios, [], { templateId });
+    const reversedWorks = autoComposeTemplateWorks([...assets].reverse(), template.slotRatios, [], { templateId });
+    assert.equal(works.length, template.photoSlots, templateId);
+    assert.equal(new Set(works.map(({ assetId }) => assetId)).size, works.length, templateId);
+    assert.deepEqual(reversedWorks, works, `${templateId} must not depend on manifest order`);
+  }
+});
+
 test("16:9 remains a display crop while primary landscape assignment targets 3:2", async (t) => {
   const { autoComposeTemplateWorks } = await importTypeScriptModule(t, "app/photo-library.ts");
   const primary = asset("primary", 1.5, "landscape");
@@ -97,7 +148,10 @@ test("source-orientation adaptive composition fills all nine stable slots for ev
 
     assert.equal(works.length, 9, `${portraitCount} portrait assets`);
     assert.deepEqual(works.map(({ slotIndex }) => slotIndex), [0, 1, 2, 3, 4, 5, 6, 7, 8]);
-    assert.deepEqual(works.map(({ assetId }) => assetId), assets.map(({ id }) => id));
+    assert.deepEqual(
+      works.map(({ assetId }) => assetId),
+      assets.map(({ id }) => id).sort((left, right) => left.localeCompare(right)),
+    );
   }
 });
 
@@ -190,7 +244,7 @@ test("character template keeps keyboard, lightbox, placeholder, and responsive j
     fs.readFile(new URL("../app/templates/character-select/template.module.css", import.meta.url), "utf8"),
   ]);
 
-  assert.match(template, /adaptiveToSourceOrientation: true/);
+  assert.match(template, /templateId: "character-select"/);
   assert.match(template, /groupSourceOrientationSlots/);
   assert.match(template, /data-character-row/);
   assert.match(template, /data-source-orientation/);
@@ -203,6 +257,36 @@ test("character template keeps keyboard, lightbox, placeholder, and responsive j
   assert.match(css, /grid-template-columns:var\(--character-columns\)/);
   assert.match(css, /@media \(max-width:650px\)/);
   assert.doesNotMatch(css, /aspect-ratio:\s*1(?:;|\})/);
+});
+
+test("all formal renderers opt into the shared slot-level orientation policy and retain mobile CSS", async () => {
+  const templateIds = [
+    "cinematic-light", "neon-hud", "film-rail", "manga-panels", "prism-liquid",
+    "orbital-portal", "archive-os", "editorial-duet", "polaroid-field",
+    "character-select", "museum-depth",
+  ];
+  const cssByTemplate = {
+    "cinematic-light": "../app/globals.css",
+    "neon-hud": "../app/templates/neon-hud/template.module.css",
+    "film-rail": "../app/templates/film-rail/film-rail.module.css",
+    "manga-panels": "../app/templates/manga-panels/manga-panels.module.css",
+    "prism-liquid": "../app/templates/prism-liquid/template.module.css",
+    "orbital-portal": "../app/templates/orbital-portal/template.module.css",
+    "archive-os": "../app/templates/archive-os/archive-os.module.css",
+    "editorial-duet": "../app/templates/editorial-duet/template.module.css",
+    "polaroid-field": "../app/templates/polaroid-field/polaroid-field.module.css",
+    "character-select": "../app/templates/character-select/template.module.css",
+    "museum-depth": "../app/templates/museum-depth/template.module.css",
+  };
+  for (const templateId of templateIds) {
+    const [template, css] = await Promise.all([
+      fs.readFile(new URL(`../app/templates/${templateId}/template.tsx`, import.meta.url), "utf8"),
+      fs.readFile(new URL(cssByTemplate[templateId], import.meta.url), "utf8"),
+    ]);
+    assert.match(template, new RegExp(`templateId: ["']${templateId}["']`), templateId);
+    assert.match(template, /data-photo-ratio/, templateId);
+    assert.match(css, /@media\s*\(max-width:/, `${templateId} must retain its 390/320 responsive lane`);
+  }
 });
 
 test("auto composition preserves valid locks, drops orphan locks, and leaves incompatible slots empty", async (t) => {

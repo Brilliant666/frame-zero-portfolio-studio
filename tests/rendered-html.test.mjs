@@ -90,7 +90,9 @@ test("keeps editable content and eleven lazy template choices in one configurati
   assert.match(adminShell, /data-admin-title="true"/);
   assert.match(adminShell, /<strong>ADMIN<\/strong>/);
   assert.doesNotMatch(adminShell, /FRAME\/\/ZERO/);
-  assert.match(adminShell, /预览当前主页/);
+  assert.match(adminShell, /预览当前草稿/);
+  assert.match(adminShell, /DraftTemplatePreviewTrigger/);
+  assert.doesNotMatch(adminShell, /预览当前主页|查看已保存主页/);
   assert.match(adminShell, /ADMIN_SECTIONS\.map/);
   assert.match(api, /onConflictDoUpdate/);
   assert.match(schema, /site_settings/);
@@ -140,7 +142,9 @@ test("keeps every template on a fixed photo-slot contract with missing-image pla
   assert.match(sharedSlots, /export function buildPhotoSlots/);
   assert.match(sharedSlots, /export function PhotoPlaceholder/);
   assert.match(sharedSlots, /Math\.abs\(Math\.log\(actualRatio \/ targetRatio\)\)/);
-  assert.match(layoutWorkspace, /一键智能排版/);
+  assert.match(layoutWorkspace, /LayoutCompositionPreview/);
+  assert.match(layoutWorkspace, /生成排版建议并采用到草稿/);
+  assert.doesNotMatch(layoutWorkspace, /一键智能排版/);
   assert.match(layoutWorkspace, /刷新素材列表/);
   assert.match(libraryModel, /parsePhotoLibraryManifest/);
   assert.match(libraryModel, /autoComposeTemplateWorks/);

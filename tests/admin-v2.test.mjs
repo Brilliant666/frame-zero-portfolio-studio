@@ -64,6 +64,7 @@ test("the six editors retain ownership of every legacy SiteContent root field", 
   ]);
 
   assert.match(template, /content\.activeTemplate/);
+  assert.doesNotMatch(template, /templateWorks|TemplateCompositionPreview|applyTemplateCompositionPreview/);
   for (const field of ["profile", "hero", "trustItems", "statement"]) assert.match(profile, new RegExp(`content\\.${field}`));
   assert.match(packages, /content\.packages/);
   assert.match(layout, /content\.templateWorks/);
@@ -75,9 +76,13 @@ test("the six editors retain ownership of every legacy SiteContent root field", 
 });
 
 test("template browsing, package disclosures, layout tools, and legacy controls keep their required semantics", async () => {
-  const [template, templatePreview, profile, packages, layout, advanced, resetDialog] = await Promise.all([
+  const [template, templateEffectPreview, layoutPreview, draftPreview, draftPreviewDialog, templatePreviewDialog, profile, packages, layout, advanced, resetDialog] = await Promise.all([
     source("app/admin/template/template-editor.tsx"),
+    source("app/admin/template/template-effect-preview.tsx"),
     source("app/admin/template/template-composition-preview.tsx"),
+    source("app/admin/draft-preview.tsx"),
+    source("app/admin/draft-preview-dialog.tsx"),
+    source("app/admin/template-preview-dialog.tsx"),
     source("app/admin/profile/profile-editor.tsx"),
     source("app/admin/packages/packages-editor.tsx"),
     source("app/admin/layout/layout-workspace.tsx"),
@@ -116,7 +121,6 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   );
   assert.match(browseControl, /setInspectedOverride/);
   assert.doesNotMatch(browseControl, /chooseTemplate|setContent/);
-  assert.match(template, /独立预览/);
   assert.match(template, /查看候选详情不会修改草稿/);
   assert.match(template, /素材排版可能变化/);
   assert.match(template, /不会在这里静默删除/);
@@ -126,25 +130,61 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   for (const requirement of ["横图", "竖图", "方图", "主视觉", "裁切压力", "手机策略"]) {
     assert.match(template, new RegExp(requirement));
   }
-  assert.match(template, /<TemplateCompositionPreview templateId=\{inspectedTemplate\.id\}/);
-  assert.match(templatePreview, /planTemplateCompositionPreview/);
-  assert.match(templatePreview, /data-preview-readonly="true"/);
-  assert.match(templatePreview, /data-template-preview-apply=\{templateId\}/);
-  assert.match(templatePreview, /打开真实模板预览/);
-  assert.match(templatePreview, /<TemplateRenderer/);
-  assert.match(templatePreview, /应用此排版到草稿/);
-  assert.match(templatePreview, /仍需“保存全部修改”才会持久化/);
-  assert.match(templatePreview, /setContent\(\(current\) => applyTemplateCompositionPreview\(current, planned\)\)/);
-  assert.match(templatePreview, /activeTemplate: preview\.templateId/);
-  assert.match(templatePreview, /data-hero-missing=\{planned\.heroMissingCount\}/);
-  assert.match(templatePreview, /主视觉 \{planned\.heroMissingCount\} 张/);
-  assert.match(templatePreview, /<Lightbox/);
-  assert.doesNotMatch(templatePreview, /onOpenWork=\{\(\) => \{\}\}|method:\s*"PUT"|\/api\/site-content/);
-  const previewApplyHandler = templatePreview.slice(
-    templatePreview.indexOf("const applyPreview"),
-    templatePreview.indexOf("return (", templatePreview.indexOf("const applyPreview")),
+  assert.doesNotMatch(template, /TemplateCompositionPreview|LayoutCompositionPreview|planTemplateCompositionPreview|applyTemplateCompositionPreview|data-layout-preview-/);
+  assert.match(template, /设为主页模板/);
+  assert.match(template, /下一步：素材排版/);
+  assert.doesNotMatch(template, /独立预览/);
+  assert.match(template, /<TemplateEffectPreview templateId=\{inspectedTemplate\.id\}/);
+  assert.match(templateEffectPreview, /data-template-candidate-preview=\{templateId\}/);
+  assert.match(templateEffectPreview, /data-preview-readonly="true"/);
+  assert.match(templateEffectPreview, /data-action-count="1"/);
+  assert.match(templateEffectPreview, /label="查看模板效果"/);
+  assert.match(templateEffectPreview, /scope="candidate"/);
+  assert.doesNotMatch(templateEffectPreview, /templateWorks|planTemplateCompositionPreview|applyTemplateCompositionPreview|loadLocalPhotoLibrary|setContent|fetch\(|method:\s*"PUT"/);
+
+  assert.match(layout, /<LayoutCompositionPreview/);
+  assert.match(layoutPreview, /planTemplateCompositionPreview/);
+  assert.match(layoutPreview, /data-layout-composition-preview=\{templateId\}/);
+  assert.match(layoutPreview, /data-layout-preview-generate=\{templateId\}/);
+  assert.match(layoutPreview, /data-layout-preview-open=\{templateId\}/);
+  assert.match(layoutPreview, /data-layout-preview-apply=\{templateId\}/);
+  assert.match(layoutPreview, /生成排版建议/);
+  assert.match(layoutPreview, /预览推荐排版/);
+  assert.match(layoutPreview, /采用推荐到草稿/);
+  assert.match(layoutPreview, /仍需顶栏“保存全部修改”才会持久化/);
+  assert.match(layoutPreview, /applyTemplateCompositionPreview\(current, planned\)/);
+  assert.match(layoutPreview, /data-hero-missing=\{planned\.heroMissingCount\}/);
+  assert.match(layoutPreview, /主视觉 \{planned\.heroMissingCount\} 张/);
+  assert.match(layoutPreview, /dynamic\(\(\) => import\("\.\.\/template-preview-dialog"\)/);
+  assert.doesNotMatch(layoutPreview, /TemplateRenderer|Lightbox|useTemplateInteractions|template-preview-dialog\.module\.css/);
+  assert.doesNotMatch(layoutPreview, /onOpenWork=\{\(\) => \{\}\}|method:\s*"PUT"|\/api\/site-content/);
+  const previewApplyHandler = layoutPreview.slice(
+    layoutPreview.indexOf("const applyPreview"),
+    layoutPreview.indexOf("return (", layoutPreview.indexOf("const applyPreview")),
   );
-  assert.doesNotMatch(previewApplyHandler, /activeTemplate|chooseTemplate|fetch\(/);
+  assert.match(previewApplyHandler, /planned\.templateId !== content\.activeTemplate/);
+  assert.match(previewApplyHandler, /current\.activeTemplate === planned\.templateId/);
+  assert.doesNotMatch(previewApplyHandler, /activeTemplate\s*:|chooseTemplate|fetch\(/);
+  assert.doesNotMatch(layoutPreview.slice(0, layoutPreview.indexOf("const applyPreview")), /setContent\(|method:\s*"PUT"/);
+
+  assert.match(draftPreview, /dynamic\(\(\) => import\("\.\/draft-preview-dialog"\)/);
+  assert.match(draftPreview, /triggerRef\.current\?\.focus\(\)/);
+  assert.doesNotMatch(draftPreview, /TemplateRenderer|Lightbox|buildPhotoSlots|useAdmin/);
+  assert.match(draftPreviewDialog, /const \{ content \} = useAdmin\(\)/);
+  assert.match(draftPreviewDialog, /content\.templateWorks\[templateId\]/);
+  assert.match(draftPreviewDialog, /buildPhotoSlots\(/);
+  assert.match(draftPreviewDialog, /previewSource="draft"/);
+  assert.match(draftPreviewDialog, /draftScope=\{scope\}/);
+  assert.doesNotMatch(draftPreviewDialog, /TemplateRenderer|Lightbox|useTemplateInteractions|admin-v2\.module\.css/);
+  assert.match(templatePreviewDialog, /data-admin-draft-preview-dialog=\{draftScope === "admin" \? "true" : undefined\}/);
+  assert.match(templatePreviewDialog, /data-template-candidate-preview-dialog=\{draftScope === "candidate" \? templateId : undefined\}/);
+  assert.match(templatePreviewDialog, /data-preview-source=\{previewSource\}/);
+  assert.match(templatePreviewDialog, /<TemplateRenderer/);
+  assert.match(templatePreviewDialog, /<Lightbox/);
+  assert.match(templatePreviewDialog, /dialog\.showModal\(\)/);
+  assert.match(templatePreviewDialog, /template-preview-dialog\.module\.css/);
+  assert.doesNotMatch(templatePreviewDialog, /admin-v2\.module\.css/);
+  assert.doesNotMatch(`${draftPreview}\n${draftPreviewDialog}\n${templatePreviewDialog}`, /fetch\(|method:\s*"PUT"|setContent|planTemplateCompositionPreview|loadLocalPhotoLibrary/);
 
   assert.match(profile, /<details className=\{styles\.optionalDisclosure\}/);
   assert.match(profile, /data-optional-brand-content="true"/);
@@ -165,10 +205,18 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   assert.match(packages, /已启用/);
   assert.match(packages, /已隐藏/);
 
-  for (const operation of ["autoComposeTemplateWorks", "parsePhotoLibraryManifest", "isPhotoAssetCompatibleWithSlot", "parseFocusPosition"]) {
+  for (const operation of ["parsePhotoLibraryManifest", "isPhotoAssetCompatibleWithSlot", "parseFocusPosition", "templateSlotOrientationMode"]) {
     assert.match(layout, new RegExp(operation));
   }
   assert.match(layout, /复杂素材排版建议使用桌面端/);
+  assert.match(layout, /hasSourceOrientationAdaptiveSlots\(content\.activeTemplate\)/);
+  assert.match(layout, /templateSlotOrientationMode\(content\.activeTemplate, slotIndex\) === "source-adaptive"/);
+  assert.match(layoutPreview, /templateSlotOrientationMode\(templateId, slotIndex\) === "source-adaptive"/);
+  assert.doesNotMatch(layoutPreview, /templateId === "character-select"/);
+  assert.match(layout, /isPhotoAssetCompatibleWithSlot\(asset, activeRatio, activeSlotUsesSourceOrientation\)/);
+  assert.match(layout, /isWorkCompatibleWithSlot\(sourceWork, template\.slotRatios\[destination\], slotUsesSourceOrientation\(destination\)\)/);
+  assert.match(layout, /isWorkCompatibleWithSlot\(destinationWork, template\.slotRatios\[slotIndex\], slotUsesSourceOrientation\(slotIndex\)\)/);
+  assert.match(layoutPreview, /生成排版建议/);
   assert.doesNotMatch(layout, /\/api\//);
 
   assert.match(advanced, /useState\(false\)/);
@@ -212,7 +260,9 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(layout, /<PhotoImportPanel/);
   assert.match(layout, /localPhotoImportOrigin/);
   assert.match(layout, /localPhotoImportState/);
-  assert.match(layout, /isImporting \|\| assets\.length === 0/);
+  assert.match(layout, /<LayoutCompositionPreview/);
+  assert.match(layout, /assets=\{assets\}/);
+  assert.match(layout, /busy=\{isImporting\}/);
   assert.match(layout, /libraryRequestRef/);
   assert.match(layout, /request !== libraryRequestRef\.current/);
   assert.match(layout, /loadLocalPhotoLibrary/);
@@ -350,7 +400,7 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(panel, /刷新素材列表（不重新扫描文件夹）/);
   assert.match(panel, /一次性读取/);
   assert.match(panel, /后续增删需再次选择/);
-  assert.match(templatePreview, /请先到“素材排版”添加素材/);
+  assert.match(templatePreview, /没有可用于推荐排版的在库素材/);
   assert.match(previewComposition, /请刷新素材列表后重试/);
   assert.doesNotMatch(previewComposition, /刷新素材库后重试/);
   assert.match(panel, /正在处理第 \$\{Math\.min\(progress\.processed \+ 1, progress\.total\)\} 张，共 \$\{progress\.total\} 张/);
@@ -398,25 +448,47 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(css, /@media \(max-width: 480px\)[\s\S]*?\.photoImportProgress dl\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
 });
 
-test("template composition preview excludes recycled local assets from new recommendations", async () => {
-  const previewSource = await source("app/admin/template/template-composition-preview.tsx");
-  assert.match(previewSource, /loadLocalPhotoLibrary\(localPhotoImportOrigin\)/);
-  assert.match(previewSource, /filter\(\(item\) => item\.status === "active"\)/);
-  assert.match(previewSource, /localPhotoImportState === "configured"/);
-  assert.match(previewSource, /localPhotoImportOrigin/);
-  assert.match(previewSource, /templateId === "character-select"/);
-  assert.match(previewSource, /primaryPhotoRatioForDimensions\(work\.previewWidth, work\.previewHeight\)/);
-  assert.match(previewSource, /data-ratio=\{presentationRatio\}/);
+test("layout recommendations receive active library assets while template effects stay library-independent", async () => {
+  const [layoutSource, layoutPreview, templateEffectPreview] = await Promise.all([
+    source("app/admin/layout/layout-workspace.tsx"),
+    source("app/admin/template/template-composition-preview.tsx"),
+    source("app/admin/template/template-effect-preview.tsx"),
+  ]);
+  assert.match(layoutSource, /libraryItems\.filter\(\(item\) => item\.status === "active"\)/);
+  assert.match(layoutSource, /const assets = useMemo\(\(\) => activeItems\.map/);
+  assert.match(layoutSource, /<LayoutCompositionPreview[\s\S]*assets=\{assets\}/);
+  assert.match(layoutPreview, /planTemplateCompositionPreview\(\{[\s\S]*assets,/);
+  assert.match(layoutPreview, /primaryPhotoRatioForDimensions\(work\.previewWidth, work\.previewHeight\)/);
+  assert.match(layoutPreview, /data-ratio=\{presentationRatio\}/);
+  assert.doesNotMatch(templateEffectPreview, /assets|library|planTemplateCompositionPreview|loadLocalPhotoLibrary/);
 });
 
 test("Admin V2 keeps shared draft persistence on the unchanged site-content endpoint", async () => {
-  const provider = await source("app/admin/admin-provider.tsx");
+  const [provider, shell, draftPreview, draftPreviewDialog, template, templateEffectPreview, layout, layoutPreview] = await Promise.all([
+    source("app/admin/admin-provider.tsx"),
+    source("app/admin/admin-shell.tsx"),
+    source("app/admin/draft-preview.tsx"),
+    source("app/admin/draft-preview-dialog.tsx"),
+    source("app/admin/template/template-editor.tsx"),
+    source("app/admin/template/template-effect-preview.tsx"),
+    source("app/admin/layout/layout-workspace.tsx"),
+    source("app/admin/template/template-composition-preview.tsx"),
+  ]);
   assert.match(provider, /fetch\("\/api\/site-content", \{ cache: "no-store" \}\)/);
   assert.match(provider, /method: "PUT"/);
   assert.match(provider, /JSON\.stringify\(\{ content: submitted \}\)/);
   assert.match(provider, /beforeunload/);
   assert.match(provider, /isAdminSaveShortcut/);
   assert.doesNotMatch(provider, /site_settings|SiteDocument|migration|repository/);
+  assert.equal([provider, shell, draftPreview, draftPreviewDialog, template, templateEffectPreview, layout, layoutPreview]
+    .reduce((count, input) => count + (input.match(/method:\s*"PUT"/g)?.length ?? 0), 0), 1);
+  assert.match(shell, /<DraftTemplatePreviewTrigger/);
+  assert.match(shell, /templateId=\{content\.activeTemplate\}/);
+  assert.match(shell, /预览当前草稿/);
+  assert.doesNotMatch(shell, /查看已保存主页|预览当前主页/);
+  assert.match(draftPreview, /data-admin-draft-preview-trigger=\{scope === "admin" \? "true" : undefined\}/);
+  assert.match(draftPreviewDialog, /直接使用当前内存草稿 · 不读取已保存主页 · 不保存/);
+  assert.doesNotMatch([shell, draftPreview, draftPreviewDialog, template, templateEffectPreview, layout, layoutPreview].join("\n"), /\/api\/site-content/);
 });
 
 test("responsive CSS exposes a mobile section switcher and single-column layout without hiding data", async () => {
@@ -441,7 +513,7 @@ test("responsive CSS exposes a mobile section switcher and single-column layout 
   assert.match(css, /\.templateMaterialDemand\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
   assert.match(css, /\.templateCompositionPreview\s*\{/);
   assert.match(css, /\.templatePreviewSlotMap\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
-  assert.match(css, /\.templatePreviewDialog\s*\{/);
+  assert.doesNotMatch(css, /\.templatePreviewDialog\s*\{/);
   assert.doesNotMatch(css, /\.templateGrid|\.templateCard\b/);
   assert.match(css, /@media \(max-width: 1280px\) and \(min-width: 761px\)/);
   assert.match(css, /@media \(max-width: 960px\)\s*\{[^}]*\.packageCardHeader\s*\{[^}]*grid-template-columns:\s*1fr/s);

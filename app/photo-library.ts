@@ -1,5 +1,9 @@
-import { primaryAssignmentRatioNumber } from "./photo-ratio-policy";
+import {
+  primaryAssignmentRatioNumber,
+  templateSlotOrientationMode,
+} from "./photo-ratio-policy";
 import type { Work } from "./site-config";
+import type { TemplateId } from "./templates/catalog";
 
 export const PHOTO_LIBRARY_MANIFEST_VERSION = 1 as const;
 
@@ -33,6 +37,7 @@ export type FocusPosition = { x: number; y: number };
 
 export type AutoComposeTemplateWorksOptions = Readonly<{
   adaptiveToSourceOrientation?: boolean;
+  templateId?: TemplateId;
 }>;
 
 const DEFAULT_FOCUS: FocusPosition = { x: 50, y: 50 };
@@ -281,8 +286,8 @@ function minimumCostAssignment(
  * Keeps valid locked slots. Fixed templates then globally pair the closest
  * same-orientation assets with the remaining primary 3:2 / 2:3 targets; a
  * displayed 16:9 slot is costed as a secondary crop of a 3:2 assignment.
- * Source-orientation-adaptive templates fill open stable slots in library order
- * and let their renderer derive the directional presentation for each asset.
+ * Source-orientation-adaptive templates fill open stable slots in canonical
+ * asset-id order and let their renderer derive the directional presentation.
  */
 export function autoComposeTemplateWorks(
   assets: readonly PhotoAsset[],
@@ -290,7 +295,12 @@ export function autoComposeTemplateWorks(
   existingWorks: readonly Work[] = [],
   options: AutoComposeTemplateWorksOptions = {},
 ): Work[] {
-  const adaptive = options.adaptiveToSourceOrientation === true;
+  const isAdaptiveSlot = (slotIndex: number) => (
+    options.adaptiveToSourceOrientation === true
+    || (options.templateId !== undefined
+      && templateSlotOrientationMode(options.templateId, slotIndex) === "source-adaptive")
+  );
+  const allSlotsAdaptive = slotRatios.every((_, slotIndex) => isAdaptiveSlot(slotIndex));
   const slots = new Map<number, Work>();
   const usedAssetIds = new Set<string>();
   const availableAssetIds = new Set(assets.map((asset) => asset.id));
@@ -303,7 +313,7 @@ export function autoComposeTemplateWorks(
     const slotIndex = Number.isInteger(work.slotIndex) ? work.slotIndex as number : fallbackIndex;
     if (slotIndex < 0 || slotIndex >= slotRatios.length || slots.has(slotIndex)) return;
     if (work.assetId && !availableAssetIds.has(work.assetId)) return;
-    if (!isWorkCompatibleWithSlot(work, slotRatios[slotIndex], adaptive)) return;
+    if (!isWorkCompatibleWithSlot(work, slotRatios[slotIndex], isAdaptiveSlot(slotIndex))) return;
     if (work.assetId && usedAssetIds.has(work.assetId)) return;
 
     slots.set(slotIndex, { ...work, slotIndex, locked: true });
@@ -317,10 +327,11 @@ export function autoComposeTemplateWorks(
     seenAssetIds.add(asset.id);
     availableAssets.push(asset);
   }
+  availableAssets.sort((left, right) => left.id.localeCompare(right.id));
 
   const openSlotIndexes = slotRatios.flatMap((_, slotIndex) => slots.has(slotIndex) ? [] : [slotIndex]);
 
-  if (adaptive) {
+  if (allSlotsAdaptive) {
     for (let index = 0; index < Math.min(openSlotIndexes.length, availableAssets.length); index += 1) {
       const slotIndex = openSlotIndexes[index];
       const asset = availableAssets[index];
@@ -342,6 +353,7 @@ export function autoComposeTemplateWorks(
       if (column >= dummyColumnOffset) return placeholderCost;
       const slotIndex = openSlotIndexes[slotRow];
       const asset = availableAssets[column];
+      if (isAdaptiveSlot(slotIndex)) return 10;
       if (!isPhotoAssetCompatibleWithSlot(asset, slotRatios[slotIndex])) return incompatibleCost;
       return Math.abs(Math.log(asset.aspectRatio / primaryAssignmentRatioNumber(slotRatios[slotIndex])));
     },
@@ -351,7 +363,7 @@ export function autoComposeTemplateWorks(
     if (assetColumn >= dummyColumnOffset) continue;
     const slotIndex = openSlotIndexes[slotRow];
     const asset = availableAssets[assetColumn];
-    if (!isPhotoAssetCompatibleWithSlot(asset, slotRatios[slotIndex])) continue;
+    if (!isPhotoAssetCompatibleWithSlot(asset, slotRatios[slotIndex], isAdaptiveSlot(slotIndex))) continue;
     const existing = existingByAssetId.get(asset.id);
     slots.set(slotIndex, existing
       ? { ...existing, slotIndex, locked: false }
