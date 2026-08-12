@@ -28,6 +28,10 @@ import {
 } from "../../photo-ratio-policy";
 import type { Work } from "../../site-config";
 import { getTemplateCatalogItem } from "../../templates/catalog";
+import {
+  formatTemplateMaterialDirectionSummary,
+  getTemplateMaterialPlanSummary,
+} from "../../templates/material-profiles";
 import { AdminSection } from "../admin-form";
 import { useAdmin } from "../admin-provider";
 import styles from "../admin-v2.module.css";
@@ -118,6 +122,7 @@ export default function LayoutWorkspace() {
   }));
 
   const template = getTemplateCatalogItem(content.activeTemplate);
+  const materialPlan = getTemplateMaterialPlanSummary(content.activeTemplate);
   const templateChangedFromSaved = content.activeTemplate !== savedContent.activeTemplate;
   const activeSlot = activeSlotState.templateId === content.activeTemplate
     && activeSlotState.slotIndex < template.photoSlots
@@ -439,7 +444,11 @@ export default function LayoutWorkspace() {
       />
 
       <div className={styles.layoutSummary}>
-        <div><span>当前模板</span><strong>{template.name}</strong><small>{template.photoRatios}</small></div>
+        <div>
+          <span>当前模板</span>
+          <strong>{template.name}</strong>
+          <small>{formatTemplateMaterialDirectionSummary(materialPlan)}</small>
+        </div>
         <div><span>排版状态</span><strong>{layoutConfigured ? `${selectedBySlot.size} / ${template.photoSlots} 已排版` : "沿用旧版作品"}</strong><small>正在编辑槽位 {String(activeSlot + 1).padStart(2, "0")}</small></div>
         <div className={styles.layoutActions}>
           <button type="button" onClick={resetLayout}>清空本模板</button>

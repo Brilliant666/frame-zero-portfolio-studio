@@ -128,17 +128,37 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   assert.match(browseControl, /setInspectedOverride/);
   assert.doesNotMatch(browseControl, /chooseTemplate|setContent/);
   assert.match(template, /getTemplateMaterialProfile\(inspectedTemplate\.id\)/);
+  assert.match(template, /getTemplateMaterialPlanSummary\(inspectedTemplate\.id\)/);
+  assert.match(template, /formatTemplateMaterialDirectionSummary\(materialPlan\)/);
   assert.match(template, /data-template-material-profile=\{materialProfile\.templateId\}/);
   assert.match(template, /建议 \{materialProfile\.recommendedPhotoCount\} 张/);
-  for (const requirement of ["横图", "竖图", "方图", "主视觉", "裁切压力", "手机策略"]) {
+  for (const requirement of ["槽位构成", "固定横图", "固定竖图", "方图", "任意方向", "主视觉", "裁切压力", "手机策略"]) {
     assert.match(template, new RegExp(requirement));
   }
+  assert.doesNotMatch(template, /比例计划|photoRatios/);
+  assert.match(template, /无需单独准备 16:9 素材/);
   assert.doesNotMatch(template, /TemplateCompositionPreview|LayoutCompositionPreview|planTemplateCompositionPreview|applyTemplateCompositionPreview|data-layout-preview-/);
   assert.match(template, /设为主页并进入素材排版/);
   assert.match(template, /进入素材排版/);
   assert.doesNotMatch(template, /独立预览/);
   assert.doesNotMatch(template, /TemplateEffectPreview|查看模板效果|data-template-candidate-preview/);
   assert.match(template, /<TemplateStructurePreview templateId=\{inspectedTemplate\.id\}/);
+  assert.ok(
+    template.indexOf("templateDetailIntro") < template.indexOf("<TemplateStructurePreview"),
+    "the template heading and description must precede the structure diagram in the DOM",
+  );
+  const detailIntro = template.slice(
+    template.indexOf("<header className={styles.templateDetailIntro}"),
+    template.indexOf("</header>", template.indexOf("<header className={styles.templateDetailIntro}")),
+  );
+  assert.ok(
+    detailIntro.indexOf("templateDetailHeader") < detailIntro.indexOf("templateDetailStates"),
+    "the template name must remain the primary heading even when a saved or draft state is present",
+  );
+  assert.ok(
+    template.indexOf("<TemplateStructurePreview") < template.indexOf("data-template-material-profile"),
+    "the structure diagram must precede the detailed material profile",
+  );
   assert.match(structurePreview, /data-template-structure-preview=\{templateId\}/);
   assert.match(structurePreview, /data-user-materials="false"/);
   assert.match(structurePreview, /getTemplateStructurePreview\(templateId\)/);
@@ -592,6 +612,7 @@ test("responsive CSS exposes a mobile section switcher and single-column layout 
   assert.match(css, /\.templateWorkbench\s*\{[^}]*grid-template-columns:\s*minmax\(13rem, 16rem\) minmax\(0, 1fr\)/s);
   assert.match(css, /\.templateList\s*\{/);
   assert.match(css, /\.templateDetail\s*\{/);
+  assert.match(css, /\.templateDetailIntro\s*\{/);
   assert.match(css, /\.templateMaterialProfile\s*\{/);
   assert.match(css, /\.templateMaterialDemand\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
   assert.match(css, /\.templateCompositionPreview\s*\{/);

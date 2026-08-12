@@ -206,8 +206,12 @@ the existing save endpoint; the single top-bar action saves all changes across
 the six sections, while **预览当前草稿** shows that in-memory draft without
 persisting it. The template route keeps its compact eleven-item selector and
 shows one candidate at a time with a neutral, repository-owned structure
-diagram—not the user's photographs or SiteContent. Its detail area is reduced
-to structure, concise material guidance, and one workflow action: choosing a
+diagram—not the user's photographs or SiteContent. Its detail area leads with
+the candidate name and description, then shows the structure and one material
+direction plan shared with the detailed guidance: fixed landscape, fixed
+portrait, and source-adaptive slots always account for the complete slot set.
+A 16:9 target is presentation cropping, not a separate source-file requirement.
+The route retains one workflow action: choosing a
 new homepage template updates only the draft `activeTemplate`, then opens
 **素材排版**; choosing the already-current draft template simply opens that same
 workspace. Neither path saves or applies a composition. Recommended composition, preview, adoption, and all

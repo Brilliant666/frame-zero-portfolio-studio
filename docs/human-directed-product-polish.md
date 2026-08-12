@@ -24,9 +24,12 @@ ratio policy, and the `character-select` presentation fix.
 presenting its missing management endpoint as an empty library. `HR-006`
 clarifies Admin template/layout ownership, the single persistence action, true
 draft preview, and the full-template direction-adaptation recheck boundary.
-`HR-007` is the active implementation slice: it simplifies the template detail,
-uses public-safe neutral structure diagrams, and hands homepage selection
-directly to the unchanged material-layout workspace.
+`HR-007` is ready for human recheck after simplifying the template detail,
+adding public-safe neutral structure diagrams, and handing homepage selection
+directly to the unchanged material-layout workspace. `HR-008` is ready for
+human recheck after moving the inspected template identity above the structure
+diagram and using one slot-direction plan for both the summary and material
+guidance.
 
 This is not an automated backlog. Codex handles exactly one concrete human
 request, validates it in proportion to risk, creates one focused commit, pushes
@@ -81,6 +84,7 @@ allowed in this lane.
 | `HR-005` | 2026-08-12 | 素材管理 | 新前端连接仍在运行的旧版本地 importer 时，不得把管理接口缺失误报为素材库为空；明确提示重新启动完整开发服务，并保留现有素材与排版引用。 | `READY_FOR_HUMAN_RECHECK` | `fix: diagnose stale local material service` | stale-service behavior regression; safe dev restart; manifest/catalog count verification | 待人工复检 |
 | `HR-006` | 2026-08-12 | Admin 信息架构／模板适配 | 页面模板只负责查看效果与选择 `activeTemplate`，素材排版独占推荐、预览、采用和 `templateWorks` 编辑；顶栏保留唯一“保存全部修改”并准确预览当前内存草稿。按每个正式模板自身方向需求完成全套适配，不把横图偏好定义为全局素材标准；全部 11 个模板仍须真实素材人工复检。 | `READY_FOR_HUMAN_RECHECK` | `fix: separate template choice from material layout` | full repository gates; ownership/save/draft-preview contract tests; eleven-template direction and deterministic layout tests; Standard Next and legacy bundle gates; Chrome visual workflow pending because the selected Chrome profile is not connected | 未经人工复检不得标记 `HUMAN_APPROVED` |
 | `HR-007` | 2026-08-12 | Admin 页面模板／流程衔接 | 精简模板详情：移除重复的顶部三栏、负向状态 badge 与独立“查看模板效果”；保留 11 项选择列表，以不含用户素材的中性结构图表达模板差异；“设为主页模板”只更新 draft `activeTemplate` 并进入素材排版，当前 draft 则直接进入素材排版。模块 4 `/admin/layout` 继续独占素材库、推荐生成、预览、采用与 `templateWorks` 编辑。 | `READY_FOR_HUMAN_RECHECK` | `fix: simplify template choice and continue to layout` | `git diff --check`; `npm run lint`; full `npm test`; Standard Next build/bundle; legacy runtime/bundle; Public Safety; deterministic 11-preview regeneration; Chrome 1440px/390px template selection → unsaved layout transition → reload-without-save | 待人工复检；不得推导 `HUMAN_APPROVED` |
+| `HR-008` | 2026-08-12 | Admin 模板详情／素材指引 | 将模板名称作为详情首要标题，并把必要状态与简介一并置于结构图之前；模板详情中的槽位构成与素材准备建议共用同一逐槽方向计划，素材排版摘要沿用该计划，统一表达固定横图、固定竖图与任意方向槽位，并明确 16:9 只是展示裁切而非需要额外准备的素材格式。 | `READY_FOR_HUMAN_RECHECK` | `fix: align template details with material guidance` | `git diff --check`; focused material-profile/Admin/rendered tests; full `npm test`; lint; Standard Next and legacy build/bundle; Public Safety; Chrome desktop/responsive heading order, all-11 slot-count consistency, Prism 2/1/6, layout-summary parity, zero overflow and zero console errors | 待人工复检；不得推导 `HUMAN_APPROVED` |
 
 The bootstrap did not consume `HR-001`; the first explicit request above does.
 A completed implementation may be reported as `READY_FOR_HUMAN_RECHECK`; only
@@ -121,7 +125,6 @@ The following are known observations, not approved implementation tasks:
 
 - `LOCAL_SOURCE_BINDING_FOLLOWUP`
 - `ONE_LEVEL_LAYOUT_UNDO_FOLLOWUP`
-- `MATERIAL_PROFILE_INFORMATION_HIERARCHY_REVIEW_PENDING`
 - `ORBITAL_VARIANT_CANDIDATE`
 - `CHARACTER_SELECT_VARIANT_CANDIDATE`
 - `REAL_SQUARE_HEAVY_VALIDATION_PENDING`

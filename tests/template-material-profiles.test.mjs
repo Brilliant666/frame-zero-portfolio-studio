@@ -110,7 +110,11 @@ test("all eleven templates expose bounded, immutable material profiles", async (
 });
 
 test("material profiles preserve differentiated implementation-driven demands", async (t) => {
-  const { getTemplateMaterialProfile } = await importMaterialProfiles(t);
+  const {
+    formatTemplateMaterialDirectionSummary,
+    getTemplateMaterialPlanSummary,
+    getTemplateMaterialProfile,
+  } = await importMaterialProfiles(t);
 
   const film = getTemplateMaterialProfile("film-rail");
   assert.deepEqual(
@@ -153,6 +157,50 @@ test("material profiles preserve differentiated implementation-driven demands", 
   assert.equal(getTemplateMaterialProfile("archive-os").recommendedPhotoCount, 12);
   assert.equal(getTemplateMaterialProfile("museum-depth").recommendedPhotoCount, 7);
   assert.equal(getTemplateMaterialProfile("polaroid-field").visualPriority[0].slotIndex, 4);
+
+  const expectedPlans = {
+    "cinematic-light": [2, 0, 7, 2],
+    "neon-hud": [2, 0, 7, 2],
+    "film-rail": [9, 0, 0, 0],
+    "manga-panels": [2, 1, 6, 2],
+    "prism-liquid": [2, 1, 6, 1],
+    "orbital-portal": [0, 8, 0, 0],
+    "archive-os": [1, 0, 11, 0],
+    "editorial-duet": [3, 1, 5, 3],
+    "polaroid-field": [1, 1, 7, 0],
+    "character-select": [0, 0, 9, 0],
+    "museum-depth": [1, 1, 5, 0],
+  };
+  for (const [templateId, expected] of Object.entries(expectedPlans)) {
+    const plan = getTemplateMaterialPlanSummary(templateId);
+    const profile = getTemplateMaterialProfile(templateId);
+    assert.deepEqual(
+      [plan.fixedLandscapeCount, plan.fixedPortraitCount, plan.sourceAdaptiveCount, plan.fixedWideCropCount],
+      expected,
+      `${templateId} must expose the slot policy as one material plan`,
+    );
+    assert.equal(
+      plan.fixedLandscapeCount + plan.fixedPortraitCount + plan.sourceAdaptiveCount,
+      plan.totalSlots,
+    );
+    assert.deepEqual(
+      [plan.fixedLandscapeCount, plan.fixedPortraitCount, plan.sourceAdaptiveCount],
+      [
+        profile.landscapeDemand.recommended,
+        profile.portraitDemand.recommended,
+        profile.sourceAdaptiveDemand.recommended,
+      ],
+    );
+    assert.equal(profile.squareDemand.recommended, 0);
+    assert.doesNotMatch(formatTemplateMaterialDirectionSummary(plan), /16:9/);
+    assert.ok(Object.isFrozen(plan));
+  }
+
+  const prismPlan = getTemplateMaterialPlanSummary("prism-liquid");
+  assert.equal(
+    formatTemplateMaterialDirectionSummary(prismPlan),
+    "固定横图 2 张 · 固定竖图 1 张 · 任意方向 6 张",
+  );
 });
 
 test("material profiles stay presentation-only and out of persistence contracts", async () => {
@@ -165,6 +213,9 @@ test("material profiles stay presentation-only and out of persistence contracts"
   assert.doesNotMatch(siteDocument, /TemplateMaterialProfile|material-profiles/);
   assert.doesNotMatch(adapter, /TemplateMaterialProfile|material-profiles/);
   assert.match(templateEditor, /getTemplateMaterialProfile/);
+  assert.match(templateEditor, /getTemplateMaterialPlanSummary/);
+  assert.match(templateEditor, /formatTemplateMaterialDirectionSummary/);
   assert.match(templateEditor, /data-template-material-profile/);
+  assert.doesNotMatch(templateEditor, /photoRatios|比例计划/);
   assert.doesNotMatch(templateEditor, /SiteDocumentV1|variantId|method:\s*"PUT"/);
 });

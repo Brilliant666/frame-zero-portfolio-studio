@@ -137,8 +137,10 @@ test("keeps every template on a fixed photo-slot contract with missing-image pla
   assert.equal(catalog.match(/photoSlots: \d+/g)?.length, templateIds.length);
   assert.equal(catalog.match(/photoRatios: "/g)?.length, templateIds.length);
   assert.equal(catalog.match(/slotRatios: \[/g)?.length, templateIds.length);
-  assert.match(templateEditor, /photoSlots/);
-  assert.match(templateEditor, /photoRatios/);
+  assert.match(templateEditor, /materialPlan\.totalSlots/);
+  assert.match(templateEditor, /getTemplateMaterialPlanSummary/);
+  assert.match(templateEditor, /formatTemplateMaterialDirectionSummary/);
+  assert.doesNotMatch(templateEditor, /比例计划|photoRatios/);
   assert.match(sharedSlots, /export function buildPhotoSlots/);
   assert.match(sharedSlots, /export function PhotoPlaceholder/);
   assert.match(sharedSlots, /Math\.abs\(Math\.log\(actualRatio \/ targetRatio\)\)/);

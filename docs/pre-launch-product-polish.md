@@ -202,13 +202,14 @@ human visual polish remains pending for all eleven templates.
 
 ## Human-directed product polish follow-up
 
-The next product-experience review remains intentionally unimplemented here:
+The product-experience follow-ups currently have these states:
 
 - `ONE_LEVEL_LAYOUT_UNDO_FOLLOWUP` is a `P1_PRODUCT_EXPERIENCE_FOLLOWUP` for
   explicitly applied recommended layouts;
-- `MATERIAL_PROFILE_INFORMATION_HIERARCHY_REVIEW_PENDING` covers whether the
-  photographer-facing UI should expose crop pressure, mobile strategy,
-  secondary presentation, and slot-level technical detail;
+- `MATERIAL_PROFILE_INFORMATION_HIERARCHY_REVIEW_PENDING` was addressed by
+  HR-008: the candidate identity now precedes its structure diagram, and one
+  slot-direction plan drives both the summary and material guidance. Human
+  recheck of the resulting hierarchy remains pending;
 - `LOCAL_SOURCE_BINDING_FOLLOWUP` remains separate from one-time folder import;
 - `ORBITAL_VARIANT_CANDIDATE` remains a design study after the accepted
   portrait-safety fix;

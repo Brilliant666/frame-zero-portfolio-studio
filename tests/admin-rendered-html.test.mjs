@@ -86,11 +86,34 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
       assert.equal(html.match(/data-user-materials="false"/g)?.length, 1);
       assert.equal(new Set(html.match(/\/template-structure-previews\/[a-z0-9-]+\.webp/g) ?? []).size, 1);
       assert.equal(html.match(/data-template-state="[^"]+"/g)?.length, 1);
+      const templateHeadingId = html.match(/<h3 id="(template-detail-name-[^"]+)"/)?.[1];
+      assert.ok(templateHeadingId, "the rendered template detail must expose its labelled heading");
+      assert.match(html, new RegExp(`aria-labelledby="${templateHeadingId}"`));
+      const detailStart = html.indexOf("data-template-detail=");
+      const headingIndex = html.indexOf(`id="${templateHeadingId}"`, detailStart);
+      const previewIndex = html.indexOf("data-template-structure-preview=", detailStart);
+      const profileIndex = html.indexOf("data-template-material-profile=", detailStart);
+      const actionIndex = html.indexOf("data-template-primary-action=", detailStart);
+      assert.ok(
+        headingIndex > detailStart && headingIndex < previewIndex,
+        "the rendered template name must precede its structure diagram",
+      );
+      assert.ok(
+        previewIndex < profileIndex,
+        "the structure diagram must precede the detailed material guidance",
+      );
+      assert.ok(
+        profileIndex < actionIndex,
+        "the primary action must follow the complete material guidance",
+      );
       assert.doesNotMatch(html, /data-layout-composition-preview=|data-layout-preview-apply=/);
       assert.doesNotMatch(html, /data-template-card=/);
       assert.doesNotMatch(html, /data-template-candidate-preview=|data-template-candidate-preview-trigger=|data-preview-readonly=/);
       assert.match(html, /aria-label="正式页面模板"/);
       assert.match(html, /素材准备建议/);
+      assert.match(html, /槽位构成/);
+      assert.match(html, /固定横图|固定竖图|任意方向/);
+      assert.doesNotMatch(html, /比例计划/);
       assert.match(html, /横图/);
       assert.match(html, /竖图/);
       assert.match(html, /方图/);

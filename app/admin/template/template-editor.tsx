@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { isTemplateId, templateCatalog, type TemplateId } from "../../site-config";
 import {
+  formatTemplateMaterialDirectionSummary,
+  getTemplateMaterialPlanSummary,
   getTemplateMaterialProfile,
   type TemplateMaterialProfile,
 } from "../../templates/material-profiles";
@@ -27,6 +29,7 @@ export default function TemplateEditor() {
   const inspectedId = inspectedOverride ?? content.activeTemplate;
   const inspectedTemplate = templateCatalog.find((template) => template.id === inspectedId) ?? templateCatalog[0];
   const materialProfile = getTemplateMaterialProfile(inspectedTemplate.id);
+  const materialPlan = getTemplateMaterialPlanSummary(inspectedTemplate.id);
   const inspectedIsSaved = savedContent.activeTemplate === inspectedTemplate.id;
   const inspectedIsDraft = content.activeTemplate === inspectedTemplate.id;
 
@@ -115,25 +118,39 @@ export default function TemplateEditor() {
             data-inspected="true"
             aria-labelledby={`template-detail-name-${inspectedTemplate.id}`}
           >
-            <div className={styles.templateDetailVisual}>
-              <TemplateStructurePreview templateId={inspectedTemplate.id} />
-            </div>
-
-            <div className={styles.templateDetailBody}>
+            <header className={styles.templateDetailIntro}>
+              <div className={styles.templateDetailHeader}>
+                <span>READY · {String(templateCatalog.indexOf(inspectedTemplate) + 1).padStart(2, "0")}</span>
+                <h3 id={`template-detail-name-${inspectedTemplate.id}`}>{inspectedTemplate.name}</h3>
+              </div>
               {detailState ? (
                 <div className={styles.templateDetailStates} role="status" aria-live="polite">
                   <span data-template-state={detailState}>{detailState}</span>
                 </div>
               ) : null}
-              <div className={styles.templateDetailHeader}>
-                <span>READY · {String(templateCatalog.indexOf(inspectedTemplate) + 1).padStart(2, "0")}</span>
-                <h3 id={`template-detail-name-${inspectedTemplate.id}`}>{inspectedTemplate.name}</h3>
-              </div>
               <p>{inspectedTemplate.description}</p>
+            </header>
+
+            <div className={styles.templateDetailVisual}>
+              <TemplateStructurePreview templateId={inspectedTemplate.id} />
+            </div>
+
+            <div className={styles.templateDetailBody}>
               <dl className={styles.templateDetailFacts}>
-                <div><dt>照片槽位</dt><dd>{inspectedTemplate.photoSlots} 个</dd></div>
-                <div><dt>比例计划</dt><dd>{inspectedTemplate.photoRatios}</dd></div>
+                <div><dt>照片槽位</dt><dd>{materialPlan.totalSlots} 个</dd></div>
+                <div>
+                  <dt>槽位构成</dt>
+                  <dd>{formatTemplateMaterialDirectionSummary(materialPlan)}</dd>
+                </div>
               </dl>
+              <p className={styles.templateMaterialPlanNote}>
+                {materialPlan.sourceAdaptiveCount > 0
+                  ? "任意方向槽按源素材展示为横图 3:2 或竖图 2:3。"
+                  : "本模板的正式槽位使用固定横竖方向。"}
+                {materialPlan.fixedWideCropCount > 0
+                  ? ` 其中 ${materialPlan.fixedWideCropCount} 个固定横向槽使用 16:9 展示裁切；无需单独准备 16:9 素材。`
+                  : " 16:9 仅在模板需要时作为展示裁切，不是额外素材格式。"}
+              </p>
 
               <section
                 className={styles.templateMaterialProfile}
@@ -153,8 +170,8 @@ export default function TemplateEditor() {
                 </p>
                 <dl className={styles.templateMaterialDemand}>
                   {([
-                    ["横图", materialProfile.landscapeDemand],
-                    ["竖图", materialProfile.portraitDemand],
+                    ["固定横图", materialProfile.landscapeDemand],
+                    ["固定竖图", materialProfile.portraitDemand],
                     ["方图", materialProfile.squareDemand],
                     ["任意方向", materialProfile.sourceAdaptiveDemand],
                   ] as const).map(([label, demand]) => (

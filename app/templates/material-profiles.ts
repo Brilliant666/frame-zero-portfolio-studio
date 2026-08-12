@@ -49,6 +49,14 @@ export type TemplateMaterialProfile = Readonly<{
   optionalNotes: readonly string[];
 }>;
 
+export type TemplateMaterialPlanSummary = Readonly<{
+  totalSlots: number;
+  fixedLandscapeCount: number;
+  fixedPortraitCount: number;
+  sourceAdaptiveCount: number;
+  fixedWideCropCount: number;
+}>;
+
 type ProfileMetadata = Omit<
   TemplateMaterialProfile,
   "templateId" | "maximumUsefulPhotoCount" | "slotAspectTargets" | "sourceAdaptiveDemand"
@@ -336,8 +344,62 @@ const profileByTemplateId = new Map<TemplateId, TemplateMaterialProfile>(
   templateMaterialProfiles.map((profile) => [profile.templateId, profile]),
 );
 
+const planSummaryByTemplateId = new Map<TemplateId, TemplateMaterialPlanSummary>(
+  templateMaterialProfiles.map((profile) => {
+    let fixedLandscapeCount = 0;
+    let fixedPortraitCount = 0;
+    let sourceAdaptiveCount = 0;
+    let fixedWideCropCount = 0;
+    profile.slotAspectTargets.forEach((ratio, slotIndex) => {
+      if (templateSlotOrientationMode(profile.templateId, slotIndex) === "source-adaptive") {
+        sourceAdaptiveCount += 1;
+        return;
+      }
+      if (ratio === "2:3") fixedPortraitCount += 1;
+      else fixedLandscapeCount += 1;
+      if (ratio === "16:9") fixedWideCropCount += 1;
+    });
+    const summary = Object.freeze({
+      totalSlots: profile.maximumUsefulPhotoCount,
+      fixedLandscapeCount,
+      fixedPortraitCount,
+      sourceAdaptiveCount,
+      fixedWideCropCount,
+    });
+    const plannedSlots = summary.fixedLandscapeCount
+      + summary.fixedPortraitCount
+      + summary.sourceAdaptiveCount
+      + profile.squareDemand.recommended;
+    if (plannedSlots !== summary.totalSlots) {
+      throw new Error(`Material plan for ${profile.templateId} must account for every photo slot.`);
+    }
+    if (
+      summary.fixedLandscapeCount !== profile.landscapeDemand.recommended
+      || summary.fixedPortraitCount !== profile.portraitDemand.recommended
+      || summary.sourceAdaptiveCount !== profile.sourceAdaptiveDemand.recommended
+    ) {
+      throw new Error(`Material guidance for ${profile.templateId} must match its slot policy.`);
+    }
+    return [profile.templateId, summary];
+  }),
+);
+
 export function getTemplateMaterialProfile(templateId: TemplateId) {
   const profile = profileByTemplateId.get(templateId);
   if (!profile) throw new Error(`Missing material profile for ${templateId}.`);
   return profile;
+}
+
+export function getTemplateMaterialPlanSummary(templateId: TemplateId) {
+  const summary = planSummaryByTemplateId.get(templateId);
+  if (!summary) throw new Error(`Missing material plan summary for ${templateId}.`);
+  return summary;
+}
+
+export function formatTemplateMaterialDirectionSummary(summary: TemplateMaterialPlanSummary) {
+  return [
+    summary.fixedLandscapeCount > 0 ? `固定横图 ${summary.fixedLandscapeCount} 张` : null,
+    summary.fixedPortraitCount > 0 ? `固定竖图 ${summary.fixedPortraitCount} 张` : null,
+    summary.sourceAdaptiveCount > 0 ? `任意方向 ${summary.sourceAdaptiveCount} 张` : null,
+  ].filter((part): part is string => Boolean(part)).join(" · ");
 }
