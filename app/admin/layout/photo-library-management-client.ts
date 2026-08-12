@@ -118,6 +118,30 @@ async function json(response: Response) {
   try { return await response.json(); } catch { return null; }
 }
 
+function healthy(value: unknown) {
+  const data = record(value);
+  return Boolean(
+    data
+    && Object.keys(data).length === 1
+    && Object.prototype.hasOwnProperty.call(data, "ok")
+    && data.ok === true,
+  );
+}
+
+async function hasReachableLegacyService(origin: string, fetchImpl: FetchLike) {
+  try {
+    const response = await fetchImpl(url(origin, "/health"), {
+      method: "GET",
+      cache: "no-store",
+      credentials: "omit",
+      referrerPolicy: "no-referrer",
+    });
+    return response.ok && healthy(await json(response));
+  } catch {
+    return false;
+  }
+}
+
 function errorCode(value: unknown) {
   const data = record(value);
   const error = record(data?.error);
@@ -142,10 +166,24 @@ export async function loadLocalPhotoLibrary(
       referrerPolicy: "no-referrer",
     });
   } catch {
+    if (await hasReachableLegacyService(origin, fetchImpl)) {
+      throw new LocalPhotoLibraryManagementError(
+        "service-update-required",
+        "本地素材服务版本较旧；请停止并重新运行 npm run dev。",
+      );
+    }
     throw new LocalPhotoLibraryManagementError("unavailable", "本地素材管理服务暂时不可用。");
   }
   const body = await json(response);
-  if (!response.ok) throw new LocalPhotoLibraryManagementError(errorCode(body) ?? "request-failed", "本地素材库读取失败。");
+  if (!response.ok) {
+    const code = errorCode(body) ?? "request-failed";
+    throw new LocalPhotoLibraryManagementError(
+      response.status === 404 ? "service-update-required" : code,
+      response.status === 404
+        ? "本地素材服务版本较旧；请停止并重新运行 npm run dev。"
+        : "本地素材库读取失败。",
+    );
+  }
   const parsed = snapshot(body);
   if (!parsed) throw new LocalPhotoLibraryManagementError("invalid-response", "本地素材库返回了无效数据。");
   return parsed;

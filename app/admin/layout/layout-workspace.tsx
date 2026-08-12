@@ -625,17 +625,19 @@ export default function LayoutWorkspace() {
             </>
           ) : (
             <div className={styles.libraryEmpty} role="status">
-              <strong>{libraryView === "archived"
-                ? archivedAssetCount === 0 ? "回收站还是空的" : "没有符合筛选条件的回收站素材"
-                : activeItems.length === 0 ? "素材库还是空的" : "没有符合筛选条件的素材"}</strong>
-              <p>{(libraryView === "active" ? activeItems.length : archivedAssetCount) > 0
+              <strong>{libraryState === "error"
+                ? "素材库暂时无法读取"
+                : libraryView === "archived"
+                  ? archivedAssetCount === 0 ? "回收站还是空的" : "没有符合筛选条件的回收站素材"
+                  : activeItems.length === 0 ? "素材库还是空的" : "没有符合筛选条件的素材"}</strong>
+              <p>{libraryState === "error"
+                ? libraryMessage
+                : (libraryView === "active" ? activeItems.length : archivedAssetCount) > 0
                 ? "试试清空搜索词，或切换画幅与导入批次。"
                 : libraryView === "archived"
                   ? "移入回收站的素材会保留原文件和现有排版引用，并可随时恢复。"
                   : activeItems.length === 0
-                ? libraryState === "error"
-                  ? "未能读取素材库；请先处理上方错误并刷新素材列表。"
-                  : localPhotoImportState === "configured"
+                ? localPhotoImportState === "configured"
                     ? "使用上方“添加素材”把照片或文件夹加入素材库。"
                     : localPhotoImportState === "missing"
                       ? "本地照片导入服务未启动；请使用 npm run dev 启动完整编辑环境。"

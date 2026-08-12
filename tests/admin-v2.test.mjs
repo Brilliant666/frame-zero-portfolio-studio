@@ -238,8 +238,11 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.doesNotMatch(managementClient, /\/api\/site-content|method:\s*"PUT"|filename|webkitRelativePath/);
   assert.match(layout, /\["all", "landscape", "portrait", "square"\]/);
   assert.match(layout, /setLibraryMessage\("素材库还为空。"\)/);
+  assert.match(layout, /libraryState === "error"[\s\S]*\? "素材库暂时无法读取"/);
+  assert.match(layout, /<p>\{libraryState === "error"[\s\S]*\? libraryMessage/);
   assert.match(layout, /使用上方“添加素材”把照片或文件夹加入素材库/);
-  assert.match(layout, /未能读取素材库；请先处理上方错误并刷新素材列表/);
+  assert.match(managementClient, /service-update-required/);
+  assert.match(managementClient, /本地素材服务版本较旧；请停止并重新运行 npm run dev/);
   assert.doesNotMatch(layout, /先运行文件夹导入命令|重新执行导入命令/);
   assert.doesNotMatch(panel, /useAdmin|setContent|autoComposeTemplateWorks|\/api\/site-content|method:\s*"PUT"/);
   assert.match(panel, /data-add-materials-trigger="true"/);

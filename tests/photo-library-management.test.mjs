@@ -135,6 +135,56 @@ test("management client rejects inconsistent status counts and duplicate asset i
   }
 });
 
+test("management client identifies readable and CORS-blocked stale services instead of reporting an empty library", async (t) => {
+  const { loadLocalPhotoLibrary, LocalPhotoLibraryManagementError } = await importTypeScriptModule(
+    t,
+    "../app/admin/layout/photo-library-management-client.ts",
+  );
+  await assert.rejects(
+    loadLocalPhotoLibrary("http://127.0.0.1:43127", async () => new Response(
+      JSON.stringify({ ok: false, error: { code: "not-found" } }),
+      { status: 404, headers: { "content-type": "application/json" } },
+    )),
+    (error) => error instanceof LocalPhotoLibraryManagementError
+      && error.code === "service-update-required"
+      && error.message === "本地素材服务版本较旧；请停止并重新运行 npm run dev。",
+  );
+
+  const requested = [];
+  await assert.rejects(
+    loadLocalPhotoLibrary("http://127.0.0.1:43127", async (input) => {
+      const requestedUrl = String(input);
+      requested.push(requestedUrl);
+      if (requestedUrl.endsWith("/library")) throw new TypeError("CORS blocked the legacy response");
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }),
+    (error) => error instanceof LocalPhotoLibraryManagementError
+      && error.code === "service-update-required",
+  );
+  assert.deepEqual(requested, [
+    "http://127.0.0.1:43127/library",
+    "http://127.0.0.1:43127/health",
+  ]);
+});
+
+test("management client keeps a fully unreachable local service distinct from a stale one", async (t) => {
+  const { loadLocalPhotoLibrary, LocalPhotoLibraryManagementError } = await importTypeScriptModule(
+    t,
+    "../app/admin/layout/photo-library-management-client.ts",
+  );
+  await assert.rejects(
+    loadLocalPhotoLibrary("http://127.0.0.1:43127", async () => {
+      throw new TypeError("service offline");
+    }),
+    (error) => error instanceof LocalPhotoLibraryManagementError
+      && error.code === "unavailable"
+      && error.message === "本地素材管理服务暂时不可用。",
+  );
+});
+
 test("management client sends revision-safe archive requests with no source metadata", async (t) => {
   const { setLocalPhotoLibraryArchived } = await importTypeScriptModule(
     t,
