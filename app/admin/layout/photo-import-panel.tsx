@@ -34,19 +34,25 @@ type PhotoImportPanelProps = Readonly<{
 }>;
 
 const directoryInputAttributes = { webkitdirectory: "" };
-const photoImportPreviewLimit = 24;
+const photoImportPreviewPageSize = 24;
 
 type PendingPhotoImportBatch = Readonly<{
+  revision: number;
   files: readonly LocalPhotoImportFile[];
   ignored: number;
   mode: PhotoImportSelectionMode;
   nestedFileCount: number;
-  previewObjectUrls: readonly (string | null)[];
   subdirectoryCount: number;
 }>;
 
-function releasePendingBatch(batch: PendingPhotoImportBatch | null) {
-  for (const objectUrl of batch?.previewObjectUrls ?? []) {
+type PendingPhotoImportPreviewPage = Readonly<{
+  batchRevision: number;
+  objectUrls: readonly (string | null)[];
+  pageIndex: number;
+}>;
+
+function releasePhotoPreviewUrls(objectUrls: readonly (string | null)[]) {
+  for (const objectUrl of objectUrls) {
     if (objectUrl) URL.revokeObjectURL(objectUrl);
   }
 }
@@ -70,12 +76,43 @@ function PhotoImportPreviewItem({
       {!objectUrl || previewFailed ? (
         <div className={styles.photoImportPreviewFallback}>确认后转换</div>
       ) : (
-        // The object URL stays inside this browser session and is revoked with the pending batch.
+        // The object URL stays inside this browser session and is revoked with the current preview page.
         // eslint-disable-next-line @next/next/no-img-element
         <img src={objectUrl} alt="" onError={() => setPreviewFailed(true)} />
       )}
       <figcaption title={file.name}>{file.name}</figcaption>
     </figure>
+  );
+}
+
+function PhotoImportPreviewPage({
+  batchRevision,
+  files,
+  objectUrls,
+  pageIndex,
+}: Readonly<{
+  batchRevision: number;
+  files: readonly LocalPhotoImportFile[];
+  objectUrls: readonly (string | null)[];
+  pageIndex: number;
+}>) {
+  const pageStart = pageIndex * photoImportPreviewPageSize;
+  const pageEnd = Math.min(pageStart + photoImportPreviewPageSize, files.length);
+  const previewFiles = files.slice(pageStart, pageEnd);
+
+  return (
+    <div
+      className={styles.photoImportPreviewGrid}
+      aria-label={`待添加照片缩略图，第 ${pageIndex + 1} 页`}
+    >
+      {previewFiles.map((file, index) => (
+        <PhotoImportPreviewItem
+          key={`${batchRevision}-${pageStart + index}`}
+          file={file}
+          objectUrl={objectUrls[index] ?? null}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -94,9 +131,12 @@ export default function PhotoImportPanel({
   const photoInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const batchActiveRef = useRef(false);
+  const pendingBatchRevisionRef = useRef(0);
   const pendingBatchRef = useRef<PendingPhotoImportBatch | null>(null);
+  const previewPageRef = useRef<PendingPhotoImportPreviewPage | null>(null);
   const [addMaterialsOpen, setAddMaterialsOpen] = useState(false);
   const [pendingBatch, setPendingBatchState] = useState<PendingPhotoImportBatch | null>(null);
+  const [previewPage, setPreviewPageState] = useState<PendingPhotoImportPreviewPage | null>(null);
   const [progress, setProgress] = useState<PhotoImportProgress | null>(null);
   const [result, setResult] = useState<PhotoImportResult | null>(null);
   const [batchError, setBatchError] = useState<string | null>(null);
@@ -105,12 +145,34 @@ export default function PhotoImportPanel({
   const [selectionMode, setSelectionMode] = useState<PhotoImportSelectionMode>("photos");
 
   const setPendingBatch = (nextBatch: PendingPhotoImportBatch | null) => {
-    releasePendingBatch(pendingBatchRef.current);
     pendingBatchRef.current = nextBatch;
     setPendingBatchState(nextBatch);
   };
 
-  useEffect(() => () => releasePendingBatch(pendingBatchRef.current), []);
+  const clearPhotoPreviewPage = () => {
+    releasePhotoPreviewUrls(previewPageRef.current?.objectUrls ?? []);
+    previewPageRef.current = null;
+    setPreviewPageState(null);
+  };
+
+  const showPhotoPreviewPage = (batch: PendingPhotoImportBatch, pageIndex: number) => {
+    releasePhotoPreviewUrls(previewPageRef.current?.objectUrls ?? []);
+    const pageStart = pageIndex * photoImportPreviewPageSize;
+    const nextPreviewPage = {
+      batchRevision: batch.revision,
+      objectUrls: batch.files
+        .slice(pageStart, pageStart + photoImportPreviewPageSize)
+        .map(createPhotoPreviewUrl),
+      pageIndex,
+    };
+    previewPageRef.current = nextPreviewPage;
+    setPreviewPageState(nextPreviewPage);
+  };
+
+  useEffect(() => () => {
+    releasePhotoPreviewUrls(previewPageRef.current?.objectUrls ?? []);
+    previewPageRef.current = null;
+  }, []);
 
   const openPhotoPicker = () => photoInputRef.current?.click();
 
@@ -146,6 +208,7 @@ export default function PhotoImportPanel({
       const nextResult = await runLocalPhotoImport(localPhotoImportOrigin, files, {
         onProgress: setProgress,
         refreshLibrary: onRefresh,
+        sourceKind: mode,
       });
       setResult(nextResult);
     } catch (error) {
@@ -197,16 +260,17 @@ export default function PhotoImportPanel({
       return;
     }
 
-    setPendingBatch({
+    pendingBatchRevisionRef.current += 1;
+    const nextBatch = {
+      revision: pendingBatchRevisionRef.current,
       files: selection.accepted,
       ignored: selection.ignored,
       mode,
       nestedFileCount: selection.nestedFileCount,
-      previewObjectUrls: selection.accepted
-        .slice(0, photoImportPreviewLimit)
-        .map(createPhotoPreviewUrl),
       subdirectoryCount: selection.uniqueSubfolderCount,
-    });
+    };
+    setPendingBatch(nextBatch);
+    showPhotoPreviewPage(nextBatch, 0);
     setSelectionMode(mode);
     requestAnimationFrame(() => preflightConfirmRef.current?.focus());
   };
@@ -215,11 +279,13 @@ export default function PhotoImportPanel({
     if (!pendingBatch || importing) return;
     setIgnoredFiles(pendingBatch.ignored);
     const importPromise = beginImport(pendingBatch.files, pendingBatch.mode);
+    clearPhotoPreviewPage();
     setPendingBatch(null);
     void importPromise;
   };
 
   const cancelPendingImport = () => {
+    clearPhotoPreviewPage();
     setPendingBatch(null);
     setIgnoredFiles(0);
     requestAnimationFrame(() => addMaterialsTriggerRef.current?.focus());
@@ -245,6 +311,22 @@ export default function PhotoImportPanel({
   const selectionLabel = selectionMode === "folder"
     ? "素材文件夹（一次性快照，不会持续同步）"
     : "照片选择（单张或多张）";
+  const previewPageCount = pendingBatch
+    ? Math.ceil(pendingBatch.files.length / photoImportPreviewPageSize)
+    : 0;
+  const previewPageIndex = previewPage && previewPage.batchRevision === pendingBatch?.revision
+    ? previewPage.pageIndex
+    : 0;
+  const previewObjectUrls = previewPage && previewPage.batchRevision === pendingBatch?.revision
+    ? previewPage.objectUrls
+    : [];
+
+  const selectPreviewPage = (nextPageIndex: number) => {
+    if (!pendingBatch || previewPageCount === 0) return;
+    const boundedPageIndex = Math.min(Math.max(nextPageIndex, 0), previewPageCount - 1);
+    if (boundedPageIndex === previewPageIndex) return;
+    showPhotoPreviewPage(pendingBatch, boundedPageIndex);
+  };
 
   return (
     <section
@@ -384,20 +466,48 @@ export default function PhotoImportPanel({
             </p>
           ) : null}
 
-          <div className={styles.photoImportPreviewGrid} aria-label="待添加照片缩略图">
-            {pendingBatch.files.slice(0, photoImportPreviewLimit).map((file, index) => (
-              <PhotoImportPreviewItem
-                key={`${pendingBatch.previewObjectUrls[index]}-${index}`}
-                file={file}
-                objectUrl={pendingBatch.previewObjectUrls[index]}
-              />
-            ))}
+          <div className={styles.photoImportPreviewPagination}>
+            <p aria-live="polite" aria-atomic="true">
+              第 {previewPageIndex + 1} / {previewPageCount} 页 · 共 {pendingBatch.files.length} 张
+            </p>
+            <nav aria-label="待导入素材缩略图分页">
+              <button
+                type="button"
+                onClick={() => selectPreviewPage(previewPageIndex - 1)}
+                disabled={previewPageIndex === 0}
+              >
+                上一页
+              </button>
+              <label>
+                <span>页码</span>
+                <select
+                  aria-label="选择缩略图页码"
+                  value={previewPageIndex}
+                  onChange={(event) => selectPreviewPage(Number(event.currentTarget.value))}
+                >
+                  {Array.from({ length: previewPageCount }, (_, pageIndex) => (
+                    <option key={pageIndex} value={pageIndex}>第 {pageIndex + 1} 页</option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={() => selectPreviewPage(previewPageIndex + 1)}
+                disabled={previewPageIndex >= previewPageCount - 1}
+              >
+                下一页
+              </button>
+            </nav>
           </div>
+          <PhotoImportPreviewPage
+            key={`${pendingBatch.revision}-${previewPageIndex}`}
+            batchRevision={pendingBatch.revision}
+            files={pendingBatch.files}
+            objectUrls={previewObjectUrls}
+            pageIndex={previewPageIndex}
+          />
           <small className={styles.photoImportPreviewLimit}>
-            最多显示 24 张缩略图
-            {pendingBatch.files.length > photoImportPreviewLimit
-              ? `；另有 ${pendingBatch.files.length - photoImportPreviewLimit} 张将在确认后处理`
-              : ""}
+            每页最多显示 24 张缩略图；确认后仍会处理全部 {pendingBatch.files.length} 张。
           </small>
 
           <div className={styles.photoImportPreflightActions}>
@@ -424,6 +534,7 @@ export default function PhotoImportPanel({
           {progress ? (
             <dl>
               <div><dt>新增</dt><dd>{progress.added}</dd></div>
+              <div><dt>恢复</dt><dd>{progress.restored}</dd></div>
               <div><dt>重复跳过</dt><dd>{progress.alreadyExists}</dd></div>
               <div><dt>失败</dt><dd>{progress.failed}</dd></div>
             </dl>
@@ -439,20 +550,23 @@ export default function PhotoImportPanel({
           role="status"
           aria-live="polite"
         >
-          <strong>{result.added + result.alreadyExists === 0 && result.failed > 0
+          <strong>{result.added + result.restored + result.alreadyExists === 0 && result.failed > 0
             ? "未能读取素材"
             : result.failed > 0
               ? "读取完成，部分照片未处理"
               : result.added > 0
                 ? `已添加 ${result.added} 张素材`
+                : result.restored > 0
+                  ? `已恢复 ${result.restored} 张素材`
                 : result.alreadyExists > 0
                   ? "没有新增照片"
                   : "素材读取完成"}</strong>
           <p>
             本次新增 {result.added}
+            {result.restored > 0 ? <> · 恢复可用 {result.restored}</> : null}
             {result.alreadyExists > 0 ? <> · 重复跳过 {result.alreadyExists}</> : null}
             {result.failed > 0 ? ` · 失败 ${result.failed}` : ""}
-            {result.libraryTotal === null ? "" : ` · 素材库总计 ${result.libraryTotal} 张`}
+            {result.libraryTotal === null ? "" : ` · 可用素材总计 ${result.libraryTotal} 张`}
           </p>
           <small>本次来源：{selectionLabel}</small>
           {result.alreadyExists > 0 ? (

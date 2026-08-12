@@ -855,6 +855,23 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.photoImportPreviewPagination { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.photoImportPreviewPagination p { margin: 0; color: var(--admin-v2-muted); font: 700 .68rem var(--font-geist-mono), monospace; }
+.photoImportPreviewPagination nav { display: flex; align-items: center; gap: .4rem; }
+.photoImportPreviewPagination label { display: flex; align-items: center; gap: .35rem; color: var(--admin-v2-muted); font-size: .68rem; font-weight: 700; }
+.photoImportPreviewPagination button,
+.photoImportPreviewPagination select {
+  min-height: 2.5rem;
+  border: 1px solid var(--admin-v2-line);
+  background: #fff;
+  color: var(--admin-v2-ink);
+  font: 700 .72rem var(--font-geist-sans), sans-serif;
+}
+.photoImportPreviewPagination button { padding: .5rem .7rem; cursor: pointer; }
+.photoImportPreviewPagination select { padding: .45rem 1.75rem .45rem .55rem; }
+.photoImportPreviewPagination button:disabled { opacity: .4; cursor: default; }
+.photoImportPreviewPagination button:focus-visible,
+.photoImportPreviewPagination select:focus-visible { outline: 3px solid rgba(255,107,0,.22); outline-offset: 2px; }
 .photoImportPreviewLimit { color: var(--admin-v2-muted); font-size: .66rem; line-height: 1.45; }
 .photoImportPreflightActions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(0, 1.35fr); gap: .45rem; }
 .photoImportPreflightActions button:last-child { border-color: var(--admin-v2-ink); background: var(--admin-v2-ink); color: #fff; }
@@ -870,7 +887,7 @@
 .photoImportError strong { font-size: .78rem; }
 .photoImportProgress > div:first-child span { font: 700 .72rem var(--font-geist-mono), monospace; }
 .photoImportProgress progress { width: 100%; height: .65rem; accent-color: var(--admin-v2-accent); }
-.photoImportProgress dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; }
+.photoImportProgress dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; }
 .photoImportProgress dl div { display: flex; justify-content: space-between; gap: .5rem; padding-right: .75rem; font-size: .7rem; }
 .photoImportProgress dd { margin: 0; font-weight: 700; }
 .photoImportResult { border-left: 3px solid #367148; background: #f5faf5; }
@@ -890,6 +907,8 @@
 .layoutActions button,
 .slotControls button,
 .libraryFilters button,
+.libraryViews button,
+.assetManagement button,
 .pagination button {
   min-height: 2.75rem;
   padding: .55rem .75rem;
@@ -905,6 +924,8 @@
 .photoImportPreflightActions button:disabled,
 .layoutActions button:disabled,
 .slotControls button:disabled,
+.libraryViews button:disabled,
+.assetManagement button:disabled,
 .assetPick:disabled,
 .pagination button:disabled { opacity: .4; cursor: default; }
 
@@ -1026,12 +1047,19 @@
 .emptyEditor p { max-width: 18rem; margin: 0; color: var(--admin-v2-muted); font-size: .78rem; line-height: 1.55; }
 
 .libraryToolbar { display: grid; grid-template-columns: minmax(9rem, 1fr) auto; gap: .55rem; padding: .7rem; border-bottom: 1px solid var(--admin-v2-line); }
+.libraryViews { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--admin-v2-line); }
+.libraryViews button { min-height: 2.75rem; border-width: 0 1px 0 0; }
+.libraryViews button:last-child { border-right: 0; }
+.libraryViews button[aria-pressed="true"] { background: var(--admin-v2-ink); color: #fff; }
 .libraryFilters { display: flex; }
 .libraryFilters button { min-width: 3.25rem; border-left: 0; }
 .libraryFilters button:first-child { border-left: 1px solid var(--admin-v2-line); }
 .libraryFilters button[aria-pressed="true"] { background: var(--admin-v2-ink); color: #fff; }
+.librarySelect { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .45rem; min-width: 0; color: var(--admin-v2-muted); font-size: .68rem; font-weight: 700; }
+.librarySelect select { min-width: 0; min-height: 2.65rem; padding: .5rem 1.8rem .5rem .55rem; border: 1px solid var(--admin-v2-line); border-radius: 0; background: #fff; color: var(--admin-v2-ink); }
+.libraryManagementMessage { margin: 0; padding: .65rem .7rem; border-bottom: 1px solid var(--admin-v2-line); background: #fff8ef; color: #6f4a34; font-size: .72rem; line-height: 1.5; }
 .assetGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .55rem; padding: .7rem; }
-.assetCard { min-width: 0; border: 1px solid var(--admin-v2-line); }
+.assetCard { display: grid; min-width: 0; align-content: start; border: 1px solid var(--admin-v2-line); background: #fff; }
 .assetCard[data-selected="true"] { border-color: var(--admin-v2-accent); }
 .assetPick { display: grid; width: 100%; min-width: 0; padding: 0; border: 0; background: #fff; color: inherit; text-align: left; cursor: pointer; }
 .assetThumb { position: relative; display: block; width: 100%; overflow: hidden; background: #ded8d1; }
@@ -1040,6 +1068,11 @@
 .assetMeta { display: grid; min-width: 0; gap: .15rem; padding: .55rem; }
 .assetMeta strong { font-size: .72rem; }
 .assetMeta small { overflow: hidden; color: var(--admin-v2-muted); font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
+.assetManagement { display: grid; gap: .4rem; padding: .5rem; border-top: 1px solid var(--admin-v2-line); }
+.assetManagement > small { color: var(--admin-v2-muted); font-size: .62rem; line-height: 1.4; }
+.assetManagement > button { width: 100%; min-height: 2.75rem; color: #8b2d1d; font-size: .68rem; }
+.assetManagement > div { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: .3rem; color: #8b2d1d; font-size: .65rem; font-weight: 700; }
+.assetManagement > div button { min-height: 2.75rem; padding-inline: .45rem; font-size: .65rem; }
 .pagination { display: flex; align-items: center; justify-content: center; gap: .65rem; padding: .25rem .7rem .8rem; }
 .pagination span { font: 700 .72rem var(--font-geist-mono), monospace; }
 .libraryEmpty { display: grid; min-height: 18rem; place-items: center; align-content: center; gap: .35rem; padding: 2rem; text-align: center; }
@@ -1144,6 +1177,9 @@
 .photoImportPreflightActions button:focus-visible,
 .photoImportResult summary:focus-visible,
 .layoutActions button:focus-visible,
+.libraryViews button:focus-visible,
+.librarySelect select:focus-visible,
+.assetManagement button:focus-visible,
 .slotControls button:focus-visible,
 .slotLock input:focus-visible,
 .librarySearch input:focus-visible,
@@ -1242,6 +1278,9 @@
   .dangerZone,
   .dangerHeader { display: grid; grid-template-columns: 1fr; }
   .dangerButton { width: 100%; }
+  .photoImportPreviewPagination { align-items: stretch; flex-direction: column; }
+  .photoImportPreviewPagination nav { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); width: 100%; }
+  .photoImportPreviewPagination nav > button { width: 100%; }
   .photoImportPreviewGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .photoImportPreflightActions { grid-template-columns: 1fr; }
 }
@@ -1303,6 +1342,8 @@
   .photoImportPreflightStats { grid-template-columns: 1fr; }
   .photoImportPreflightStats > div { border-right: 0; border-bottom: 1px solid var(--admin-v2-line); }
   .photoImportPreflightStats > div:last-child { border-bottom: 0; }
+  .photoImportProgress dl { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .35rem .6rem; }
+  .photoImportProgress dl div { padding-right: 0; }
   .photoImportPreviewGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .slotControls { grid-template-columns: 1fr; }
   .slotLock { min-height: 2.75rem; }
@@ -1310,6 +1351,8 @@
   .libraryFilters button,
   .libraryFilters button:first-child { border-left: 1px solid var(--admin-v2-line); }
   .assetGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .assetManagement > div { grid-template-columns: 1fr 1fr; }
+  .assetManagement > div span { grid-column: 1 / -1; }
   .libraryStats > div { padding-inline: .5rem; }
   .legacySummary { grid-template-columns: 3.5rem minmax(0, 1fr) 1.5rem; padding-inline: .75rem; }
   .legacyCard { grid-template-columns: 1fr; }

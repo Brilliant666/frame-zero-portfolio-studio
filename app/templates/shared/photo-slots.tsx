@@ -1,6 +1,8 @@
 import type { CSSProperties } from "react";
+import { primaryAssignmentRatioNumber } from "../../photo-ratio-policy";
 import type { Work } from "../../site-config";
 import type { PhotoRatio } from "../catalog";
+import { buildSourceOrientationSlots } from "./source-orientation-layout";
 import styles from "./photo-slots.module.css";
 
 export type { PhotoRatio } from "../catalog";
@@ -17,13 +19,11 @@ export const photoRatioValue: Record<PhotoRatio, string> = {
   "16:9": "16 / 9",
 };
 
-const photoRatioNumber: Record<PhotoRatio, number> = {
-  "3:2": 3 / 2,
-  "2:3": 2 / 3,
-  "16:9": 16 / 9,
-};
-
 type WorkWithSlotIndex = Work & { slotIndex?: unknown };
+
+export type BuildPhotoSlotsOptions = Readonly<{
+  adaptiveToSourceOrientation?: boolean;
+}>;
 
 function getFixedSlotIndex(work: Work, slotCount: number) {
   const slotIndex = (work as WorkWithSlotIndex).slotIndex;
@@ -54,12 +54,20 @@ function bitCount(value: number) {
 }
 
 /**
- * Builds a fixed photo sequence. Explicit zero-based `slotIndex` values win;
- * remaining works are globally matched by the lowest aspect-ratio crop cost.
- * Cross-orientation images are never forced into an incompatible slot, so a
- * missing compatible work remains an intentional editorial placeholder.
+ * Builds a fixed photo sequence. Explicit zero-based `slotIndex` values win.
+ * Fixed templates globally match remaining works by the lowest primary crop
+ * cost and never force cross-orientation placement. An adaptive template keeps
+ * the same slot identities but derives each occupied presentation as 3:2 or
+ * 2:3 from the source dimensions.
  */
-export function buildPhotoSlots(works: Work[], ratios: readonly PhotoRatio[]): PhotoSlot[] {
+export function buildPhotoSlots(
+  works: Work[],
+  ratios: readonly PhotoRatio[],
+  options: BuildPhotoSlotsOptions = {},
+): PhotoSlot[] {
+  const adaptive = options.adaptiveToSourceOrientation === true;
+  if (adaptive) return buildSourceOrientationSlots(works, ratios);
+
   const slots = ratios.map((ratio, index): PhotoSlot => ({ index, ratio, work: null }));
   const fixedWorkIndexes = new Set<number>();
 
@@ -92,7 +100,7 @@ export function buildPhotoSlots(works: Work[], ratios: readonly PhotoRatio[]): P
         const bit = 1 << openSlotIndex;
         if ((mask & bit) !== 0) return;
 
-        const targetRatio = photoRatioNumber[slots[slotIndex].ratio];
+        const targetRatio = primaryAssignmentRatioNumber(slots[slotIndex].ratio);
         if (!hasCompatibleOrientation(actualRatio, targetRatio)) return;
 
         const nextMask = mask | bit;

@@ -195,10 +195,12 @@ test("the obsolete long-form Admin implementation is removed", async () => {
 });
 
 test("local photo ingest stays isolated from the shared SiteContent draft", async () => {
-  const [layout, panel, client, provider, adminLayout, templatePreview, previewComposition, css, viteConfig] = await Promise.all([
+  const [layout, panel, client, managementClient, references, provider, adminLayout, templatePreview, previewComposition, css, viteConfig] = await Promise.all([
     source("app/admin/layout/layout-workspace.tsx"),
     source("app/admin/layout/photo-import-panel.tsx"),
     source("app/admin/layout/photo-import-client.ts"),
+    source("app/admin/layout/photo-library-management-client.ts"),
+    source("app/photo-library-references.ts"),
     source("app/admin/admin-provider.tsx"),
     source("app/admin/layout.tsx"),
     source("app/admin/template/template-composition-preview.tsx"),
@@ -213,6 +215,27 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(layout, /isImporting \|\| assets\.length === 0/);
   assert.match(layout, /libraryRequestRef/);
   assert.match(layout, /request !== libraryRequestRef\.current/);
+  assert.match(layout, /loadLocalPhotoLibrary/);
+  assert.match(layout, /setLocalPhotoLibraryArchived/);
+  assert.match(layout, /在库素材/);
+  assert.match(layout, /回收站/);
+  assert.match(layout, /最近新增/);
+  assert.match(layout, /最早记录/);
+  assert.match(layout, /导入批次/);
+  assert.match(layout, /既有素材（时间未知）/);
+  assert.match(layout, /当前草稿 \{references\.draft\.length\} 处 · 已保存 \{references\.saved\.length\} 处/);
+  assert.match(layout, /移入回收站/);
+  assert.match(layout, /恢复素材/);
+  assert.match(layout, /现有排版引用保持可用/);
+  assert.match(layout, /archivedAssetCount === 0/);
+  assert.match(layout, /没有符合筛选条件的回收站素材/);
+  assert.match(layout, /archiveConfirmRef/);
+  assert.match(layout, /archiveTriggerRefs/);
+  assert.match(layout, /archiveConfirmRef\.current\?\.focus\(\)/);
+  assert.match(layout, /archiveTriggerRefs\.current\.get\(assetId\)\?\.focus\(\)/);
+  assert.match(references, /work\.assetId/);
+  assert.match(references, /work\.image, work\.preview/);
+  assert.doesNotMatch(managementClient, /\/api\/site-content|method:\s*"PUT"|filename|webkitRelativePath/);
   assert.match(layout, /\["all", "landscape", "portrait", "square"\]/);
   assert.match(layout, /setLibraryMessage\("素材库还为空。"\)/);
   assert.match(layout, /使用上方“添加素材”把照片或文件夹加入素材库/);
@@ -249,6 +272,7 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.equal(panel.match(/tabIndex=\{-1\}/g)?.length, 2);
   const selectionHandler = panel.match(/const handleSelection = \([\s\S]*?^  \};/m)?.[0] ?? "";
   const confirmationHandler = panel.match(/const confirmPendingImport = [\s\S]*?^  \};/m)?.[0] ?? "";
+  const cancelHandler = panel.match(/const cancelPendingImport = [\s\S]*?^  \};/m)?.[0] ?? "";
   const reselectHandler = panel.match(/const reselectPendingImport = [\s\S]*?^  \};/m)?.[0] ?? "";
   assert.notEqual(selectionHandler, "", "photo selection must have an explicit handler");
   assert.match(selectionHandler, /setPendingBatch/);
@@ -259,27 +283,52 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.notEqual(confirmationHandler, "", "pending selection must require explicit confirmation");
   assert.match(confirmationHandler, /beginImport\(/);
   assert.match(confirmationHandler, /pendingBatch/);
+  assert.match(confirmationHandler, /clearPhotoPreviewPage\(\)/);
+  assert.notEqual(cancelHandler, "", "cancelling a pending selection must be explicit");
+  assert.match(cancelHandler, /clearPhotoPreviewPage\(\)/);
   assert.notEqual(reselectHandler, "", "reselect must preserve the pending batch if the chooser is cancelled");
   assert.doesNotMatch(reselectHandler, /setPendingBatch\(null\)/);
   assert.match(panel, /URL\.revokeObjectURL/);
   assert.match(panel, /function createPhotoPreviewUrl/);
-  assert.match(panel, /const photoImportPreviewLimit = 24/);
+  assert.match(panel, /function releasePhotoPreviewUrls/);
+  assert.match(panel, /const photoImportPreviewPageSize = 24/);
+  assert.match(panel, /function PhotoImportPreviewPage/);
+  assert.match(panel, /files\.slice\(pageStart, pageEnd\)/);
+  assert.match(panel, /const showPhotoPreviewPage/);
+  assert.match(panel, /releasePhotoPreviewUrls\(previewPageRef\.current\?\.objectUrls \?\? \[\]\)/);
+  assert.match(panel, /batch\.files\s*\.slice\(pageStart, pageStart \+ photoImportPreviewPageSize\)\s*\.map\(createPhotoPreviewUrl\)/);
+  assert.match(panel, /useEffect\(\(\) => \(\) => \{/);
+  assert.match(panel, /previewPageRef\.current = null/);
+  assert.match(panel, /showPhotoPreviewPage\(nextBatch, 0\)/);
+  assert.match(panel, /showPhotoPreviewPage\(pendingBatch, boundedPageIndex\)/);
+  assert.doesNotMatch(panel, /previewObjectUrls:\s*selection\.accepted/);
   assert.match(panel, /data-photo-import-preflight="true"/);
   assert.match(panel, /data-photo-import-preview-item/);
   assert.match(panel, /pendingBatch\.files\.length/);
   assert.match(panel, /pendingBatch\.ignored/);
   assert.match(panel, /pendingBatch\.subdirectoryCount/);
-  assert.match(panel, /pendingBatch\.files\.slice\(0, photoImportPreviewLimit\)/);
+  assert.match(panel, /Math\.ceil\(pendingBatch\.files\.length \/ photoImportPreviewPageSize\)/);
+  assert.match(panel, /aria-label="待导入素材缩略图分页"/);
+  assert.match(panel, /aria-label="选择缩略图页码"/);
+  assert.match(panel, /上一页/);
+  assert.match(panel, /下一页/);
+  assert.match(panel, /第 \{previewPageIndex \+ 1\} \/ \{previewPageCount\} 页 · 共 \{pendingBatch\.files\.length\} 张/);
+  assert.match(panel, /每页最多显示 24 张缩略图/);
+  assert.match(confirmationHandler, /beginImport\(pendingBatch\.files, pendingBatch\.mode\)/);
+  assert.doesNotMatch(confirmationHandler, /slice\(|previewPage/);
   assert.match(panel, /待处理/);
   assert.match(panel, /忽略/);
   assert.match(panel, /子目录/);
-  assert.match(panel, /最多(?:显示|预览)?\s*24 张/);
+  assert.match(panel, /处理全部 \{pendingBatch\.files\.length\} 张/);
   assert.match(panel, /确认导入/);
   assert.match(panel, /取消/);
   assert.match(panel, /重新选择/);
   assert.match(panel, /onClick=\{confirmPendingImport\}/);
   assert.match(panel, /onClick=\{cancelPendingImport\}/);
   assert.match(panel, /onClick=\{reselectPendingImport\}/);
+  assert.match(css, /\.photoImportPreviewPagination\s*\{/);
+  assert.match(css, /\.photoImportPreviewPagination nav\s*\{/);
+  assert.match(css, /grid-template-columns:\s*minmax\(0, 1fr\) auto minmax\(0, 1fr\)/);
   assert.match(panel, /本地照片导入仅在本机编辑模式可用/);
   assert.match(panel, /本地照片导入服务未启动/);
   assert.match(panel, /请使用 npm run dev 启动完整编辑环境/);
@@ -288,8 +337,10 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(panel, /导入地址已配置，但当前无法连接本地照片导入服务/);
   assert.doesNotMatch(panel, /高级 \/ 命令行导入|photos:import/);
   assert.match(panel, /本次新增 \{result\.added\}/);
+  assert.match(panel, /恢复可用 \{result\.restored\}/);
   assert.match(panel, /重复跳过 \{result\.alreadyExists\}/);
-  assert.match(panel, /素材库总计 \$\{result\.libraryTotal\} 张/);
+  assert.match(panel, /可用素材总计 \$\{result\.libraryTotal\} 张/);
+  assert.doesNotMatch(panel, /素材库总计 \$\{result\.libraryTotal\} 张/);
   assert.doesNotMatch(panel, /已存在/);
   assert.match(panel, /查看失败详情/);
   assert.match(panel, /aria-label="照片导入进度"/);
@@ -310,6 +361,9 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(client, /body: file/);
   assert.match(client, /"content-type": "application\/octet-stream"/);
   assert.match(client, /"x-frame-zero-local-import": "1"/);
+  assert.match(client, /"x-frame-zero-photo-batch": batchId/);
+  assert.match(client, /"x-frame-zero-photo-batch-position": String\(index\)/);
+  assert.match(client, /"x-frame-zero-photo-source": sourceKind/);
   assert.match(client, /localPhotoImportMaximumBytes = 200 \* 1024 \* 1024/);
   assert.match(client, /checkLocalPhotoImportHealth\(\s*origin: string/);
   assert.match(client, /runLocalPhotoImport\(\s*origin: string/);
@@ -335,6 +389,21 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(css, /\.photoImportChoiceNotes\s*\{/);
   assert.doesNotMatch(css, /\.photoImportCli\s*\{/);
   assert.match(css, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.libraryViews button:focus-visible/);
+  assert.match(css, /\.librarySelect select:focus-visible/);
+  assert.match(css, /\.assetManagement button:focus-visible/);
+  assert.match(css, /@media \(max-width: 480px\)[\s\S]*?\.photoImportProgress dl\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
+});
+
+test("template composition preview excludes recycled local assets from new recommendations", async () => {
+  const previewSource = await source("app/admin/template/template-composition-preview.tsx");
+  assert.match(previewSource, /loadLocalPhotoLibrary\(localPhotoImportOrigin\)/);
+  assert.match(previewSource, /filter\(\(item\) => item\.status === "active"\)/);
+  assert.match(previewSource, /localPhotoImportState === "configured"/);
+  assert.match(previewSource, /localPhotoImportOrigin/);
+  assert.match(previewSource, /templateId === "character-select"/);
+  assert.match(previewSource, /primaryPhotoRatioForDimensions\(work\.previewWidth, work\.previewHeight\)/);
+  assert.match(previewSource, /data-ratio=\{presentationRatio\}/);
 });
 
 test("Admin V2 keeps shared draft persistence on the unchanged site-content endpoint", async () => {

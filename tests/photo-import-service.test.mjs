@@ -22,9 +22,22 @@ const ALLOWED_ORIGIN = "http://127.0.0.1:3001";
 const IMPORT_HEADERS = {
   "Content-Type": "application/octet-stream",
   "X-Frame-Zero-Local-Import": "1",
+  "X-Frame-Zero-Photo-Batch": "0123456789abcdef0123456789abcdef",
+  "X-Frame-Zero-Photo-Batch-Position": "0",
+  "X-Frame-Zero-Photo-Batch-Size": "1",
   "X-Frame-Zero-Photo-Extension": ".jpg",
+  "X-Frame-Zero-Photo-Source": "photos",
   Origin: ALLOWED_ORIGIN,
 };
+const TEST_ASSET_ID = "a".repeat(64);
+
+function importerResult({ disposition = "added", totalAssets = 1, revision = 1, assetId = TEST_ASSET_ID } = {}) {
+  return {
+    assetOutcomes: [{ assetId, disposition }],
+    activeAssets: totalAssets,
+    catalogRevision: revision,
+  };
+}
 const [nodeMajor, nodeMinor] = process.versions.node.split(".").map(Number);
 const supportsPhotoImport = nodeMajor > 22 || (nodeMajor === 22 && nodeMinor >= 13);
 const importerTest = supportsPhotoImport
@@ -244,7 +257,11 @@ test("CORS preflight and import security headers are strict", async (t) => {
       "Access-Control-Request-Headers": [
         "content-type",
         "x-frame-zero-local-import",
+        "x-frame-zero-photo-batch",
+        "x-frame-zero-photo-batch-position",
+        "x-frame-zero-photo-batch-size",
         "x-frame-zero-photo-extension",
+        "x-frame-zero-photo-source",
       ].join(", "),
     },
   });
@@ -423,7 +440,7 @@ test("a committed import is not misreported when temporary cleanup needs a retry
   const { url } = await startService(t, {
     ...workspace,
     contract: { supportedExtensions: [".webp"] },
-    importer: async () => ({ addedAssets: 1, importedAssets: 19 }),
+    importer: async () => importerResult({ totalAssets: 19 }),
     temporaryDirectoryCleanup: async () => {
       immediateCleanupCalls += 1;
       const error = new Error("synthetic Windows file lock");
@@ -445,7 +462,13 @@ test("a committed import is not misreported when temporary cleanup needs a retry
   });
 
   assert.equal(response.status, 200);
-  assert.deepEqual(response.body, { ok: true, status: "added", totalAssets: 19 });
+  assert.deepEqual(response.body, {
+    ok: true,
+    status: "added",
+    assetId: TEST_ASSET_ID,
+    totalAssets: 19,
+    revision: 1,
+  });
   await waitUntil(async () => (await fs.readdir(workspace.tempRoot)).length === 0);
   assert.equal(immediateCleanupCalls, 1);
   assert.equal(deferredCleanupCalls, 1);
@@ -474,7 +497,7 @@ test("chunked upload and import requests are fully serialized", async (t) => {
         importedSizes.push((await fs.stat(path.join(sourceDir, fileName))).size);
         await new Promise((resolve) => setTimeout(resolve, 30));
         totalAssets += 1;
-        return { addedAssets: 1, importedAssets: totalAssets };
+        return importerResult({ totalAssets, revision: totalAssets - 17 });
       } finally {
         active -= 1;
       }
@@ -551,9 +574,88 @@ importerTest("WebP request sources release file handles before service cleanup",
   });
 
   assert.equal(response.status, 200);
-  assert.deepEqual(response.body, { ok: true, status: "added", totalAssets: 1 });
+  assert.equal(response.body.ok, true);
+  assert.equal(response.body.status, "added");
+  assert.equal(response.body.totalAssets, 1);
+  assert.match(response.body.assetId, /^[a-f0-9]{64}$/);
+  assert.equal(response.body.revision, 1);
   assert.equal(sharp.cache().files.max, 0);
   await waitUntil(async () => (await fs.readdir(workspace.tempRoot)).length === 0);
+});
+
+importerTest("local library API exposes order and provides revision-safe recycle and restore", async (t) => {
+  const workspace = await makeWorkspace(t);
+  const { url } = await startService(t, {
+    ...workspace,
+    contract: photoImportContract,
+  });
+  const sourceBuffer = await makeJpegBuffer({ width: 900, height: 600, color: "#a65b42" });
+  const imported = await request({
+    url,
+    pathname: "/import",
+    method: "POST",
+    headers: IMPORT_HEADERS,
+    chunks: [sourceBuffer],
+  });
+  assert.equal(imported.status, 200);
+  assert.equal(imported.body.status, "added");
+
+  const withoutOrigin = await request({ url, pathname: "/library" });
+  assert.equal(withoutOrigin.status, 403);
+  const library = await request({
+    url,
+    pathname: "/library",
+    headers: { Origin: ALLOWED_ORIGIN },
+  });
+  assert.equal(library.status, 200);
+  assert.equal(library.body.activeAssets, 1);
+  assert.equal(library.body.archivedAssets, 0);
+  assert.equal(library.body.items[0].importOrdinal, 1);
+  assert.equal(library.body.items[0].sourceKind, "photos");
+  assert.doesNotMatch(JSON.stringify(library.body), /filename|relativePath|sourceDir|private|\\/i);
+
+  const mutationHeaders = {
+    Origin: ALLOWED_ORIGIN,
+    "Content-Type": "application/json",
+    "X-Frame-Zero-Local-Import": "1",
+  };
+  const archive = await request({
+    url,
+    pathname: "/library/archive",
+    method: "POST",
+    headers: mutationHeaders,
+    chunks: [JSON.stringify({
+      assetIds: [imported.body.assetId],
+      expectedRevision: library.body.revision,
+    })],
+  });
+  assert.equal(archive.status, 200);
+  assert.equal(archive.body.activeAssets, 0);
+  assert.equal(archive.body.archivedAssets, 1);
+
+  const staleRestore = await request({
+    url,
+    pathname: "/library/restore",
+    method: "POST",
+    headers: mutationHeaders,
+    chunks: [JSON.stringify({ assetIds: [imported.body.assetId], expectedRevision: 0 })],
+  });
+  assert.equal(staleRestore.status, 409);
+  assert.equal(staleRestore.body.error.code, "library-changed");
+
+  const restore = await request({
+    url,
+    pathname: "/library/restore",
+    method: "POST",
+    headers: mutationHeaders,
+    chunks: [JSON.stringify({
+      assetIds: [imported.body.assetId],
+      expectedRevision: archive.body.revision,
+    })],
+  });
+  assert.equal(restore.status, 200);
+  assert.equal(restore.body.activeAssets, 1);
+  assert.equal(restore.body.archivedAssets, 0);
 });
 
 importerTest("additive service imports preserve 18 assets, deduplicate, and retain privacy", async (t) => {
@@ -580,19 +682,32 @@ importerTest("additive service imports preserve 18 assets, deduplicate, and reta
     url, pathname: "/import", method: "POST", headers: IMPORT_HEADERS, chunks: [firstBuffer],
   });
   assert.equal(first.status, 200);
-  assert.deepEqual(first.body, { ok: true, status: "added", totalAssets: 19 });
+  assert.equal(first.body.status, "added");
+  assert.equal(first.body.totalAssets, 19);
+  assert.equal(first.body.revision, 2);
 
   const duplicate = await request({
     url, pathname: "/import", method: "POST", headers: IMPORT_HEADERS, chunks: [firstBuffer],
   });
   assert.equal(duplicate.status, 200);
-  assert.deepEqual(duplicate.body, { ok: true, status: "already-exists", totalAssets: 19 });
+  assert.equal(duplicate.body.status, "duplicate");
+  assert.equal(duplicate.body.totalAssets, 19);
+  assert.equal(duplicate.body.revision, 2);
 
   const second = await request({
-    url, pathname: "/import", method: "POST", headers: IMPORT_HEADERS, chunks: [secondBuffer],
+    url,
+    pathname: "/import",
+    method: "POST",
+    headers: {
+      ...IMPORT_HEADERS,
+      "X-Frame-Zero-Photo-Batch": "fedcba9876543210fedcba9876543210",
+    },
+    chunks: [secondBuffer],
   });
   assert.equal(second.status, 200);
-  assert.deepEqual(second.body, { ok: true, status: "added", totalAssets: 20 });
+  assert.equal(second.body.status, "added");
+  assert.equal(second.body.totalAssets, 20);
+  assert.equal(second.body.revision, 3);
 
   const manifestPath = path.join(workspace.projectRoot, "public", "photos", "library-manifest.json");
   const statePath = path.join(workspace.projectRoot, ".frame-zero", "photo-import-state.json");

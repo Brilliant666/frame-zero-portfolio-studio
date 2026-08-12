@@ -17,7 +17,9 @@ polish. The `NEXT` hand-off recorded when the product-experience foundation was
 accepted is now active by human authorization. The human revised the local
 material-entry requirement after `HR-001`; `HR-002` records the replacement and
 remains ready for human recheck. `HR-003` records the subsequent preview and
-confirmation requirement and is also ready for human recheck.
+confirmation requirement and is also ready for human recheck. `HR-004` closes
+the complete follow-up set covering paged review, local library management,
+ratio policy, and the `character-select` presentation fix.
 
 This is not an automated backlog. Codex handles exactly one concrete human
 request, validates it in proportion to risk, creates one focused commit, pushes
@@ -67,7 +69,8 @@ allowed in this lane.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `HR-001` | 2026-08-11 | 素材导入 | 本地素材导入只保留文件夹选择作为普通产品入口，取消产品侧高级／命令行导入入口。 | `SUPERSEDED_BY_HR-002` | `fix: make folder import the sole product entry` | `git diff --check`; focused Admin and photo tests; desktop/mobile browser entry validation | 后续需求改为统一添加素材入口；继续保留产品侧不展示命令行入口 |
 | `HR-002` | 2026-08-11 | 素材导入 | 本机素材导入使用一个“添加素材”主入口，展开后可选择一张或多张照片，或选择文件夹作为一次性批次来源；不提前实现 hosted upload、素材删除或持久化管理。 | `READY_FOR_HUMAN_RECHECK` | `fix: unify local material selection` | `git diff --check`; focused Admin, rendered HTML and photo tests; desktop/mobile browser chooser validation | 待人工复检 |
-| `HR-003` | 2026-08-12 | 素材导入 | 选择照片或文件夹后先预览待处理批次并明确确认；两种选择共用 Web `FileList` 链路，文件夹仅作 capability enhancement，不按浏览器分支；结果明确区分本次新增、重复跳过和素材库总计。 | `READY_FOR_HUMAN_RECHECK` | `fix: verify local material batches before import` | `git diff --check`; focused Admin, rendered HTML and photo tests; desktop/mobile browser preview-and-cancel validation without changing the real library | 待人工复检 |
+| `HR-003` | 2026-08-12 | 素材导入 | 选择照片或文件夹后先预览待处理批次并明确确认；两种选择共用 Web `FileList` 链路，文件夹仅作 capability enhancement，不按浏览器分支；结果明确区分本次新增、重复跳过和可用素材总计。 | `READY_FOR_HUMAN_RECHECK` | `fix: verify local material batches before import` | `git diff --check`; focused Admin, rendered HTML and photo tests; desktop/mobile browser preview-and-cancel validation without changing the real library | 待人工复检 |
+| `HR-004` | 2026-08-12 | 素材管理／排版 | 将本轮提出的问题作为一个完整批次处理：待处理缩略图分页且确认仍覆盖完整批次；记录隐私安全的首次导入顺序与批次；显示 draft／已保存引用；提供可恢复回收站；分配目标收敛为横图 3:2、竖图 2:3并保留 16:9 展示裁切；修复 `character-select`，让任意九张横／竖图以三行 justified roster 展示且不使用 1:1。 | `READY_FOR_HUMAN_RECHECK` | `fix: complete local material management and character layout` | full repository gates; importer/service/client/management tests; 512 orientation combinations; desktop/mobile browser validation | 待人工复检；不推导 `HUMAN_APPROVED` |
 
 The bootstrap did not consume `HR-001`; the first explicit request above does.
 A completed implementation may be reported as `READY_FOR_HUMAN_RECHECK`, while
@@ -91,7 +94,7 @@ Allowed states are `PENDING_HUMAN_REVIEW`, `HUMAN_REVIEW_IN_PROGRESS`,
 | `archive-os` | `PENDING_HUMAN_REVIEW` | — |
 | `editorial-duet` | `PENDING_HUMAN_REVIEW` | — |
 | `polaroid-field` | `PENDING_HUMAN_REVIEW` | — |
-| `character-select` | `NEEDS_POLISH` | 人工拒绝当前固定 1:1 roster 裁切；后续需基于真实素材形成有依据的 3:2 / 2:3 adaptive 方案，并遵守 ADR-0003 的 Variant 与持久化边界。本切片不实现。 |
+| `character-select` | `NEEDS_POLISH` | 人工拒绝固定 1:1 roster；HR-004 已提供不修改持久化 identity 的 3:2 / 2:3 三行 adaptive justified 候选，等待真实素材人工复检。自动测试不构成 `HUMAN_APPROVED`。 |
 | `museum-depth` | `PENDING_HUMAN_REVIEW` | — |
 
 CI, screenshots, browser checks, automated QA, absence of overflow, and a clean
@@ -117,11 +120,11 @@ The following are known observations, not approved implementation tasks:
 DO NOT IMPLEMENT without a new, explicit human request.
 ```
 
-`CHARACTER_SELECT_VARIANT_CANDIDATE` now carries an explicit human direction:
-the current 1:1 roster crop is not accepted. A later, separately authorized
-design study must justify a 3:2 / 2:3 adaptive treatment against real material;
-this decision does not authorize a formal Variant, persistence change, renderer
-integration, or template implementation in HR-003.
+`CHARACTER_SELECT_VARIANT_CANDIDATE` still means a future formal Variant decision.
+HR-004 fixes the current presentation with a deterministic 3:2 / 2:3 source-
+orientation layout, but does not create a production Variant registry, persist a
+variant identity, or change `SiteDocumentV1`. Human visual approval remains
+pending against real material.
 
 ## Scope and architecture guardrails
 

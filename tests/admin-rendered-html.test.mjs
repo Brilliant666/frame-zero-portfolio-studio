@@ -100,6 +100,7 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
       assert.match(html, /data-local-photo-import="missing"/);
       assert.match(html, /本地照片导入服务未启动/);
       assert.doesNotMatch(html, /data-add-materials-trigger=|data-photo-picker=|data-photo-import-preflight=|选择照片|选择文件夹|确认导入|重新选择|高级 \/ 命令行导入|photos:import/);
+      assert.doesNotMatch(html, /aria-label="素材库视图"|>在库素材 |移入回收站|恢复素材/);
       assert.match(html, /aria-label="素材库画幅统计"/);
     }
     assert.doesNotMatch(html, /admin-section-placeholder/);
@@ -174,6 +175,7 @@ test("hosted Admin renders no executable local photo ingest controls", async () 
   assert.match(html, /本地照片导入仅在本机编辑模式可用/);
   assert.doesNotMatch(html, /data-add-materials-trigger=|data-photo-picker=|data-photo-import-preflight=/);
   assert.doesNotMatch(html, /选择照片|选择文件夹|确认导入|重新选择|高级 \/ 命令行导入|photos:import/);
+  assert.doesNotMatch(html, /aria-label="素材库视图"|>在库素材 |移入回收站|恢复素材/);
   assert.match(html, /aria-label="保存全部修改"/);
 });
 
@@ -185,4 +187,5 @@ test("a local-looking hosted hostname cannot enable the loopback controls", asyn
   assert.equal(response.status, 200);
   assert.match(html, /data-local-photo-import="hosted"/);
   assert.doesNotMatch(html, /data-add-materials-trigger=|data-photo-picker=|data-photo-import-preflight=|选择照片|选择文件夹|确认导入|重新选择|高级 \/ 命令行导入|photos:import/);
+  assert.doesNotMatch(html, /aria-label="素材库视图"|>在库素材 |移入回收站|恢复素材/);
 });

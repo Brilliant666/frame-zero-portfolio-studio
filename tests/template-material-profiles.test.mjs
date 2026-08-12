@@ -66,13 +66,14 @@ test("all eleven templates expose bounded, immutable material profiles", async (
       assert.ok(demand.note.length > 0);
       assert.ok(Object.isFrozen(demand));
     }
+    const orientationAdaptive = catalog.id === "character-select";
     assert.equal(
       demands.reduce((total, demand) => total + demand.minimum, 0),
-      profile.minimumUsefulPhotoCount,
+      orientationAdaptive ? 0 : profile.minimumUsefulPhotoCount,
     );
     assert.equal(
       demands.reduce((total, demand) => total + demand.recommended, 0),
-      profile.recommendedPhotoCount,
+      orientationAdaptive ? 0 : profile.recommendedPhotoCount,
     );
 
     const prioritySlots = profile.visualPriority.map(({ slotIndex }) => slotIndex);
@@ -122,9 +123,10 @@ test("material profiles preserve differentiated implementation-driven demands", 
   const character = getTemplateMaterialProfile("character-select");
   assert.deepEqual(
     [character.landscapeDemand.recommended, character.portraitDemand.recommended, character.squareDemand.recommended],
-    [6, 1, 2],
+    [0, 0, 0],
   );
-  assert.ok(character.secondaryPresentations.some(({ target }) => target === "1:1"));
+  assert.ok(character.secondaryPresentations.some(({ target }) => target === "variable"));
+  assert.ok(character.secondaryPresentations.every(({ target }) => target !== "1:1"));
 
   assert.equal(getTemplateMaterialProfile("archive-os").recommendedPhotoCount, 12);
   assert.equal(getTemplateMaterialProfile("museum-depth").recommendedPhotoCount, 7);

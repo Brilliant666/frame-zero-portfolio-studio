@@ -14,6 +14,10 @@ import {
   type PhotoAsset,
   type PhotoOrientation,
 } from "../../photo-library";
+import {
+  normalizePrimaryAssignmentRatio,
+  primaryPhotoRatioForDimensions,
+} from "../../photo-ratio-policy";
 import type { TemplateId } from "../../site-config";
 import { getTemplateMaterialProfile } from "../../templates/material-profiles";
 import {
@@ -27,6 +31,7 @@ import Lightbox from "../../templates/shared/lightbox";
 import { useTemplateInteractions } from "../../templates/shared/use-template-interactions";
 import { useAdmin } from "../admin-provider";
 import styles from "../admin-v2.module.css";
+import { loadLocalPhotoLibrary } from "../layout/photo-library-management-client";
 
 const manifestUrl = "/photos/library-manifest.json";
 
@@ -146,7 +151,12 @@ function PreviewDialog({
 }
 
 export default function TemplateCompositionPreview({ templateId }: { templateId: TemplateId }) {
-  const { content, setContent } = useAdmin();
+  const {
+    content,
+    localPhotoImportOrigin,
+    localPhotoImportState,
+    setContent,
+  } = useAdmin();
   const [assets, setAssets] = useState<PhotoAsset[]>([]);
   const [libraryState, setLibraryState] = useState<"loading" | "ready" | "empty" | "error">("loading");
   const [libraryMessage, setLibraryMessage] = useState("正在读取本地素材库…");
@@ -164,6 +174,19 @@ export default function TemplateCompositionPreview({ templateId }: { templateId:
     setLibraryState("loading");
     setLibraryMessage("正在刷新预览素材…");
     try {
+      if (localPhotoImportState === "configured" && localPhotoImportOrigin) {
+        const snapshot = await loadLocalPhotoLibrary(localPhotoImportOrigin);
+        if (request !== requestRef.current) return;
+        const activeAssets = snapshot.items
+          .filter((item) => item.status === "active")
+          .map((item) => item.asset);
+        setAssets(activeAssets);
+        setLibraryState(activeAssets.length > 0 ? "ready" : "empty");
+        setLibraryMessage(activeAssets.length > 0
+          ? `已使用 ${activeAssets.length} 张在库素材生成只读推荐。`
+          : "在库素材还为空；请先到“素材排版”添加或恢复素材。");
+        return;
+      }
       const response = await fetch(`${manifestUrl}?preview=${Date.now()}`, { cache: "no-store" });
       if (request !== requestRef.current) return;
       if (response.status === 404) {
@@ -186,7 +209,7 @@ export default function TemplateCompositionPreview({ templateId }: { templateId:
       setLibraryState("error");
       setLibraryMessage(error instanceof Error ? error.message : "素材库读取失败");
     }
-  }, []);
+  }, [localPhotoImportOrigin, localPhotoImportState]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void loadLibrary(), 0);
@@ -279,14 +302,20 @@ export default function TemplateCompositionPreview({ templateId }: { templateId:
             {profile.slotAspectTargets.map((ratio, slotIndex) => {
               const work = workBySlot.get(slotIndex);
               const priority = priorityBySlot.get(slotIndex);
+              const presentationRatio = templateId === "character-select"
+                ? work
+                  ? primaryPhotoRatioForDimensions(work.previewWidth, work.previewHeight)
+                    ?? normalizePrimaryAssignmentRatio(ratio)
+                  : normalizePrimaryAssignmentRatio(ratio)
+                : ratio;
               return (
                 <article
                   key={slotIndex}
                   className={styles.templatePreviewSlot}
                   data-template-preview-slot={slotIndex}
-                  data-ratio={ratio}
+                  data-ratio={presentationRatio}
                   data-priority={priority?.level ?? "standard"}
-                  style={{ aspectRatio: ratio.replace(":", " / ") }}
+                  style={{ aspectRatio: presentationRatio.replace(":", " / ") }}
                 >
                   {work ? (
                     <img
@@ -298,7 +327,7 @@ export default function TemplateCompositionPreview({ templateId }: { templateId:
                       loading="lazy"
                       decoding="async"
                     />
-                  ) : <span>待补充 {ratio}</span>}
+                  ) : <span>待补充 {presentationRatio}</span>}
                   <small>{String(slotIndex + 1).padStart(2, "0")} · {priority?.role ?? "gallery"}</small>
                 </article>
               );

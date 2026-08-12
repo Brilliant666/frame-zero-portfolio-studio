@@ -7,7 +7,12 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { importPhotoLibrary, photoImportContract } from "./lib/photo-import.mjs";
+import {
+  getLocalPhotoLibrarySnapshot,
+  importPhotoLibrary,
+  photoImportContract,
+  setLocalPhotoAssetsArchived,
+} from "./lib/photo-import.mjs";
 
 export const LOCAL_PHOTO_IMPORT_HOST = "127.0.0.1";
 export const LOCAL_PHOTO_IMPORT_PORT = 3002;
@@ -21,11 +26,20 @@ const ALLOWED_ORIGINS = new Set([
 const ALLOWED_PREFLIGHT_HEADERS = new Set([
   "content-type",
   "x-frame-zero-local-import",
+  "x-frame-zero-photo-batch",
+  "x-frame-zero-photo-batch-position",
+  "x-frame-zero-photo-batch-size",
   "x-frame-zero-photo-extension",
+  "x-frame-zero-photo-source",
 ]);
 const IMPORT_HEADER = "x-frame-zero-local-import";
 const EXTENSION_HEADER = "x-frame-zero-photo-extension";
+const BATCH_HEADER = "x-frame-zero-photo-batch";
+const BATCH_POSITION_HEADER = "x-frame-zero-photo-batch-position";
+const BATCH_SIZE_HEADER = "x-frame-zero-photo-batch-size";
+const SOURCE_HEADER = "x-frame-zero-photo-source";
 const TEMP_DIRECTORY_PREFIX = "frame-zero-photo-import-";
+const MAX_MANAGEMENT_BODY_BYTES = 8 * 1024;
 
 async function removeTemporaryDirectory(temporaryDirectory) {
   await fs.rm(temporaryDirectory, {
@@ -145,7 +159,9 @@ function writeEmpty(response, status, origin) {
   response.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   response.setHeader(
     "Access-Control-Allow-Headers",
-    "Content-Type, X-Frame-Zero-Local-Import, X-Frame-Zero-Photo-Extension",
+    "Content-Type, X-Frame-Zero-Local-Import, X-Frame-Zero-Photo-Batch, "
+      + "X-Frame-Zero-Photo-Batch-Position, X-Frame-Zero-Photo-Batch-Size, "
+      + "X-Frame-Zero-Photo-Extension, X-Frame-Zero-Photo-Source",
   );
   response.setHeader("Access-Control-Max-Age", "600");
   response.setHeader("Vary", "Origin, Access-Control-Request-Method, Access-Control-Request-Headers");
@@ -160,7 +176,7 @@ function parseRequestPath(request) {
   }
 }
 
-function validatePreflight(request, response) {
+function validatePreflight(request, response, pathname) {
   const origin = originForRequest(request, { required: true });
   if (oneHeader(request.headers["access-control-request-method"]) !== "POST") {
     throw new SafeHttpError(403, "forbidden-preflight", "This local preflight request is not allowed.");
@@ -171,12 +187,19 @@ function validatePreflight(request, response) {
     throw new SafeHttpError(403, "forbidden-preflight", "This local preflight request is not allowed.");
   }
   const normalizedHeaders = requestedHeaders.split(",").map((value) => value.trim().toLowerCase());
-  if (
-    normalizedHeaders.some((value) => !ALLOWED_PREFLIGHT_HEADERS.has(value))
-    || !normalizedHeaders.includes(IMPORT_HEADER)
-    || !normalizedHeaders.includes(EXTENSION_HEADER)
-    || !normalizedHeaders.includes("content-type")
-  ) {
+  const requiredHeaders = pathname === "/import"
+    ? [
+        "content-type",
+        IMPORT_HEADER,
+        EXTENSION_HEADER,
+        BATCH_HEADER,
+        BATCH_POSITION_HEADER,
+        BATCH_SIZE_HEADER,
+        SOURCE_HEADER,
+      ]
+    : ["content-type", IMPORT_HEADER];
+  if (normalizedHeaders.some((value) => !ALLOWED_PREFLIGHT_HEADERS.has(value))
+    || requiredHeaders.some((value) => !normalizedHeaders.includes(value))) {
     throw new SafeHttpError(403, "forbidden-preflight", "This local preflight request is not allowed.");
   }
 
@@ -194,7 +217,18 @@ function supportedExtensionsFromContract(contract) {
   return new Set(values);
 }
 
-function validateImportHeaders(request, supportedExtensions) {
+function parseSafeHeaderInteger(value, name, { minimum, maximum }) {
+  if (typeof value !== "string" || !/^(?:0|[1-9]\d*)$/.test(value)) {
+    throw new SafeHttpError(400, "invalid-batch-metadata", `The ${name} header is invalid.`);
+  }
+  const number = Number(value);
+  if (!Number.isSafeInteger(number) || number < minimum || number > maximum) {
+    throw new SafeHttpError(400, "invalid-batch-metadata", `The ${name} header is invalid.`);
+  }
+  return number;
+}
+
+function validateImportHeaders(request, supportedExtensions, maximumAssets) {
   if (oneHeader(request.headers[IMPORT_HEADER]) !== "1") {
     throw new SafeHttpError(403, "missing-import-header", "The required local import header is missing.");
   }
@@ -212,7 +246,35 @@ function validateImportHeaders(request, supportedExtensions) {
   if (!supportedExtensions.has(extension)) {
     throw new SafeHttpError(415, "unsupported-extension", "This photo extension is not supported.");
   }
-  return extension;
+  const batchId = oneHeader(request.headers[BATCH_HEADER]);
+  const sourceKind = oneHeader(request.headers[SOURCE_HEADER]);
+  if (!batchId || !/^[a-f0-9]{32}$/.test(batchId) || !["photos", "folder"].includes(sourceKind)) {
+    throw new SafeHttpError(400, "invalid-batch-metadata", "The local import batch metadata is invalid.");
+  }
+  const batchPosition = parseSafeHeaderInteger(
+    oneHeader(request.headers[BATCH_POSITION_HEADER]),
+    "batch position",
+    { minimum: 0, maximum: maximumAssets - 1 },
+  );
+  const batchSize = parseSafeHeaderInteger(
+    oneHeader(request.headers[BATCH_SIZE_HEADER]),
+    "batch size",
+    { minimum: 1, maximum: maximumAssets },
+  );
+  if (batchPosition >= batchSize) {
+    throw new SafeHttpError(400, "invalid-batch-metadata", "The local import batch metadata is invalid.");
+  }
+  return { extension, batchId, batchPosition, batchSize, sourceKind };
+}
+
+function validateManagementHeaders(request) {
+  if (oneHeader(request.headers[IMPORT_HEADER]) !== "1") {
+    throw new SafeHttpError(403, "missing-import-header", "The required local import header is missing.");
+  }
+  const contentType = oneHeader(request.headers["content-type"]);
+  if (!contentType || contentType.split(";", 1)[0].trim().toLowerCase() !== "application/json") {
+    throw new SafeHttpError(415, "unsupported-media-type", "Local library changes require JSON.");
+  }
 }
 
 function validateDeclaredBodySize(request, maximumBytes) {
@@ -266,6 +328,48 @@ async function streamRequestToFile(request, filePath, maximumBytes) {
   return totalBytes;
 }
 
+async function readSmallJsonBody(request) {
+  const rawLength = oneHeader(request.headers["content-length"]);
+  if (rawLength && (!/^\d+$/.test(rawLength) || Number(rawLength) > MAX_MANAGEMENT_BODY_BYTES)) {
+    request.resume();
+    throw new SafeHttpError(413, "payload-too-large", "The local library request is too large.");
+  }
+  const chunks = [];
+  let totalBytes = 0;
+  for await (const value of request) {
+    const chunk = Buffer.isBuffer(value) ? value : Buffer.from(value);
+    totalBytes += chunk.byteLength;
+    if (totalBytes > MAX_MANAGEMENT_BODY_BYTES) {
+      request.resume();
+      throw new SafeHttpError(413, "payload-too-large", "The local library request is too large.");
+    }
+    chunks.push(chunk);
+  }
+  if (totalBytes === 0) throw new SafeHttpError(400, "invalid-request", "The request body is required.");
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    throw new SafeHttpError(400, "invalid-request", "The request body is invalid.");
+  }
+}
+
+function parseLibraryMutation(value) {
+  if (
+    !value
+    || typeof value !== "object"
+    || Array.isArray(value)
+    || Object.keys(value).length !== 2
+    || !Array.isArray(value.assetIds)
+    || value.assetIds.length < 1
+    || value.assetIds.length > 100
+    || value.assetIds.some((assetId) => typeof assetId !== "string" || !/^[a-f0-9]{64}$/.test(assetId))
+    || new Set(value.assetIds).size !== value.assetIds.length
+    || !Number.isSafeInteger(value.expectedRevision)
+    || value.expectedRevision < 0
+  ) throw new SafeHttpError(400, "invalid-request", "The local library request is invalid.");
+  return { assetIds: value.assetIds, expectedRevision: value.expectedRevision };
+}
+
 function createPromiseQueue() {
   let tail = Promise.resolve();
   return function enqueue(operation) {
@@ -285,23 +389,47 @@ function classifyImportError(error) {
   return new SafeHttpError(500, "import-failed", "The local photo import failed.");
 }
 
+function classifyLibraryError(error) {
+  switch (error?.code) {
+    case "CATALOG_REVISION_CONFLICT":
+      return new SafeHttpError(409, "library-changed", "The local library changed; refresh and try again.");
+    case "ASSET_NOT_FOUND":
+      return new SafeHttpError(404, "asset-not-found", "This local photo asset no longer exists.");
+    case "ASSET_VARIANTS_MISSING":
+      return new SafeHttpError(409, "asset-variants-missing", "Re-import this photo before restoring it.");
+    default:
+      return new SafeHttpError(500, "library-update-failed", "The local photo library could not be updated.");
+  }
+}
+
 function normalizeImportResult(result) {
-  if (!Number.isInteger(result?.addedAssets) || result.addedAssets < 0) {
-    throw new Error("The photo importer did not return an added asset count");
-  }
-  if (!Number.isInteger(result?.importedAssets) || result.importedAssets < 1) {
-    throw new Error("The photo importer did not return a library asset count");
-  }
+  if (
+    !Array.isArray(result?.assetOutcomes)
+    || result.assetOutcomes.length !== 1
+    || !result.assetOutcomes[0]
+    || typeof result.assetOutcomes[0] !== "object"
+    || !/^[a-f0-9]{64}$/.test(result.assetOutcomes[0].assetId)
+    || !["added", "duplicate", "restored"].includes(result.assetOutcomes[0].disposition)
+    || !Number.isInteger(result.activeAssets)
+    || result.activeAssets < 1
+    || !Number.isInteger(result.catalogRevision)
+    || result.catalogRevision < 0
+  ) throw new Error("The photo importer did not return one valid asset outcome");
+  const outcome = result.assetOutcomes[0];
   return {
     ok: true,
-    status: result.addedAssets > 0 ? "added" : "already-exists",
-    totalAssets: result.importedAssets,
+    status: outcome.disposition,
+    assetId: outcome.assetId,
+    totalAssets: result.activeAssets,
+    revision: result.catalogRevision,
   };
 }
 
 export function createPhotoImportService({
   projectRoot,
   importer = importPhotoLibrary,
+  libraryReader = getLocalPhotoLibrarySnapshot,
+  libraryMutator = setLocalPhotoAssetsArchived,
   contract = photoImportContract,
   tempRoot = os.tmpdir(),
   maximumBytes = LOCAL_PHOTO_IMPORT_MAX_BYTES,
@@ -322,6 +450,10 @@ export function createPhotoImportService({
   }
 
   const supportedExtensions = supportedExtensionsFromContract(contract);
+  const maximumAssets = Number.isSafeInteger(contract?.maxManifestAssets)
+    && contract.maxManifestAssets > 0
+    ? contract.maxManifestAssets
+    : 10_000;
   const resolvedProjectRoot = path.resolve(projectRoot);
   const resolvedTempRoot = path.resolve(tempRoot);
   const enqueueRequest = createPromiseQueue();
@@ -343,12 +475,15 @@ export function createPhotoImportService({
   };
 
   async function importOne(request) {
-    const extension = validateImportHeaders(request, supportedExtensions);
+    const metadata = validateImportHeaders(request, supportedExtensions, maximumAssets);
     validateDeclaredBodySize(request, maximumBytes);
 
     await fs.mkdir(resolvedTempRoot, { recursive: true });
     const temporaryDirectory = await fs.mkdtemp(path.join(resolvedTempRoot, TEMP_DIRECTORY_PREFIX));
-    const temporaryFile = path.join(temporaryDirectory, `photo-${randomBytes(16).toString("hex")}${extension}`);
+    const temporaryFile = path.join(
+      temporaryDirectory,
+      `photo-${randomBytes(16).toString("hex")}${metadata.extension}`,
+    );
 
     let result;
     let operationError;
@@ -359,6 +494,10 @@ export function createPhotoImportService({
           sourceDir: temporaryDirectory,
           projectRoot: resolvedProjectRoot,
           recordSourceState: false,
+          batchId: metadata.batchId,
+          batchPosition: metadata.batchPosition,
+          batchSize: metadata.batchSize,
+          sourceKind: metadata.sourceKind,
         });
       } catch (error) {
         throw classifyImportError(error);
@@ -380,6 +519,32 @@ export function createPhotoImportService({
     return result;
   }
 
+  async function readLibrary() {
+    try {
+      return { ok: true, ...await libraryReader({ projectRoot: resolvedProjectRoot }) };
+    } catch (error) {
+      throw classifyLibraryError(error);
+    }
+  }
+
+  async function updateLibrary(request, archived) {
+    validateManagementHeaders(request);
+    const input = parseLibraryMutation(await readSmallJsonBody(request));
+    try {
+      return {
+        ok: true,
+        ...await libraryMutator({
+          projectRoot: resolvedProjectRoot,
+          assetIds: input.assetIds,
+          archived,
+          expectedRevision: input.expectedRevision,
+        }),
+      };
+    } catch (error) {
+      throw classifyLibraryError(error);
+    }
+  }
+
   async function handle(request, response) {
     let responseOrigin = null;
     try {
@@ -391,8 +556,18 @@ export function createPhotoImportService({
         return;
       }
 
-      if (pathname === "/import" && request.method === "OPTIONS") {
-        validatePreflight(request, response);
+      if (pathname === "/library" && request.method === "GET") {
+        responseOrigin = originForRequest(request, { required: true });
+        if (closing) throw new SafeHttpError(503, "service-stopping", "The local import service is stopping.");
+        writeJson(response, 200, await enqueueRequest(readLibrary), responseOrigin);
+        return;
+      }
+
+      if (
+        ["/import", "/library/archive", "/library/restore"].includes(pathname)
+        && request.method === "OPTIONS"
+      ) {
+        validatePreflight(request, response, pathname);
         return;
       }
 
@@ -405,7 +580,22 @@ export function createPhotoImportService({
         return;
       }
 
-      if (pathname === "/health" || pathname === "/import") {
+      if (
+        ["/library/archive", "/library/restore"].includes(pathname)
+        && request.method === "POST"
+      ) {
+        responseOrigin = originForRequest(request, { required: true });
+        if (closing) throw new SafeHttpError(503, "service-stopping", "The local import service is stopping.");
+        writeJson(
+          response,
+          200,
+          await enqueueRequest(() => updateLibrary(request, pathname === "/library/archive")),
+          responseOrigin,
+        );
+        return;
+      }
+
+      if (["/health", "/import", "/library", "/library/archive", "/library/restore"].includes(pathname)) {
         throw new SafeHttpError(405, "method-not-allowed", "This request method is not allowed.");
       }
       throw new SafeHttpError(404, "not-found", "This local service endpoint does not exist.");

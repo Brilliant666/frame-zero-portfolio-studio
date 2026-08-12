@@ -20,6 +20,10 @@ const PHOTO_IMPORT_LOCK_TIMEOUT_MS = 120_000;
 const PHOTO_IMPORT_LOCK_RETRY_MS = 50;
 const PHOTO_IMPORT_DEAD_LOCK_GRACE_MS = 5_000;
 const PHOTO_IMPORT_INCOMPLETE_LOCK_GRACE_MS = 30_000;
+const PHOTO_LIBRARY_CATALOG_VERSION = 1;
+const PHOTO_LIBRARY_CATALOG_FILE = "photo-library-catalog.json";
+const IMPORT_BATCH_PATTERN = /^[a-f0-9]{32}$/;
+const IMPORT_SOURCE_KINDS = new Set(["photos", "folder"]);
 const SUPPORTED_EXTENSION_LIST = Object.freeze([
   ".avif",
   ".heic",
@@ -537,6 +541,365 @@ async function readExistingManifest(manifestPath) {
   };
 }
 
+function isIsoTimestamp(value) {
+  if (typeof value !== "string" || value.length > 32) return false;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) && new Date(timestamp).toISOString() === value;
+}
+
+function isCatalogBatch(value) {
+  return Boolean(
+    value
+    && typeof value === "object"
+    && Object.keys(value).length === 4
+    && IMPORT_BATCH_PATTERN.test(value.id)
+    && Number.isSafeInteger(value.ordinal)
+    && value.ordinal > 0
+    && IMPORT_SOURCE_KINDS.has(value.sourceKind)
+    && isIsoTimestamp(value.createdAt),
+  );
+}
+
+function isCatalogItem(value) {
+  return Boolean(
+    value
+    && typeof value === "object"
+    && Object.keys(value).length === 9
+    && isCanonicalAssetShape(value.asset)
+    && HASH_PATTERN.test(value.assetId)
+    && value.asset.id === value.assetId
+    && (value.importOrdinal === null || (Number.isSafeInteger(value.importOrdinal) && value.importOrdinal > 0))
+    && (value.batchId === null || IMPORT_BATCH_PATTERN.test(value.batchId))
+    && (value.batchPosition === null || (
+      Number.isSafeInteger(value.batchPosition)
+      && value.batchPosition >= 0
+      && value.batchPosition < MAX_MANIFEST_ASSETS
+    ))
+    && ["legacy", "photos", "folder"].includes(value.sourceKind)
+    && (value.addedAt === null || isIsoTimestamp(value.addedAt))
+    && ["active", "archived"].includes(value.status)
+    && (value.archivedAt === null || isIsoTimestamp(value.archivedAt)),
+  );
+}
+
+function isCanonicalAssetShape(value) {
+  if (!isAssetShape(value) || Object.keys(value).length !== 4) return false;
+  if (Object.keys(value.variants).length !== Object.keys(VARIANT_OPTIONS).length) return false;
+  return Object.values(value.variants).every((variant) => Object.keys(variant).length === 4);
+}
+
+// A short-lived development build wrote catalog metadata without the PhotoAsset.
+// Accept that exact private shape only long enough to hydrate it from the legacy
+// public manifest while holding the import lock. It is never written again.
+function isLegacyCatalogItem(value) {
+  if (!value || typeof value !== "object" || Object.keys(value).length !== 8) return false;
+  return isCatalogItem({ ...value, asset: makeCatalogValidationAsset(value.assetId) });
+}
+
+function makeCatalogValidationAsset(assetId) {
+  const variant = (name) => ({
+    src: variantSource(assetId, name),
+    width: 1,
+    height: 1,
+    bytes: 1,
+  });
+  return {
+    id: assetId,
+    aspectRatio: 1,
+    orientation: "square",
+    variants: Object.fromEntries(Object.keys(VARIANT_OPTIONS).map((name) => [name, variant(name)])),
+  };
+}
+
+function emptyPhotoLibraryCatalog() {
+  return {
+    version: PHOTO_LIBRARY_CATALOG_VERSION,
+    revision: 0,
+    nextImportOrdinal: 1,
+    nextBatchOrdinal: 1,
+    batches: [],
+    items: [],
+  };
+}
+
+function isPhotoLibraryCatalogWithItems(value, itemValidator) {
+  if (!(
+    value
+    && typeof value === "object"
+    && Object.keys(value).length === 6
+    && value.version === PHOTO_LIBRARY_CATALOG_VERSION
+    && Number.isSafeInteger(value.revision)
+    && value.revision >= 0
+    && Number.isSafeInteger(value.nextImportOrdinal)
+    && value.nextImportOrdinal > 0
+    && Number.isSafeInteger(value.nextBatchOrdinal)
+    && value.nextBatchOrdinal > 0
+    && Array.isArray(value.batches)
+    && value.batches.length <= MAX_MANIFEST_ASSETS
+    && value.batches.every(isCatalogBatch)
+    && Array.isArray(value.items)
+    && value.items.length <= MAX_MANIFEST_ASSETS
+    && value.items.every(itemValidator)
+  )) return false;
+
+  const batchIds = new Set(value.batches.map((batch) => batch.id));
+  const batchesById = new Map(value.batches.map((batch) => [batch.id, batch]));
+  const batchOrdinals = new Set(value.batches.map((batch) => batch.ordinal));
+  const assetIds = new Set(value.items.map((item) => item.assetId));
+  const importOrdinals = value.items
+    .map((item) => item.importOrdinal)
+    .filter((ordinal) => ordinal !== null);
+  const batchPositions = value.items
+    .filter((item) => item.batchId !== null)
+    .map((item) => `${item.batchId}:${item.batchPosition}`);
+  if (
+    batchIds.size !== value.batches.length
+    || batchOrdinals.size !== value.batches.length
+    || assetIds.size !== value.items.length
+    || new Set(importOrdinals).size !== importOrdinals.length
+    || new Set(batchPositions).size !== batchPositions.length
+    || value.batches.some((batch) => batch.ordinal >= value.nextBatchOrdinal)
+    || importOrdinals.some((ordinal) => ordinal >= value.nextImportOrdinal)
+    || value.items.some((item) => (
+      item.batchId !== null && !batchIds.has(item.batchId)
+      || item.sourceKind === "legacy" && (
+        item.batchId !== null
+        || item.batchPosition !== null
+        || item.importOrdinal !== null
+        || item.addedAt !== null
+      )
+      || item.sourceKind !== "legacy" && (
+        item.batchId === null
+        || item.batchPosition === null
+        || item.importOrdinal === null
+        || item.addedAt === null
+      )
+      || item.batchId !== null && batchesById.get(item.batchId)?.sourceKind !== item.sourceKind
+      || item.status === "active" && item.archivedAt !== null
+      || item.status === "archived" && item.archivedAt === null
+    ))
+  ) return false;
+
+  return true;
+}
+
+
+function isPhotoLibraryCatalog(value) {
+  return isPhotoLibraryCatalogWithItems(value, isCatalogItem);
+}
+
+function isLegacyPhotoLibraryCatalog(value) {
+  return isPhotoLibraryCatalogWithItems(value, isLegacyCatalogItem);
+}
+
+async function readPhotoLibraryCatalog(catalogPath) {
+  await recoverInterruptedAtomicWrite(catalogPath);
+  let contents;
+  try {
+    contents = await fs.readFile(catalogPath, "utf8");
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return { catalog: emptyPhotoLibraryCatalog(), needsMigration: false };
+    }
+    throw error;
+  }
+
+  let value;
+  try {
+    value = JSON.parse(contents);
+  } catch {
+    throw new Error("Local photo library catalog is invalid; refusing to overwrite it");
+  }
+  const canonical = isPhotoLibraryCatalog(value);
+  if (!canonical && !isLegacyPhotoLibraryCatalog(value)) {
+    throw new Error("Local photo library catalog is invalid; refusing to overwrite it");
+  }
+  return { catalog: value, needsMigration: !canonical };
+}
+
+function legacyCatalogItem(asset) {
+  return {
+    asset: selectPublicAssetFields(asset),
+    assetId: asset.id,
+    importOrdinal: null,
+    batchId: null,
+    batchPosition: null,
+    sourceKind: "legacy",
+    addedAt: null,
+    status: "active",
+    archivedAt: null,
+  };
+}
+
+function createManifestFromCatalog(catalog) {
+  return {
+    version: MANIFEST_VERSION,
+    assets: catalog.items
+      .filter((item) => item.status === "active")
+      .map((item) => selectPublicAssetFields(item.asset)),
+  };
+}
+
+function manifestsMatch(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+async function loadCanonicalPhotoLibraryState({ manifestPath, catalogPath }) {
+  const manifest = await readExistingManifest(manifestPath);
+  const result = await readPhotoLibraryCatalog(catalogPath);
+  let { catalog } = result;
+  let catalogChanged = result.needsMigration;
+  const manifestAssets = new Map(manifest.assets.map((asset) => [asset.id, asset]));
+  const hydratedItems = catalog.items.map((item) => {
+    if (isCatalogItem(item)) return item;
+    const asset = manifestAssets.get(item.assetId);
+    if (!asset) {
+      throw new Error("Local photo library catalog cannot recover an asset missing from the public manifest");
+    }
+    return { asset: selectPublicAssetFields(asset), ...item };
+  });
+  const catalogAssetIds = new Set(hydratedItems.map((item) => item.assetId));
+  for (const asset of manifest.assets) {
+    if (catalogAssetIds.has(asset.id)) continue;
+    if (hydratedItems.length >= MAX_MANIFEST_ASSETS) {
+      throw new Error("Local photo library catalog exceeds its asset limit");
+    }
+    hydratedItems.push(legacyCatalogItem(asset));
+    catalogAssetIds.add(asset.id);
+    catalogChanged = true;
+  }
+
+  if (catalogChanged) {
+    catalog = {
+      ...catalog,
+      revision: catalog.revision + 1,
+      items: hydratedItems,
+    };
+    if (!isPhotoLibraryCatalog(catalog)) {
+      throw new Error("Local photo library catalog migration is invalid; refusing to overwrite it");
+    }
+    // The private catalog is canonical. Committing it first ensures a later
+    // read can always reconstruct a missing or stale public manifest.
+    await writeJsonAtomically(catalogPath, catalog);
+  }
+
+  const derivedManifest = createManifestFromCatalog(catalog);
+  if (!manifestsMatch(manifest, derivedManifest)) {
+    await writeJsonAtomically(manifestPath, derivedManifest);
+  }
+  return { catalog, manifest: derivedManifest };
+}
+
+function createCatalogSnapshot(catalog) {
+  const items = catalog.items.map((item) => ({
+    ...item,
+    asset: selectPublicAssetFields(item.asset),
+  }));
+  const relevantBatchIds = new Set(items.map((item) => item.batchId).filter(Boolean));
+  return {
+    version: PHOTO_LIBRARY_CATALOG_VERSION,
+    revision: catalog.revision,
+    activeAssets: items.filter((item) => item.status === "active").length,
+    archivedAssets: items.filter((item) => item.status === "archived").length,
+    batches: catalog.batches.filter((batch) => relevantBatchIds.has(batch.id)),
+    items,
+  };
+}
+
+function validateImportCatalogMetadata({ batchId, batchPosition, batchSize, sourceKind }) {
+  const resolvedBatchId = batchId ?? randomBytes(16).toString("hex");
+  if (!IMPORT_BATCH_PATTERN.test(resolvedBatchId)) throw new TypeError("batchId is invalid");
+  if (!IMPORT_SOURCE_KINDS.has(sourceKind)) throw new TypeError("sourceKind is invalid");
+  if (!Number.isSafeInteger(batchPosition) || batchPosition < 0 || batchPosition >= MAX_MANIFEST_ASSETS) {
+    throw new TypeError("batchPosition is invalid");
+  }
+  if (!Number.isSafeInteger(batchSize) || batchSize < 1 || batchSize > MAX_MANIFEST_ASSETS) {
+    throw new TypeError("batchSize is invalid");
+  }
+  if (batchPosition >= batchSize) throw new TypeError("batchPosition must be smaller than batchSize");
+  return { batchId: resolvedBatchId, batchPosition, batchSize, sourceKind };
+}
+
+function applyImportToCatalog(catalog, currentAssets, assetOutcomes, importMetadata, addedAt) {
+  const assetsById = new Map(currentAssets.map((asset) => [asset.id, selectPublicAssetFields(asset)]));
+  const addedOutcomes = assetOutcomes.filter((outcome) => outcome.disposition === "added");
+  const restoredIds = new Set(
+    assetOutcomes.filter((outcome) => outcome.disposition === "restored").map((outcome) => outcome.assetId),
+  );
+  const existingItems = new Map(catalog.items.map((item) => [item.assetId, item]));
+  const existingBatch = catalog.batches.find((batch) => batch.id === importMetadata.batchId);
+  if (addedOutcomes.length > 0 && existingBatch && existingBatch.sourceKind !== importMetadata.sourceKind) {
+    throw new Error("Local photo import batch metadata changed during import");
+  }
+
+  const batches = addedOutcomes.length === 0 || existingBatch
+    ? catalog.batches
+    : [...catalog.batches, {
+        id: importMetadata.batchId,
+        ordinal: catalog.nextBatchOrdinal,
+        sourceKind: importMetadata.sourceKind,
+        createdAt: addedAt,
+      }];
+  let changed = false;
+  let nextImportOrdinal = catalog.nextImportOrdinal;
+  let items = catalog.items.map((item) => {
+    if (!restoredIds.has(item.assetId)) return item;
+    const asset = assetsById.get(item.assetId);
+    if (!asset) throw new Error("Imported photo catalog update is missing asset metadata");
+    const nextItem = { ...item, asset, status: "active", archivedAt: null };
+    if (JSON.stringify(nextItem) !== JSON.stringify(item)) changed = true;
+    return nextItem;
+  });
+  const occupiedPositions = new Map(
+    items.flatMap((item) => item.batchId === importMetadata.batchId && item.batchPosition !== null
+      ? [[item.batchPosition, item.assetId]]
+      : []),
+  );
+  for (let offset = 0; offset < addedOutcomes.length; offset += 1) {
+    const { assetId } = addedOutcomes[offset];
+    if (existingItems.has(assetId)) throw new Error("Imported photo already exists in the local catalog");
+    const batchPosition = importMetadata.batchPosition + offset;
+    if (batchPosition >= importMetadata.batchSize) {
+      throw new Error("Local photo import batch position exceeds its declared size");
+    }
+    const occupiedAssetId = occupiedPositions.get(batchPosition);
+    if (occupiedAssetId && occupiedAssetId !== assetId) {
+      throw new Error("Local photo import batch position is already occupied");
+    }
+    const asset = assetsById.get(assetId);
+    if (!asset) throw new Error("Imported photo catalog update is missing asset metadata");
+    items.push({
+      asset,
+      assetId,
+      importOrdinal: nextImportOrdinal,
+      batchId: importMetadata.batchId,
+      batchPosition,
+      sourceKind: importMetadata.sourceKind,
+      addedAt,
+      status: "active",
+      archivedAt: null,
+    });
+    occupiedPositions.set(batchPosition, assetId);
+    nextImportOrdinal += 1;
+    changed = true;
+  }
+  if (!changed) return catalog;
+  const nextCatalog = {
+    ...catalog,
+    revision: catalog.revision + 1,
+    nextImportOrdinal,
+    nextBatchOrdinal: addedOutcomes.length > 0 && !existingBatch
+      ? catalog.nextBatchOrdinal + 1
+      : catalog.nextBatchOrdinal,
+    batches,
+    items,
+  };
+  if (!isPhotoLibraryCatalog(nextCatalog)) {
+    throw new Error("Imported photo catalog update is invalid; refusing to publish it");
+  }
+  return nextCatalog;
+}
+
 function selectStoredSourceState(previousState) {
   if (
     !previousState
@@ -663,6 +1026,10 @@ export async function importPhotoLibrary({
   projectRoot = process.cwd(),
   adoptLinkedOutput = false,
   recordSourceState = true,
+  batchId,
+  batchPosition = 0,
+  batchSize = MAX_MANIFEST_ASSETS,
+  sourceKind = recordSourceState ? "folder" : "photos",
 }) {
   assertSupportedNodeRuntime();
   // The local HTTP importer reads from short-lived request directories. libvips
@@ -676,6 +1043,12 @@ export async function importPhotoLibrary({
   if (typeof recordSourceState !== "boolean") {
     throw new TypeError("recordSourceState must be a boolean");
   }
+  const importMetadata = validateImportCatalogMetadata({
+    batchId,
+    batchPosition,
+    batchSize,
+    sourceKind,
+  });
 
   const resolvedProjectRoot = await fs.realpath(path.resolve(projectRoot));
   const resolvedSourceDir = await fs.realpath(path.resolve(sourceDir));
@@ -691,6 +1064,7 @@ export async function importPhotoLibrary({
 
   return withImportLock(stateDir, async () => {
     const statePath = path.join(stateDir, "photo-import-state.json");
+    const catalogPath = path.join(stateDir, PHOTO_LIBRARY_CATALOG_FILE);
     const previousState = await readJson(statePath);
     const linkedManifest = await readJson(path.join(generatedPhotosRoot, "library-manifest.json"));
     const linkedOwner = await readJson(path.join(generatedLibraryDir, ".frame-zero-owner.json"));
@@ -724,9 +1098,15 @@ export async function importPhotoLibrary({
       : randomBytes(32).toString("hex");
     const photosRoot = path.dirname(libraryDir);
     const manifestPath = path.join(photosRoot, "library-manifest.json");
-    const previousManifest = await readExistingManifest(manifestPath);
+    const { catalog: previousCatalog, manifest: previousManifest } = await loadCanonicalPhotoLibraryState({
+      manifestPath,
+      catalogPath,
+    });
     const previousAssets = new Map(
-      previousManifest.assets.map((asset) => [asset.id, asset]),
+      previousCatalog.items.map((item) => [item.assetId, item.asset]),
+    );
+    const previousCatalogItems = new Map(
+      previousCatalog.items.map((item) => [item.assetId, item]),
     );
     const canReusePrevious = previousState?.pipelineVersion === PIPELINE_VERSION;
 
@@ -757,6 +1137,7 @@ export async function importPhotoLibrary({
     let addedAssets = 0;
     let existingAssets = 0;
     let capacityRejectedAssets = 0;
+    const assetOutcomes = [];
 
     for (const [id, sourcePath] of uniqueSources) {
       const alreadyExists = previousAssets.has(id);
@@ -771,15 +1152,26 @@ export async function importPhotoLibrary({
 
       try {
         const previous = canReusePrevious ? previousAssets.get(id) : null;
+        let regenerated = false;
         if (previous && await canReuseAsset(previous, libraryDir)) {
           currentAssets.push(previous);
           reusedAssets += 1;
         } else {
           currentAssets.push(await generateAsset(sourcePath, id, libraryDir));
           generatedAssets += 1;
+          regenerated = alreadyExists;
         }
         if (alreadyExists) existingAssets += 1;
         else addedAssets += 1;
+        const wasArchived = previousCatalogItems.get(id)?.status === "archived";
+        assetOutcomes.push({
+          assetId: id,
+          disposition: !alreadyExists
+            ? "added"
+            : regenerated || wasArchived
+              ? "restored"
+              : "duplicate",
+        });
       } catch (error) {
         skipped.push({
           file: normalizeRelativePath(path.relative(resolvedSourceDir, sourcePath)),
@@ -797,15 +1189,25 @@ export async function importPhotoLibrary({
       throw error;
     }
 
-    // Imports are additive by default. A mistaken folder selection, temporary
-    // decoder failure, or removed source file must never invalidate photographs
-    // that are already referenced by a saved homepage layout.
-    const mergedAssets = new Map(previousAssets);
-    for (const asset of currentAssets) mergedAssets.set(asset.id, asset);
-    const assets = [...mergedAssets.values()];
-    assets.sort((left, right) => left.id.localeCompare(right.id));
-    const manifest = { version: MANIFEST_VERSION, assets };
-    await writeJsonAtomically(manifestPath, manifest);
+    // Commit the canonical private catalog before deriving the browser-safe,
+    // active-only manifest. Variant files are intentionally retained when an
+    // item is archived so existing SiteContent references remain renderable.
+    const addedAt = new Date().toISOString();
+    const catalog = applyImportToCatalog(
+      previousCatalog,
+      currentAssets,
+      assetOutcomes,
+      importMetadata,
+      addedAt,
+    );
+    if (catalog.revision !== previousCatalog.revision) {
+      await writeJsonAtomically(catalogPath, catalog);
+    }
+
+    const manifest = createManifestFromCatalog(catalog);
+    if (!manifestsMatch(previousManifest, manifest)) {
+      await writeJsonAtomically(manifestPath, manifest);
+    }
     await writeJsonAtomically(path.join(libraryDir, ".frame-zero-owner.json"), {
       version: MANIFEST_VERSION,
       ownershipToken,
@@ -826,6 +1228,8 @@ export async function importPhotoLibrary({
     };
     await writeJsonAtomically(statePath, state);
 
+    const catalogSnapshot = createCatalogSnapshot(catalog);
+
     return {
       manifest,
       manifestPath,
@@ -839,15 +1243,138 @@ export async function importPhotoLibrary({
       reusedAssets,
       addedAssets,
       existingAssets,
+      assetOutcomes,
       sourceAssets: currentAssets.length,
-      importedAssets: assets.length,
+      importedAssets: catalog.items.length,
+      activeAssets: catalogSnapshot.activeAssets,
+      catalogRevision: catalogSnapshot.revision,
+      catalogPath,
       skippedSymlinks: scan.skippedSymlinks,
       skipped,
     };
   });
 }
 
+function libraryCatalogError(code, message) {
+  const error = new Error(message);
+  error.code = code;
+  return error;
+}
+
+async function resolveLocalPhotoLibraryPaths(projectRoot) {
+  assertSupportedNodeRuntime();
+  const resolvedProjectRoot = await fs.realpath(path.resolve(projectRoot));
+  const stateDir = await ensureGeneratedDirectory(
+    resolvedProjectRoot,
+    path.join(resolvedProjectRoot, ".frame-zero"),
+  );
+  return {
+    stateDir,
+    catalogPath: path.join(stateDir, PHOTO_LIBRARY_CATALOG_FILE),
+    manifestPath: path.join(resolvedProjectRoot, "public", "photos", "library-manifest.json"),
+    libraryDir: path.join(resolvedProjectRoot, "public", "photos", "library"),
+  };
+}
+
+/**
+ * Returns the private local management view joined to the browser-safe manifest.
+ * The response deliberately excludes source names and filesystem paths.
+ */
+export async function getLocalPhotoLibrarySnapshot({ projectRoot = process.cwd() } = {}) {
+  const paths = await resolveLocalPhotoLibraryPaths(projectRoot);
+  return withImportLock(paths.stateDir, async () => {
+    const { catalog } = await loadCanonicalPhotoLibraryState(paths);
+    return createCatalogSnapshot(catalog);
+  });
+}
+
+/**
+ * Moves assets into or out of the private recycle bin. Variant files and the
+ * saved layout URLs remain intact; the public discovery manifest is active-only.
+ */
+export async function setLocalPhotoAssetsArchived({
+  projectRoot = process.cwd(),
+  assetIds,
+  archived,
+  expectedRevision,
+} = {}) {
+  if (
+    !Array.isArray(assetIds)
+    || assetIds.length < 1
+    || assetIds.length > 100
+    || assetIds.some((assetId) => typeof assetId !== "string" || !HASH_PATTERN.test(assetId))
+    || new Set(assetIds).size !== assetIds.length
+  ) throw new TypeError("assetIds must contain 1 to 100 unique asset IDs");
+  if (typeof archived !== "boolean") throw new TypeError("archived must be a boolean");
+  if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) {
+    throw new TypeError("expectedRevision must be a non-negative safe integer");
+  }
+
+  const paths = await resolveLocalPhotoLibraryPaths(projectRoot);
+  return withImportLock(paths.stateDir, async () => {
+    const { catalog, manifest } = await loadCanonicalPhotoLibraryState(paths);
+    if (catalog.revision !== expectedRevision) {
+      throw libraryCatalogError(
+        "CATALOG_REVISION_CONFLICT",
+        "The local photo library changed; refresh it before trying again",
+      );
+    }
+
+    const catalogItems = new Map(catalog.items.map((item) => [item.assetId, item]));
+    for (const assetId of assetIds) {
+      if (!catalogItems.has(assetId)) {
+        throw libraryCatalogError("ASSET_NOT_FOUND", "The local photo asset does not exist");
+      }
+    }
+    if (!archived) {
+      for (const assetId of assetIds) {
+        if (!await canReuseAsset(catalogItems.get(assetId).asset, paths.libraryDir)) {
+          throw libraryCatalogError(
+            "ASSET_VARIANTS_MISSING",
+            "The local photo variants are unavailable; re-import the photo before restoring it",
+          );
+        }
+      }
+    }
+
+    const requestedIds = new Set(assetIds);
+    const timestamp = new Date().toISOString();
+    let changed = false;
+    const items = catalog.items.map((current) => {
+      if (!requestedIds.has(current.assetId)) return current;
+      const desiredStatus = archived ? "archived" : "active";
+      if (current.status === desiredStatus) return current;
+      changed = true;
+      return {
+        ...current,
+        status: desiredStatus,
+        archivedAt: archived ? timestamp : null,
+      };
+    });
+
+    const nextCatalog = changed
+      ? {
+          ...catalog,
+          revision: catalog.revision + 1,
+          items,
+        }
+      : catalog;
+    if (changed) {
+      if (!isPhotoLibraryCatalog(nextCatalog)) {
+        throw new Error("Local photo library status update is invalid; refusing to publish it");
+      }
+      await writeJsonAtomically(paths.catalogPath, nextCatalog);
+      const nextManifest = createManifestFromCatalog(nextCatalog);
+      if (!manifestsMatch(manifest, nextManifest)) {
+        await writeJsonAtomically(paths.manifestPath, nextManifest);
+      }
+    }
+    return createCatalogSnapshot(nextCatalog);
+  });
+}
+
 export const photoImportContract = Object.freeze({
+  catalogVersion: PHOTO_LIBRARY_CATALOG_VERSION,
   maxManifestAssets: MAX_MANIFEST_ASSETS,
   manifestVersion: MANIFEST_VERSION,
   pipelineVersion: PIPELINE_VERSION,

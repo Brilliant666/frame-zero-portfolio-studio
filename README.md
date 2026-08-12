@@ -250,13 +250,16 @@ Both choices enter the same Web `FileList` batch path. Folder selection is a
 capability enhancement on that path, not a separate importer or a browser-name
 branch. After selection, Admin first shows the pending batch for review. Nothing
 is imported until the user confirms it; cancelling or replacing the pending
-selection leaves the library unchanged.
+selection leaves the library unchanged. Preview pages contain at most 24
+thumbnails, while confirmation always processes the complete selected batch.
 
 After confirmation, accepted photographs are processed one at a time, progress
 remains visible, and the material grid refreshes automatically when the batch
-finishes. The result summary distinguishes **本次新增**, **重复跳过**, and
-**素材库总计**. Duplicate means identical file content, so a differently named
-copy or the same photograph selected through another folder can be skipped.
+finishes. The result summary distinguishes **本次新增**, **恢复可用**,
+**重复跳过**, and **可用素材总计**. Duplicate means identical file content, so a
+differently named copy or the same photograph selected through another folder
+can be skipped; regenerated missing derivatives are reported as restored rather
+than incorrectly described as already present.
 Adding material updates the local Photo Library; it does not save or change the
 shared SiteContent draft and it never runs automatic layout.
 
@@ -279,16 +282,37 @@ repository-level entry points, linked-output adoption, automatic interrupted
 write recovery, and stale-lock recovery remain internal compatibility and
 maintenance capabilities. HR-001 did not remove or replace the importer core;
 HR-002 reuses that same core for both photograph and folder selection, and
-HR-003 adds review and explicit confirmation before either batch starts.
+HR-003 adds review and explicit confirmation before either batch starts. HR-004
+adds paged review plus the local material-management layer described below.
 
 Generated files stay local in `public/photos/library/`. The browser-safe index is
 `public/photos/library-manifest.json`; it contains stable asset IDs, aspect ratios,
-orientations, and responsive image dimensions, but no source file names or local
-paths. Incremental import state is stored in `.frame-zero/`. Both locations are
+orientations, and responsive image dimensions for active material, but no source file names or local
+paths. A private catalog in `.frame-zero/` stores that browser-safe asset metadata
+plus opaque batch IDs, photo/folder source kind, first-import order, timestamps,
+revision counters, and recycle-bin status. It never stores or returns a file name,
+folder name, or local path. Pre-catalogue assets
+remain usable and are labelled as having unknown historical import order.
+Incremental import state is stored in `.frame-zero/`. Both locations are
 ignored by Git. JPEG, PNG, WebP, AVIF, TIFF, HEIC, and HEIF inputs are considered;
 actual format support depends on the installed Sharp build. Camera RAW formats
 such as ARW, CR3, and NEF are not supported. Damaged or unsupported files are
 reported without stopping the rest of an Admin batch.
+
+The local library can be sorted by newest or oldest known import order and
+filtered by import batch. The folder is a source for that batch, not a permanent
+album or automatic classification. Each card shows whether the current draft or
+saved content refers to it. **移到回收站** removes the photograph from new
+selection and automatic layout while retaining its responsive files and all
+existing references; **恢复** returns it to its original import position. There
+is deliberately no irreversible purge action in this local UI.
+
+Primary assignment treats landscape material as 3:2 and portrait material as
+2:3. A 16:9 shape remains an approved presentation crop where a template needs
+it, rather than a separate source category. The importer still preserves true
+dimensions and square orientation metadata instead of falsifying the source.
+`character-select` uses three justified rows whose cards remain 3:2 or 2:3 for
+all nine source-orientation combinations; it no longer forces a 1:1 roster.
 
 Imports are additive: choosing the wrong folder, temporarily losing a source file,
 or hitting one damaged photograph will not delete assets already used by a saved

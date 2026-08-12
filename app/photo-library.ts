@@ -1,3 +1,4 @@
+import { primaryAssignmentRatioNumber } from "./photo-ratio-policy";
 import type { Work } from "./site-config";
 
 export const PHOTO_LIBRARY_MANIFEST_VERSION = 1 as const;
@@ -29,6 +30,10 @@ export type PhotoLibraryManifest = {
 };
 
 export type FocusPosition = { x: number; y: number };
+
+export type AutoComposeTemplateWorksOptions = Readonly<{
+  adaptiveToSourceOrientation?: boolean;
+}>;
 
 const DEFAULT_FOCUS: FocusPosition = { x: 50, y: 50 };
 const MAX_ASSETS = 10_000;
@@ -184,13 +189,23 @@ function orientationForSlot(ratio: PhotoSlotRatio): Exclude<PhotoOrientation, "s
   return ratioValue(ratio) < 1 ? "portrait" : "landscape";
 }
 
-export function isPhotoAssetCompatibleWithSlot(asset: PhotoAsset, ratio: PhotoSlotRatio) {
+export function isPhotoAssetCompatibleWithSlot(
+  asset: PhotoAsset,
+  ratio: PhotoSlotRatio,
+  adaptiveToSourceOrientation = false,
+) {
+  if (adaptiveToSourceOrientation) return true;
   return asset.orientation === "square" || asset.orientation === orientationForSlot(ratio);
 }
 
-export function isWorkCompatibleWithSlot(work: Work, ratio: PhotoSlotRatio) {
+export function isWorkCompatibleWithSlot(
+  work: Work,
+  ratio: PhotoSlotRatio,
+  adaptiveToSourceOrientation = false,
+) {
   if (!Number.isFinite(work.previewWidth) || !Number.isFinite(work.previewHeight)) return false;
   if (work.previewWidth <= 0 || work.previewHeight <= 0) return false;
+  if (adaptiveToSourceOrientation) return true;
   if (work.previewWidth === work.previewHeight) return true;
   return (work.previewWidth > work.previewHeight) === (ratioValue(ratio) > 1);
 }
@@ -263,15 +278,19 @@ function minimumCostAssignment(
 }
 
 /**
- * Keeps valid locked slots, then globally pairs the closest same-orientation
- * assets with the remaining ratios. A missing orientation deliberately leaves
- * a slot empty so the template can render its editorial placeholder.
+ * Keeps valid locked slots. Fixed templates then globally pair the closest
+ * same-orientation assets with the remaining primary 3:2 / 2:3 targets; a
+ * displayed 16:9 slot is costed as a secondary crop of a 3:2 assignment.
+ * Source-orientation-adaptive templates fill open stable slots in library order
+ * and let their renderer derive the directional presentation for each asset.
  */
 export function autoComposeTemplateWorks(
   assets: readonly PhotoAsset[],
   slotRatios: readonly PhotoSlotRatio[],
   existingWorks: readonly Work[] = [],
+  options: AutoComposeTemplateWorksOptions = {},
 ): Work[] {
+  const adaptive = options.adaptiveToSourceOrientation === true;
   const slots = new Map<number, Work>();
   const usedAssetIds = new Set<string>();
   const availableAssetIds = new Set(assets.map((asset) => asset.id));
@@ -284,7 +303,7 @@ export function autoComposeTemplateWorks(
     const slotIndex = Number.isInteger(work.slotIndex) ? work.slotIndex as number : fallbackIndex;
     if (slotIndex < 0 || slotIndex >= slotRatios.length || slots.has(slotIndex)) return;
     if (work.assetId && !availableAssetIds.has(work.assetId)) return;
-    if (!isWorkCompatibleWithSlot(work, slotRatios[slotIndex])) return;
+    if (!isWorkCompatibleWithSlot(work, slotRatios[slotIndex], adaptive)) return;
     if (work.assetId && usedAssetIds.has(work.assetId)) return;
 
     slots.set(slotIndex, { ...work, slotIndex, locked: true });
@@ -300,6 +319,19 @@ export function autoComposeTemplateWorks(
   }
 
   const openSlotIndexes = slotRatios.flatMap((_, slotIndex) => slots.has(slotIndex) ? [] : [slotIndex]);
+
+  if (adaptive) {
+    for (let index = 0; index < Math.min(openSlotIndexes.length, availableAssets.length); index += 1) {
+      const slotIndex = openSlotIndexes[index];
+      const asset = availableAssets[index];
+      const existing = existingByAssetId.get(asset.id);
+      slots.set(slotIndex, existing
+        ? { ...existing, slotIndex, locked: false }
+        : assetToWork(asset, slotIndex));
+    }
+    return [...slots.values()].sort((left, right) => (left.slotIndex ?? 0) - (right.slotIndex ?? 0));
+  }
+
   const dummyColumnOffset = availableAssets.length;
   const incompatibleCost = 1_000_000;
   const placeholderCost = 100;
@@ -311,7 +343,7 @@ export function autoComposeTemplateWorks(
       const slotIndex = openSlotIndexes[slotRow];
       const asset = availableAssets[column];
       if (!isPhotoAssetCompatibleWithSlot(asset, slotRatios[slotIndex])) return incompatibleCost;
-      return Math.abs(Math.log(asset.aspectRatio / ratioValue(slotRatios[slotIndex])));
+      return Math.abs(Math.log(asset.aspectRatio / primaryAssignmentRatioNumber(slotRatios[slotIndex])));
     },
   );
 

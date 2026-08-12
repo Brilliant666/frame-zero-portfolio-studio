@@ -150,7 +150,8 @@ test("a batch performs one raw sequential request per photo and refreshes once",
   const files = [
     folderPhoto("private-name.jpg", "Private folder/people/private-name.jpg", "first"),
     folderPhoto("duplicate.PNG", "Private folder/duplicate.PNG", "second"),
-    photo("broken.heic", "third"),
+    photo("restored.webp", "third"),
+    photo("broken.heic", "fourth"),
   ];
   const requests = [];
   let postsInFlight = 0;
@@ -165,7 +166,8 @@ test("a batch performs one raw sequential request per photo and refreshes once",
     postsInFlight -= 1;
     const response = [
       jsonResponse({ ok: true, status: "added", totalAssets: 19 }),
-      jsonResponse({ ok: true, status: "already-exists", totalAssets: 19 }),
+      jsonResponse({ ok: true, status: "duplicate", totalAssets: 19 }),
+      jsonResponse({ ok: true, status: "restored", totalAssets: 20 }),
       jsonResponse({ ok: false, error: { code: "invalid-image", message: "redacted" } }, 422),
     ][postIndex];
     postIndex += 1;
@@ -177,6 +179,7 @@ test("a batch performs one raw sequential request per photo and refreshes once",
   const result = await runLocalPhotoImport(configuredOrigin, files, {
     fetchImpl,
     onProgress: (value) => progress.push(value),
+    sourceKind: "folder",
     refreshLibrary: async () => {
       refreshes += 1;
       return 19;
@@ -184,17 +187,18 @@ test("a batch performs one raw sequential request per photo and refreshes once",
   });
 
   assert.equal(maximumPostsInFlight, 1);
-  assert.equal(requests.length, 3);
+  assert.equal(requests.length, 4);
   assert.equal(refreshes, 1);
   assert.equal(progress.at(0).processed, 0);
-  assert.deepEqual(progress.slice(1).map(({ processed }) => processed), [1, 2, 3]);
+  assert.deepEqual(progress.slice(1).map(({ processed }) => processed), [1, 2, 3, 4]);
   assert.deepEqual(result, {
-    total: 3,
-    processed: 3,
+    total: 4,
+    processed: 4,
     added: 1,
     alreadyExists: 1,
+    restored: 1,
     failed: 1,
-    failures: [{ index: 2, reason: "照片无法解码或格式暂不受支持" }],
+    failures: [{ index: 3, reason: "照片无法解码或格式暂不受支持" }],
     libraryTotal: 19,
     refreshFailed: false,
   });
@@ -206,7 +210,11 @@ test("a batch performs one raw sequential request per photo and refreshes once",
     assert.equal(init.body, files[index]);
     assert.equal(init.headers["content-type"], "application/octet-stream");
     assert.equal(init.headers["x-frame-zero-local-import"], "1");
-    assert.equal(init.headers["x-frame-zero-photo-extension"], [".jpg", ".png", ".heic"][index]);
+    assert.match(init.headers["x-frame-zero-photo-batch"], /^[a-f0-9]{32}$/);
+    assert.equal(init.headers["x-frame-zero-photo-batch-position"], String(index));
+    assert.equal(init.headers["x-frame-zero-photo-batch-size"], "4");
+    assert.equal(init.headers["x-frame-zero-photo-extension"], [".jpg", ".png", ".webp", ".heic"][index]);
+    assert.equal(init.headers["x-frame-zero-photo-source"], "folder");
     const transmittedMetadata = JSON.stringify({ url, headers: init.headers });
     assert.doesNotMatch(transmittedMetadata, /private-name|duplicate|broken|Private folder|people|webkitRelativePath|base64/i);
   });

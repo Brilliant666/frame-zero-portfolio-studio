@@ -7,6 +7,11 @@ import {
   type CompositionRatio,
   type TemplateCompositionVariant,
 } from "../template-composition/contract";
+import {
+  isSourceOrientationAdaptiveTemplate,
+  normalizePrimaryAssignmentRatio,
+  primaryPhotoRatioForOrientation,
+} from "../photo-ratio-policy";
 import { assetToWork, type PhotoAsset, type PhotoOrientation } from "../photo-library";
 import type { SiteContent, Work } from "../site-config";
 import type { TemplateId } from "./catalog";
@@ -59,14 +64,50 @@ function roleForSlot(profile: TemplateMaterialProfile, slotIndex: number) {
   return profile.visualPriority.find((priority) => priority.slotIndex === slotIndex)?.role ?? "gallery";
 }
 
-function previewVariant(profile: TemplateMaterialProfile): TemplateCompositionVariant {
+function adaptivePreviewRatios(
+  profile: TemplateMaterialProfile,
+  assets: readonly PhotoAsset[],
+  existingWorks: readonly Work[],
+) {
+  if (!isSourceOrientationAdaptiveTemplate(profile.templateId)) return profile.slotAspectTargets;
+
+  const ratios = profile.slotAspectTargets.map(normalizePrimaryAssignmentRatio);
+  const assetById = new Map(assets.map((asset) => [asset.id, asset]));
+  const usedAssetIds = new Set<string>();
+  const occupiedSlots = new Set<number>();
+
+  existingWorks.forEach((work, fallbackIndex) => {
+    if (!work.assetId) return;
+    const asset = assetById.get(work.assetId);
+    if (!asset || usedAssetIds.has(asset.id)) return;
+    const slotIndex = Number.isInteger(work.slotIndex) ? work.slotIndex as number : fallbackIndex;
+    if (slotIndex < 0 || slotIndex >= ratios.length || occupiedSlots.has(slotIndex)) return;
+    ratios[slotIndex] = primaryPhotoRatioForOrientation(asset.orientation);
+    occupiedSlots.add(slotIndex);
+    usedAssetIds.add(asset.id);
+  });
+
+  const openSlots = ratios.flatMap((_, slotIndex) => occupiedSlots.has(slotIndex) ? [] : [slotIndex]);
+  const availableAssets = assets
+    .filter((asset) => !usedAssetIds.has(asset.id))
+    .sort((left, right) => left.id.localeCompare(right.id));
+  for (let index = 0; index < Math.min(openSlots.length, availableAssets.length); index += 1) {
+    ratios[openSlots[index]] = primaryPhotoRatioForOrientation(availableAssets[index].orientation);
+  }
+  return Object.freeze(ratios);
+}
+
+function previewVariant(
+  profile: TemplateMaterialProfile,
+  assignmentRatios: readonly CompositionRatio[] = profile.slotAspectTargets,
+): TemplateCompositionVariant {
   return Object.freeze({
     variantId: PREVIEW_VARIANT_ID,
     fallbackPriority: 0,
     label: "Preview",
     description: "Ephemeral formal-slot preview.",
     designIntent: "Preview only.",
-    slots: Object.freeze(profile.slotAspectTargets.map((assignmentRatio, slotIndex) => {
+    slots: Object.freeze(assignmentRatios.map((displayRatio, slotIndex) => {
       const priority = profile.visualPriority.find((item) => item.slotIndex === slotIndex);
       const secondaryPresentations = profile.secondaryPresentations.flatMap((presentation, presentationIndex) => (
         presentation.slotIndexes.includes(slotIndex) && compositionRatios.has(presentation.target as CompositionRatio)
@@ -77,12 +118,19 @@ function previewVariant(profile: TemplateMaterialProfile): TemplateCompositionVa
             })]
           : []
       ));
+      if (displayRatio === "16:9") {
+        secondaryPresentations.push(Object.freeze({
+          presentationKey: "secondary-slot-display-16-9",
+          ratio: "16:9" as const,
+          critical: false,
+        }));
+      }
 
       return Object.freeze({
         slotIndex,
         slotKey: `slot-${String(slotIndex + 1).padStart(2, "0")}`,
         logicalRole: roleForSlot(profile, slotIndex),
-        assignmentRatio,
+        assignmentRatio: normalizePrimaryAssignmentRatio(displayRatio),
         critical: priority?.level === "critical",
         secondaryPresentations: Object.freeze(secondaryPresentations),
       });
@@ -139,8 +187,9 @@ export function planTemplateCompositionPreview({
   existingWorks?: readonly Work[];
 }>): TemplateCompositionPreview {
   const profile = getTemplateMaterialProfile(templateId);
+  const assignmentRatios = adaptivePreviewRatios(profile, assets, existingWorks);
   const assignment = assignComposition({
-    variant: previewVariant(profile),
+    variant: previewVariant(profile, assignmentRatios),
     assets: assets.map((asset) => ({
       assetId: asset.id,
       aspectRatio: asset.aspectRatio,

@@ -11,6 +11,7 @@ const sources = [
   ["app/template-composition/assignment.ts", "assignment.mjs"],
   ["app/templates/catalog.ts", "catalog.mjs"],
   ["app/templates/material-profiles.ts", "material-profiles.mjs"],
+  ["app/photo-ratio-policy.ts", "photo-ratio-policy.mjs"],
   ["app/photo-library.ts", "photo-library.mjs"],
   ["app/templates/template-preview-composition.ts", "template-preview-composition.mjs"],
 ];
@@ -26,6 +27,8 @@ function rewriteImports(output) {
     .replaceAll('from "./catalog"', 'from "./catalog.mjs"')
     .replaceAll('from "../template-composition/assignment"', 'from "./assignment.mjs"')
     .replaceAll('from "../template-composition/contract"', 'from "./contract.mjs"')
+    .replaceAll('from "../photo-ratio-policy"', 'from "./photo-ratio-policy.mjs"')
+    .replaceAll('from "./photo-ratio-policy"', 'from "./photo-ratio-policy.mjs"')
     .replaceAll('from "../photo-library"', 'from "./photo-library.mjs"')
     .replaceAll('from "./material-profiles"', 'from "./material-profiles.mjs"');
 }
@@ -152,6 +155,46 @@ test("preview reports orientation shortage and keeps intentional placeholders", 
     preview.shortages.find(({ orientation }) => orientation === "portrait"),
     { orientation: "portrait", minimumMissing: 2, recommendedMissing: 6 },
   );
+});
+
+test("character preview accepts every zero-to-nine portrait mix without cross-orientation placeholders", async (t) => {
+  const { planTemplateCompositionPreview } = await importPreviewModule(t);
+
+  for (let portraitCount = 0; portraitCount <= 9; portraitCount += 1) {
+    const assets = Array.from({ length: 9 }, (_, index) => photoAsset(
+      `asset-${String(index).padStart(2, "0")}`,
+      index < portraitCount ? 2 / 3 : 3 / 2,
+    ));
+    const preview = planTemplateCompositionPreview({
+      templateId: "character-select",
+      assets,
+    });
+
+    assert.equal(preview.status, "planned");
+    assert.equal(preview.filledPhotoCount, 9, `${portraitCount} portrait assets`);
+    assert.equal(preview.placeholderCount, 0);
+    assert.equal(preview.assignment.metrics.orientationShortage, 0);
+    assert.deepEqual(preview.works.map(({ slotIndex }) => slotIndex), [0, 1, 2, 3, 4, 5, 6, 7, 8]);
+  }
+});
+
+test("character preview keeps intentional placeholders for every partial library size", async (t) => {
+  const { planTemplateCompositionPreview } = await importPreviewModule(t);
+
+  for (let assetCount = 0; assetCount <= 9; assetCount += 1) {
+    const assets = Array.from({ length: assetCount }, (_, index) => photoAsset(
+      `partial-${String(index).padStart(2, "0")}`,
+      index % 2 === 0 ? 3 / 2 : 2 / 3,
+    ));
+    const preview = planTemplateCompositionPreview({
+      templateId: "character-select",
+      assets,
+    });
+
+    assert.equal(preview.status, "planned");
+    assert.equal(preview.filledPhotoCount, assetCount);
+    assert.equal(preview.placeholderCount, 9 - assetCount);
+  }
 });
 
 test("valid locks survive preview while missing locked assets block explicitly", async (t) => {
