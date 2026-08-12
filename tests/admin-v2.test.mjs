@@ -180,7 +180,7 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   assert.match(layoutPreview, /data-layout-preview-generate=\{templateId\}/);
   assert.match(layoutPreview, /data-layout-preview-open=\{templateId\}/);
   assert.match(layoutPreview, /data-layout-preview-apply=\{templateId\}/);
-  assert.match(layoutPreview, /生成排版建议/);
+  assert.match(layoutPreview, /刷新排版建议/);
   assert.match(layoutPreview, /预览推荐排版/);
   assert.match(layoutPreview, /采用推荐到草稿/);
   assert.match(layoutPreview, /仍需顶栏“保存全部修改”才会持久化/);
@@ -248,7 +248,21 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   assert.match(layout, /isPhotoAssetCompatibleWithSlot\(asset, activeRatio, activeSlotUsesSourceOrientation\)/);
   assert.match(layout, /isWorkCompatibleWithSlot\(sourceWork, template\.slotRatios\[destination\], slotUsesSourceOrientation\(destination\)\)/);
   assert.match(layout, /isWorkCompatibleWithSlot\(destinationWork, template\.slotRatios\[slotIndex\], slotUsesSourceOrientation\(slotIndex\)\)/);
-  assert.match(layoutPreview, /生成排版建议/);
+  assert.match(layoutPreview, /刷新排版建议/);
+  assert.match(layoutPreview, /<details className=\{styles\.templatePreviewSlotDisclosure\}/);
+  assert.match(layoutPreview, /data-layout-recommendation-details=\{templateId\}/);
+  assert.match(layoutPreview, /<h3 id=\{`layout-preview-heading-\$\{templateId\}`\}>当前模板推荐排版<\/h3>/);
+  assert.doesNotMatch(layoutPreview, /<details[^>]*\sopen(?:=|\s|>)/);
+  assert.match(layout, /const assetPageSize = 24;/);
+  assert.match(layout, /const slotDirectionLabel = \(slotIndex: number\) =>/);
+  assert.match(layout, /<h3 id="slot-list-heading">照片槽位<\/h3>/);
+  assert.match(layout, /<h3 id="asset-library-heading">素材选择与管理<\/h3>/);
+  assert.match(layout, /aria-label="模板照片槽位"/);
+  assert.doesNotMatch(layout, /aria-label="模板固定照片槽位"/);
+  assert.ok(
+    layout.indexOf("className={styles.layoutSummary}") < layout.indexOf("<PhotoImportPanel"),
+    "the current template summary must precede the import utility",
+  );
   assert.doesNotMatch(layout, /\/api\//);
 
   assert.match(advanced, /useState\(false\)/);
@@ -616,7 +630,10 @@ test("responsive CSS exposes a mobile section switcher and single-column layout 
   assert.match(css, /\.templateMaterialProfile\s*\{/);
   assert.match(css, /\.templateMaterialDemand\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
   assert.match(css, /\.templateCompositionPreview\s*\{/);
-  assert.match(css, /\.templatePreviewSlotMap\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+  assert.match(css, /\.templatePreviewSlotMap\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fill, minmax\(8rem, 1fr\)\)/s);
+  assert.match(css, /\.templatePreviewSlotMap\s*\{[^}]*align-items:\s*start/s);
+  assert.match(css, /\.templatePreviewSlotDisclosure\s*\{/);
+  assert.doesNotMatch(css, /\.templatePreviewSlot\[data-priority="critical"\]\s*\{[^}]*grid-column:/s);
   assert.doesNotMatch(css, /\.templatePreviewDialog\s*\{/);
   assert.doesNotMatch(css, /\.templateGrid|\.templateCard\b/);
   assert.match(css, /@media \(max-width: 1280px\) and \(min-width: 761px\)/);

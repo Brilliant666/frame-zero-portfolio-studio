@@ -125,7 +125,7 @@ export function LayoutCompositionPreview({
       <div className={styles.templateCompositionPreviewHeader}>
         <div>
           <span>LAYOUT RECOMMENDATION</span>
-          <h4 id={`layout-preview-heading-${templateId}`}>当前模板推荐排版</h4>
+          <h3 id={`layout-preview-heading-${templateId}`}>当前模板推荐排版</h3>
           <p>{libraryMessage}</p>
         </div>
         <button
@@ -134,7 +134,7 @@ export function LayoutCompositionPreview({
           onClick={() => void onRefresh()}
           disabled={libraryState === "loading" || busy}
         >
-          {libraryState === "loading" ? "正在读取…" : "生成排版建议"}
+          {libraryState === "loading" ? "正在读取…" : "刷新排版建议"}
         </button>
       </div>
 
@@ -178,41 +178,48 @@ export function LayoutCompositionPreview({
             ) : <span>当前素材已达到此模板的推荐方向组合。</span>}
           </div>
 
-          <div className={styles.templatePreviewSlotMap} data-preview-template={templateId}>
-            {profile.slotAspectTargets.map((ratio, slotIndex) => {
-              const work = workBySlot.get(slotIndex);
-              const priority = priorityBySlot.get(slotIndex);
+          <details className={styles.templatePreviewSlotDisclosure} data-layout-recommendation-details={templateId}>
+            <summary>查看 {profile.recommendedPhotoCount} 个推荐槽位</summary>
+            <div className={styles.templatePreviewSlotMap} data-preview-template={templateId}>
+              {profile.slotAspectTargets.map((ratio, slotIndex) => {
+                const work = workBySlot.get(slotIndex);
+                const priority = priorityBySlot.get(slotIndex);
                 const presentationRatio = templateSlotOrientationMode(templateId, slotIndex) === "source-adaptive"
                   ? work
                     ? primaryPhotoRatioForDimensions(work.previewWidth, work.previewHeight)
                       ?? normalizePrimaryAssignmentRatio(ratio)
-                  : normalizePrimaryAssignmentRatio(ratio)
-                : ratio;
-              return (
-                <article
-                  key={slotIndex}
-                  className={styles.templatePreviewSlot}
-                  data-template-preview-slot={slotIndex}
-                  data-ratio={presentationRatio}
-                  data-priority={priority?.level ?? "standard"}
-                  style={{ aspectRatio: presentationRatio.replace(":", " / ") }}
-                >
-                  {work ? (
-                    <img
-                      src={work.preview}
-                      width={work.previewWidth}
-                      height={work.previewHeight}
-                      alt=""
-                      style={{ objectPosition: work.position }}
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  ) : <span>待补充 {presentationRatio}</span>}
-                  <small>{String(slotIndex + 1).padStart(2, "0")} · {priority?.role ?? "gallery"}</small>
-                </article>
-              );
-            })}
-          </div>
+                    : normalizePrimaryAssignmentRatio(ratio)
+                  : ratio;
+                return (
+                  <article
+                    key={slotIndex}
+                    className={styles.templatePreviewSlot}
+                    data-template-preview-slot={slotIndex}
+                    data-ratio={presentationRatio}
+                    data-priority={priority?.level ?? "standard"}
+                  >
+                    <div
+                      className={styles.templatePreviewSlotMedia}
+                      style={{ aspectRatio: presentationRatio.replace(":", " / ") }}
+                    >
+                      {work ? (
+                        <img
+                          src={work.preview}
+                          width={work.previewWidth}
+                          height={work.previewHeight}
+                          alt=""
+                          style={{ objectPosition: work.position }}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : <span>待补充 {presentationRatio}</span>}
+                    </div>
+                    <small>{String(slotIndex + 1).padStart(2, "0")} · {priority?.role ?? "gallery"}</small>
+                  </article>
+                );
+              })}
+            </div>
+          </details>
 
           <div className={styles.templateCompositionPreviewActions} data-action-count="2">
             <button

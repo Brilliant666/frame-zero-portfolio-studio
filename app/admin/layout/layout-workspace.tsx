@@ -51,7 +51,7 @@ type LibraryView = "active" | "archived";
 type LibrarySort = "recent" | "oldest" | "asset-id";
 
 const manifestUrl = "/photos/library-manifest.json";
-const assetPageSize = 48;
+const assetPageSize = 24;
 
 function slotIndexOf(work: Work, fallback: number) {
   return Number.isInteger(work.slotIndex) ? work.slotIndex as number : fallback;
@@ -166,6 +166,10 @@ export default function LayoutWorkspace() {
   );
   const activeRatio = slotPresentationRatio(activeSlot, activeWork);
   const activeSlotUsesSourceOrientation = slotUsesSourceOrientation(activeSlot);
+  const slotDirectionLabel = (slotIndex: number) => {
+    if (slotUsesSourceOrientation(slotIndex)) return "任意方向";
+    return template.slotRatios[slotIndex] === "2:3" ? "固定竖图" : "固定横图";
+  };
   const activeFocus = parseFocusPosition(activeWork?.position ?? "50% 50%");
 
   const activeItems = useMemo(
@@ -432,17 +436,6 @@ export default function LayoutWorkspace() {
       ) : null}
       <p className={styles.mobileLayoutNote}>手机可查看并完成基础调整；复杂素材排版建议使用桌面端。</p>
 
-      <PhotoImportPanel
-        importing={isImporting}
-        libraryMessage={libraryMessage}
-        libraryState={libraryState}
-        localPhotoImportOrigin={localPhotoImportOrigin}
-        localPhotoImportState={localPhotoImportState}
-        onImportingChange={setIsImporting}
-        onRefresh={refreshLibrary}
-        stats={libraryStats}
-      />
-
       <div className={styles.layoutSummary}>
         <div>
           <span>当前模板</span>
@@ -454,6 +447,17 @@ export default function LayoutWorkspace() {
           <button type="button" onClick={resetLayout}>清空本模板</button>
         </div>
       </div>
+
+      <PhotoImportPanel
+        importing={isImporting}
+        libraryMessage={libraryMessage}
+        libraryState={libraryState}
+        localPhotoImportOrigin={localPhotoImportOrigin}
+        localPhotoImportState={localPhotoImportState}
+        onImportingChange={setIsImporting}
+        onRefresh={refreshLibrary}
+        stats={libraryStats}
+      />
 
       <LayoutCompositionPreview
         templateId={content.activeTemplate}
@@ -467,10 +471,10 @@ export default function LayoutWorkspace() {
       <div className={styles.layoutWorkspace}>
         <section className={styles.slotPane} aria-labelledby="slot-list-heading">
           <div className={styles.paneHeading}>
-            <div><strong id="slot-list-heading">固定槽位</strong><small>选择一项后在中栏编辑</small></div>
+            <div><h3 id="slot-list-heading">照片槽位</h3><small>选择一项后在中栏编辑</small></div>
             <span>{template.photoSlots}</span>
           </div>
-          <div className={styles.slotList} role="group" aria-label="模板固定照片槽位">
+          <div className={styles.slotList} role="group" aria-label="模板照片槽位">
             {template.slotRatios.map((_, slotIndex) => {
               const work = selectedBySlot.get(slotIndex);
               const presentationRatio = slotPresentationRatio(slotIndex, work);
@@ -489,8 +493,8 @@ export default function LayoutWorkspace() {
                     {work ? <img src={work.preview} width={work.previewWidth} height={work.previewHeight} alt="" /> : <span>{presentationRatio}</span>}
                   </span>
                   <span className={styles.slotState}>
-                    <strong>{presentationRatio}</strong>
-                    <small>{active ? "正在编辑" : work?.locked ? "已填 · 已锁定" : work ? "已填" : "空槽位"}</small>
+                    <strong>{slotDirectionLabel(slotIndex)}</strong>
+                    <small>{presentationRatio} · {active ? "正在编辑" : work?.locked ? "已填 · 已锁定" : work ? "已填" : "空槽位"}</small>
                   </span>
                 </button>
               );
@@ -500,7 +504,7 @@ export default function LayoutWorkspace() {
 
         <section className={styles.slotEditor} aria-labelledby="slot-editor-heading">
           <div className={styles.paneHeading}>
-            <div><strong id="slot-editor-heading">当前槽位 {String(activeSlot + 1).padStart(2, "0")}</strong><small>{activeRatio} · {activeWork ? "已填入素材" : "等待素材"}</small></div>
+            <div><h3 id="slot-editor-heading">当前槽位 {String(activeSlot + 1).padStart(2, "0")}</h3><small>{slotDirectionLabel(activeSlot)} · {activeRatio} · {activeWork ? "已填入素材" : "等待素材"}</small></div>
             <span>{activeWork?.locked ? "LOCKED" : "EDIT"}</span>
           </div>
 
@@ -556,7 +560,7 @@ export default function LayoutWorkspace() {
 
         <section className={styles.assetPane} aria-labelledby="asset-library-heading">
           <div className={styles.paneHeading}>
-            <div><strong id="asset-library-heading">本地素材库</strong><small>{libraryView === "active" ? `选择后放入当前槽位 ${String(activeSlot + 1).padStart(2, "0")}` : "回收站素材仍保留文件与现有排版引用"}</small></div>
+            <div><h3 id="asset-library-heading">素材选择与管理</h3><small>{libraryView === "active" ? `选择后放入当前槽位 ${String(activeSlot + 1).padStart(2, "0")}` : "回收站素材仍保留文件与现有排版引用"}</small></div>
             <span>{filteredItems.length} / {libraryView === "active" ? activeItems.length : archivedAssetCount}</span>
           </div>
           {localPhotoImportState === "configured" ? (

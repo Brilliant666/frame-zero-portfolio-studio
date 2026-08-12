@@ -337,7 +337,7 @@ export default function PhotoImportPanel({
     >
       <div className={styles.libraryImportHeader}>
         <div className={styles.libraryImportCopy}>
-          <strong id="local-photo-library-heading">本地素材库</strong>
+          <h3 id="local-photo-library-heading">素材库概况与导入</h3>
           <p>{libraryMessage}</p>
           <small>自动生成网页版本；原图、文件夹路径和文件名不会写入项目数据或 Git。刷新素材列表只会重新读取素材清单，不会扫描电脑文件夹。</small>
         </div>

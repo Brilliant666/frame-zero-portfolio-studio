@@ -319,7 +319,7 @@ test("preview modules separate photo-free template structures from layout-only d
   assert.match(planner, /assignComposition\(/);
   assert.doesNotMatch(planner, /fetch\(|XMLHttpRequest|method:\s*"PUT"|\/api\/site-content/);
   assert.match(layoutPreview, /data-layout-composition-preview=\{templateId\}/);
-  assert.match(layoutPreview, /生成排版建议/);
+  assert.match(layoutPreview, /刷新排版建议/);
   assert.match(layoutPreview, /预览推荐排版/);
   assert.match(layoutPreview, /采用推荐到草稿/);
   assert.match(layoutPreview, /applyTemplateCompositionPreview\(current, planned\)/);

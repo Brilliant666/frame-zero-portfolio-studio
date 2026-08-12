@@ -131,7 +131,7 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
       assert.equal(html.match(/data-layout-composition-preview="[^"]+"/g)?.length, 1);
       assert.equal(html.match(/data-layout-preview-generate="[^"]+"/g)?.length, 1);
       assert.doesNotMatch(html, /data-template-candidate-preview=/);
-      assert.match(html, /生成排版建议/);
+      assert.match(html, /data-layout-preview-generate="[^"]+"[^>]*disabled=""[^>]*>正在读取…<\/button>/);
       assert.doesNotMatch(html, /应用此排版到草稿/);
       assert.match(html, /data-local-photo-import="missing"/);
       assert.match(html, /本地照片导入服务未启动/);
