@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { isTemplateId, templateCatalog, type TemplateId } from "../../site-config";
 import {
@@ -9,7 +10,7 @@ import {
 import { AdminSection } from "../admin-form";
 import { useAdmin } from "../admin-provider";
 import styles from "../admin-v2.module.css";
-import TemplateEffectPreview from "./template-effect-preview";
+import TemplateStructurePreview from "./template-structure-preview";
 
 const mobileModeLabels: Record<TemplateMaterialProfile["mobileBehavior"]["mode"], string> = {
   stack: "顺序堆叠",
@@ -20,11 +21,10 @@ const mobileModeLabels: Record<TemplateMaterialProfile["mobileBehavior"]["mode"]
 };
 
 export default function TemplateEditor() {
+  const router = useRouter();
   const { content, savedContent, setContent } = useAdmin();
   const [inspectedOverride, setInspectedOverride] = useState<TemplateId | null>(null);
   const inspectedId = inspectedOverride ?? content.activeTemplate;
-  const savedTemplate = templateCatalog.find((template) => template.id === savedContent.activeTemplate);
-  const draftTemplate = templateCatalog.find((template) => template.id === content.activeTemplate);
   const inspectedTemplate = templateCatalog.find((template) => template.id === inspectedId) ?? templateCatalog[0];
   const materialProfile = getTemplateMaterialProfile(inspectedTemplate.id);
   const inspectedIsSaved = savedContent.activeTemplate === inspectedTemplate.id;
@@ -34,9 +34,16 @@ export default function TemplateEditor() {
     if (isTemplateId(value)) setInspectedOverride(value);
   };
 
-  const chooseTemplate = (templateId: TemplateId) => {
-    setContent((current) => ({ ...current, activeTemplate: templateId }));
+  const continueToLayout = (templateId: TemplateId) => {
+    if (content.activeTemplate !== templateId) {
+      setContent((current) => ({ ...current, activeTemplate: templateId }));
+    }
+    router.push("/admin/layout");
   };
+
+  const detailState = inspectedIsDraft
+    ? inspectedIsSaved ? "当前主页模板" : "已选为主页 · 未保存"
+    : null;
 
   const statusLabels = (templateId: TemplateId) => [
     savedContent.activeTemplate === templateId ? "已保存" : null,
@@ -51,26 +58,6 @@ export default function TemplateEditor() {
       description="从紧凑列表查看 11 个正式模板；同一时间只展开一个候选详情。"
     >
       <div className={styles.templateOverview}>
-        <div className={styles.templateSelectionSummary} role="status" aria-live="polite">
-          <div>
-            <span>已保存模板</span>
-            <strong>{savedTemplate?.name ?? savedContent.activeTemplate}</strong>
-          </div>
-          <div>
-            <span>当前草稿</span>
-            <strong>{draftTemplate?.name ?? content.activeTemplate}</strong>
-          </div>
-          <div>
-            <span>当前查看</span>
-            <strong>{inspectedTemplate.name}</strong>
-          </div>
-        </div>
-
-        <div className={styles.templateNotice} role="note">
-          查看候选详情不会修改草稿；只有点击“设为主页模板”才会更新当前草稿。模板槽位数量或比例可能不同，
-          当前主页的素材排版可能变化；各模板已有的显式槽位排版会继续保留，不会在这里静默删除。
-        </div>
-
         <div className={styles.templateWorkbench}>
           <div className={styles.templateSelectorPane}>
             <label className={styles.templateMobileSelector}>
@@ -129,17 +116,15 @@ export default function TemplateEditor() {
             aria-labelledby={`template-detail-name-${inspectedTemplate.id}`}
           >
             <div className={styles.templateDetailVisual}>
-              <div className={`template-swatch ${styles.templateDetailSwatch}`} aria-hidden="true">
-                <i /><b />
-              </div>
+              <TemplateStructurePreview templateId={inspectedTemplate.id} />
             </div>
 
             <div className={styles.templateDetailBody}>
-              <div className={styles.templateDetailStates} aria-label="当前候选模板状态">
-                <span data-active={inspectedIsSaved}>{inspectedIsSaved ? "已保存选择" : "不是已保存选择"}</span>
-                <span data-active={inspectedIsDraft}>{inspectedIsDraft ? "当前草稿" : "不是当前草稿"}</span>
-                <span data-active="true">正在查看</span>
-              </div>
+              {detailState ? (
+                <div className={styles.templateDetailStates} role="status" aria-live="polite">
+                  <span data-template-state={detailState}>{detailState}</span>
+                </div>
+              ) : null}
               <div className={styles.templateDetailHeader}>
                 <span>READY · {String(templateCatalog.indexOf(inspectedTemplate) + 1).padStart(2, "0")}</span>
                 <h3 id={`template-detail-name-${inspectedTemplate.id}`}>{inspectedTemplate.name}</h3>
@@ -215,21 +200,19 @@ export default function TemplateEditor() {
                 </ul>
               </section>
 
-              <TemplateEffectPreview templateId={inspectedTemplate.id} />
             </div>
 
             <div className={styles.templateDetailActions} data-template-primary-action="true">
-              {inspectedIsDraft ? (
-                <a href="/admin/layout">下一步：素材排版 <span aria-hidden="true">→</span></a>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => chooseTemplate(inspectedTemplate.id)}
-                  title="只更新当前草稿，不会自动保存"
-                >
-                  设为主页模板
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => continueToLayout(inspectedTemplate.id)}
+                title={inspectedIsDraft
+                  ? "进入当前主页模板的素材排版"
+                  : "将模板写入当前草稿并进入素材排版；不会自动保存"}
+              >
+                {inspectedIsDraft ? "进入素材排版" : "设为主页并进入素材排版"}
+                <span aria-hidden="true">→</span>
+              </button>
             </div>
           </article>
         </div>

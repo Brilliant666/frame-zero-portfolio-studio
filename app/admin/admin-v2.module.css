@@ -325,7 +325,6 @@
 .bookingList input:focus-visible,
 .templateListButton:focus-visible,
 .templateMobileSelector select:focus-visible,
-.templateDetailActions a:focus-visible,
 .templateDetailActions button:focus-visible,
 .templateCompositionPreviewHeader button:focus-visible,
 .templateCompositionPreviewActions button:focus-visible,
@@ -340,18 +339,6 @@
 }
 
 .templateOverview { display: grid; gap: 1rem; }
-.templateSelectionSummary {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  border: 1px solid var(--admin-v2-line);
-  background: #fff;
-}
-.templateSelectionSummary > div { display: grid; min-width: 0; gap: .2rem; padding: .8rem 1rem; }
-.templateSelectionSummary > div + div { border-left: 1px solid var(--admin-v2-line); }
-.templateSelectionSummary span { color: var(--admin-v2-muted); font: 700 .7rem var(--font-geist-mono), monospace; }
-.templateSelectionSummary strong { overflow: hidden; font-size: .88rem; text-overflow: ellipsis; white-space: nowrap; }
-.templateNotice { padding: .8rem 1rem; border-left: 3px solid var(--admin-v2-accent); background: #fff6ec; font-size: .78rem; line-height: 1.65; }
-
 .templateWorkbench {
   display: grid;
   grid-template-columns: minmax(13rem, 16rem) minmax(0, 1fr);
@@ -420,17 +407,21 @@
   background: #fff;
 }
 .templateDetailVisual { min-width: 0; border-bottom: 1px solid var(--admin-v2-line); }
-.templateDetailSwatch { min-height: 13rem; }
 .templateDetailBody { display: grid; min-width: 0; align-content: start; gap: .75rem; padding: 1rem; }
 .templateDetailStates { display: flex; flex-wrap: wrap; gap: .35rem; }
 .templateDetailStates span {
   padding: .25rem .45rem;
-  border: 1px solid #cec7c0;
-  color: #857c73;
+  border: 1px solid var(--admin-v2-line);
+  background: #f4f0eb;
+  color: #5f574f;
   font: 700 .72rem var(--font-geist-mono), monospace;
 }
-.templateDetailStates span[data-active="true"] { border-color: #241d18; background: #241d18; color: #fff; }
-.templateDetailStates span:last-child[data-active="true"] { border-color: var(--admin-v2-accent); background: var(--admin-v2-accent); color: #211006; }
+.templateDetailStates span[data-template-state="当前主页模板"],
+.templateDetailStates span[data-template-state="已选为主页 · 未保存"] {
+  border-color: var(--admin-v2-accent);
+  background: var(--admin-v2-accent);
+  color: #211006;
+}
 .templateDetailHeader { display: grid; min-width: 0; gap: .3rem; }
 .templateDetailHeader > span { color: #8a3d12; font: 700 .7rem var(--font-geist-mono), monospace; letter-spacing: .06em; }
 .templateDetailHeader h3 { overflow-wrap: anywhere; margin: 0; font-size: 1.3rem; letter-spacing: -.025em; }
@@ -605,7 +596,6 @@
 .templateCompositionPreviewEmpty { display: grid; min-height: 8rem; place-items: center; padding: 1rem; border: 1px dashed #b9b0a7; color: var(--admin-v2-muted); font-size: .75rem; text-align: center; }
 .templateDetailActions { display: grid; grid-template-columns: minmax(0, 1fr); border-top: 1px solid var(--admin-v2-line); }
 .templateDetailActions button,
-.templateDetailActions a,
 .secondaryButton {
   display: inline-flex;
   min-height: 2.75rem;
@@ -618,9 +608,8 @@
   font: 700 .78rem var(--font-geist-sans), sans-serif;
   cursor: pointer;
 }
-.templateDetailActions button { border: 0; }
+.templateDetailActions button { gap: .5rem; border: 0; }
 .templateDetailActions button:disabled { background: #e5e0da; color: var(--admin-v2-muted); cursor: default; }
-.templateDetailActions a { border: 0; background: var(--admin-v2-ink); color: #fff; }
 
 .optionalDisclosure { border: 1px solid var(--admin-v2-line); background: #fff; }
 .optionalSummary {
@@ -770,6 +759,17 @@
   padding: .85rem;
   border: 1px solid #c96d31;
   background: #fffaf4;
+}
+
+.layoutTemplateTransition {
+  margin: 0 0 .8rem;
+  padding: .75rem .9rem;
+  border: 1px solid #e6b17a;
+  border-left: 4px solid var(--admin-v2-accent);
+  background: #fff7ed;
+  color: #5f351c;
+  font-size: .78rem;
+  line-height: 1.55;
 }
 .photoImportPreflightHeader { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
 .photoImportPreflightHeader > div { display: grid; min-width: 0; gap: .2rem; }
@@ -1216,7 +1216,6 @@
     color: var(--admin-v2-ink);
     font: 700 .85rem var(--font-geist-sans), sans-serif;
   }
-  .templateDetailSwatch { min-height: 10rem; }
   .mobileLayoutNote { display: block; }
   .libraryImportHeader { align-items: stretch; flex-direction: column; }
   .libraryImportHeader > button { width: 100%; }
@@ -1262,11 +1261,8 @@
   .pairGrid { grid-template-columns: 1fr; }
   .pairRow { grid-template-columns: 1fr; }
   .fullSpan { grid-column: auto; }
-  .templateSelectionSummary { grid-template-columns: 1fr; }
-  .templateSelectionSummary > div + div { border-top: 1px solid var(--admin-v2-line); border-left: 0; }
   .templateDetailFacts div { grid-template-columns: 1fr; gap: .2rem; }
   .templateDetailActions { grid-template-columns: 1fr; }
-  .templateDetailActions a { border-left: 0; }
   .templateMaterialHeader { align-items: start; flex-direction: column; gap: .5rem; }
   .templateMaterialDemand,
   .templateMaterialSignals { grid-template-columns: 1fr; }

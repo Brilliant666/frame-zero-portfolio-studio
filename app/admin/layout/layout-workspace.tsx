@@ -111,12 +111,14 @@ export default function LayoutWorkspace() {
   const archivedLibraryViewRef = useRef<HTMLButtonElement | null>(null);
   const archiveConfirmRef = useRef<HTMLButtonElement | null>(null);
   const archiveTriggerRefs = useRef(new Map<string, HTMLButtonElement>());
+  const templateTransitionRef = useRef<HTMLParagraphElement | null>(null);
   const [activeSlotState, setActiveSlotState] = useState(() => ({
     templateId: content.activeTemplate,
     slotIndex: 0,
   }));
 
   const template = getTemplateCatalogItem(content.activeTemplate);
+  const templateChangedFromSaved = content.activeTemplate !== savedContent.activeTemplate;
   const activeSlot = activeSlotState.templateId === content.activeTemplate
     && activeSlotState.slotIndex < template.photoSlots
     ? activeSlotState.slotIndex
@@ -289,6 +291,14 @@ export default function LayoutWorkspace() {
     return () => window.cancelAnimationFrame(frame);
   }, [archiveCandidate]);
 
+  useEffect(() => {
+    if (!templateChangedFromSaved) return;
+    const frame = window.requestAnimationFrame(() => {
+      templateTransitionRef.current?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [content.activeTemplate, templateChangedFromSaved]);
+
   const changeArchiveState = async (assetId: string, archived: boolean) => {
     if (!localPhotoImportOrigin || libraryRevision === null || mutatingAssetId) return;
     setMutatingAssetId(assetId);
@@ -402,6 +412,19 @@ export default function LayoutWorkspace() {
         ? `为“${template.name}”安排已有本地素材；结构槽位保持设计方向，普通图集槽位按横图 3:2、竖图 2:3 自适应展示。`
         : `为“${template.name}”的固定槽位安排已有本地素材；比例不合适时宁可留白。`}
     >
+      {templateChangedFromSaved ? (
+        <p
+          ref={templateTransitionRef}
+          className={styles.layoutTemplateTransition}
+          data-template-transition="unsaved"
+          role="status"
+          aria-atomic="true"
+          aria-live="polite"
+          tabIndex={-1}
+        >
+          主页模板已切换为「{template.name}」，尚未保存。现在可为它安排素材；已有模板排版不会被自动覆盖。
+        </p>
+      ) : null}
       <p className={styles.mobileLayoutNote}>手机可查看并完成基础调整；复杂素材排版建议使用桌面端。</p>
 
       <PhotoImportPanel

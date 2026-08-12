@@ -307,11 +307,11 @@ test("preview is read-only and explicit apply changes only one local draft layou
   assert.notEqual(applied.templateWorks["film-rail"], preview.works, "the editable draft must not alias frozen preview works");
 });
 
-test("preview modules separate read-only candidate effects from layout-only draft adoption", async () => {
-  const [planner, layoutPreview, candidatePreview, draftPreview, draftPreviewDialog, templatePreviewDialog] = await Promise.all([
+test("preview modules separate photo-free template structures from layout-only draft adoption", async () => {
+  const [planner, layoutPreview, structurePreview, draftPreview, draftPreviewDialog, templatePreviewDialog] = await Promise.all([
     readSource("app/templates/template-preview-composition.ts"),
     readSource("app/admin/template/template-composition-preview.tsx"),
-    readSource("app/admin/template/template-effect-preview.tsx"),
+    readSource("app/admin/template/template-structure-preview.tsx"),
     readSource("app/admin/draft-preview.tsx"),
     readSource("app/admin/draft-preview-dialog.tsx"),
     readSource("app/admin/template-preview-dialog.tsx"),
@@ -323,9 +323,10 @@ test("preview modules separate read-only candidate effects from layout-only draf
   assert.match(layoutPreview, /预览推荐排版/);
   assert.match(layoutPreview, /采用推荐到草稿/);
   assert.match(layoutPreview, /applyTemplateCompositionPreview\(current, planned\)/);
-  assert.match(candidatePreview, /data-preview-readonly="true"/);
-  assert.match(candidatePreview, /查看模板效果/);
-  assert.doesNotMatch(candidatePreview, /planTemplateCompositionPreview|applyTemplateCompositionPreview|setContent|templateWorks|assets|library/);
+  assert.match(structurePreview, /data-template-structure-preview=\{templateId\}/);
+  assert.match(structurePreview, /data-user-materials="false"/);
+  assert.match(structurePreview, /getTemplateStructurePreview\(templateId\)/);
+  assert.doesNotMatch(structurePreview, /planTemplateCompositionPreview|applyTemplateCompositionPreview|setContent|templateWorks|PhotoAsset|libraryItems|fetch\(/);
   assert.match(draftPreview, /dynamic\(\(\) => import\("\.\/draft-preview-dialog"\)/);
   assert.doesNotMatch(draftPreview, /TemplateRenderer|Lightbox|buildPhotoSlots|useAdmin/);
   assert.match(draftPreviewDialog, /previewSource="draft"/);

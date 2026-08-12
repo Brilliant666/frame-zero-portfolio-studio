@@ -1552,67 +1552,6 @@ footer p { margin: 0; }
   color: #211006;
 }
 
-.template-swatch {
-  position: relative;
-  display: block;
-  height: 7rem;
-  overflow: hidden;
-  border: 1px solid rgba(0,0,0,.08);
-  background: linear-gradient(125deg, #38241a 0 46%, #f8f5f0 46%);
-}
-
-.template-swatch::before {
-  content: "LIGHT";
-  position: absolute;
-  left: .65rem;
-  bottom: .55rem;
-  z-index: 1;
-  color: #ff6b00;
-  font: 800 1.15rem var(--font-geist-mono), monospace;
-}
-
-.template-swatch i,
-.template-swatch b {
-  position: absolute;
-  right: .7rem;
-  width: 35%;
-  height: 3px;
-  background: #ff6b00;
-}
-
-.template-swatch i { top: 1.3rem; }
-.template-swatch b { top: 2rem; width: 24%; }
-.is-neon-hud .template-swatch { background: radial-gradient(circle at 65% 40%, #1e67ac, transparent 24%), linear-gradient(135deg, #050a17 0 58%, #082f4d 58%); }
-.is-neon-hud .template-swatch::before { content: "HUD"; color: #33e7ff; }
-.is-neon-hud .template-swatch i, .is-neon-hud .template-swatch b { background: #ff3bc8; box-shadow: 0 0 .6rem #ff3bc8; }
-.is-film-rail .template-swatch { background: repeating-linear-gradient(90deg, #171512 0 5%, #f2eadc 5% 10%, #171512 10% 15%); }
-.is-film-rail .template-swatch::before { content: "35MM"; color: #f5ead8; }
-.is-film-rail .template-swatch i, .is-film-rail .template-swatch b { background: #f4e9d7; }
-.is-manga-panels .template-swatch { background: linear-gradient(118deg, #fff 0 37%, #111 37% 61%, #e52e1b 61%); }
-.is-manga-panels .template-swatch::before { content: "漫"; color: #e52e1b; }
-.is-manga-panels .template-swatch i, .is-manga-panels .template-swatch b { background: #111; }
-.is-prism-liquid .template-swatch { background: radial-gradient(circle at 26% 28%, #ff5b8d, transparent 34%), radial-gradient(circle at 74% 70%, #265dff, transparent 38%), #e9ddff; }
-.is-prism-liquid .template-swatch::before { content: "PRISM"; color: #6427c7; }
-.is-prism-liquid .template-swatch i, .is-prism-liquid .template-swatch b { background: linear-gradient(90deg,#ff4f8e,#6138ff,#22b8ff); }
-.is-orbital-portal .template-swatch { background: radial-gradient(circle, #122a35 0 18%, #05070b 19% 29%, #ff6b21 30% 31%, #05070b 32%); }
-.is-orbital-portal .template-swatch::before { content: "ORBIT"; color: #ff6b21; }
-.is-orbital-portal .template-swatch i, .is-orbital-portal .template-swatch b { background: #8eeaff; }
-.is-archive-os .template-swatch { background: linear-gradient(90deg, #e7e8e8 0 24%, #fafafa 24% 72%, #d8dbdc 72%); }
-.is-archive-os .template-swatch::before { content: "OS"; color: #202529; }
-.is-archive-os .template-swatch i, .is-archive-os .template-swatch b { background: #2b71ff; }
-.is-editorial-duet .template-swatch { background: linear-gradient(90deg, #f0eadf 0 48%, #24201c 48% 52%, #d5ccc0 52%); }
-.is-editorial-duet .template-swatch::before { content: "ÉDIT"; color: #181512; font-family: Georgia, serif; }
-.is-editorial-duet .template-swatch i, .is-editorial-duet .template-swatch b { background: #181512; }
-.is-polaroid-field .template-swatch { background: linear-gradient(145deg, #c8d4bd, #edf0e8); }
-.is-polaroid-field .template-swatch::after { content: ""; position: absolute; inset: 1rem 35% .75rem 22%; border: .45rem solid #fff; border-bottom-width: 1.15rem; background: #6f8172; box-shadow: .7rem .6rem 0 rgba(54,70,57,.2); transform: rotate(-7deg); }
-.is-polaroid-field .template-swatch::before { content: "FIELD"; color: #385040; }
-.is-character-select .template-swatch { background: linear-gradient(125deg, #11141d 0 43%, #ff3b22 43% 65%, #ffd633 65%); }
-.is-character-select .template-swatch::before { content: "P1"; color: #ffd633; }
-.is-character-select .template-swatch i, .is-character-select .template-swatch b { background: #22d3ff; }
-.is-museum-depth .template-swatch { background: linear-gradient(112deg, #ece9e2 0 45%, #292824 45% 55%, #d2cfc8 55%); }
-.is-museum-depth .template-swatch::before { content: "ROOM"; color: #171716; font-family: Georgia, serif; }
-.is-museum-depth .template-swatch i, .is-museum-depth .template-swatch b { background: #171716; }
-
 .admin-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1801,7 +1740,6 @@ footer p { margin: 0; }
   .admin-panel-title { display: grid; }
   .admin-panel-title p { line-height: 1.55; }
   .template-picker, .admin-form-grid, .admin-repeat-grid, .work-editor-grid { grid-template-columns: 1fr; }
-  .template-swatch { height: 5.5rem; }
   .admin-form-compact { grid-template-columns: 1fr; }
   .admin-footer > div, .admin-reset { display: none; }
   .admin-footer .admin-save { width: 100%; }

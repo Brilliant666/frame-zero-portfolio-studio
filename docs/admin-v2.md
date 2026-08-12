@@ -7,7 +7,7 @@ legacy `SiteContent`、`/api/site-content` 和 `site_settings(id = 1)` 行为不
 
 | 路由 | 负责内容 |
 | --- | --- |
-| `/admin/template` | `activeTemplate`，模板查看、效果预览与主页模板选择；不修改 `templateWorks` |
+| `/admin/template` | `activeTemplate`，中性结构图、精简素材建议与主页模板选择；不读取用户素材、不修改 `templateWorks` |
 | `/admin/profile` | `profile`、`hero`、`trustItems`、`statement` |
 | `/admin/packages` | `packages` |
 | `/admin/layout` | `templateWorks`、排版建议／预览／采用、现有照片 manifest 与本机素材导入入口 |
@@ -33,7 +33,9 @@ legacy `SiteContent`、`/api/site-content` 和 `site_settings(id = 1)` 行为不
 
 - Admin 顶栏、认证门禁和页面 metadata 使用通用的内容管理标题，不把当前示例站品牌写入后台系统身份。
 - 桌面端使用 sticky sidebar；移动端使用紧凑的原生 section selector。
-- 11 个正式模板使用紧凑选择列表，同一时间只展开当前查看候选的完整详情；已保存、当前 draft 与正在查看三个状态分别显示。浏览候选和“查看模板效果”不会修改 draft，只有“设为主页模板”会修改 `activeTemplate`；模板分区不得生成、采用或写入 `templateWorks`。选择后以“下一步：素材排版”进入当前主页模板的排版流程。
+- 11 个正式模板继续使用左侧紧凑选择列表，同一时间只展示当前查看候选。详情区不再重复顶部“已保存／当前草稿／当前查看”三栏，也不显示“不是已保存选择／不是当前草稿”等负向 badge；列表中的必要正向状态仍保留。候选主视觉使用仓库内确定性的中性结构图，覆盖 11 个模板且不包含用户照片、SiteContent、manifest、联系方式或本机路径。
+- 模板详情不再提供独立“查看模板效果”按钮；顶栏“预览当前草稿”继续承担完整页面预览。点击“设为主页模板”只更新内存 draft 的 `activeTemplate` 后进入 `/admin/layout`，不保存、不生成也不采用排版；当前查看候选已经是当前 draft 时，“进入素材排版”只导航到 `/admin/layout`，不重复修改 draft。
+- 从模板页带着尚未保存的新 `activeTemplate` 进入素材排版时，工作区明确提示主页模板已切换且仍未保存，并将焦点放到该提示；用户可以继续安排素材，但仍须使用顶栏“保存全部修改”才会持久化模板选择。
 - 素材排版分区独占 `templateWorks` 编辑。推荐流程使用“生成排版建议／预览推荐排版／采用推荐到草稿”的明确阶段：生成和预览均不得修改 draft，只有采用才更新当前 `activeTemplate` 对应的排版，并且仍须使用顶栏“保存全部修改”才能持久化。手动槽位、焦点、锁定和清空同样只更新共享 draft。
 - 基本资料优先展示摄影师、Hero 与信任信息；`profile.brand`、`profile.mark` 和 `statement` 保留原契约，但收进默认关闭的可选品牌内容。
 - 每个套餐的主页标题始终以可编辑输入显示，其他套餐字段继续使用有文字状态的 disclosure；旧版作品只在高级设置中按需展开。

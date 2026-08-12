@@ -34,6 +34,7 @@
     "test:node-runtime": "npm run build && npm run check:bundle && node --test tests/next-node-runtime.test.mjs tests/legacy-build-budget.test.mjs",
     "photos:import": "node scripts/import-photo-library.mjs",
     "photos:serve": "node scripts/photo-import-server.mjs",
+    "templates:generate-structure-previews": "node scripts/generate-template-structure-previews.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "check:assets": "npm run check:public",
     "check:bundle": "node scripts/check-next-build-budget.mjs",

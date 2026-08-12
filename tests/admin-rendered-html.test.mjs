@@ -82,21 +82,20 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
       assert.equal(html.match(/data-template-detail="[^"]+"/g)?.length, 1);
       assert.equal(html.match(/data-template-mobile-selector="true"/g)?.length, 1);
       assert.equal(html.match(/data-template-material-profile="[^"]+"/g)?.length, 1);
-      assert.equal(html.match(/data-template-candidate-preview="[^"]+"/g)?.length, 1);
-      assert.equal(html.match(/data-template-candidate-preview-trigger="[^"]+"/g)?.length, 1);
-      assert.equal(html.match(/data-template-candidate-preview-dialog="[^"]+"/g)?.length ?? 0, 0,
-        "the heavy candidate dialog must be loaded only after an explicit preview action");
-      assert.match(html, /data-preview-readonly="true"/);
+      assert.equal(html.match(/data-template-structure-preview="[^"]+"/g)?.length, 1);
+      assert.equal(html.match(/data-user-materials="false"/g)?.length, 1);
+      assert.equal(new Set(html.match(/\/template-structure-previews\/[a-z0-9-]+\.webp/g) ?? []).size, 1);
+      assert.equal(html.match(/data-template-state="[^"]+"/g)?.length, 1);
       assert.doesNotMatch(html, /data-layout-composition-preview=|data-layout-preview-apply=/);
       assert.doesNotMatch(html, /data-template-card=/);
+      assert.doesNotMatch(html, /data-template-candidate-preview=|data-template-candidate-preview-trigger=|data-preview-readonly=/);
       assert.match(html, /aria-label="正式页面模板"/);
       assert.match(html, /素材准备建议/);
       assert.match(html, /横图/);
       assert.match(html, /竖图/);
       assert.match(html, /方图/);
-      assert.match(html, /查看模板效果/);
-      assert.match(html, /设为主页模板/);
-      assert.match(html, /下一步：素材排版/);
+      assert.doesNotMatch(html, /查看模板效果|不是已保存选择|不是当前草稿/);
+      assert.match(html, /进入素材排版/);
       assert.doesNotMatch(html, /独立预览|应用此排版到草稿/);
     }
     if (section === "profile") {
