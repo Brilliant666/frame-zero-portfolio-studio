@@ -2,13 +2,20 @@
 
 /* eslint-disable @next/next/no-img-element -- local portfolio assets already provide responsive derivatives. */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
-import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
+import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoSlot } from "../shared/photo-slots";
+import { justifiedPhotoColumns } from "../shared/source-orientation-layout";
 import styles from "./template.module.css";
 
 const PRISM_RATIOS = getTemplateSlotRatios("prism-liquid");
+
+type PrismTriptychStyle = CSSProperties & { "--prism-triptych-columns": string };
+
+function prismTriptychRowStyle(slots: readonly PhotoSlot[]): PrismTriptychStyle {
+  return { "--prism-triptych-columns": justifiedPhotoColumns(slots) };
+}
 
 export default function PrismLiquidTemplate({ content, works, packages, bookingTemplate, copiedKey, onCopy, onOpenWork }: TemplateProps) {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -121,12 +128,17 @@ export default function PrismLiquidTemplate({ content, works, packages, bookingT
         </div>
         <div className={styles.galleryGrid}>
           {[
-            { className: styles.galleryFeatureRow, slots: gallerySlots.slice(0, 2) },
-            { className: styles.galleryTriptych, slots: gallerySlots.slice(2, 5) },
-            { className: styles.galleryPanorama, slots: gallerySlots.slice(5, 6) },
-            { className: styles.galleryTriptych, slots: gallerySlots.slice(6, 9) },
+            { className: styles.galleryFeatureRow, slots: gallerySlots.slice(0, 2), justified: false },
+            { className: styles.galleryTriptych, slots: gallerySlots.slice(2, 5), justified: true },
+            { className: styles.galleryPanorama, slots: gallerySlots.slice(5, 6), justified: false },
+            { className: styles.galleryTriptych, slots: gallerySlots.slice(6, 9), justified: true },
           ].map((group, groupIndex) => (
-            <div className={group.className} key={`gallery-group-${groupIndex}`}>
+            <div
+              className={group.className}
+              data-prism-justified-row={group.justified ? groupIndex : undefined}
+              key={`gallery-group-${groupIndex}`}
+              style={group.justified ? prismTriptychRowStyle(group.slots) : undefined}
+            >
               {group.slots.map((slot) => slot.work ? (
                 <button
                   type="button"

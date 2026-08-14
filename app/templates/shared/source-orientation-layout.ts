@@ -74,10 +74,17 @@ export function buildSourceOrientationSlots<Work extends SourceOrientationWork>(
 
 export function groupSourceOrientationSlots<Slot>(slots: readonly Slot[], rowSize = 3) {
   if (!Number.isSafeInteger(rowSize) || rowSize <= 0) throw new RangeError("rowSize must be positive");
-  return Array.from(
-    { length: Math.ceil(slots.length / rowSize) },
-    (_, rowIndex) => slots.slice(rowIndex * rowSize, (rowIndex + 1) * rowSize),
-  );
+  if (slots.length === 0) return [];
+  const rowCount = Math.ceil(slots.length / rowSize);
+  const minimumRowLength = Math.floor(slots.length / rowCount);
+  const longerRowCount = slots.length % rowCount;
+  let offset = 0;
+  return Array.from({ length: rowCount }, (_, rowIndex) => {
+    const length = minimumRowLength + (rowIndex < longerRowCount ? 1 : 0);
+    const row = slots.slice(offset, offset + length);
+    offset += length;
+    return row;
+  });
 }
 
 export function justifiedPhotoColumns(slots: readonly Readonly<{ ratio: PhotoRatio }>[]) {

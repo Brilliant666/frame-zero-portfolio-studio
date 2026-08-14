@@ -250,6 +250,10 @@
 .photoChapter:nth-child(3n + 2) > :is(button, .photoPlaceholderFrame) { width: 82%; margin-left: auto; }
 .photoChapter:nth-child(3n + 3) > :is(button, .photoPlaceholderFrame) { width: 91%; margin-right: auto; }
 .photoChapter:nth-child(4n + 4) > :is(button, .photoPlaceholderFrame) { width: 76%; margin-inline: auto; }
+.photoChapter[data-photo-ratio="2:3"] > :is(button, .photoPlaceholderFrame) {
+  width: min(64%, 30rem);
+  margin-inline: auto;
+}
 .photoChapter img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .6s cubic-bezier(.2, .7, .2, 1), filter .35s ease; }
 .photoChapter button:hover img,
 .photoChapter button:focus-visible img { filter: saturate(1.05) contrast(1.02); transform: scale(1.025); }
@@ -381,7 +385,8 @@
   .photoChapter > :is(button, .photoPlaceholderFrame),
   .photoChapter:nth-child(3n + 2) > :is(button, .photoPlaceholderFrame),
   .photoChapter:nth-child(3n + 3) > :is(button, .photoPlaceholderFrame),
-  .photoChapter:nth-child(4n + 4) > :is(button, .photoPlaceholderFrame) { width: 100%; margin: 0; }
+  .photoChapter:nth-child(4n + 4) > :is(button, .photoPlaceholderFrame),
+  .photoChapter[data-photo-ratio="2:3"] > :is(button, .photoPlaceholderFrame) { width: 100%; margin: 0; }
   .photoIndex { top: .7rem; left: .7rem; }
   .photoExpand { right: .7rem; bottom: .7rem; opacity: 1; transform: none; }
   .mobileChapterCopy { display: block; padding: 1.5rem 1rem 4.5rem; border-bottom: 1px solid var(--line); }

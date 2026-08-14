@@ -69,17 +69,20 @@ const profileMetadata = {
     minimumUsefulPhotoCount: 4,
     recommendedPhotoCount: 9,
     heroSlotCount: 1,
-    landscapeDemand: { minimum: 3, recommended: 8, note: "横向主视觉与电影档案墙是主体。" },
-    portraitDemand: { minimum: 1, recommended: 1, note: "一张竖图为档案节奏提供停顿。" },
+    landscapeDemand: { minimum: 2, recommended: 2, note: "旧槽位 01 与 09 保留为独立横向主视觉和收尾宣言。" },
+    portraitDemand: { minimum: 0, recommended: 0, note: "七个画廊槽位按来源方向自适应，不强制固定竖图配额。" },
     squareDemand: { minimum: 0, recommended: 0, note: "可作回退素材，但不是设计目标。" },
     visualPriority: [
       { slotIndex: 0, level: "critical", role: "hero", note: "首屏全宽主视觉。" },
-      { slotIndex: 8, level: "high", role: "support", note: "末段宣言背景会再次使用。" },
+      { slotIndex: 8, level: "high", role: "support", note: "末段独立宣言背景，不再进入画廊。" },
     ],
     cropPressure: { level: "high", note: "主视觉与档案卡均为 cover 裁切，人物主体需留安全边距。" },
     mobileBehavior: { mode: "stack", note: "主视觉缩短，档案卡改单列/双列堆叠。" },
     secondaryPresentations: [],
-    optionalNotes: ["优先选择主体位置稳定、横向留白充足的首图。"],
+    optionalNotes: [
+      "冻结的九个槽位互斥分工：槽位 01 为主视觉、槽位 02–08 为独立画廊、槽位 09 为宣言。",
+      "优先选择主体位置稳定、横向留白充足的首图。",
+    ],
   },
   "neon-hud": {
     minimumUsefulPhotoCount: 4,
@@ -95,15 +98,18 @@ const profileMetadata = {
     cropPressure: { level: "high", note: "任一索引图都可能进入固定 16:9 主视窗。" },
     mobileBehavior: { mode: "stack", note: "主视窗、目标信息和索引在窄屏纵向排列。" },
     secondaryPresentations: [
-      { slotIndexes: allSlots(9), target: "16:9", critical: true, note: "被选中的任意素材会进入横向 HUD 主视窗。" },
+      { slotIndexes: [0, 1, 2, 3, 4, 5, 6, 7], target: "16:9", critical: true, note: "八个交互素材均可进入横向 HUD 主视窗；槽位 09 仅保留为独立宣言背景。" },
     ],
-    optionalNotes: ["人物居中或已设置 focus 的图片更适合作为可切换主视图。"],
+    optionalNotes: [
+      "冻结的九个槽位互斥分工：槽位 01–08 为交互画面，槽位 09 为独立宣言背景。",
+      "人物居中或已设置 focus 的图片更适合作为可切换主视图。",
+    ],
   },
   "film-rail": {
     minimumUsefulPhotoCount: 4,
     recommendedPhotoCount: 9,
     heroSlotCount: 1,
-    landscapeDemand: { minimum: 4, recommended: 9, note: "整套胶片轨道均按 3:2 横图组织。" },
+    landscapeDemand: { minimum: 4, recommended: 9, note: "一张独立开场主视觉加八帧胶片轨道，全部按 3:2 横图组织。" },
     portraitDemand: { minimum: 0, recommended: 0, note: "竖图不属于本模板的正式槽位需求。" },
     squareDemand: { minimum: 0, recommended: 0, note: "方图只作为裁切回退，优先补横图。" },
     visualPriority: [
@@ -112,7 +118,10 @@ const profileMetadata = {
     cropPressure: { level: "medium", note: "全部展示面统一 3:2；方向匹配时裁切压力稳定。" },
     mobileBehavior: { mode: "horizontal-rail", note: "窄屏仍保留可横向滚动与吸附的胶片轨道。" },
     secondaryPresentations: [],
-    optionalNotes: ["同一系列、相近色调的连续横图最能形成电影叙事。"],
+    optionalNotes: [
+      "冻结的九个槽位互斥分工：槽位 01 为独立开场主视觉，槽位 02–09 为八帧不重复轨道。",
+      "同一系列、相近色调的连续横图最能形成电影叙事。",
+    ],
   },
   "manga-panels": {
     minimumUsefulPhotoCount: 4,
@@ -129,7 +138,10 @@ const profileMetadata = {
     cropPressure: { level: "medium", note: "分镜比例多样，但每个槽位有明确方向目标。" },
     mobileBehavior: { mode: "stack", note: "桌面拼贴在窄屏改为按章节顺序阅读。" },
     secondaryPresentations: [],
-    optionalNotes: ["封面应使用轮廓清楚、上下留有标题空间的竖图。"],
+    optionalNotes: [
+      "冻结的九个槽位互斥分工：槽位 01 为封面，槽位 02–09 为八格独立分镜。",
+      "封面应使用轮廓清楚、上下留有标题空间的竖图。",
+    ],
   },
   "prism-liquid": {
     minimumUsefulPhotoCount: 4,
@@ -146,7 +158,7 @@ const profileMetadata = {
     cropPressure: { level: "high", note: "固定 3:2 主视窗与不规则 clip-path 会放大边缘裁切。" },
     mobileBehavior: { mode: "stack", note: "流体组图在手机端拆成纵向卡组，保留主次。" },
     secondaryPresentations: [
-      { slotIndexes: [0], target: "3:2", critical: true, note: "首槽始终进入固定 3:2 棱镜主视窗。" },
+      { slotIndexes: allSlots(9), target: "3:2", critical: true, note: "九个可选槽位中的任意照片都可能进入固定 3:2 棱镜主视窗。" },
     ],
     optionalNotes: ["主图与全景图应避免把关键主体压在画面四角。"],
   },
@@ -200,7 +212,10 @@ const profileMetadata = {
     cropPressure: { level: "medium", note: "封面与章节都使用 cover，但比例与正式槽位一致。" },
     mobileBehavior: { mode: "stack", note: "双页与黏性章节在手机端按阅读顺序展开。" },
     secondaryPresentations: [],
-    optionalNotes: ["封面和三张宽幅章节图应优先保持同一组视觉语言。"],
+    optionalNotes: [
+      "桌面端的 2:3 章节以受限宽度居中呈现，移动端恢复全宽阅读。",
+      "封面和三张宽幅章节图应优先保持同一组视觉语言。",
+    ],
   },
   "polaroid-field": {
     minimumUsefulPhotoCount: 5,

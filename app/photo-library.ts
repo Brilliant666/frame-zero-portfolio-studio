@@ -163,6 +163,27 @@ export function formatFocusPosition(x: number, y: number) {
   return `${cleanPercentage(clampPercentage(x))}% ${cleanPercentage(clampPercentage(y))}%`;
 }
 
+export function generatedFrameTitle(slotIndex: number) {
+  const safeSlotIndex = Number.isInteger(slotIndex) && slotIndex >= 0 ? slotIndex : 0;
+  return `FRAME ${String(safeSlotIndex + 1).padStart(2, "0")}`;
+}
+
+/**
+ * Moves an existing work without making a system-generated FRAME label stale.
+ * Human-authored titles are deliberately preserved.
+ */
+export function retargetWorkToSlot(work: Work, slotIndex: number): Work {
+  const safeSlotIndex = Number.isInteger(slotIndex) && slotIndex >= 0 ? slotIndex : 0;
+  const previousSlotIndex = Number.isInteger(work.slotIndex) && (work.slotIndex as number) >= 0
+    ? work.slotIndex as number
+    : null;
+  const title = previousSlotIndex !== null && work.title === generatedFrameTitle(previousSlotIndex)
+    ? generatedFrameTitle(safeSlotIndex)
+    : work.title;
+
+  return { ...work, slotIndex: safeSlotIndex, title };
+}
+
 export function assetToWork(asset: PhotoAsset, slotIndex: number): Work {
   const safeSlotIndex = Number.isInteger(slotIndex) && slotIndex >= 0 ? slotIndex : 0;
   const codeSuffix = asset.id.slice(0, 8).toUpperCase();
@@ -172,7 +193,7 @@ export function assetToWork(asset: PhotoAsset, slotIndex: number): Work {
     slotIndex: safeSlotIndex,
     locked: false,
     code: `P-${codeSuffix}`,
-    title: `FRAME ${String(safeSlotIndex + 1).padStart(2, "0")}`,
+    title: generatedFrameTitle(safeSlotIndex),
     subtitle: `LOCAL LIBRARY / ${asset.orientation.toUpperCase()}`,
     image: asset.variants.full.src,
     preview: asset.variants.card.src,
@@ -337,7 +358,7 @@ export function autoComposeTemplateWorks(
       const asset = availableAssets[index];
       const existing = existingByAssetId.get(asset.id);
       slots.set(slotIndex, existing
-        ? { ...existing, slotIndex, locked: false }
+        ? { ...retargetWorkToSlot(existing, slotIndex), locked: false }
         : assetToWork(asset, slotIndex));
     }
     return [...slots.values()].sort((left, right) => (left.slotIndex ?? 0) - (right.slotIndex ?? 0));
@@ -366,7 +387,7 @@ export function autoComposeTemplateWorks(
     if (!isPhotoAssetCompatibleWithSlot(asset, slotRatios[slotIndex], isAdaptiveSlot(slotIndex))) continue;
     const existing = existingByAssetId.get(asset.id);
     slots.set(slotIndex, existing
-      ? { ...existing, slotIndex, locked: false }
+      ? { ...retargetWorkToSlot(existing, slotIndex), locked: false }
       : assetToWork(asset, slotIndex));
     usedAssetIds.add(asset.id);
   }

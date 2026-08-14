@@ -8,11 +8,24 @@ export type TemplateSlotOrientationMode = "fixed" | "source-adaptive";
 // Character Select is entirely source-adaptive. The remaining templates keep
 // only their structural hero/cover/feature slots fixed; ordinary gallery slots
 // present each source as 3:2 or 2:3 without changing its stable slot identity.
+const cinematicLightStructuralSlots = Object.freeze([
+  0, // Existing hero slot.
+  8, // Existing closing-statement slot.
+]);
+const neonHudStructuralSlots = Object.freeze([
+  0, // Existing HUD opening target.
+  8, // Existing manifesto background.
+]);
+const mangaPanelStructuralSlots = Object.freeze([
+  0, // Existing portrait cover.
+  2, 6, // Existing wide storyboard features.
+]);
+
 const fixedSlotIndexesByTemplate: Readonly<Record<TemplateId, "all" | readonly number[]>> = Object.freeze({
-  "cinematic-light": Object.freeze([0, 8]),
-  "neon-hud": Object.freeze([0, 8]),
+  "cinematic-light": cinematicLightStructuralSlots,
+  "neon-hud": neonHudStructuralSlots,
   "film-rail": "all",
-  "manga-panels": Object.freeze([0, 2, 6]),
+  "manga-panels": mangaPanelStructuralSlots,
   "prism-liquid": Object.freeze([0, 1, 5]),
   "orbital-portal": "all",
   "archive-os": Object.freeze([0]),

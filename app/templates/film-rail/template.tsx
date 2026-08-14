@@ -7,6 +7,7 @@ import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import type { TemplateProps } from "../types";
 import styles from "./film-rail.module.css";
+import { splitFilmRailSlots } from "./slot-plan";
 
 const filmRatios = getTemplateSlotRatios("film-rail");
 
@@ -21,8 +22,8 @@ export default function FilmRailTemplate({
   onOpenWork,
 }: TemplateProps) {
   const railRef = useRef<HTMLDivElement>(null);
-  const filmSlots = buildPhotoSlots(works, filmRatios, { templateId: "film-rail" });
-  const leadSlot = filmSlots.find((slot) => slot.work) ?? filmSlots[0];
+  const photoSlots = buildPhotoSlots(works, filmRatios, { templateId: "film-rail" });
+  const { hero: leadSlot, frames: filmSlots } = splitFilmRailSlots(photoSlots);
   const leadWork = leadSlot.work;
 
   const moveRail = (direction: -1 | 1) => {
@@ -73,7 +74,11 @@ export default function FilmRailTemplate({
           </dl>
         </div>
 
-        <div className={styles.heroVisual}>
+        <div
+          className={styles.heroVisual}
+          data-film-photo-role="hero"
+          data-photo-slot={leadSlot.index + 1}
+        >
           <div className={styles.heroFilm}>
             <span className={styles.filmEdge} aria-hidden="true" />
             {leadWork ? (
@@ -105,7 +110,7 @@ export default function FilmRailTemplate({
         <div className={styles.sectionHeading}>
           <div>
             <p>ROLL 01 / SELECTED NEGATIVES</p>
-            <h2 id="film-heading">九格连续放映</h2>
+            <h2 id="film-heading">八格连续放映</h2>
           </div>
           <p>左右拖动胶片，或使用帧号时间轴定位。点击任意画面查看完整作品。</p>
           <div className={styles.railControls} aria-label="胶片轨道控制">
@@ -122,7 +127,8 @@ export default function FilmRailTemplate({
               return (
               <article
                 className={styles.frame}
-                data-photo-slot={index + 1}
+                data-film-photo-role="frame"
+                data-photo-slot={slot.index + 1}
                 data-photo-ratio={slot.ratio}
                 id={`film-frame-${index + 1}`}
                 key={work?.code ?? `film-placeholder-${index}`}

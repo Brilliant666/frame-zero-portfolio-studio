@@ -15,6 +15,7 @@ import {
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
+import { buildPolaroidFieldLayout } from "./field-layout";
 import {
   constrainView,
   fitRectsToViewport,
@@ -26,33 +27,16 @@ import styles from "./polaroid-field.module.css";
 
 type DragState = { pointerId: number; startX: number; startY: number; originX: number; originY: number };
 type PolaroidStyle = CSSProperties & { "--rotation": string; "--delay": string };
+type FieldCanvasStyle = CSSProperties & {
+  "--field-canvas-width": string;
+  "--field-canvas-height": string;
+};
 
 const INITIAL_VIEW: ViewState = { x: 0, y: 0, scale: 1 };
 const PREFERRED_MIN_SCALE = 0.72;
 const MAX_SCALE = 1.28;
 const FIT_INSET = 32;
 const POLAROID_RATIOS = getTemplateSlotRatios("polaroid-field");
-
-const placements = [
-  { left: "6%", top: "8%", width: "25rem", rotation: "-7deg", z: 5, tone: "coral" },
-  { left: "38%", top: "4%", width: "21rem", rotation: "4deg", z: 3, tone: "blue" },
-  { left: "69%", top: "12%", width: "24rem", rotation: "-2deg", z: 7, tone: "ink" },
-  { left: "18%", top: "43%", width: "20rem", rotation: "6deg", z: 8, tone: "blue" },
-  { left: "47%", top: "35%", width: "27rem", rotation: "-4deg", z: 12, tone: "coral" },
-  { left: "77%", top: "48%", width: "19rem", rotation: "8deg", z: 4, tone: "sand" },
-  { left: "3%", top: "69%", width: "23rem", rotation: "3deg", z: 6, tone: "ink" },
-  { left: "35%", top: "71%", width: "21rem", rotation: "-8deg", z: 9, tone: "sand" },
-  { left: "64%", top: "72%", width: "26rem", rotation: "5deg", z: 11, tone: "coral" },
-] as const;
-
-const threads = [
-  { left: "18%", top: "25%", width: "28%", rotation: "-7deg" },
-  { left: "50%", top: "19%", width: "26%", rotation: "13deg" },
-  { left: "27%", top: "52%", width: "31%", rotation: "-5deg" },
-  { left: "59%", top: "50%", width: "26%", rotation: "11deg" },
-  { left: "14%", top: "76%", width: "28%", rotation: "7deg" },
-  { left: "45%", top: "79%", width: "27%", rotation: "-4deg" },
-] as const;
 
 const stars = [
   [14, 31], [33, 18], [55, 27], [82, 31], [11, 61], [39, 57], [68, 61], [91, 67], [24, 86], [56, 89], [79, 85],
@@ -73,6 +57,10 @@ export default function PolaroidFieldTemplate({
   const fieldSlots = useMemo(
     () => buildPhotoSlots(works, POLAROID_RATIOS, { templateId: "polaroid-field" }),
     [works],
+  );
+  const fieldLayout = useMemo(
+    () => buildPolaroidFieldLayout(fieldSlots.map((slot) => slot.ratio)),
+    [fieldSlots],
   );
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -426,8 +414,11 @@ export default function PolaroidFieldTemplate({
             id="polaroid-field-canvas"
             className={styles.fieldCanvas}
             style={{
+              "--field-canvas-width": `${fieldLayout.canvasWidth}rem`,
+              "--field-canvas-height": `${fieldLayout.canvasHeight}rem`,
               transform: `translate3d(calc(-50% + ${view.x}px), calc(-50% + ${view.y}px), 0) scale(${view.scale})`,
-            }}
+            } as FieldCanvasStyle}
+            data-field-layout="ratio-aware-v1"
           >
             <div className={styles.canvasTitle} aria-hidden="true">
               <span>FRAME</span>
@@ -435,11 +426,16 @@ export default function PolaroidFieldTemplate({
               <small>PRIVATE CONSTELLATION / {content.profile.city}</small>
             </div>
 
-            {threads.map((thread, index) => (
+            {fieldLayout.threads.map((thread, index) => (
               <i
                 className={styles.thread}
                 key={`thread-${index}`}
-                style={{ left: thread.left, top: thread.top, width: thread.width, transform: `rotate(${thread.rotation})` }}
+                style={{
+                  left: `${thread.left}rem`,
+                  top: `${thread.top}rem`,
+                  width: `${thread.width}rem`,
+                  transform: `rotate(${thread.rotation}deg)`,
+                }}
                 aria-hidden="true"
               />
             ))}
@@ -453,14 +449,14 @@ export default function PolaroidFieldTemplate({
             ))}
 
             {fieldSlots.map((slot, index) => {
-              const placement = placements[index];
+              const placement = fieldLayout.placements[index];
               const work = slot.work;
               const placementStyle = {
-                left: placement.left,
-                top: placement.top,
-                width: placement.width,
-                zIndex: placement.z,
-                "--rotation": placement.rotation,
+                left: `${placement.left}rem`,
+                top: `${placement.top}rem`,
+                width: `${placement.width}rem`,
+                zIndex: placement.zIndex,
+                "--rotation": `${placement.rotation}deg`,
                 "--delay": `${index * 65}ms`,
               } as PolaroidStyle;
 
@@ -470,6 +466,7 @@ export default function PolaroidFieldTemplate({
                     className={`${styles.polaroid} ${styles.polaroidPlaceholder}`}
                     data-polaroid={String(index + 1)}
                     data-rotation={placement.rotation}
+                    data-layout-band={placement.band}
                     data-tone={placement.tone}
                     data-ratio={slot.ratio}
                     data-photo-slot={slot.index}
@@ -496,6 +493,7 @@ export default function PolaroidFieldTemplate({
                   className={styles.polaroid}
                   data-polaroid={String(index + 1)}
                   data-rotation={placement.rotation}
+                  data-layout-band={placement.band}
                   data-tone={placement.tone}
                   data-ratio={slot.ratio}
                   data-photo-slot={slot.index}

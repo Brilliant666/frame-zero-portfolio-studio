@@ -154,7 +154,7 @@
 .endLeader i { width: 6rem; border-top: 1px solid currentColor; }
 
 .timeline { display: grid; grid-template-columns: auto 1fr auto; gap: 1.5rem; align-items: center; width: min(calc(100% - 2.4rem), 92rem); margin: 2rem auto 0; font: .5rem var(--font-geist-mono), monospace; letter-spacing: .1em; }
-.timeline > div { display: grid; grid-template-columns: repeat(9, 1fr); position: relative; }
+.timeline > div { display: grid; grid-template-columns: repeat(8, 1fr); position: relative; }
 .timeline > div::before { content: ""; position: absolute; top: .24rem; right: 0; left: 0; border-top: 1px solid var(--line); }
 .timelineFrame { position: relative; z-index: 1; display: grid; justify-items: center; gap: .45rem; }
 .timelineFrame i { width: .52rem; height: .52rem; border: 1px solid var(--ink); border-radius: 50%; background: var(--paper); transition: background .2s ease, transform .2s ease; }

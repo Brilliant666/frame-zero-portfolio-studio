@@ -17,6 +17,7 @@ import {
   isWorkCompatibleWithSlot,
   parseFocusPosition,
   parsePhotoLibraryManifest,
+  retargetWorkToSlot,
   type PhotoAsset,
 } from "../../photo-library";
 import { buildPhotoAssetReferenceMap } from "../../photo-library-references";
@@ -371,7 +372,7 @@ export default function LayoutWorkspace() {
         work.assetId !== asset.id && slotIndexOf(work, index) !== activeSlot
       ));
       const next = existing
-        ? { ...existing, slotIndex: activeSlot }
+        ? retargetWorkToSlot(existing, activeSlot)
         : assetToWork(asset, activeSlot);
       return [...remaining, next].sort((left, right) => slotIndexOf(left, 0) - slotIndexOf(right, 0));
     });
@@ -394,8 +395,8 @@ export default function LayoutWorkspace() {
     const destination = slotIndex + direction;
     updateTemplateWorks((works) => works.map((work, index) => {
       const currentSlot = slotIndexOf(work, index);
-      if (currentSlot === slotIndex) return { ...work, slotIndex: destination };
-      if (currentSlot === destination) return { ...work, slotIndex };
+      if (currentSlot === slotIndex) return retargetWorkToSlot(work, destination);
+      if (currentSlot === destination) return retargetWorkToSlot(work, slotIndex);
       return work;
     }).sort((left, right) => slotIndexOf(left, 0) - slotIndexOf(right, 0)));
     chooseSlot(destination);

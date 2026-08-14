@@ -31,7 +31,11 @@ human recheck after moving the inspected template identity above the structure
 diagram and using one slot-direction plan for both the summary and material
 guidance. `HR-009` is ready for human recheck after compacting the material
 layout recommendation into an optional slot index and restoring the actual
-editing workspace as the page's primary working surface.
+editing workspace as the page's primary working surface. `HR-010` is ready for
+human recheck after correcting real-template repetition and mixed-orientation
+geometry across the eleven-template review. The existing 39-photo local
+library was used only as uncommitted validation input; the frozen V1 slot
+counts, identities, `SiteDocumentV1`, and legacy adapter remain unchanged.
 
 This is not an automated backlog. Codex handles exactly one concrete human
 request, validates it in proportion to risk, creates one focused commit, pushes
@@ -88,6 +92,7 @@ allowed in this lane.
 | `HR-007` | 2026-08-12 | Admin 页面模板／流程衔接 | 精简模板详情：移除重复的顶部三栏、负向状态 badge 与独立“查看模板效果”；保留 11 项选择列表，以不含用户素材的中性结构图表达模板差异；“设为主页模板”只更新 draft `activeTemplate` 并进入素材排版，当前 draft 则直接进入素材排版。模块 4 `/admin/layout` 继续独占素材库、推荐生成、预览、采用与 `templateWorks` 编辑。 | `READY_FOR_HUMAN_RECHECK` | `fix: simplify template choice and continue to layout` | `git diff --check`; `npm run lint`; full `npm test`; Standard Next build/bundle; legacy runtime/bundle; Public Safety; deterministic 11-preview regeneration; Chrome 1440px/390px template selection → unsaved layout transition → reload-without-save | 待人工复检；不得推导 `HUMAN_APPROVED` |
 | `HR-008` | 2026-08-12 | Admin 模板详情／素材指引 | 将模板名称作为详情首要标题，并把必要状态与简介一并置于结构图之前；模板详情中的槽位构成与素材准备建议共用同一逐槽方向计划，素材排版摘要沿用该计划，统一表达固定横图、固定竖图与任意方向槽位，并明确 16:9 只是展示裁切而非需要额外准备的素材格式。 | `READY_FOR_HUMAN_RECHECK` | `fix: align template details with material guidance` | `git diff --check`; focused material-profile/Admin/rendered tests; full `npm test`; lint; Standard Next and legacy build/bundle; Public Safety; Chrome desktop/responsive heading order, all-11 slot-count consistency, Prism 2/1/6, layout-summary parity, zero overflow and zero console errors | 待人工复检；不得推导 `HUMAN_APPROVED` |
 | `HR-009` | 2026-08-13 | Admin 素材排版／推荐索引 | 修复“漂浮拍立得”在素材排版页中因竖向 hero 按真实 2:3 比例跨列撑高而形成的超长错位；推荐区默认折叠，展开后使用不再跨列撑高的紧凑槽位索引，继续显示真实方向、槽位身份与优先级，正式结构与裁切仍由“预览推荐排版”承担。 | `READY_FOR_HUMAN_RECHECK` | `fix: compact the material recommendation index` | Node 22.13.1 focused Admin/preview tests, ESLint, TypeScript and diff check; full repository gates; Chrome desktop/responsive collapsed/expanded height, zero-overflow, 24-item pagination and no-draft-mutation checks | 待人工复检；不得推导 `HUMAN_APPROVED` |
+| `HR-010` | 2026-08-14 | 正式模板排版／真实素材复检 | 使用现有 39 张本地素材完整修复本轮人工指出并经全模板自查确认的问题：漂浮拍立得按真实横竖比例避免拥挤；霓虹取景器、明亮电影感与漫画分镜册不再用旧固定宽度承载自适应横竖素材；在冻结 V1 槽位内让 hero／cover／statement 与主体画廊互斥使用稳定身份，不再静默重复同一素材；其余模板同步完成真实素材桌面／窄屏复检。 | `READY_FOR_HUMAN_RECHECK` | `fix: stabilize real-material template layouts` | focused orientation, frozen-slot identity, collision and adapter-capacity tests; full repository gates; Chrome all-eleven desktop/responsive validation using the uncommitted 39-photo library | 待人工复检；不得推导 `HUMAN_APPROVED` |
 
 The bootstrap did not consume `HR-001`; the first explicit request above does.
 A completed implementation may be reported as `READY_FOR_HUMAN_RECHECK`; only
@@ -102,15 +107,15 @@ Allowed states are `PENDING_HUMAN_REVIEW`, `HUMAN_REVIEW_IN_PROGRESS`,
 
 | Template | Human status | Human decision |
 | --- | --- | --- |
-| `cinematic-light` | `READY_FOR_HUMAN_RECHECK` | HR-006 保留结构性／hero 固定方向，普通 gallery 槽按来源方向使用 3:2／2:3；需用真实横竖组合复检 desktop/mobile 裁切与层级。 |
-| `neon-hud` | `READY_FOR_HUMAN_RECHECK` | HR-006 保留结构性／hero 固定方向与 HUD 二次展示，普通 gallery 槽按来源方向使用 3:2／2:3；需真实素材复检。 |
-| `film-rail` | `READY_FOR_HUMAN_RECHECK` | HR-006 保持全横向正式槽位；需用真实横竖素材确认拒绝强跨方向与 desktop/mobile 轨道表现。 |
-| `manga-panels` | `READY_FOR_HUMAN_RECHECK` | HR-006 保留竖向封面等结构槽，普通 gallery 槽按来源方向使用 3:2／2:3；需真实素材复检。 |
-| `prism-liquid` | `READY_FOR_HUMAN_RECHECK` | HR-006 保留主视觉／全景等结构槽，普通 gallery 槽按来源方向使用 3:2／2:3；需真实素材复检。 |
+| `cinematic-light` | `READY_FOR_HUMAN_RECHECK` | HR-010 保持冻结九槽：01 为 hero、02–08 为七张独立画廊素材、09 为 statement；画廊按真实方向均衡为 3／2／2 张比例感知行，不再把结构图重复进画廊。 |
+| `neon-hud` | `READY_FOR_HUMAN_RECHECK` | HR-010 保持冻结九槽：01–08 为八张交互素材、09 为独立 manifesto；索引画廊按真实方向均衡为 3／3／2 张比例感知行，HUD 内的 stage／dock 投射仍是明确交互。 |
+| `film-rail` | `READY_FOR_HUMAN_RECHECK` | HR-010 保持冻结九槽：01 为独立开场 hero、02–09 为八帧轨道，开场图不再作为轨道首帧重复。 |
+| `manga-panels` | `READY_FOR_HUMAN_RECHECK` | HR-010 保持冻结九槽：01 为封面、02–09 为八格独立 storyboard；普通分镜按真实方向均衡为 3／3／2 张比例感知行。 |
+| `prism-liquid` | `READY_FOR_HUMAN_RECHECK` | HR-010 让两组三联画按真实横竖比例计算列宽，减少混合方向下的无效留白，并补齐所有可进入主视窗素材的 3:2 展示裁切说明。 |
 | `orbital-portal` | `READY_FOR_HUMAN_RECHECK` | HR-006 保持全竖向正式槽位与横向门户二次展示；需真实素材复检 desktop/mobile 裁切与层级。 |
 | `archive-os` | `READY_FOR_HUMAN_RECHECK` | HR-006 保留结构性槽，普通 gallery 槽按来源方向使用 3:2／2:3；需真实素材复检高密度 desktop/mobile 表现。 |
-| `editorial-duet` | `READY_FOR_HUMAN_RECHECK` | HR-006 保留竖向封面等结构槽，普通 gallery 槽按来源方向使用 3:2／2:3；需真实素材复检。 |
-| `polaroid-field` | `READY_FOR_HUMAN_RECHECK` | HR-006 保留中央竖向 hero 等结构槽，普通外围槽按来源方向使用 3:2／2:3；需真实素材复检 FIT、裁切与层级。 |
+| `editorial-duet` | `READY_FOR_HUMAN_RECHECK` | HR-010 将桌面 2:3 章节限制为居中且不超过 30rem／64% 的画面，移动端仍恢复全宽阅读。 |
+| `polaroid-field` | `READY_FOR_HUMAN_RECHECK` | HR-010 按九张素材的真实比例、旋转后边界、安全边距与最小间距重新计算星图；七个自适应槽的 128 种方向组合均无碰撞或越界。 |
 | `character-select` | `READY_FOR_HUMAN_RECHECK` | 人工拒绝固定 1:1 roster；HR-004/HR-006 保持全槽来源方向自适应的 3:2／2:3 三行 justified 候选，需真实横竖组合复检。 |
 | `museum-depth` | `READY_FOR_HUMAN_RECHECK` | HR-006 保留展厅 hero／结构槽方向，普通 gallery 槽按来源方向使用 3:2／2:3；需真实素材复检 desktop/mobile 裁切与层级。 |
 

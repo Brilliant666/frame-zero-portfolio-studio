@@ -62,9 +62,166 @@ function asset(id, aspectRatio, orientation) {
 
 test("template catalog slot counts stay aligned with their ratio contracts", async (t) => {
   const { templateCatalog } = await importTypeScriptModule(t, "app/templates/catalog.ts");
+  const adapterSource = await fs.readFile(new URL("../app/legacy-site-content-adapter.ts", import.meta.url), "utf8");
   assert.equal(templateCatalog.length, 11);
   for (const template of templateCatalog) {
     assert.equal(template.photoSlots, template.slotRatios.length, template.id);
+    assert.match(
+      adapterSource,
+      new RegExp(`"${template.id}": Object\\.freeze\\(\\{ templateVersion: TEMPLATE_VERSION, slotCount: ${template.photoSlots} \\}\\)`),
+      `${template.id} must stay aligned with the frozen V1 legacy adapter capacity`,
+    );
+  }
+});
+
+test("cinematic light partitions nine frozen slots into independent hero, archive, and statement surfaces", async (t) => {
+  const {
+    CINEMATIC_LIGHT_ARCHIVE_SLOT_INDEXES,
+    CINEMATIC_LIGHT_HERO_SLOT_INDEX,
+    CINEMATIC_LIGHT_SLOT_COUNT,
+    CINEMATIC_LIGHT_STATEMENT_SLOT_INDEX,
+    splitCinematicLightSlots,
+  } = await importTypeScriptModule(t, "app/templates/cinematic-light/slot-plan.ts");
+  const { templateCatalog } = await importTypeScriptModule(t, "app/templates/catalog.ts");
+  const cinematic = templateCatalog.find(({ id }) => id === "cinematic-light");
+
+  assert.equal(CINEMATIC_LIGHT_SLOT_COUNT, 9);
+  assert.equal(cinematic.photoSlots, CINEMATIC_LIGHT_SLOT_COUNT);
+  assert.deepEqual(
+    [CINEMATIC_LIGHT_HERO_SLOT_INDEX, ...CINEMATIC_LIGHT_ARCHIVE_SLOT_INDEXES, CINEMATIC_LIGHT_STATEMENT_SLOT_INDEX].sort((left, right) => left - right),
+    Array.from({ length: 9 }, (_, index) => index),
+  );
+
+  const legacySlots = Array.from({ length: 9 }, (_, slotIndex) => ({ assetId: `legacy-${slotIndex}`, slotIndex }));
+  const split = splitCinematicLightSlots(legacySlots);
+  assert.equal(split.hero.assetId, "legacy-0");
+  assert.equal(split.statement.assetId, "legacy-8");
+  assert.deepEqual(split.archive.flatMap((slot) => slot ? [slot.assetId] : []), [
+    "legacy-1", "legacy-2", "legacy-3", "legacy-4", "legacy-5", "legacy-6", "legacy-7",
+  ]);
+  assert.equal(new Set([
+    split.hero.assetId,
+    ...split.archive.flatMap((slot) => slot ? [slot.assetId] : []),
+    split.statement.assetId,
+  ]).size, 9, "legacy assets must render once without a silent duplicate projection");
+});
+
+test("cinematic light auto composition fills all nine frozen slots with unique assets", async (t) => {
+  const { autoComposeTemplateWorks } = await importTypeScriptModule(t, "app/photo-library.ts");
+  const { templateCatalog } = await importTypeScriptModule(t, "app/templates/catalog.ts");
+  const cinematic = templateCatalog.find(({ id }) => id === "cinematic-light");
+  const assets = Array.from({ length: 39 }, (_, index) => index % 2 === 0
+    ? asset(`cinematic-landscape-${String(index).padStart(2, "0")}`, 3 / 2, "landscape")
+    : asset(`cinematic-portrait-${String(index).padStart(2, "0")}`, 2 / 3, "portrait"));
+  const works = autoComposeTemplateWorks(assets, cinematic.slotRatios, [], { templateId: cinematic.id });
+
+  assert.equal(works.length, 9);
+  assert.deepEqual(works.map(({ slotIndex }) => slotIndex), Array.from({ length: 9 }, (_, index) => index));
+  assert.equal(new Set(works.map(({ assetId }) => assetId)).size, 9);
+});
+
+test("cinematic renderer never maps structural hero or statement slots into the archive", async () => {
+  const template = await fs.readFile(new URL("../app/templates/cinematic-light/template.tsx", import.meta.url), "utf8");
+
+  assert.match(template, /splitCinematicLightSlots\(photoSlots\)/);
+  assert.match(template, /groupSourceOrientationSlots\(archiveSlots\)/);
+  assert.match(template, /archiveRows\.map\(/);
+  assert.doesNotMatch(template, /photoSlots\.map\(/);
+  assert.match(template, /data-cinematic-photo-role="hero"/);
+  assert.match(template, /data-cinematic-photo-role="archive"/);
+  assert.match(template, /data-cinematic-photo-role="statement"/);
+  assert.match(template, /data-cinematic-archive-position=/);
+});
+
+test("film rail partitions nine frozen slots into one hero and eight independent frames", async (t) => {
+  const {
+    FILM_RAIL_FRAME_SLOT_INDEXES,
+    FILM_RAIL_HERO_SLOT_INDEX,
+    FILM_RAIL_SLOT_COUNT,
+    splitFilmRailSlots,
+  } = await importTypeScriptModule(t, "app/templates/film-rail/slot-plan.ts");
+  const { templateCatalog } = await importTypeScriptModule(t, "app/templates/catalog.ts");
+  const film = templateCatalog.find(({ id }) => id === "film-rail");
+
+  assert.equal(FILM_RAIL_SLOT_COUNT, 9);
+  assert.equal(film.photoSlots, FILM_RAIL_SLOT_COUNT);
+  assert.deepEqual(
+    [FILM_RAIL_HERO_SLOT_INDEX, ...FILM_RAIL_FRAME_SLOT_INDEXES].sort((left, right) => left - right),
+    Array.from({ length: 9 }, (_, index) => index),
+  );
+
+  const legacySlots = Array.from({ length: 9 }, (_, slotIndex) => ({ assetId: `legacy-film-${slotIndex}`, slotIndex }));
+  const split = splitFilmRailSlots(legacySlots);
+  assert.equal(split.hero.assetId, "legacy-film-0");
+  assert.deepEqual(split.frames.flatMap((slot) => slot ? [slot.assetId] : []), [
+    "legacy-film-1", "legacy-film-2", "legacy-film-3", "legacy-film-4",
+    "legacy-film-5", "legacy-film-6", "legacy-film-7", "legacy-film-8",
+  ]);
+  assert.equal(new Set([
+    split.hero.assetId,
+    ...split.frames.flatMap((slot) => slot ? [slot.assetId] : []),
+  ]).size, 9, "legacy film assets must render once without reusing the hero as frame one");
+});
+
+test("film rail auto composition fills its hero and all eight frames uniquely", async (t) => {
+  const { autoComposeTemplateWorks } = await importTypeScriptModule(t, "app/photo-library.ts");
+  const { templateCatalog } = await importTypeScriptModule(t, "app/templates/catalog.ts");
+  const film = templateCatalog.find(({ id }) => id === "film-rail");
+  const assets = Array.from({ length: 19 }, (_, index) => (
+    asset(`film-landscape-${String(index).padStart(2, "0")}`, 3 / 2, "landscape")
+  ));
+  const works = autoComposeTemplateWorks(assets, film.slotRatios, [], { templateId: film.id });
+
+  assert.equal(works.length, 9);
+  assert.deepEqual(works.map(({ slotIndex }) => slotIndex), Array.from({ length: 9 }, (_, index) => index));
+  assert.equal(new Set(works.map(({ assetId }) => assetId)).size, 9);
+});
+
+test("film renderer keeps its hero outside the eight-frame rail", async () => {
+  const [template, css] = await Promise.all([
+    fs.readFile(new URL("../app/templates/film-rail/template.tsx", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/templates/film-rail/film-rail.module.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(template, /splitFilmRailSlots\(photoSlots\)/);
+  assert.doesNotMatch(template, /filmSlots\.find\(/);
+  assert.match(template, /data-film-photo-role="hero"/);
+  assert.match(template, /data-film-photo-role="frame"/);
+  assert.match(template, />八格连续放映</);
+  assert.match(css, /\.timeline > div \{[^}]*grid-template-columns:\s*repeat\(8, 1fr\)/);
+  assert.doesNotMatch(css, /\.timeline > div \{[^}]*repeat\(9, 1fr\)/);
+});
+
+test("neon and manga keep their frozen nine-slot selections while separating structural surfaces", async (t) => {
+  const { assetToWork, autoComposeTemplateWorks } = await importTypeScriptModule(t, "app/photo-library.ts");
+  const { templateCatalog } = await importTypeScriptModule(t, "app/templates/catalog.ts");
+  const { templateSlotOrientationMode } = await importTypeScriptModule(t, "app/photo-ratio-policy.ts");
+
+  for (const templateId of ["neon-hud", "manga-panels"]) {
+    const template = templateCatalog.find(({ id }) => id === templateId);
+    const assets = Array.from({ length: 9 }, (_, slotIndex) => {
+      const ratio = templateId === "manga-panels" && slotIndex === 0 ? 2 / 3 : 3 / 2;
+      return asset(`${templateId}-legacy-${slotIndex}`, ratio, ratio < 1 ? "portrait" : "landscape");
+    });
+    const legacyWorks = assets.map((item, slotIndex) => ({
+      ...assetToWork(item, slotIndex),
+      locked: true,
+    }));
+    const works = autoComposeTemplateWorks(
+      assets,
+      template.slotRatios,
+      legacyWorks,
+      { templateId },
+    );
+
+    assert.equal(template.photoSlots, 9, templateId);
+    assert.deepEqual(works.map(({ slotIndex }) => slotIndex), [0, 1, 2, 3, 4, 5, 6, 7, 8], templateId);
+    assert.equal(new Set(works.map(({ assetId }) => assetId)).size, 9, templateId);
+    assert.equal(
+      templateSlotOrientationMode(templateId, 8),
+      templateId === "neon-hud" ? "fixed" : "source-adaptive",
+      templateId,
+    );
   }
 });
 
@@ -218,6 +375,54 @@ test("character presentation keeps every nine-photo orientation permutation in t
   }
 });
 
+test("prism triptychs justify every mixed-direction row while preserving feature and panorama slots", async (t) => {
+  const { justifiedPhotoColumns } = await importTypeScriptModule(t, "app/templates/shared/source-orientation-layout.ts");
+  const [template, css] = await Promise.all([
+    fs.readFile(new URL("../app/templates/prism-liquid/template.tsx", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/templates/prism-liquid/template.module.css", import.meta.url), "utf8"),
+  ]);
+
+  for (const slotIndexes of [[2, 3, 4], [6, 7, 8]]) {
+    for (let orientationMask = 0; orientationMask < 2 ** slotIndexes.length; orientationMask += 1) {
+      const row = slotIndexes.map((index, columnIndex) => ({
+        index,
+        ratio: (orientationMask & (1 << columnIndex)) === 0 ? "3:2" : "2:3",
+      }));
+      const fractions = justifiedPhotoColumns(row).split(" ").map((value) => Number.parseFloat(value));
+      const normalizedHeights = fractions.map((fraction, index) => (
+        fraction / (row[index].ratio === "2:3" ? 2 / 3 : 3 / 2)
+      ));
+      assert.ok(normalizedHeights.every((height) => Math.abs(height - normalizedHeights[0]) < 1e-9));
+    }
+  }
+
+  assert.match(template, /gallerySlots\.slice\(0, 2\).*justified: false/);
+  assert.match(template, /gallerySlots\.slice\(2, 5\).*justified: true/);
+  assert.match(template, /gallerySlots\.slice\(5, 6\).*justified: false/);
+  assert.match(template, /gallerySlots\.slice\(6, 9\).*justified: true/);
+  assert.match(template, /prismTriptychRowStyle\(group\.slots\)/);
+  assert.match(template, /data-prism-justified-row=/);
+  assert.match(css, /grid-template-columns:\s*var\(--prism-triptych-columns\)/);
+  assert.doesNotMatch(css, /\.galleryTriptych\s*\{[^}]*repeat\(3,\s*minmax\(0,\s*1fr\)\)/s);
+});
+
+test("editorial portrait chapters are centered and width-capped only on desktop", async () => {
+  const [template, css] = await Promise.all([
+    fs.readFile(new URL("../app/templates/editorial-duet/template.tsx", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/templates/editorial-duet/template.module.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(template, /className=\{styles\.photoChapter\}[\s\S]*data-photo-ratio=\{slot\.ratio\}/);
+  assert.match(
+    css,
+    /\.photoChapter\[data-photo-ratio="2:3"\]\s*>\s*:is\(button,\s*\.photoPlaceholderFrame\)\s*\{[^}]*width:\s*min\(64%,\s*30rem\);[^}]*margin-inline:\s*auto;/s,
+  );
+  assert.match(
+    css,
+    /@media \(max-width:\s*760px\)[\s\S]*\.photoChapter\[[\s\S]*width:\s*100%;\s*margin:\s*0;/,
+  );
+});
+
 test("character presentation preserves placeholders and square source identity without a 1:1 target", async (t) => {
   const { buildSourceOrientationSlots } = await importTypeScriptModule(t, "app/templates/shared/source-orientation-layout.ts");
   const fallback = ["3:2", "3:2", "16:9", "3:2", "2:3", "3:2", "16:9", "3:2", "3:2"];
@@ -287,6 +492,24 @@ test("all formal renderers opt into the shared slot-level orientation policy and
     assert.match(template, /data-photo-ratio/, templateId);
     assert.match(css, /@media\s*\(max-width:/, `${templateId} must retain its 390/320 responsive lane`);
   }
+});
+
+test("moving a work retargets only system-generated frame titles", async (t) => {
+  const {
+    assetToWork,
+    generatedFrameTitle,
+    retargetWorkToSlot,
+  } = await importTypeScriptModule(t, "app/photo-library.ts");
+  const source = assetToWork(asset("move-me", 1.5, "landscape"), 0);
+
+  const moved = retargetWorkToSlot(source, 8);
+  assert.equal(moved.slotIndex, 8);
+  assert.equal(moved.title, "FRAME 09");
+  assert.equal(generatedFrameTitle(8), "FRAME 09");
+
+  const custom = retargetWorkToSlot({ ...source, title: "MY CUSTOM TITLE" }, 8);
+  assert.equal(custom.slotIndex, 8);
+  assert.equal(custom.title, "MY CUSTOM TITLE", "human-authored titles must survive slot changes");
 });
 
 test("auto composition preserves valid locks, drops orphan locks, and leaves incompatible slots empty", async (t) => {

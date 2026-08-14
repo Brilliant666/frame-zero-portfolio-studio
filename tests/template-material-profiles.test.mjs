@@ -121,6 +121,7 @@ test("material profiles preserve differentiated implementation-driven demands", 
     [film.landscapeDemand.recommended, film.portraitDemand.recommended, film.squareDemand.recommended],
     [9, 0, 0],
   );
+  assert.equal(film.recommendedPhotoCount, 9);
   assert.equal(film.mobileBehavior.mode, "horizontal-rail");
 
   const orbital = getTemplateMaterialProfile("orbital-portal");
@@ -148,11 +149,22 @@ test("material profiles preserve differentiated implementation-driven demands", 
     [cinematic.landscapeDemand.recommended, cinematic.portraitDemand.recommended, cinematic.sourceAdaptiveDemand.recommended],
     [2, 0, 7],
   );
+  assert.equal(cinematic.recommendedPhotoCount, 9);
+  assert.deepEqual(cinematic.visualPriority.map(({ slotIndex }) => slotIndex), [0, 8]);
+
+  const neon = getTemplateMaterialProfile("neon-hud");
+  assert.equal(neon.recommendedPhotoCount, 9);
+  assert.deepEqual(
+    neon.secondaryPresentations[0].slotIndexes,
+    [0, 1, 2, 3, 4, 5, 6, 7],
+  );
+
   const manga = getTemplateMaterialProfile("manga-panels");
   assert.deepEqual(
     [manga.landscapeDemand.recommended, manga.portraitDemand.recommended, manga.sourceAdaptiveDemand.recommended],
     [2, 1, 6],
   );
+  assert.equal(manga.recommendedPhotoCount, 9);
 
   assert.equal(getTemplateMaterialProfile("archive-os").recommendedPhotoCount, 12);
   assert.equal(getTemplateMaterialProfile("museum-depth").recommendedPhotoCount, 7);
@@ -200,6 +212,15 @@ test("material profiles preserve differentiated implementation-driven demands", 
   assert.equal(
     formatTemplateMaterialDirectionSummary(prismPlan),
     "固定横图 2 张 · 固定竖图 1 张 · 任意方向 6 张",
+  );
+  assert.deepEqual(
+    getTemplateMaterialProfile("prism-liquid").secondaryPresentations[0],
+    {
+      slotIndexes: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+      target: "3:2",
+      critical: true,
+      note: "九个可选槽位中的任意照片都可能进入固定 3:2 棱镜主视窗。",
+    },
   );
 });
 

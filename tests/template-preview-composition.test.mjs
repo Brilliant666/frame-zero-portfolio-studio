@@ -197,6 +197,39 @@ test("character preview keeps intentional placeholders for every partial library
   }
 });
 
+test("neon and manga selections retain all nine frozen slots without an appended placeholder", async (t) => {
+  const { planTemplateCompositionPreview } = await importPreviewModule(t);
+
+  for (const templateId of ["neon-hud", "manga-panels"]) {
+    const assets = Array.from({ length: 9 }, (_, slotIndex) => photoAsset(
+      `${templateId}-legacy-${slotIndex}`,
+      templateId === "manga-panels" && slotIndex === 0 ? 2 / 3 : 3 / 2,
+    ));
+    const existingWorks = assets.map((asset, slotIndex) => ({
+      assetId: asset.id,
+      slotIndex,
+      locked: true,
+      code: `LEGACY-${String(slotIndex + 1).padStart(2, "0")}`,
+      title: `Legacy ${slotIndex + 1}`,
+      subtitle: "Legacy nine-slot selection",
+      image: asset.variants.full.src,
+      preview: asset.variants.card.src,
+      position: "50% 50%",
+      previewWidth: asset.variants.card.width,
+      previewHeight: asset.variants.card.height,
+      fullWidth: asset.variants.full.width,
+      enabled: true,
+    }));
+    const preview = planTemplateCompositionPreview({ templateId, assets, existingWorks });
+
+    assert.equal(preview.status, "planned", templateId);
+    assert.equal(preview.filledPhotoCount, 9, templateId);
+    assert.equal(preview.placeholderCount, 0, templateId);
+    assert.deepEqual(preview.works.map(({ slotIndex }) => slotIndex), [0, 1, 2, 3, 4, 5, 6, 7, 8], templateId);
+    assert.equal(preview.assignments.length, 9, templateId);
+  }
+});
+
 test("hybrid previews adapt only ordinary gallery slots and preserve each template's structural slots", async (t) => {
   const { planTemplateCompositionPreview, templateCatalog } = await importPreviewModule(t);
   const structuralSlots = new Map([

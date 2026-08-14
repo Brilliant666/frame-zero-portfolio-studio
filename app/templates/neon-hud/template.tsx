@@ -2,13 +2,22 @@
 
 /* eslint-disable @next/next/no-img-element -- portfolio assets include local responsive WebP derivatives. */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { getTemplateSlotRatios } from "../catalog";
-import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
+import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoSlot } from "../shared/photo-slots";
+import { groupSourceOrientationSlots, justifiedPhotoColumns } from "../shared/source-orientation-layout";
 import type { TemplateProps } from "../types";
 import styles from "./template.module.css";
 
 const neonRatios = getTemplateSlotRatios("neon-hud");
+const neonInteractiveSlotIndexes = [0, 1, 2, 3, 4, 5, 6, 7] as const;
+const neonManifestoSlotIndex = 8;
+
+type NeonArchiveRowStyle = CSSProperties & { "--neon-archive-columns": string };
+
+function neonArchiveRowStyle(slots: readonly PhotoSlot[]): NeonArchiveRowStyle {
+  return { "--neon-archive-columns": justifiedPhotoColumns(slots) };
+}
 
 export default function NeonHudTemplate({
   content,
@@ -21,16 +30,27 @@ export default function NeonHudTemplate({
   onOpenWork,
 }: TemplateProps) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const photoSlots = buildPhotoSlots(works, neonRatios, { templateId: "neon-hud" });
-  const safeIndex = Math.min(Math.max(activeIndex, 0), photoSlots.length - 1);
-  const activeSlot = photoSlots[safeIndex];
+  const photoSlots = useMemo(
+    () => buildPhotoSlots(works, neonRatios, { templateId: "neon-hud" }),
+    [works],
+  );
+  const interactiveSlots = useMemo(
+    () => neonInteractiveSlotIndexes.flatMap((slotIndex) => photoSlots[slotIndex] ? [photoSlots[slotIndex]] : []),
+    [photoSlots],
+  );
+  const archiveRows = useMemo(
+    () => groupSourceOrientationSlots(interactiveSlots),
+    [interactiveSlots],
+  );
+  const safeIndex = Math.min(Math.max(activeIndex, 0), interactiveSlots.length - 1);
+  const activeSlot = interactiveSlots[safeIndex];
   const activeWork = activeSlot.work;
-  const manifestoSlot = photoSlots[photoSlots.length - 1];
-  const manifestoWork = manifestoSlot.work;
+  const manifestoSlot = photoSlots[neonManifestoSlotIndex] ?? null;
+  const manifestoWork = manifestoSlot?.work ?? null;
 
   const move = useCallback((direction: -1 | 1) => {
-    setActiveIndex((index) => (index + direction + photoSlots.length) % photoSlots.length);
-  }, [photoSlots.length]);
+    setActiveIndex((index) => (index + direction + interactiveSlots.length) % interactiveSlots.length);
+  }, [interactiveSlots.length]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -48,8 +68,8 @@ export default function NeonHudTemplate({
   }, [move]);
 
   const frameNumber = String(safeIndex + 1).padStart(2, "0");
-  const frameTotal = String(photoSlots.length).padStart(2, "0");
-  const progress = `${((safeIndex + 1) / photoSlots.length) * 100}%`;
+  const frameTotal = String(interactiveSlots.length).padStart(2, "0");
+  const progress = `${((safeIndex + 1) / interactiveSlots.length) * 100}%`;
 
   return (
     <main className={styles.root} data-template="neon-hud">
@@ -102,6 +122,8 @@ export default function NeonHudTemplate({
               {activeWork ? (
                 <button
                   className={styles.stageButton}
+                  data-photo-slot={activeSlot.index + 1}
+                  data-photo-ratio={activeSlot.ratio}
                   type="button"
                   onClick={() => onOpenWork(activeWork)}
                   aria-label={`打开作品 ${activeWork.title}`}
@@ -177,11 +199,11 @@ export default function NeonHudTemplate({
           <div className={styles.dockArea}>
             <div className={styles.progressTrack} aria-hidden="true"><span style={{ width: progress }} /></div>
             <div className={styles.dock} aria-label="选择主作品">
-              {photoSlots.map((slot, index) => slot.work ? (
+              {interactiveSlots.map((slot, index) => slot.work ? (
                 <button
-                  key={slot.work.code}
+                  key={`hud-dock-${slot.index}`}
                   className={`${styles.dockItem} ${index === safeIndex ? styles.dockActive : ""}`}
-                  data-photo-slot={index + 1}
+                  data-photo-slot={slot.index + 1}
                   data-photo-ratio={slot.ratio}
                   style={getPhotoSlotStyle(slot)}
                   type="button"
@@ -203,7 +225,7 @@ export default function NeonHudTemplate({
               ) : (
                 <div
                   className={styles.dockPlaceholder}
-                  data-photo-slot={index + 1}
+                  data-photo-slot={slot.index + 1}
                   data-photo-ratio={slot.ratio}
                   key={`hud-dock-placeholder-${index}`}
                   style={getPhotoSlotStyle(slot)}
@@ -240,55 +262,68 @@ export default function NeonHudTemplate({
         </div>
 
         <div className={styles.archiveGrid}>
-          {photoSlots.map((slot, index) => {
-            const work = slot.work;
-            if (!work) {
-              return (
-                <div
-                  className={`${styles.archiveCard} ${styles.archivePlaceholder}`}
-                  data-photo-slot={index + 1}
-                  data-photo-ratio={slot.ratio}
-                  key={`hud-archive-placeholder-${index}`}
-                  style={getPhotoSlotStyle(slot)}
-                >
-                  <PhotoPlaceholder slot={slot} tone="dark" label="等待角色信号" />
-                </div>
-              );
-            }
+          {archiveRows.map((row, rowIndex) => (
+            <div
+              className={styles.archiveRow}
+              data-neon-archive-row={rowIndex + 1}
+              key={`hud-archive-row-${rowIndex}`}
+              role="presentation"
+              style={neonArchiveRowStyle(row)}
+            >
+              {row.map((slot) => {
+                const work = slot.work;
+                const displayIndex = slot.index + 1;
+                if (!work) {
+                  return (
+                    <div
+                      className={`${styles.archiveCard} ${styles.archivePlaceholder}`}
+                      data-photo-slot={displayIndex}
+                      data-photo-ratio={slot.ratio}
+                      key={`hud-archive-placeholder-${slot.index}`}
+                      style={getPhotoSlotStyle(slot)}
+                    >
+                      <PhotoPlaceholder slot={slot} tone="dark" label="等待角色信号" />
+                    </div>
+                  );
+                }
 
-            return (
-              <button
-                className={styles.archiveCard}
-                data-photo-slot={index + 1}
-                data-photo-ratio={slot.ratio}
-                key={work.code}
-                style={getPhotoSlotStyle(slot)}
-                type="button"
-                onClick={() => onOpenWork(work)}
-                aria-label={`查看作品 ${work.title}`}
-              >
-                <img
-                  src={work.preview}
-                  srcSet={`${work.preview} ${work.previewWidth}w, ${work.image} ${work.fullWidth}w`}
-                  sizes={slot.ratio === "16:9" ? "(max-width: 1080px) 94vw, 94vw" : "(max-width: 1080px) 94vw, 41vw"}
-                  width={work.previewWidth}
-                  height={work.previewHeight}
-                  alt={work.subtitle}
-                  loading="lazy"
-                  decoding="async"
-                  style={{ objectPosition: work.position }}
-                />
-                <span className={styles.cardShade} />
-                <span className={styles.cardIndex}>{String(index + 1).padStart(2, "0")}</span>
-                <span className={styles.cardInfo}>
-                  <small>{work.code} / TARGET LOCK</small>
-                  <strong>{work.title}</strong>
-                  <em>{work.subtitle}</em>
-                </span>
-                <span className={styles.cardOpen}>EXPAND ↗</span>
-              </button>
-            );
-          })}
+                return (
+                  <button
+                    className={styles.archiveCard}
+                    data-photo-slot={displayIndex}
+                    data-photo-ratio={slot.ratio}
+                    key={`hud-archive-${slot.index}`}
+                    style={getPhotoSlotStyle(slot)}
+                    type="button"
+                    onClick={() => onOpenWork(work)}
+                    aria-label={`查看作品 ${work.title}`}
+                  >
+                    <img
+                      src={work.preview}
+                      srcSet={`${work.preview} ${work.previewWidth}w, ${work.image} ${work.fullWidth}w`}
+                      sizes={slot.ratio === "2:3"
+                        ? "(max-width: 760px) 68vw, (max-width: 1080px) 31vw, 38vw"
+                        : "(max-width: 760px) 94vw, (max-width: 1080px) 31vw, 38vw"}
+                      width={work.previewWidth}
+                      height={work.previewHeight}
+                      alt={work.subtitle}
+                      loading="lazy"
+                      decoding="async"
+                      style={{ objectPosition: work.position }}
+                    />
+                    <span className={styles.cardShade} />
+                    <span className={styles.cardIndex}>{String(displayIndex).padStart(2, "0")}</span>
+                    <span className={styles.cardInfo}>
+                      <small>{work.code} / TARGET LOCK</small>
+                      <strong>{work.title}</strong>
+                      <em>{work.subtitle}</em>
+                    </span>
+                    <span className={styles.cardOpen}>EXPAND ↗</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </div>
       </section>
 
@@ -342,7 +377,7 @@ export default function NeonHudTemplate({
             decoding="async"
             style={{ objectPosition: manifestoWork.position }}
           />
-        ) : (
+        ) : manifestoSlot ? (
           <div
             data-photo-slot={manifestoSlot.index + 1}
             data-photo-ratio={manifestoSlot.ratio}
@@ -350,6 +385,8 @@ export default function NeonHudTemplate({
           >
             <PhotoPlaceholder slot={manifestoSlot} label="MANIFESTO SIGNAL PENDING" />
           </div>
+        ) : (
+          <div className={styles.manifestoPending} aria-hidden="true" />
         )}
         <div className={styles.manifestoGrid} aria-hidden="true" />
         <div className={styles.manifestoCopy}>

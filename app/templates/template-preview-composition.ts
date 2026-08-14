@@ -15,6 +15,7 @@ import {
 import {
   assetToWork,
   autoComposeTemplateWorks,
+  retargetWorkToSlot,
   type PhotoAsset,
   type PhotoOrientation,
 } from "../photo-library";
@@ -230,7 +231,7 @@ export function planTemplateCompositionPreview({
     if (!asset) return [];
     const existing = existingByAssetId.get(slotAssignment.assetId);
     const work = existing
-      ? { ...existing, slotIndex: slotAssignment.slotIndex, locked: slotAssignment.locked }
+      ? { ...retargetWorkToSlot(existing, slotAssignment.slotIndex), locked: slotAssignment.locked }
       : { ...assetToWork(asset, slotAssignment.slotIndex), locked: slotAssignment.locked };
     return [Object.freeze(work)];
   });
