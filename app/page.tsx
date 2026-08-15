@@ -3,9 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { getClientVisiblePortfolioTitle } from "./client-visible-title";
 import { isTemplateId, normalizeSiteContent, siteConfig, type SiteContent, type TemplateId } from "./site-config";
-import { getTemplateCatalogItem } from "./templates/catalog";
 import Lightbox from "./templates/shared/lightbox";
-import { buildPhotoSlots } from "./templates/shared/photo-slots";
+import { useTemplateWorks } from "./templates/shared/use-template-works";
 import { useTemplateInteractions } from "./templates/shared/use-template-interactions";
 import TemplateRenderer from "./templates/template-renderer";
 
@@ -14,22 +13,7 @@ export default function Home() {
   const [previewTemplate, setPreviewTemplate] = useState<TemplateId | null>(null);
   const [booted, setBooted] = useState(false);
   const templateId = previewTemplate ?? content.activeTemplate;
-  const templatePlan = getTemplateCatalogItem(templateId);
-  const works = useMemo(() => {
-    const selected = content.templateWorks[templateId];
-    if (selected !== undefined) {
-      return selected
-        .filter((work) => work.enabled)
-        .sort((left, right) => (left.slotIndex ?? 999) - (right.slotIndex ?? 999))
-        .slice(0, templatePlan.photoSlots);
-    }
-
-    return buildPhotoSlots(
-      content.works.filter((work) => work.enabled),
-      templatePlan.slotRatios,
-      { templateId },
-    ).flatMap((slot) => slot.work ? [{ ...slot.work, slotIndex: slot.index }] : []);
-  }, [content.templateWorks, content.works, templateId, templatePlan.photoSlots, templatePlan.slotRatios]);
+  const { works } = useTemplateWorks(content, templateId);
   const {
     activeWork,
     closeButtonRef,

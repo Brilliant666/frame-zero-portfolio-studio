@@ -85,8 +85,7 @@ test("keeps editable content and eleven lazy template choices in one configurati
   assert.match(page, /const nextContent = normalizeSiteContent\(result\.content\)/);
   assert.match(page, /document\.title = getClientVisiblePortfolioTitle\(nextContent\.profile\)/);
   assert.doesNotMatch(clientTitle, /FRAME\/\/ZERO|Cosplay 摄影师|openGraph|twitter/u);
-  assert.match(page, /const selected = content\.templateWorks\[templateId\]/);
-  assert.match(page, /buildPhotoSlots\(/);
+  assert.match(page, /useTemplateWorks\(content, templateId\)/);
   assert.match(adminShell, /data-admin-title="true"/);
   assert.match(adminShell, /<strong>ADMIN<\/strong>/);
   assert.doesNotMatch(adminShell, /FRAME\/\/ZERO/);

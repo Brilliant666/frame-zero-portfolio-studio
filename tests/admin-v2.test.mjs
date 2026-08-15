@@ -203,8 +203,8 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   assert.match(draftPreview, /triggerRef\.current\?\.focus\(\)/);
   assert.doesNotMatch(draftPreview, /TemplateRenderer|Lightbox|buildPhotoSlots|useAdmin/);
   assert.match(draftPreviewDialog, /const \{ content \} = useAdmin\(\)/);
-  assert.match(draftPreviewDialog, /content\.templateWorks\[templateId\]/);
-  assert.match(draftPreviewDialog, /buildPhotoSlots\(/);
+  assert.match(draftPreviewDialog, /useTemplateWorks\(content, templateId\)/);
+  assert.doesNotMatch(draftPreviewDialog, /setContent|applyTemplateCompositionPreview|method:\s*"PUT"/);
   assert.match(draftPreviewDialog, /previewSource="draft"/);
   assert.match(draftPreviewDialog, /draftScope=\{scope\}/);
   assert.doesNotMatch(draftPreviewDialog, /TemplateRenderer|Lightbox|useTemplateInteractions|admin-v2\.module\.css/);

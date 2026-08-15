@@ -1,29 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
-import type { SiteContent, TemplateId } from "../site-config";
-import { getTemplateCatalogItem } from "../templates/catalog";
-import { buildPhotoSlots } from "../templates/shared/photo-slots";
+import type { TemplateId } from "../site-config";
+import { useTemplateWorks } from "../templates/shared/use-template-works";
 import { useAdmin } from "./admin-provider";
 import type { DraftPreviewScope } from "./draft-preview";
 import TemplatePreviewDialog from "./template-preview-dialog";
-
-function draftWorksForTemplate(content: SiteContent, templateId: TemplateId) {
-  const template = getTemplateCatalogItem(templateId);
-  const selected = content.templateWorks[templateId];
-  if (selected !== undefined) {
-    return selected
-      .filter((work) => work.enabled)
-      .sort((left, right) => (left.slotIndex ?? 999) - (right.slotIndex ?? 999))
-      .slice(0, template.photoSlots);
-  }
-
-  return buildPhotoSlots(
-    content.works.filter((work) => work.enabled),
-    template.slotRatios,
-    { templateId },
-  ).flatMap((slot) => slot.work ? [{ ...slot.work, slotIndex: slot.index }] : []);
-}
 
 export default function DraftPreviewDialog({
   templateId,
@@ -35,10 +16,7 @@ export default function DraftPreviewDialog({
   onRequestClose: () => void;
 }>) {
   const { content } = useAdmin();
-  const works = useMemo(
-    () => draftWorksForTemplate(content, templateId),
-    [content, templateId],
-  );
+  const { works } = useTemplateWorks(content, templateId);
   const candidate = scope === "candidate";
 
   return (

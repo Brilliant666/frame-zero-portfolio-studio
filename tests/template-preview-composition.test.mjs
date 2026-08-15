@@ -363,8 +363,8 @@ test("preview modules separate photo-free template structures from layout-only d
   assert.match(draftPreview, /dynamic\(\(\) => import\("\.\/draft-preview-dialog"\)/);
   assert.doesNotMatch(draftPreview, /TemplateRenderer|Lightbox|buildPhotoSlots|useAdmin/);
   assert.match(draftPreviewDialog, /previewSource="draft"/);
-  assert.match(draftPreviewDialog, /content\.templateWorks\[templateId\]/);
-  assert.match(draftPreviewDialog, /buildPhotoSlots\(/);
+  assert.match(draftPreviewDialog, /useTemplateWorks\(content, templateId\)/);
+  assert.doesNotMatch(draftPreviewDialog, /setContent|applyTemplateCompositionPreview|method:\s*"PUT"/);
   assert.doesNotMatch(draftPreviewDialog, /TemplateRenderer|Lightbox|admin-v2\.module\.css/);
   assert.match(templatePreviewDialog, /data-preview-source=\{previewSource\}/);
   assert.match(templatePreviewDialog, /<TemplateRenderer/);
