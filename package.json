@@ -26,7 +26,7 @@
     "test:fallback": "node --test tests/template-work-fallback.test.mjs",
     "test:preview": "node --test tests/template-preview-composition.test.mjs",
     "test:admin": "node --test tests/admin-state.test.mjs tests/admin-v2.test.mjs",
-    "test:polish": "node --test tests/client-visible-title.test.mjs tests/orbital-portal-focus.test.mjs tests/polaroid-field-fit.test.mjs",
+    "test:polish": "node --test tests/client-visible-title.test.mjs tests/orbital-portal-focus.test.mjs tests/polaroid-field-fit.test.mjs tests/pr24-limited-closure.test.mjs",
     "test:container-contract": "node --test tests/container-packaging.test.mjs",
     "test:deployment-config": "node --test tests/deployment-config.test.mjs",
     "test:deployment-bootstrap": "node --test tests/deployment-bootstrap.test.mjs",

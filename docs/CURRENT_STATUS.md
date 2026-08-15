@@ -1,6 +1,6 @@
 # Portfolio Platform Current Status
 
-> - Updated: 2026-08-11
+> - Updated: 2026-08-15
 > - Baseline: `main@ced247e5baf19510329c4c3a084a69e6b1ab0c2c`
 
 ```text
@@ -17,8 +17,13 @@ Current product priority: LOCAL_PRODUCT_EXPERIENCE
 Product experience foundation: ACCEPTED
 Automated visual QA baseline: ACCEPTED
 Pre-launch product polish: IN_PROGRESS
-Human-directed product polish: ACTIVE
+Human-directed product polish: PR24_LIMITED_BASELINE_READY
 Eleven-template human visual approval: PENDING
+Human-approved templates: 0 / 11
+PR #24 closure mode: LIMITED_CLOSURE + HUMAN_ACCEPTANCE_GATE
+PR #24 feature freeze: TRUE
+PR #24 product baseline: PR24_LIMITED_BASELINE_READY
+PR #24 hand-off: WAITING_FOR_HUMAN_REVIEW
 External operations: NOT_AUTHORIZED
 Completed milestone: STANDARD_NEXT_NODE_PARITY
 Next milestone: DEPLOYMENT_BOOTSTRAP_READY
@@ -126,16 +131,17 @@ QA. It does not authorize target-server preflight, deployment, Stage B,
 PostgreSQL, production Auth, hosted upload, DNS, TLS, or production data.
 
 Human review has accepted the product-experience foundation and its automated
-visual-QA baseline. That acceptance does not close
-`PRE_LAUNCH_PRODUCT_POLISH`: human-directed polish is now active and proceeds
-only from explicit, item-by-item human requests. No formal template has
-`HUMAN_APPROVED` status, and eleven-template human visual approval remains
-pending.
+visual-QA baseline. PR #24 is now feature-frozen as a limited product-polish
+baseline and awaits the human acceptance gate. This does not close
+`PRE_LAUNCH_PRODUCT_POLISH`, complete the eleven-template visual review, or
+claim V1 product-experience completion. No formal template has
+`HUMAN_APPROVED` status (`0 / 11`); all eleven remain ready for human recheck or
+later template-by-template polish in a new human-directed product-polish PR.
 
 See [stage-a2-deployment-bootstrap.md](stage-a2-deployment-bootstrap.md) for
 the current Definition of Done matrix and explicit external-operation boundary.
 See [pre-launch-product-polish.md](pre-launch-product-polish.md) for the active
 product-experience batch and its architecture boundaries.
 See [human-directed-product-polish.md](human-directed-product-polish.md) for
-the active request ledger, template review matrix, and stop-after-each-request
+the limited-closure ledger, template review matrix, and human-review stop
 protocol.

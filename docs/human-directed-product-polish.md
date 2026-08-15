@@ -1,6 +1,6 @@
 # Human-Directed Product Polish
 
-> - Human-directed polish status: `ACTIVE`
+> - Human-directed polish status: `PR24_LIMITED_BASELINE_READY`
 > - Current phase: `SELF_HOSTED_V1`
 > - Current stage: `STAGE_A2_DEPLOYMENT_BOOTSTRAP`
 > - Stage status: `IN_PROGRESS`
@@ -9,6 +9,10 @@
 > - Engineering launch line: `FROZEN_AT_REPO_SIDE_BOOTSTRAP_READY`
 > - Branch: `product/prelaunch-manual-polish-01`
 > - Current Draft PR: `#24 — fix: refine local workflow and template presentation`
+> - PR #24 closure mode: `LIMITED_CLOSURE + HUMAN_ACCEPTANCE_GATE`
+> - PR #24 feature freeze: `TRUE`
+> - Human-approved templates: `0 / 11`
+> - Current hand-off: `WAITING_FOR_HUMAN_REVIEW`
 > - External operations: `NOT_AUTHORIZED`
 > - Base: `main@ced247e5baf19510329c4c3a084a69e6b1ab0c2c`
 
@@ -40,8 +44,11 @@ counts, identities, `SiteDocumentV1`, and legacy adapter remain unchanged.
 This is not an automated backlog. Codex handles exactly one concrete human
 request, validates it in proportion to risk, creates one focused commit, pushes
 it to the same Draft PR, reports the result, and stops at
-`WAITING_FOR_HUMAN_INPUT`. Observations outside the request may be recorded but
-must not be implemented without a new human instruction.
+`WAITING_FOR_HUMAN_REVIEW`. Observations outside the request may be recorded but
+must not be implemented without a new human instruction. PR #24 is now
+feature-frozen: its limited closure does not mark human-directed or pre-launch
+product polish complete, and a merge would not constitute final template
+visual approval.
 
 The formal project state remains:
 
@@ -71,7 +78,7 @@ Each human request follows this bounded sequence:
 9. `PUSH`
 10. `UPDATE_LEDGER`
 11. `REPORT`
-12. `WAITING_FOR_HUMAN_INPUT`
+12. `WAITING_FOR_HUMAN_REVIEW`
 
 Requests receive sequential IDs beginning with `HR-001`. The request wording
 must preserve the human intent without expanding it into a broader redesign.
@@ -97,6 +104,129 @@ allowed in this lane.
 The bootstrap did not consume `HR-001`; the first explicit request above does.
 A completed implementation may be reported as `READY_FOR_HUMAN_RECHECK`; only
 the human reviewer can accept it.
+
+## PR #24 limited closure
+
+```text
+FEATURE_FREEZE = TRUE
+PR24 = OPEN + DRAFT
+PR24_READY = NO
+PR24_MERGED = NO
+NEXT_PR_CREATED = NO
+HUMAN_DIRECTED_PRODUCT_POLISH = PR24_LIMITED_BASELINE_READY
+PRE_LAUNCH_PRODUCT_POLISH = IN_PROGRESS
+ELEVEN_TEMPLATE_HUMAN_VISUAL_APPROVAL = PENDING
+HUMAN_APPROVED = 0 / 11
+CURRENT_SAVED_TEMPLATE_FALLBACK_BROKEN = CLOSED
+ENGINEERING_LAUNCH = FROZEN_AT_REPO_SIDE_BOOTSTRAP_READY
+SERVER_DNS_TLS_OPERATIONS = NONE
+PR24_HAND_OFF = WAITING_FOR_HUMAN_REVIEW
+```
+
+The closure fixes only the saved-template fallback safety defect. It preserves
+the own-key semantics of `templateWorks`, including an explicit empty layout,
+and distinguishes three cases without writing SiteContent:
+
+| Saved layout state | Closure behavior |
+| --- | --- |
+| Explicit `templateWorks` key exists | Use that explicit layout without probing or replacing it. |
+| No explicit key and every resolved legacy image is available | Preserve the compatible legacy fallback. |
+| No explicit key and any resolved legacy image is stale or unavailable | Mark the layout required, retain only works whose preview and full image both probe successfully, and render placeholders for failed slots instead of broken images. |
+
+This behavior applies equally to the four locally observed fallback gaps:
+`orbital-portal`, `archive-os`, `editorial-duet`, and `museum-depth`. Choosing a
+template still changes only draft `activeTemplate`; it does not Apply a
+recommendation, create `templateWorks`, or persist the draft. Apply remains an
+explicit Layout action, and save remains the single Admin persistence action.
+
+### `AUDIT_RECONCILIATION`
+
+The entries below are additive closure-time audit notes. They do not rewrite
+the request wording, status, validation claim, or chronology of `HR-001` through
+`HR-010`.
+
+- `HR-001_COMPANION_EOL`: commit
+  `6173c7564100350e9d2d32fee4b07236895b6b6e` (`chore: normalize HR-001
+  transport line endings`) followed the HR-001 product commit. It is transport-
+  only support, not a second product change or a new human request.
+- `WINDOWS_LIBVIPS_IMPORT_LIFECYCLE`: the Windows/libvips file-lifecycle repair
+  and synthetic cleanup-lock regression were completed inside
+  `b743a4775ed25fcc17ce6cf4de61d552d2da2222` while validating HR-004. It did not
+  receive a separate HR row; this note supplies the missing audit linkage.
+- `HR-006_CHROME_EVIDENCE`: the HR-006 row accurately recorded Chrome as pending
+  at that commit. Connected Chrome evidence was supplied later by HR-007 through
+  HR-010 for template selection, unsaved transition, draft preview, Layout
+  ownership, desktop/responsive behavior, and all-eleven real-material smoke.
+  Later evidence does not retroactively change the HR-006 row and does not imply
+  `HUMAN_APPROVED`.
+- `WAITING_TOKEN`: this closure standardizes the hand-off token as
+  `WAITING_FOR_HUMAN_REVIEW`; the earlier `WAITING_FOR_HUMAN_INPUT` wording
+  represented the same stop-for-human boundary and is not a completion claim.
+- `ROUTE_AND_PUBLIC_IDENTITY_DEFERRED`: the human explicitly deferred `/star`,
+  the future platform introduction at `/`, and the client/SSR title split. PR
+  #24 does not implement a route migration or SSR branding migration.
+  `PUBLIC_IDENTITY_SSR_MISMATCH` remains `P1_PRE_DEPLOYMENT`; route and platform
+  homepage ownership remain with the formal roadmap stages.
+
+### Legacy bundle gate integrity
+
+The scope-expanded legacy rollback gate remains an accepted internal supporting
+change pending final review:
+
+```text
+LEGACY_BUNDLE_GATE = ACCEPTED_INTERNAL_SUPPORTING_CHANGE_PENDING_FINAL_REVIEW
+PUBLIC_JS_CAP = 550 KiB (not widened)
+ADMIN_DYNAMIC_JS_CAP = 160 KiB
+ADMIN_PER_ENTRY_JS_CAP = 80 KiB
+STANDARD_NEXT_GATE = STILL_EFFECTIVE
+```
+
+The split keeps the public legacy budget at its previous 550 KiB ceiling,
+adds explicit aggregate and per-entry Admin limits, and leaves the Standard
+Next public application/bootstrap/CSS/template gate in force. It therefore does
+not hide a public regression by merely moving the threshold.
+
+### Remaining work after PR #24
+
+The feature freeze routes remaining work into explicit buckets. None of these
+items is authorized for implementation in this closure.
+
+#### `NEXT_PR_P1`
+
+- `ONE_LEVEL_LAYOUT_UNDO`, including Apply undo and clear-template
+  confirmation/undo;
+- `IMPORT_FAILURE_IDENTIFICATION`, using privacy-safe session-only filename or
+  thumbnail evidence without persisting absolute paths;
+- `DELETE_SEMANTICS_HUMAN_DECISION`; the current safe, recoverable recycle-bin
+  behavior remains unchanged;
+- template-by-template human visual polish.
+
+#### `NEXT_PR_P2`
+
+- photo/folder drag-and-drop and automatic selection classification;
+- RAW evaluation;
+- Asset detail, bulk management, tags, and albums;
+- true multi-option reroll;
+- preview device switcher.
+
+#### `PRE_DEPLOYMENT_P1`
+
+- `PUBLIC_IDENTITY_SSR_MISMATCH`.
+
+#### `FUTURE_HOSTED`
+
+- PostgreSQL, production Auth, hosted Assets and Hosted Upload;
+- hosted `AssetResolver` and Site-scoped publication storage.
+
+#### `LOCAL_ONLY_FUTURE`
+
+- trusted source-folder binding;
+- manual rescan of a bound source;
+- filesystem watch and automatic synchronization.
+
+PR #24 merge would accept only this limited baseline. It would not complete
+`PRE_LAUNCH_PRODUCT_POLISH`, approve any of the eleven templates, create the
+next PR, or unfreeze engineering launch.
 
 ## Eleven-template human review matrix
 
@@ -177,7 +307,7 @@ enabled for every PR update.
 After the bootstrap and after every future micro-slice, the required state is:
 
 ```text
-WAITING_FOR_HUMAN_INPUT
+WAITING_FOR_HUMAN_REVIEW
 ```
 
 The Draft PR is never marked Ready or merged without separate human approval.
