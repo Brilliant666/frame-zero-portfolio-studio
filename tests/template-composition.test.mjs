@@ -48,7 +48,9 @@ async function transpileTo(sourceRelativePath, outputName) {
   const output = result.outputText
     .replaceAll('from "./contract"', 'from "./contract.js"')
     .replaceAll('from "./assignment"', 'from "./assignment.js"')
-    .replaceAll('from "./planner"', 'from "./planner.js"');
+    .replaceAll('from "./planner"', 'from "./planner.js"')
+    .replaceAll('from "../photo-ratio-policy"', 'from "./photo-ratio-policy.js"')
+    .replaceAll('from "./photo-ratio-policy"', 'from "./photo-ratio-policy.js"');
   await fs.writeFile(path.join(compiledDirectory, outputName), output, "utf8");
 }
 
@@ -65,6 +67,7 @@ test.before(async () => {
       `${name}.js`,
     )),
     transpileTo("app/templates/catalog.ts", "catalog.js"),
+    transpileTo("app/photo-ratio-policy.ts", "photo-ratio-policy.js"),
     transpileTo("app/photo-library.ts", "photo-library.js"),
   ]);
   const cacheKey = `${Date.now()}-${Math.random()}`;
@@ -183,19 +186,6 @@ function ratioValue(ratio) {
   if (ratio === "3:2") return 3 / 2;
   if (ratio === "2:3") return 2 / 3;
   return 16 / 9;
-}
-
-function legacyRatioCost(works, assetsById, slotRatios) {
-  return works.reduce((sum, work) => sum + Math.abs(Math.log(
-    assetsById.get(work.assetId).aspectRatio / ratioValue(slotRatios[work.slotIndex]),
-  )), 0);
-}
-
-function newRatioCost(result) {
-  return result.assignments.reduce(
-    (sum, assignment) => sum + assignment.assignmentCostUnits / composition.COMPOSITION_COST_SCALE,
-    0,
-  );
 }
 
 test("the public TypeScript contract type-checks as an isolated pure dependency graph", () => {
@@ -868,7 +858,7 @@ test("planner output is repeatable across 100 runs, input reversal, and frozen i
   }
 });
 
-test("classic test adapter preserves all 11 fixed catalogs across shared legacy semantics", () => {
+test("classic test adapter preserves all 11 fixed catalog identities and orientation semantics", () => {
   assert.equal(templateCatalog.length, 11);
   for (const template of templateCatalog) {
     assert.equal("variantId" in template, false, `${template.id} must remain a production fixed-layout catalog`);
@@ -895,16 +885,11 @@ test("classic test adapter preserves all 11 fixed catalogs across shared legacy 
     assert.equal(plannedFilled.length, legacyWorks.length, `${template.id}: fill parity`);
     assert.equal(planned.metrics.placeholderCount, template.photoSlots - legacyWorks.length, `${template.id}: placeholder parity`);
 
-    const assetsById = new Map(sparseAssets.map((entry) => [entry.id, entry]));
     for (const assignment of plannedFilled) {
-      const selected = assetsById.get(assignment.assetId);
+      const selected = sparseAssets.find((entry) => entry.id === assignment.assetId);
       const slotOrientation = ratioValue(template.slotRatios[assignment.slotIndex]) < 1 ? "portrait" : "landscape";
       assert.ok(selected.orientation === "square" || selected.orientation === slotOrientation, `${template.id}: orientation parity`);
     }
-    assert.ok(
-      Math.abs(newRatioCost(planned) - legacyRatioCost(legacyWorks, assetsById, template.slotRatios)) <= 0.000002,
-      `${template.id}: ratio-cost parity`,
-    );
 
     const lockSlot = 0;
     const lockedAsset = template.slotRatios[lockSlot] === "2:3" ? sparseAssets[2] : sparseAssets[0];

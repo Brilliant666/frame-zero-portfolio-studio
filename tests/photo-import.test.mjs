@@ -5,7 +5,12 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import sharp from "sharp";
-import { importPhotoLibrary, photoImportContract } from "../scripts/lib/photo-import.mjs";
+import {
+  getLocalPhotoLibrarySnapshot,
+  importPhotoLibrary,
+  photoImportContract,
+  setLocalPhotoAssetsArchived,
+} from "../scripts/lib/photo-import.mjs";
 
 const [nodeMajor, nodeMinor] = process.versions.node.split(".").map(Number);
 const supportsPhotoImport = nodeMajor > 22 || (nodeMajor === 22 && nodeMinor >= 13);
@@ -187,6 +192,165 @@ photoTest("imports a recursive, deduplicated, privacy-safe responsive photo libr
     const stat = await fs.stat(path.join(afterRemoval.libraryDir, `${portraitId}-${variantName}.webp`));
     assert.ok(stat.isFile());
   }
+});
+
+photoTest("records private import order and supports revision-safe recycle and restore", async (t) => {
+  const { projectRoot, sourceDir } = await makeTemporaryWorkspace(t);
+  const firstPath = path.join(sourceDir, "private-first-name.jpg");
+  const secondPath = path.join(sourceDir, "nested", "private-second-name.png");
+  await fs.mkdir(path.dirname(secondPath), { recursive: true });
+  await sharp({ create: { width: 300, height: 200, channels: 3, background: "#c85f42" } })
+    .jpeg()
+    .toFile(firstPath);
+  await sharp({ create: { width: 200, height: 300, channels: 3, background: "#4268c8" } })
+    .png()
+    .toFile(secondPath);
+
+  const imported = await importPhotoLibrary({ sourceDir, projectRoot });
+  const firstSnapshot = await getLocalPhotoLibrarySnapshot({ projectRoot });
+  assert.equal(firstSnapshot.revision, 1);
+  assert.equal(firstSnapshot.activeAssets, 2);
+  assert.equal(firstSnapshot.archivedAssets, 0);
+  assert.deepEqual(firstSnapshot.items.map((item) => item.importOrdinal), [1, 2]);
+  assert.ok(firstSnapshot.items.every((item) => item.sourceKind === "folder"));
+  assert.equal(new Set(firstSnapshot.items.map((item) => item.batchId)).size, 1);
+  assert.deepEqual(firstSnapshot.items.map((item) => item.asset), imported.manifest.assets);
+
+  const catalogText = await fs.readFile(imported.catalogPath, "utf8");
+  assert.doesNotMatch(catalogText, /private-first|private-second|nested|source photos|[A-Z]:\\/i);
+
+  const archivedId = firstSnapshot.items[0].assetId;
+  const archived = await setLocalPhotoAssetsArchived({
+    projectRoot,
+    assetIds: [archivedId],
+    archived: true,
+    expectedRevision: firstSnapshot.revision,
+  });
+  assert.equal(archived.revision, 2);
+  assert.equal(archived.activeAssets, 1);
+  assert.equal(archived.archivedAssets, 1);
+  assert.equal(archived.items.find((item) => item.assetId === archivedId).status, "archived");
+  const manifestPath = path.join(projectRoot, "public", "photos", "library-manifest.json");
+  const manifestAfterArchive = JSON.parse(await fs.readFile(manifestPath, "utf8"));
+  assert.equal(manifestAfterArchive.assets.length, 1);
+  assert.ok(!manifestAfterArchive.assets.some((asset) => asset.id === archivedId),
+    "recycled assets must leave the active discovery manifest");
+  for (const variantName of ["thumbnail", "card", "full"]) {
+    assert.ok((await fs.stat(path.join(imported.libraryDir, `${archivedId}-${variantName}.webp`))).isFile(),
+      "recycle must retain variants needed by existing saved URLs");
+  }
+
+  await assert.rejects(
+    setLocalPhotoAssetsArchived({
+      projectRoot,
+      assetIds: [archivedId],
+      archived: false,
+      expectedRevision: firstSnapshot.revision,
+    }),
+    (error) => error?.code === "CATALOG_REVISION_CONFLICT",
+  );
+
+  const restored = await setLocalPhotoAssetsArchived({
+    projectRoot,
+    assetIds: [archivedId],
+    archived: false,
+    expectedRevision: archived.revision,
+  });
+  assert.equal(restored.revision, 3);
+  assert.equal(restored.activeAssets, 2);
+  assert.equal(restored.archivedAssets, 0);
+  assert.deepEqual(restored.items.map((item) => item.importOrdinal), [1, 2]);
+  const manifestAfterRestore = JSON.parse(await fs.readFile(manifestPath, "utf8"));
+  assert.equal(manifestAfterRestore.assets.length, 2);
+  assert.ok(manifestAfterRestore.assets.some((asset) => asset.id === archivedId));
+});
+
+photoTest("re-importing archived bytes reports restored instead of duplicate", async (t) => {
+  const { projectRoot, sourceDir } = await makeTemporaryWorkspace(t);
+  await sharp({ create: { width: 300, height: 200, channels: 3, background: "#4c8a62" } })
+    .jpeg()
+    .toFile(path.join(sourceDir, "photo.jpg"));
+  const imported = await importPhotoLibrary({ sourceDir, projectRoot });
+  const [assetId] = imported.manifest.assets.map((asset) => asset.id);
+  const archived = await setLocalPhotoAssetsArchived({
+    projectRoot,
+    assetIds: [assetId],
+    archived: true,
+    expectedRevision: imported.catalogRevision,
+  });
+
+  const repeated = await importPhotoLibrary({ sourceDir, projectRoot });
+  assert.deepEqual(repeated.assetOutcomes, [{ assetId, disposition: "restored" }]);
+  assert.equal(repeated.activeAssets, 1);
+  assert.equal(repeated.catalogRevision, archived.revision + 1);
+  assert.equal((await getLocalPhotoLibrarySnapshot({ projectRoot })).archivedAssets, 0);
+  assert.deepEqual(
+    JSON.parse(await fs.readFile(repeated.manifestPath, "utf8")).assets.map((asset) => asset.id),
+    [assetId],
+  );
+});
+
+photoTest("bootstraps a canonical private catalog from the legacy public manifest", async (t) => {
+  const { projectRoot } = await makeTemporaryWorkspace(t);
+  const manifestPath = path.join(projectRoot, "public", "photos", "library-manifest.json");
+  const catalogPath = path.join(projectRoot, ".frame-zero", "photo-library-catalog.json");
+  const first = makeManifestAsset("b".repeat(64));
+  const second = makeManifestAsset("a".repeat(64));
+  await fs.mkdir(path.dirname(manifestPath), { recursive: true });
+  await fs.writeFile(manifestPath, `${JSON.stringify({ version: 1, assets: [first, second] })}\n`, "utf8");
+
+  const snapshot = await getLocalPhotoLibrarySnapshot({ projectRoot });
+
+  assert.equal(snapshot.revision, 1);
+  assert.equal(snapshot.activeAssets, 2);
+  assert.deepEqual(snapshot.items.map((item) => item.assetId), [first.id, second.id]);
+  assert.ok(snapshot.items.every((item) => (
+    item.sourceKind === "legacy"
+    && item.importOrdinal === null
+    && item.batchId === null
+  )));
+  assert.deepEqual(snapshot.items.map((item) => item.asset), [first, second]);
+  const catalog = JSON.parse(await fs.readFile(catalogPath, "utf8"));
+  assert.deepEqual(catalog.items.map((item) => item.asset), [first, second]);
+  assert.doesNotMatch(JSON.stringify(catalog), /relativePath|sourceDir|fileName|[A-Z]:\\/i);
+});
+
+photoTest("migrates the metadata-only catalog and repairs an interrupted public manifest", async (t) => {
+  const { projectRoot, sourceDir } = await makeTemporaryWorkspace(t);
+  await sharp({ create: { width: 300, height: 200, channels: 3, background: "#76624c" } })
+    .jpeg()
+    .toFile(path.join(sourceDir, "photo.jpg"));
+  const imported = await importPhotoLibrary({ sourceDir, projectRoot });
+  const catalog = JSON.parse(await fs.readFile(imported.catalogPath, "utf8"));
+  const metadataOnlyCatalog = {
+    ...catalog,
+    items: catalog.items.map((item) => {
+      const metadataOnlyItem = { ...item };
+      delete metadataOnlyItem.asset;
+      return metadataOnlyItem;
+    }),
+  };
+  await fs.writeFile(imported.catalogPath, `${JSON.stringify(metadataOnlyCatalog)}\n`, "utf8");
+
+  const migrated = await getLocalPhotoLibrarySnapshot({ projectRoot });
+  assert.equal(migrated.revision, catalog.revision + 1);
+  assert.deepEqual(migrated.items[0].asset, imported.manifest.assets[0]);
+
+  await setLocalPhotoAssetsArchived({
+    projectRoot,
+    assetIds: [migrated.items[0].assetId],
+    archived: true,
+    expectedRevision: migrated.revision,
+  });
+  // Simulate a catalog-first commit whose public manifest replacement was
+  // interrupted. The next locked read must deterministically repair it.
+  await fs.writeFile(imported.manifestPath, `${JSON.stringify(imported.manifest)}\n`, "utf8");
+  const repaired = await getLocalPhotoLibrarySnapshot({ projectRoot });
+  assert.equal(repaired.archivedAssets, 1);
+  assert.deepEqual(
+    JSON.parse(await fs.readFile(imported.manifestPath, "utf8")),
+    { version: 1, assets: [] },
+  );
 });
 
 photoTest("rejects the generated library as an import source", async (t) => {

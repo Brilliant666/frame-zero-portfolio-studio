@@ -66,6 +66,10 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
     assert.match(html, /<link rel="icon" href="(?:https?:\/\/[^\"]+)?\/favicon\.svg"\/>/);
     assert.match(html, /aria-label="保存全部修改"/);
     assert.match(html, /title="保存全部修改"/);
+    assert.equal(html.match(/aria-label="保存全部修改"/g)?.length, 1);
+    assert.match(html, /data-admin-draft-preview-trigger="true"/);
+    assert.match(html, /预览当前草稿/);
+    assert.doesNotMatch(html, /查看已保存主页|预览当前主页/);
     assert.equal(html.match(/<h1\b/g)?.length, 1);
     assert.equal(html.match(/data-admin-section="[^"]+"/g)?.length, 1);
     assert.match(html, new RegExp(`data-admin-section="${section}"`));
@@ -78,17 +82,44 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
       assert.equal(html.match(/data-template-detail="[^"]+"/g)?.length, 1);
       assert.equal(html.match(/data-template-mobile-selector="true"/g)?.length, 1);
       assert.equal(html.match(/data-template-material-profile="[^"]+"/g)?.length, 1);
-      assert.equal(html.match(/data-template-composition-preview="[^"]+"/g)?.length, 1);
-      assert.match(html, /data-preview-readonly="true"/);
+      assert.equal(html.match(/data-template-structure-preview="[^"]+"/g)?.length, 1);
+      assert.equal(html.match(/data-user-materials="false"/g)?.length, 1);
+      assert.equal(new Set(html.match(/\/template-structure-previews\/[a-z0-9-]+\.webp/g) ?? []).size, 1);
+      assert.equal(html.match(/data-template-state="[^"]+"/g)?.length, 1);
+      const templateHeadingId = html.match(/<h3 id="(template-detail-name-[^"]+)"/)?.[1];
+      assert.ok(templateHeadingId, "the rendered template detail must expose its labelled heading");
+      assert.match(html, new RegExp(`aria-labelledby="${templateHeadingId}"`));
+      const detailStart = html.indexOf("data-template-detail=");
+      const headingIndex = html.indexOf(`id="${templateHeadingId}"`, detailStart);
+      const previewIndex = html.indexOf("data-template-structure-preview=", detailStart);
+      const profileIndex = html.indexOf("data-template-material-profile=", detailStart);
+      const actionIndex = html.indexOf("data-template-primary-action=", detailStart);
+      assert.ok(
+        headingIndex > detailStart && headingIndex < previewIndex,
+        "the rendered template name must precede its structure diagram",
+      );
+      assert.ok(
+        previewIndex < profileIndex,
+        "the structure diagram must precede the detailed material guidance",
+      );
+      assert.ok(
+        profileIndex < actionIndex,
+        "the primary action must follow the complete material guidance",
+      );
+      assert.doesNotMatch(html, /data-layout-composition-preview=|data-layout-preview-apply=/);
       assert.doesNotMatch(html, /data-template-card=/);
+      assert.doesNotMatch(html, /data-template-candidate-preview=|data-template-candidate-preview-trigger=|data-preview-readonly=/);
       assert.match(html, /aria-label="正式页面模板"/);
       assert.match(html, /素材准备建议/);
+      assert.match(html, /槽位构成/);
+      assert.match(html, /固定横图|固定竖图|任意方向/);
+      assert.doesNotMatch(html, /比例计划/);
       assert.match(html, /横图/);
       assert.match(html, /竖图/);
       assert.match(html, /方图/);
-      assert.match(html, /当前素材排版预览/);
-      assert.match(html, /正在为/);
-      assert.match(html, /准备预览/);
+      assert.doesNotMatch(html, /查看模板效果|不是已保存选择|不是当前草稿/);
+      assert.match(html, /进入素材排版/);
+      assert.doesNotMatch(html, /独立预览|应用此排版到草稿/);
     }
     if (section === "profile") {
       assert.equal(html.match(/data-optional-brand-content="true"/g)?.length, 1);
@@ -97,16 +128,22 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
       assert.equal(html.match(/data-package-title-input="\d+"/g)?.length, 3);
     }
     if (section === "layout") {
+      assert.equal(html.match(/data-layout-composition-preview="[^"]+"/g)?.length, 1);
+      assert.equal(html.match(/data-layout-preview-generate="[^"]+"/g)?.length, 1);
+      assert.doesNotMatch(html, /data-template-candidate-preview=/);
+      assert.match(html, /data-layout-preview-generate="[^"]+"[^>]*disabled=""[^>]*>正在读取…<\/button>/);
+      assert.doesNotMatch(html, /应用此排版到草稿/);
       assert.match(html, /data-local-photo-import="missing"/);
       assert.match(html, /本地照片导入服务未启动/);
-      assert.doesNotMatch(html, /data-photo-picker=|\+ 添加照片|\+ 添加文件夹/);
+      assert.doesNotMatch(html, /data-add-materials-trigger=|data-photo-picker=|data-photo-import-preflight=|选择照片|选择文件夹|确认导入|重新选择|高级 \/ 命令行导入|photos:import/);
+      assert.doesNotMatch(html, /aria-label="素材库视图"|>在库素材 |移入回收站|恢复素材/);
       assert.match(html, /aria-label="素材库画幅统计"/);
     }
     assert.doesNotMatch(html, /admin-section-placeholder/);
   });
 }
 
-test("local Admin renders executable ingest only for a strictly configured loopback origin", async () => {
+test("local Admin renders one add-materials entry that stages photo and folder choices", async () => {
   const { response, html } = await renderAdmin(
     "/admin/layout",
     undefined,
@@ -114,12 +151,25 @@ test("local Admin renders executable ingest only for a strictly configured loopb
   );
   assert.equal(response.status, 200);
   assert.match(html, /data-local-photo-import="configured"/);
-  assert.equal(html.match(/data-photo-picker="(?:files|folder)"/g)?.length, 2);
+  assert.equal(html.match(/data-add-materials-trigger="true"/g)?.length, 1);
+  assert.match(html, /data-add-materials-trigger="true"[^>]*aria-expanded="false"|aria-expanded="false"[^>]*data-add-materials-trigger="true"/);
+  assert.match(html, />添加素材</);
+  assert.match(html, /id="local-photo-import-choices"[^>]*hidden=""|hidden=""[^>]*id="local-photo-import-choices"/);
+  assert.equal(html.match(/data-photo-picker="files"/g)?.length, 1);
+  assert.equal(html.match(/data-photo-picker="folder"/g)?.length, 1);
+  const photoPickerTag = html.match(/<input[^>]*data-photo-picker="files"[^>]*>/)?.[0] ?? "";
+  const folderPickerTag = html.match(/<input[^>]*data-photo-picker="folder"[^>]*>/)?.[0] ?? "";
+  assert.match(photoPickerTag, /\saccept="[^"]+"/);
+  assert.doesNotMatch(photoPickerTag, /webkitdirectory/);
+  assert.doesNotMatch(folderPickerTag, /\saccept=/);
   assert.match(html, /data-photo-picker="folder"[^>]*webkitdirectory=""|webkitdirectory=""[^>]*data-photo-picker="folder"/);
-  assert.match(html, /\+ 添加照片/);
-  assert.match(html, /\+ 添加文件夹/);
-  assert.match(html, /刷新素材库（不重新扫描文件夹）/);
-  assert.match(html, /导入当前快照；后续增删需再次选择该文件夹/);
+  assert.match(html, /选择照片/);
+  assert.match(html, /选择文件夹/);
+  assert.doesNotMatch(html, /data-photo-import-preflight=|确认导入|重新选择/);
+  assert.doesNotMatch(html, /高级 \/ 命令行导入|photos:import/);
+  assert.match(html, /刷新素材列表（不重新扫描文件夹）/);
+  assert.match(html, /一次性读取/);
+  assert.match(html, /后续增删需再次选择/);
   assert.doesNotMatch(html, /本地照片导入服务未启动/);
 });
 
@@ -146,7 +196,7 @@ test("local Admin rejects malformed or non-loopback import origins", async (t) =
       const { response, html } = await renderAdmin("/admin/layout", undefined, origin);
       assert.equal(response.status, 200);
       assert.match(html, /data-local-photo-import="missing"/);
-      assert.doesNotMatch(html, /data-photo-picker=|\+ 添加照片|\+ 添加文件夹/);
+      assert.doesNotMatch(html, /data-add-materials-trigger=|data-photo-picker=|data-photo-import-preflight=|选择照片|选择文件夹|确认导入|重新选择|高级 \/ 命令行导入|photos:import/);
     });
   }
 });
@@ -159,8 +209,9 @@ test("hosted Admin renders no executable local photo ingest controls", async () 
   assert.equal(response.status, 200);
   assert.match(html, /data-local-photo-import="hosted"/);
   assert.match(html, /本地照片导入仅在本机编辑模式可用/);
-  assert.doesNotMatch(html, /data-photo-picker=/);
-  assert.doesNotMatch(html, /\+ 添加照片|\+ 添加文件夹/);
+  assert.doesNotMatch(html, /data-add-materials-trigger=|data-photo-picker=|data-photo-import-preflight=/);
+  assert.doesNotMatch(html, /选择照片|选择文件夹|确认导入|重新选择|高级 \/ 命令行导入|photos:import/);
+  assert.doesNotMatch(html, /aria-label="素材库视图"|>在库素材 |移入回收站|恢复素材/);
   assert.match(html, /aria-label="保存全部修改"/);
 });
 
@@ -171,5 +222,6 @@ test("a local-looking hosted hostname cannot enable the loopback controls", asyn
   }, "http://127.0.0.1:43127");
   assert.equal(response.status, 200);
   assert.match(html, /data-local-photo-import="hosted"/);
-  assert.doesNotMatch(html, /data-photo-picker=|\+ 添加照片|\+ 添加文件夹/);
+  assert.doesNotMatch(html, /data-add-materials-trigger=|data-photo-picker=|data-photo-import-preflight=|选择照片|选择文件夹|确认导入|重新选择|高级 \/ 命令行导入|photos:import/);
+  assert.doesNotMatch(html, /aria-label="素材库视图"|>在库素材 |移入回收站|恢复素材/);
 });

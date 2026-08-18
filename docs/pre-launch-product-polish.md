@@ -6,9 +6,13 @@
 > - External operations: `NOT_AUTHORIZED`
 > - Product experience foundation: `ACCEPTED`
 > - Automated visual QA baseline: `ACCEPTED`
-> - Human-directed product polish: `NEXT`
+> - Human-directed product polish: `IN_PROGRESS`
 > - Eleven-template human visual approval: `PENDING`
-> - Base: `main@e40c7514efeb50a66a7836eb41272f682b395a4c`
+> - Human-approved templates: `0 / 11`
+> - PR #24 feature freeze: `TRUE`
+> - PR #24 limited baseline acceptance: `ACCEPTED`
+> - Current hand-off: `WAITING_FOR_NEXT_HUMAN_DIRECTED_PRODUCT_POLISH_AUTHORIZATION`
+> - Current PR base: `main@ced247e5baf19510329c4c3a084a69e6b1ab0c2c`
 
 This temporary product-experience lane improves the local photographer journey
 before real deployment resumes. It does not replace the Portfolio Platform
@@ -35,9 +39,29 @@ formal template, or replace a template-by-template human aesthetic review.
 PRODUCT_EXPERIENCE_FOUNDATION = ACCEPTED
 AUTOMATED_VISUAL_QA_BASELINE = ACCEPTED
 PRE_LAUNCH_PRODUCT_POLISH = IN_PROGRESS
-HUMAN_DIRECTED_PRODUCT_POLISH = NEXT
+HUMAN_DIRECTED_PRODUCT_POLISH = IN_PROGRESS
+PR24_LIMITED_BASELINE = ACCEPTED
 ELEVEN_TEMPLATE_HUMAN_VISUAL_APPROVAL = PENDING
+HUMAN_APPROVED = 0 / 11
 ```
+
+## PR #24 limited acceptance boundary
+
+PR #24 completed `LIMITED_CLOSURE + HUMAN_ACCEPTANCE_GATE`, and the human
+reviewer accepted that exact limited baseline for Ready and squash merge. Its
+feature scope remains frozen. The closure does not automatically Apply or save
+a layout, change `SiteDocumentV1`, change template identities or slot counts,
+or add hosted capabilities. The resulting hand-off is
+`WAITING_FOR_NEXT_HUMAN_DIRECTED_PRODUCT_POLISH_AUTHORIZATION`, not a final
+product or template approval.
+
+The authoritative audit reconciliation and separately categorized
+`NEXT_PR_P1`, `NEXT_PR_P2`, `PRE_DEPLOYMENT_P1`, `FUTURE_HOSTED`, and
+`LOCAL_ONLY_FUTURE` lists are recorded in
+[human-directed-product-polish.md](human-directed-product-polish.md). In
+particular, `/star`, the future platform homepage at `/`, and the SSR/client
+identity split remain deferred; `PUBLIC_IDENTITY_SSR_MISMATCH` is a
+pre-deployment P1.
 
 ## Frozen engineering launch line
 
@@ -91,8 +115,9 @@ selection != save
 These four phases establish the accepted foundation and automated baseline:
 photo ingest semantics, implementation-derived material profiles, reuse of the
 accepted pure Composition planner for read-only preview and explicit apply, and
-differentiated real-photo QA across all templates. Human-directed polish remains
-the next step.
+differentiated real-photo QA across all templates. The first human-directed
+polish PR is now a limited baseline ready for human review; later
+template-by-template polish remains in progress rather than complete.
 
 ## Architecture invariants
 
@@ -202,13 +227,16 @@ human visual polish remains pending for all eleven templates.
 
 ## Human-directed product polish follow-up
 
-The next product-experience review remains intentionally unimplemented here:
+The product-experience follow-ups currently have these states. The limited
+closure ledger supplies the authoritative priority buckets; this section
+preserves the design context behind them:
 
 - `ONE_LEVEL_LAYOUT_UNDO_FOLLOWUP` is a `P1_PRODUCT_EXPERIENCE_FOLLOWUP` for
   explicitly applied recommended layouts;
-- `MATERIAL_PROFILE_INFORMATION_HIERARCHY_REVIEW_PENDING` covers whether the
-  photographer-facing UI should expose crop pressure, mobile strategy,
-  secondary presentation, and slot-level technical detail;
+- `MATERIAL_PROFILE_INFORMATION_HIERARCHY_REVIEW_PENDING` was addressed by
+  HR-008: the candidate identity now precedes its structure diagram, and one
+  slot-direction plan drives both the summary and material guidance. Human
+  recheck of the resulting hierarchy remains pending;
 - `LOCAL_SOURCE_BINDING_FOLLOWUP` remains separate from one-time folder import;
 - `ORBITAL_VARIANT_CANDIDATE` remains a design study after the accepted
   portrait-safety fix;

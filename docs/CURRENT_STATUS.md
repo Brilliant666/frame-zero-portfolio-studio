@@ -1,7 +1,7 @@
 # Portfolio Platform Current Status
 
-> - Updated: 2026-08-11
-> - Baseline: `main@e40c7514efeb50a66a7836eb41272f682b395a4c`
+> - Updated: 2026-08-18
+> - Baseline: `main@ced247e5baf19510329c4c3a084a69e6b1ab0c2c`
 
 ```text
 Current phase: SELF_HOSTED_V1
@@ -17,8 +17,14 @@ Current product priority: LOCAL_PRODUCT_EXPERIENCE
 Product experience foundation: ACCEPTED
 Automated visual QA baseline: ACCEPTED
 Pre-launch product polish: IN_PROGRESS
-Human-directed product polish: NEXT
+Human-directed product polish: IN_PROGRESS
 Eleven-template human visual approval: PENDING
+Human-approved templates: 0 / 11
+PR #24 closure mode: FINAL_HUMAN_ACCEPTANCE + MERGE
+PR #24 feature freeze: TRUE
+PR #24 product baseline: ACCEPTED
+PR #24 limited baseline acceptance: ACCEPTED
+PR #24 hand-off: WAITING_FOR_NEXT_HUMAN_DIRECTED_PRODUCT_POLISH_AUTHORIZATION
 External operations: NOT_AUTHORIZED
 Completed milestone: STANDARD_NEXT_NODE_PARITY
 Next milestone: DEPLOYMENT_BOOTSTRAP_READY
@@ -125,14 +131,19 @@ composition previews, explicit layout application, and eleven-template visual
 QA. It does not authorize target-server preflight, deployment, Stage B,
 PostgreSQL, production Auth, hosted upload, DNS, TLS, or production data.
 
-Human review has accepted the product-experience foundation and its automated
-visual-QA baseline. That acceptance does not close
-`PRE_LAUNCH_PRODUCT_POLISH`: human-directed import, profile, preview, apply,
-spacing, crop, hierarchy, typography, and mobile polish remains the next work.
-No formal template has `HUMAN_APPROVED` status, and eleven-template human visual
-approval remains pending.
+Human review has accepted the product-experience foundation, its automated
+visual-QA baseline, and PR #24 as the limited product-polish baseline. Ready
+and squash merge are authorized for that exact accepted head. This does not
+close
+`PRE_LAUNCH_PRODUCT_POLISH`, complete the eleven-template visual review, or
+claim V1 product-experience completion. No formal template has
+`HUMAN_APPROVED` status (`0 / 11`); all eleven remain ready for human recheck or
+later template-by-template polish in a new human-directed product-polish PR.
 
 See [stage-a2-deployment-bootstrap.md](stage-a2-deployment-bootstrap.md) for
 the current Definition of Done matrix and explicit external-operation boundary.
 See [pre-launch-product-polish.md](pre-launch-product-polish.md) for the active
 product-experience batch and its architecture boundaries.
+See [human-directed-product-polish.md](human-directed-product-polish.md) for
+the limited-closure ledger, template review matrix, and human-review stop
+protocol.

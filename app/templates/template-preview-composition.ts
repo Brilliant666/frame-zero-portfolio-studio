@@ -7,7 +7,18 @@ import {
   type CompositionRatio,
   type TemplateCompositionVariant,
 } from "../template-composition/contract";
-import { assetToWork, type PhotoAsset, type PhotoOrientation } from "../photo-library";
+import {
+  normalizePrimaryAssignmentRatio,
+  primaryPhotoRatioForOrientation,
+  templateSlotOrientationMode,
+} from "../photo-ratio-policy";
+import {
+  assetToWork,
+  autoComposeTemplateWorks,
+  retargetWorkToSlot,
+  type PhotoAsset,
+  type PhotoOrientation,
+} from "../photo-library";
 import type { SiteContent, Work } from "../site-config";
 import type { TemplateId } from "./catalog";
 import {
@@ -59,14 +70,49 @@ function roleForSlot(profile: TemplateMaterialProfile, slotIndex: number) {
   return profile.visualPriority.find((priority) => priority.slotIndex === slotIndex)?.role ?? "gallery";
 }
 
-function previewVariant(profile: TemplateMaterialProfile): TemplateCompositionVariant {
+function adaptivePreviewRatios(
+  profile: TemplateMaterialProfile,
+  assets: readonly PhotoAsset[],
+  existingWorks: readonly Work[],
+) {
+  const isAdaptiveSlot = (slotIndex: number) => (
+    templateSlotOrientationMode(profile.templateId, slotIndex) === "source-adaptive"
+  );
+  if (!profile.slotAspectTargets.some((_, slotIndex) => isAdaptiveSlot(slotIndex))) {
+    return profile.slotAspectTargets;
+  }
+
+  const ratios = profile.slotAspectTargets.map((ratio, slotIndex) => (
+    isAdaptiveSlot(slotIndex) ? normalizePrimaryAssignmentRatio(ratio) : ratio
+  ));
+  const assetById = new Map(assets.map((asset) => [asset.id, asset]));
+  const stableAssets = [...assets].sort((left, right) => left.id.localeCompare(right.id));
+  const plannedWorks = autoComposeTemplateWorks(
+    stableAssets,
+    profile.slotAspectTargets,
+    existingWorks.map((work) => ({ ...work, locked: true })),
+    { templateId: profile.templateId },
+  );
+  for (const [fallbackIndex, work] of plannedWorks.entries()) {
+    const slotIndex = Number.isInteger(work.slotIndex) ? work.slotIndex as number : fallbackIndex;
+    if (!isAdaptiveSlot(slotIndex) || !work.assetId) continue;
+    const asset = assetById.get(work.assetId);
+    if (asset) ratios[slotIndex] = primaryPhotoRatioForOrientation(asset.orientation);
+  }
+  return Object.freeze(ratios);
+}
+
+function previewVariant(
+  profile: TemplateMaterialProfile,
+  assignmentRatios: readonly CompositionRatio[] = profile.slotAspectTargets,
+): TemplateCompositionVariant {
   return Object.freeze({
     variantId: PREVIEW_VARIANT_ID,
     fallbackPriority: 0,
     label: "Preview",
     description: "Ephemeral formal-slot preview.",
     designIntent: "Preview only.",
-    slots: Object.freeze(profile.slotAspectTargets.map((assignmentRatio, slotIndex) => {
+    slots: Object.freeze(assignmentRatios.map((displayRatio, slotIndex) => {
       const priority = profile.visualPriority.find((item) => item.slotIndex === slotIndex);
       const secondaryPresentations = profile.secondaryPresentations.flatMap((presentation, presentationIndex) => (
         presentation.slotIndexes.includes(slotIndex) && compositionRatios.has(presentation.target as CompositionRatio)
@@ -77,12 +123,19 @@ function previewVariant(profile: TemplateMaterialProfile): TemplateCompositionVa
             })]
           : []
       ));
+      if (displayRatio === "16:9") {
+        secondaryPresentations.push(Object.freeze({
+          presentationKey: "secondary-slot-display-16-9",
+          ratio: "16:9" as const,
+          critical: false,
+        }));
+      }
 
       return Object.freeze({
         slotIndex,
         slotKey: `slot-${String(slotIndex + 1).padStart(2, "0")}`,
         logicalRole: roleForSlot(profile, slotIndex),
-        assignmentRatio,
+        assignmentRatio: normalizePrimaryAssignmentRatio(displayRatio),
         critical: priority?.level === "critical",
         secondaryPresentations: Object.freeze(secondaryPresentations),
       });
@@ -122,7 +175,7 @@ function demandShortages(profile: TemplateMaterialProfile, assets: readonly Phot
 
 function safeReason(assignment: Exclude<CompositionAssignmentResult, { status: "assigned" }>) {
   if (assignment.status === "blocked") return "锁定槽位与素材库冲突；请先检查素材排版。";
-  return "预览排版失败；请刷新素材库后重试。";
+  return "预览排版失败；请刷新素材列表后重试。";
 }
 
 /**
@@ -139,8 +192,9 @@ export function planTemplateCompositionPreview({
   existingWorks?: readonly Work[];
 }>): TemplateCompositionPreview {
   const profile = getTemplateMaterialProfile(templateId);
+  const assignmentRatios = adaptivePreviewRatios(profile, assets, existingWorks);
   const assignment = assignComposition({
-    variant: previewVariant(profile),
+    variant: previewVariant(profile, assignmentRatios),
     assets: assets.map((asset) => ({
       assetId: asset.id,
       aspectRatio: asset.aspectRatio,
@@ -177,7 +231,7 @@ export function planTemplateCompositionPreview({
     if (!asset) return [];
     const existing = existingByAssetId.get(slotAssignment.assetId);
     const work = existing
-      ? { ...existing, slotIndex: slotAssignment.slotIndex, locked: slotAssignment.locked }
+      ? { ...retargetWorkToSlot(existing, slotAssignment.slotIndex), locked: slotAssignment.locked }
       : { ...assetToWork(asset, slotAssignment.slotIndex), locked: slotAssignment.locked };
     return [Object.freeze(work)];
   });

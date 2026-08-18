@@ -7,6 +7,7 @@ import { ADMIN_SECTIONS, getAdminSection } from "./admin-navigation";
 import { formatSavedAt, useAdmin } from "./admin-provider";
 import { getAdminStatus } from "./admin-state";
 import styles from "./admin-v2.module.css";
+import DraftTemplatePreviewTrigger from "./draft-preview";
 
 export default function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
@@ -48,15 +49,12 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
             <strong>{status.label}</strong>
             <span>{showStatusMessage ? message : savedAt ? `上次保存 ${savedAt}` : editorLabel}</span>
           </div>
-          <a
+          <DraftTemplatePreviewTrigger
+            templateId={content.activeTemplate}
+            label="预览当前草稿"
             className={styles.previewLink}
-            href={`/?template=${content.activeTemplate}`}
-            target="_blank"
-            rel="noreferrer"
-            aria-label="在新标签页预览当前主页"
-          >
-            <span className={styles.previewText}>预览当前主页</span> <span aria-hidden="true">↗</span>
-          </a>
+            scope="admin"
+          />
           <button
             type="button"
             className={styles.saveButton}

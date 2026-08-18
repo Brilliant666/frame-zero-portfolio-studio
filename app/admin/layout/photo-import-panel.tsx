@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import styles from "../admin-v2.module.css";
 import {
   LocalPhotoImportUnavailableError,
   localPhotoImportAccept,
   runLocalPhotoImport,
   selectLocalPhotoImportFiles,
+  type LocalPhotoImportFile,
   type PhotoImportProgress,
   type PhotoImportResult,
 } from "./photo-import-client";
@@ -33,6 +34,87 @@ type PhotoImportPanelProps = Readonly<{
 }>;
 
 const directoryInputAttributes = { webkitdirectory: "" };
+const photoImportPreviewPageSize = 24;
+
+type PendingPhotoImportBatch = Readonly<{
+  revision: number;
+  files: readonly LocalPhotoImportFile[];
+  ignored: number;
+  mode: PhotoImportSelectionMode;
+  nestedFileCount: number;
+  subdirectoryCount: number;
+}>;
+
+type PendingPhotoImportPreviewPage = Readonly<{
+  batchRevision: number;
+  objectUrls: readonly (string | null)[];
+  pageIndex: number;
+}>;
+
+function releasePhotoPreviewUrls(objectUrls: readonly (string | null)[]) {
+  for (const objectUrl of objectUrls) {
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+  }
+}
+
+function createPhotoPreviewUrl(file: LocalPhotoImportFile) {
+  try {
+    return URL.createObjectURL(file);
+  } catch {
+    return null;
+  }
+}
+
+function PhotoImportPreviewItem({
+  file,
+  objectUrl,
+}: Readonly<{ file: LocalPhotoImportFile; objectUrl: string | null }>) {
+  const [previewFailed, setPreviewFailed] = useState(false);
+
+  return (
+    <figure className={styles.photoImportPreviewItem} data-photo-import-preview-item="true">
+      {!objectUrl || previewFailed ? (
+        <div className={styles.photoImportPreviewFallback}>确认后转换</div>
+      ) : (
+        // The object URL stays inside this browser session and is revoked with the current preview page.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={objectUrl} alt="" onError={() => setPreviewFailed(true)} />
+      )}
+      <figcaption title={file.name}>{file.name}</figcaption>
+    </figure>
+  );
+}
+
+function PhotoImportPreviewPage({
+  batchRevision,
+  files,
+  objectUrls,
+  pageIndex,
+}: Readonly<{
+  batchRevision: number;
+  files: readonly LocalPhotoImportFile[];
+  objectUrls: readonly (string | null)[];
+  pageIndex: number;
+}>) {
+  const pageStart = pageIndex * photoImportPreviewPageSize;
+  const pageEnd = Math.min(pageStart + photoImportPreviewPageSize, files.length);
+  const previewFiles = files.slice(pageStart, pageEnd);
+
+  return (
+    <div
+      className={styles.photoImportPreviewGrid}
+      aria-label={`待添加照片缩略图，第 ${pageIndex + 1} 页`}
+    >
+      {previewFiles.map((file, index) => (
+        <PhotoImportPreviewItem
+          key={`${batchRevision}-${pageStart + index}`}
+          file={file}
+          objectUrl={objectUrls[index] ?? null}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function PhotoImportPanel({
   importing,
@@ -44,9 +126,17 @@ export default function PhotoImportPanel({
   onRefresh,
   stats,
 }: PhotoImportPanelProps) {
+  const addMaterialsTriggerRef = useRef<HTMLButtonElement>(null);
+  const preflightConfirmRef = useRef<HTMLButtonElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const batchActiveRef = useRef(false);
+  const pendingBatchRevisionRef = useRef(0);
+  const pendingBatchRef = useRef<PendingPhotoImportBatch | null>(null);
+  const previewPageRef = useRef<PendingPhotoImportPreviewPage | null>(null);
+  const [addMaterialsOpen, setAddMaterialsOpen] = useState(false);
+  const [pendingBatch, setPendingBatchState] = useState<PendingPhotoImportBatch | null>(null);
+  const [previewPage, setPreviewPageState] = useState<PendingPhotoImportPreviewPage | null>(null);
   const [progress, setProgress] = useState<PhotoImportProgress | null>(null);
   const [result, setResult] = useState<PhotoImportResult | null>(null);
   const [batchError, setBatchError] = useState<string | null>(null);
@@ -54,26 +144,58 @@ export default function PhotoImportPanel({
   const [ignoredFiles, setIgnoredFiles] = useState(0);
   const [selectionMode, setSelectionMode] = useState<PhotoImportSelectionMode>("photos");
 
+  const setPendingBatch = (nextBatch: PendingPhotoImportBatch | null) => {
+    pendingBatchRef.current = nextBatch;
+    setPendingBatchState(nextBatch);
+  };
+
+  const clearPhotoPreviewPage = () => {
+    releasePhotoPreviewUrls(previewPageRef.current?.objectUrls ?? []);
+    previewPageRef.current = null;
+    setPreviewPageState(null);
+  };
+
+  const showPhotoPreviewPage = (batch: PendingPhotoImportBatch, pageIndex: number) => {
+    releasePhotoPreviewUrls(previewPageRef.current?.objectUrls ?? []);
+    const pageStart = pageIndex * photoImportPreviewPageSize;
+    const nextPreviewPage = {
+      batchRevision: batch.revision,
+      objectUrls: batch.files
+        .slice(pageStart, pageStart + photoImportPreviewPageSize)
+        .map(createPhotoPreviewUrl),
+      pageIndex,
+    };
+    previewPageRef.current = nextPreviewPage;
+    setPreviewPageState(nextPreviewPage);
+  };
+
+  useEffect(() => () => {
+    releasePhotoPreviewUrls(previewPageRef.current?.objectUrls ?? []);
+    previewPageRef.current = null;
+  }, []);
+
+  const openPhotoPicker = () => photoInputRef.current?.click();
+
+  const openFolderPicker = () => {
+    const input = folderInputRef.current;
+    if (!input || !("webkitdirectory" in input)) {
+      setBatchError("当前环境无法选择文件夹；请改用“选择照片”。");
+      return;
+    }
+    input.click();
+  };
+
   const beginImport = async (
-    files: ArrayLike<File> | null,
+    files: readonly LocalPhotoImportFile[],
     mode: PhotoImportSelectionMode,
   ) => {
     if (
       localPhotoImportState !== "configured"
       || !localPhotoImportOrigin
       || batchActiveRef.current
-      || !files
+      || files.length === 0
     ) return;
     setSelectionMode(mode);
-    const selection = selectLocalPhotoImportFiles(files);
-    if (selection.accepted.length === 0) {
-      setProgress(null);
-      setResult(null);
-      setHealthError(null);
-      setIgnoredFiles(selection.ignored);
-      setBatchError("所选内容中没有受支持的照片。");
-      return;
-    }
 
     batchActiveRef.current = true;
     onImportingChange(true);
@@ -81,19 +203,19 @@ export default function PhotoImportPanel({
     setResult(null);
     setBatchError(null);
     setHealthError(null);
-    setIgnoredFiles(selection.ignored);
 
     try {
-      const nextResult = await runLocalPhotoImport(localPhotoImportOrigin, selection.accepted, {
+      const nextResult = await runLocalPhotoImport(localPhotoImportOrigin, files, {
         onProgress: setProgress,
         refreshLibrary: onRefresh,
+        sourceKind: mode,
       });
       setResult(nextResult);
     } catch (error) {
       if (error instanceof LocalPhotoImportUnavailableError) {
         setHealthError("导入地址已配置，但当前无法连接本地照片导入服务。请确认 npm run dev 正在运行。");
       } else {
-        setBatchError("照片导入未能完成，请重试。");
+        setBatchError("素材添加未能完成，请重试。");
       }
     } finally {
       batchActiveRef.current = false;
@@ -105,23 +227,106 @@ export default function PhotoImportPanel({
     event: ChangeEvent<HTMLInputElement>,
     mode: PhotoImportSelectionMode,
   ) => {
-    const files = event.currentTarget.files ? Array.from(event.currentTarget.files) : null;
+    const files = event.currentTarget.files ? Array.from(event.currentTarget.files) : [];
     event.currentTarget.value = "";
-    void beginImport(files, mode);
+    setAddMaterialsOpen(false);
+
+    if (files.length === 0) {
+      if (!pendingBatchRef.current && mode === "folder") {
+        setBatchError("未收到文件；文件夹为空或无法读取时，请改用“选择照片”。");
+      }
+      requestAnimationFrame(() => {
+        if (pendingBatchRef.current) preflightConfirmRef.current?.focus();
+        else addMaterialsTriggerRef.current?.focus();
+      });
+      return;
+    }
+
+    const selection = selectLocalPhotoImportFiles(files);
+
+    setProgress(null);
+    setResult(null);
+    setBatchError(null);
+    setHealthError(null);
+    setIgnoredFiles(0);
+
+    if (selection.accepted.length === 0) {
+      setIgnoredFiles(selection.ignored);
+      setBatchError("所选内容中没有受支持的照片。");
+      requestAnimationFrame(() => {
+        if (pendingBatchRef.current) preflightConfirmRef.current?.focus();
+        else addMaterialsTriggerRef.current?.focus();
+      });
+      return;
+    }
+
+    pendingBatchRevisionRef.current += 1;
+    const nextBatch = {
+      revision: pendingBatchRevisionRef.current,
+      files: selection.accepted,
+      ignored: selection.ignored,
+      mode,
+      nestedFileCount: selection.nestedFileCount,
+      subdirectoryCount: selection.uniqueSubfolderCount,
+    };
+    setPendingBatch(nextBatch);
+    showPhotoPreviewPage(nextBatch, 0);
+    setSelectionMode(mode);
+    requestAnimationFrame(() => preflightConfirmRef.current?.focus());
+  };
+
+  const confirmPendingImport = () => {
+    if (!pendingBatch || importing) return;
+    setIgnoredFiles(pendingBatch.ignored);
+    const importPromise = beginImport(pendingBatch.files, pendingBatch.mode);
+    clearPhotoPreviewPage();
+    setPendingBatch(null);
+    void importPromise;
+  };
+
+  const cancelPendingImport = () => {
+    clearPhotoPreviewPage();
+    setPendingBatch(null);
+    setIgnoredFiles(0);
+    requestAnimationFrame(() => addMaterialsTriggerRef.current?.focus());
+  };
+
+  const reselectPendingImport = () => {
+    const mode = pendingBatch?.mode;
+    if (mode === "folder") openFolderPicker();
+    else openPhotoPicker();
   };
 
   const refreshDisabled = importing || libraryState === "loading";
   const processingLabel = progress && progress.processed === progress.total
-    ? "正在刷新素材库…"
+    ? "正在刷新素材列表…"
     : selectionMode === "folder"
-      ? "正在导入文件夹快照"
+      ? "正在读取素材文件夹"
       : "正在添加照片";
   const progressPosition = progress
     ? progress.processed === progress.total
-      ? `已处理 ${progress.total} 张，正在刷新素材库`
+      ? `已处理 ${progress.total} 张，正在刷新素材列表`
       : `正在处理第 ${Math.min(progress.processed + 1, progress.total)} 张，共 ${progress.total} 张`
     : "正在连接本地服务…";
-  const selectionLabel = selectionMode === "folder" ? "文件夹快照" : "照片选择";
+  const selectionLabel = selectionMode === "folder"
+    ? "素材文件夹（一次性快照，不会持续同步）"
+    : "照片选择（单张或多张）";
+  const previewPageCount = pendingBatch
+    ? Math.ceil(pendingBatch.files.length / photoImportPreviewPageSize)
+    : 0;
+  const previewPageIndex = previewPage && previewPage.batchRevision === pendingBatch?.revision
+    ? previewPage.pageIndex
+    : 0;
+  const previewObjectUrls = previewPage && previewPage.batchRevision === pendingBatch?.revision
+    ? previewPage.objectUrls
+    : [];
+
+  const selectPreviewPage = (nextPageIndex: number) => {
+    if (!pendingBatch || previewPageCount === 0) return;
+    const boundedPageIndex = Math.min(Math.max(nextPageIndex, 0), previewPageCount - 1);
+    if (boundedPageIndex === previewPageIndex) return;
+    showPhotoPreviewPage(pendingBatch, boundedPageIndex);
+  };
 
   return (
     <section
@@ -132,18 +337,18 @@ export default function PhotoImportPanel({
     >
       <div className={styles.libraryImportHeader}>
         <div className={styles.libraryImportCopy}>
-          <strong id="local-photo-library-heading">本地素材库</strong>
+          <h3 id="local-photo-library-heading">素材库概况与导入</h3>
           <p>{libraryMessage}</p>
-          <small>自动生成网页版本；原图、文件夹路径和文件名不会写入项目数据或 Git。刷新只重新读取素材清单，不会扫描电脑文件夹。</small>
+          <small>自动生成网页版本；原图、文件夹路径和文件名不会写入项目数据或 Git。刷新素材列表只会重新读取素材清单，不会扫描电脑文件夹。</small>
         </div>
         <button
           type="button"
-          aria-label="刷新素材库（不重新扫描文件夹）"
+          aria-label="刷新素材列表（不重新扫描文件夹）"
           title="只重新读取素材清单，不会重新扫描电脑文件夹"
           onClick={() => void onRefresh()}
           disabled={refreshDisabled}
         >
-          {libraryState === "loading" ? "刷新中…" : "刷新素材库"}
+          {libraryState === "loading" ? "刷新中…" : "刷新素材列表"}
         </button>
       </div>
 
@@ -156,22 +361,41 @@ export default function PhotoImportPanel({
 
       {localPhotoImportState === "configured" && localPhotoImportOrigin ? (
         <div className={styles.photoImportControls}>
-          <div className={styles.photoImportActions} aria-label="选择本次导入来源">
+          <div className={styles.photoImportActions}>
+            <button
+              ref={addMaterialsTriggerRef}
+              type="button"
+              data-add-materials-trigger="true"
+              aria-controls="local-photo-import-choices"
+              aria-expanded={addMaterialsOpen}
+              onClick={() => setAddMaterialsOpen((open) => !open)}
+              disabled={importing || Boolean(pendingBatch)}
+            >
+              添加素材
+            </button>
+          </div>
+          <div
+            id="local-photo-import-choices"
+            className={styles.photoImportChoiceNotes}
+            role="group"
+            aria-label="选择素材添加方式"
+            hidden={!addMaterialsOpen}
+          >
             <button
               type="button"
-              aria-describedby="local-photo-import-choices"
-              onClick={() => photoInputRef.current?.click()}
-              disabled={importing}
+              onClick={openPhotoPicker}
+              disabled={importing || Boolean(pendingBatch)}
             >
-              + 添加照片
+              <strong>选择照片</strong>
+              <small>默认方式 · 可选择一张或多张</small>
             </button>
             <button
               type="button"
-              aria-describedby="local-photo-import-choices"
-              onClick={() => folderInputRef.current?.click()}
-              disabled={importing}
+              onClick={openFolderPicker}
+              disabled={importing || Boolean(pendingBatch)}
             >
-              + 添加文件夹
+              <strong>选择文件夹</strong>
+              <small>一次性读取文件夹及子文件夹</small>
             </button>
           </div>
           <input
@@ -193,18 +417,13 @@ export default function PhotoImportPanel({
             type="file"
             aria-hidden="true"
             tabIndex={-1}
-            accept={localPhotoImportAccept}
             multiple
             disabled={importing}
             onChange={(event) => handleSelection(event, "folder")}
             {...directoryInputAttributes}
           />
-          <div id="local-photo-import-choices" className={styles.photoImportChoiceNotes}>
-            <p><strong>添加照片</strong> 本次可选择一张或多张。</p>
-            <p><strong>添加文件夹</strong> 导入当前快照；后续增删需再次选择该文件夹。</p>
-          </div>
           <p className={styles.photoImportHint}>
-            支持 JPG、JPEG、PNG、WebP、AVIF、HEIC、HEIF、TIFF；暂不支持相机 RAW。照片会立即加入本地素材库，不会自动修改或保存主页排版。
+            默认可添加一张或多张照片；文件夹按当前内容一次性读取，后续增删需再次选择。支持 JPG、JPEG、PNG、WebP、AVIF、HEIC、HEIF、TIFF；暂不支持相机 RAW。添加素材不会自动修改或保存主页排版。
           </p>
         </div>
       ) : localPhotoImportState === "missing" ? (
@@ -218,6 +437,88 @@ export default function PhotoImportPanel({
           <p>远程素材存储将在后续存储阶段提供。</p>
         </div>
       )}
+
+      {pendingBatch ? (
+        <section
+          className={styles.photoImportPreflight}
+          data-photo-import-preflight="true"
+          aria-labelledby="photo-import-preflight-heading"
+        >
+          <div className={styles.photoImportPreflightHeader}>
+            <div>
+              <strong id="photo-import-preflight-heading">确认添加这些素材</strong>
+              <p>
+                缩略图仅供本次预览；确认后才开始本机处理。
+              </p>
+            </div>
+            <span>{pendingBatch.mode === "folder" ? "文件夹批次" : "照片批次"}</span>
+          </div>
+
+          <dl className={styles.photoImportPreflightStats} aria-label="待添加素材批次统计">
+            <div><dt>待处理</dt><dd>{pendingBatch.files.length}</dd></div>
+            <div><dt>子目录照片</dt><dd>{pendingBatch.nestedFileCount}</dd></div>
+            <div><dt>已忽略</dt><dd>{pendingBatch.ignored}</dd></div>
+          </dl>
+
+          {pendingBatch.mode === "folder" ? (
+            <p className={styles.photoImportPreflightNote}>
+              含待处理照片的子目录 {pendingBatch.subdirectoryCount} 个；路径不上传、不保存。
+            </p>
+          ) : null}
+
+          <div className={styles.photoImportPreviewPagination}>
+            <p aria-live="polite" aria-atomic="true">
+              第 {previewPageIndex + 1} / {previewPageCount} 页 · 共 {pendingBatch.files.length} 张
+            </p>
+            <nav aria-label="待导入素材缩略图分页">
+              <button
+                type="button"
+                onClick={() => selectPreviewPage(previewPageIndex - 1)}
+                disabled={previewPageIndex === 0}
+              >
+                上一页
+              </button>
+              <label>
+                <span>页码</span>
+                <select
+                  aria-label="选择缩略图页码"
+                  value={previewPageIndex}
+                  onChange={(event) => selectPreviewPage(Number(event.currentTarget.value))}
+                >
+                  {Array.from({ length: previewPageCount }, (_, pageIndex) => (
+                    <option key={pageIndex} value={pageIndex}>第 {pageIndex + 1} 页</option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={() => selectPreviewPage(previewPageIndex + 1)}
+                disabled={previewPageIndex >= previewPageCount - 1}
+              >
+                下一页
+              </button>
+            </nav>
+          </div>
+          <PhotoImportPreviewPage
+            key={`${pendingBatch.revision}-${previewPageIndex}`}
+            batchRevision={pendingBatch.revision}
+            files={pendingBatch.files}
+            objectUrls={previewObjectUrls}
+            pageIndex={previewPageIndex}
+          />
+          <small className={styles.photoImportPreviewLimit}>
+            每页最多显示 24 张缩略图；确认后仍会处理全部 {pendingBatch.files.length} 张。
+          </small>
+
+          <div className={styles.photoImportPreflightActions}>
+            <button type="button" onClick={cancelPendingImport}>取消</button>
+            <button type="button" onClick={reselectPendingImport}>重新选择</button>
+            <button ref={preflightConfirmRef} type="button" onClick={confirmPendingImport}>
+              确认导入 {pendingBatch.files.length} 张
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       {importing ? (
         <div className={styles.photoImportProgress} role="status" aria-live="polite">
@@ -233,7 +534,8 @@ export default function PhotoImportPanel({
           {progress ? (
             <dl>
               <div><dt>新增</dt><dd>{progress.added}</dd></div>
-              <div><dt>已存在</dt><dd>{progress.alreadyExists}</dd></div>
+              <div><dt>恢复</dt><dd>{progress.restored}</dd></div>
+              <div><dt>重复跳过</dt><dd>{progress.alreadyExists}</dd></div>
               <div><dt>失败</dt><dd>{progress.failed}</dd></div>
             </dl>
           ) : null}
@@ -248,18 +550,30 @@ export default function PhotoImportPanel({
           role="status"
           aria-live="polite"
         >
-          <strong>{result.added + result.alreadyExists === 0 && result.failed > 0
-            ? "未能添加照片"
+          <strong>{result.added + result.restored + result.alreadyExists === 0 && result.failed > 0
+            ? "未能读取素材"
             : result.failed > 0
-              ? "添加完成，部分照片未处理"
-              : "添加完成"}</strong>
+              ? "读取完成，部分照片未处理"
+              : result.added > 0
+                ? `已添加 ${result.added} 张素材`
+                : result.restored > 0
+                  ? `已恢复 ${result.restored} 张素材`
+                : result.alreadyExists > 0
+                  ? "没有新增照片"
+                  : "素材读取完成"}</strong>
           <p>
-            新增 {result.added} · 已存在 {result.alreadyExists} · 失败 {result.failed}
-            {result.libraryTotal === null ? "" : ` · 素材库现有 ${result.libraryTotal} 张`}
+            本次新增 {result.added}
+            {result.restored > 0 ? <> · 恢复可用 {result.restored}</> : null}
+            {result.alreadyExists > 0 ? <> · 重复跳过 {result.alreadyExists}</> : null}
+            {result.failed > 0 ? ` · 失败 ${result.failed}` : ""}
+            {result.libraryTotal === null ? "" : ` · 可用素材总计 ${result.libraryTotal} 张`}
           </p>
-          <small>本次来源：{selectionLabel}{selectionMode === "folder" ? "（一次性快照，不会持续同步）" : ""}</small>
+          <small>本次来源：{selectionLabel}</small>
+          {result.alreadyExists > 0 ? (
+            <small>按照片字节识别重复内容；改名或换文件夹不会生成副本。</small>
+          ) : null}
           {ignoredFiles > 0 ? <small>另有 {ignoredFiles} 个非照片文件已忽略。</small> : null}
-          {result.refreshFailed ? <small>照片处理已完成，但素材列表刷新失败；请稍后刷新素材库。</small> : null}
+          {result.refreshFailed ? <small>照片处理已完成，但素材列表刷新失败；请稍后刷新素材列表。</small> : null}
           {result.failures.length > 0 ? (
             <details>
               <summary>查看失败详情</summary>
@@ -275,7 +589,7 @@ export default function PhotoImportPanel({
 
       {batchError ? (
         <div className={styles.photoImportError} role="alert">
-          <strong>未能开始添加</strong>
+          <strong>未能开始读取</strong>
           <p>{batchError}</p>
           {ignoredFiles > 0 ? <small>已忽略 {ignoredFiles} 个不受支持的文件。</small> : null}
         </div>
@@ -287,11 +601,6 @@ export default function PhotoImportPanel({
           <p>{healthError}</p>
         </div>
       ) : null}
-
-      <details className={styles.photoImportCli}>
-        <summary>高级 / 命令行导入</summary>
-        <code>npm run photos:import -- --source &quot;&lt;照片文件夹&gt;&quot;</code>
-      </details>
     </section>
   );
 }

@@ -13,7 +13,10 @@ const ORBIT_RATIOS = getTemplateSlotRatios("orbital-portal");
 
 export default function OrbitalPortalTemplate({ content, works, packages, bookingTemplate, copiedKey, onCopy, onOpenWork }: TemplateProps) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const orbitSlots = useMemo(() => buildPhotoSlots(works, ORBIT_RATIOS), [works]);
+  const orbitSlots = useMemo(
+    () => buildPhotoSlots(works, ORBIT_RATIOS, { templateId: "orbital-portal" }),
+    [works],
+  );
   const filledOrbitSlots = useMemo(() => orbitSlots.filter((slot) => slot.work), [orbitSlots]);
   const safeActiveIndex = filledOrbitSlots.length === 0 ? 0 : Math.min(activeIndex, filledOrbitSlots.length - 1);
   const activeSlot = filledOrbitSlots[safeActiveIndex] ?? orbitSlots[0];

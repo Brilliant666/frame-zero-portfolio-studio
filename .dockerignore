@@ -26,6 +26,18 @@
 !public/favicon.svg
 !public/file.svg
 !public/globe.svg
+!public/template-structure-previews/
+!public/template-structure-previews/archive-os.webp
+!public/template-structure-previews/character-select.webp
+!public/template-structure-previews/cinematic-light.webp
+!public/template-structure-previews/editorial-duet.webp
+!public/template-structure-previews/film-rail.webp
+!public/template-structure-previews/manga-panels.webp
+!public/template-structure-previews/museum-depth.webp
+!public/template-structure-previews/neon-hud.webp
+!public/template-structure-previews/orbital-portal.webp
+!public/template-structure-previews/polaroid-field.webp
+!public/template-structure-previews/prism-liquid.webp
 !public/window.svg
 
 # These deny rules stay last so future broad source includes cannot admit

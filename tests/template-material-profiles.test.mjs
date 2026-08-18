@@ -16,6 +16,7 @@ async function importMaterialProfiles(t) {
 
   for (const [relativePath, outputName] of [
     ["app/templates/catalog.ts", "catalog.mjs"],
+    ["app/photo-ratio-policy.ts", "photo-ratio-policy.mjs"],
     ["app/templates/material-profiles.ts", "material-profiles.mjs"],
   ]) {
     const input = await source(relativePath);
@@ -27,6 +28,7 @@ async function importMaterialProfiles(t) {
       fileName: relativePath,
     }).outputText;
     output = output.replaceAll('from "./catalog"', 'from "./catalog.mjs"');
+    output = output.replaceAll('from "../photo-ratio-policy"', 'from "./photo-ratio-policy.mjs"');
     await fs.writeFile(path.join(directory, outputName), output, "utf8");
   }
 
@@ -59,7 +61,12 @@ test("all eleven templates expose bounded, immutable material profiles", async (
     assert.ok(profile.recommendedPhotoCount <= profile.maximumUsefulPhotoCount);
     assert.ok(profile.heroSlotCount >= 0 && profile.heroSlotCount <= profile.maximumUsefulPhotoCount);
 
-    const demands = [profile.landscapeDemand, profile.portraitDemand, profile.squareDemand];
+    const demands = [
+      profile.landscapeDemand,
+      profile.portraitDemand,
+      profile.squareDemand,
+      profile.sourceAdaptiveDemand,
+    ];
     for (const demand of demands) {
       assert.ok(Number.isSafeInteger(demand.minimum) && demand.minimum >= 0);
       assert.ok(Number.isSafeInteger(demand.recommended) && demand.recommended >= demand.minimum);
@@ -96,19 +103,25 @@ test("all eleven templates expose bounded, immutable material profiles", async (
     assert.ok(Object.isFrozen(profile.visualPriority));
     assert.ok(Object.isFrozen(profile.cropPressure));
     assert.ok(Object.isFrozen(profile.mobileBehavior));
+    assert.ok(Object.isFrozen(profile.sourceAdaptiveDemand));
     assert.ok(Object.isFrozen(profile.secondaryPresentations));
     assert.ok(Object.isFrozen(profile.optionalNotes));
   }
 });
 
 test("material profiles preserve differentiated implementation-driven demands", async (t) => {
-  const { getTemplateMaterialProfile } = await importMaterialProfiles(t);
+  const {
+    formatTemplateMaterialDirectionSummary,
+    getTemplateMaterialPlanSummary,
+    getTemplateMaterialProfile,
+  } = await importMaterialProfiles(t);
 
   const film = getTemplateMaterialProfile("film-rail");
   assert.deepEqual(
     [film.landscapeDemand.recommended, film.portraitDemand.recommended, film.squareDemand.recommended],
     [9, 0, 0],
   );
+  assert.equal(film.recommendedPhotoCount, 9);
   assert.equal(film.mobileBehavior.mode, "horizontal-rail");
 
   const orbital = getTemplateMaterialProfile("orbital-portal");
@@ -122,13 +135,93 @@ test("material profiles preserve differentiated implementation-driven demands", 
   const character = getTemplateMaterialProfile("character-select");
   assert.deepEqual(
     [character.landscapeDemand.recommended, character.portraitDemand.recommended, character.squareDemand.recommended],
-    [6, 1, 2],
+    [0, 0, 0],
   );
-  assert.ok(character.secondaryPresentations.some(({ target }) => target === "1:1"));
+  assert.ok(character.secondaryPresentations.some(({ target }) => target === "variable"));
+  assert.ok(character.secondaryPresentations.every(({ target }) => target !== "1:1"));
+  assert.deepEqual(
+    [character.sourceAdaptiveDemand.minimum, character.sourceAdaptiveDemand.recommended],
+    [5, 9],
+  );
+
+  const cinematic = getTemplateMaterialProfile("cinematic-light");
+  assert.deepEqual(
+    [cinematic.landscapeDemand.recommended, cinematic.portraitDemand.recommended, cinematic.sourceAdaptiveDemand.recommended],
+    [2, 0, 7],
+  );
+  assert.equal(cinematic.recommendedPhotoCount, 9);
+  assert.deepEqual(cinematic.visualPriority.map(({ slotIndex }) => slotIndex), [0, 8]);
+
+  const neon = getTemplateMaterialProfile("neon-hud");
+  assert.equal(neon.recommendedPhotoCount, 9);
+  assert.deepEqual(
+    neon.secondaryPresentations[0].slotIndexes,
+    [0, 1, 2, 3, 4, 5, 6, 7],
+  );
+
+  const manga = getTemplateMaterialProfile("manga-panels");
+  assert.deepEqual(
+    [manga.landscapeDemand.recommended, manga.portraitDemand.recommended, manga.sourceAdaptiveDemand.recommended],
+    [2, 1, 6],
+  );
+  assert.equal(manga.recommendedPhotoCount, 9);
 
   assert.equal(getTemplateMaterialProfile("archive-os").recommendedPhotoCount, 12);
   assert.equal(getTemplateMaterialProfile("museum-depth").recommendedPhotoCount, 7);
   assert.equal(getTemplateMaterialProfile("polaroid-field").visualPriority[0].slotIndex, 4);
+
+  const expectedPlans = {
+    "cinematic-light": [2, 0, 7, 2],
+    "neon-hud": [2, 0, 7, 2],
+    "film-rail": [9, 0, 0, 0],
+    "manga-panels": [2, 1, 6, 2],
+    "prism-liquid": [2, 1, 6, 1],
+    "orbital-portal": [0, 8, 0, 0],
+    "archive-os": [1, 0, 11, 0],
+    "editorial-duet": [3, 1, 5, 3],
+    "polaroid-field": [1, 1, 7, 0],
+    "character-select": [0, 0, 9, 0],
+    "museum-depth": [1, 1, 5, 0],
+  };
+  for (const [templateId, expected] of Object.entries(expectedPlans)) {
+    const plan = getTemplateMaterialPlanSummary(templateId);
+    const profile = getTemplateMaterialProfile(templateId);
+    assert.deepEqual(
+      [plan.fixedLandscapeCount, plan.fixedPortraitCount, plan.sourceAdaptiveCount, plan.fixedWideCropCount],
+      expected,
+      `${templateId} must expose the slot policy as one material plan`,
+    );
+    assert.equal(
+      plan.fixedLandscapeCount + plan.fixedPortraitCount + plan.sourceAdaptiveCount,
+      plan.totalSlots,
+    );
+    assert.deepEqual(
+      [plan.fixedLandscapeCount, plan.fixedPortraitCount, plan.sourceAdaptiveCount],
+      [
+        profile.landscapeDemand.recommended,
+        profile.portraitDemand.recommended,
+        profile.sourceAdaptiveDemand.recommended,
+      ],
+    );
+    assert.equal(profile.squareDemand.recommended, 0);
+    assert.doesNotMatch(formatTemplateMaterialDirectionSummary(plan), /16:9/);
+    assert.ok(Object.isFrozen(plan));
+  }
+
+  const prismPlan = getTemplateMaterialPlanSummary("prism-liquid");
+  assert.equal(
+    formatTemplateMaterialDirectionSummary(prismPlan),
+    "固定横图 2 张 · 固定竖图 1 张 · 任意方向 6 张",
+  );
+  assert.deepEqual(
+    getTemplateMaterialProfile("prism-liquid").secondaryPresentations[0],
+    {
+      slotIndexes: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+      target: "3:2",
+      critical: true,
+      note: "九个可选槽位中的任意照片都可能进入固定 3:2 棱镜主视窗。",
+    },
+  );
 });
 
 test("material profiles stay presentation-only and out of persistence contracts", async () => {
@@ -141,6 +234,9 @@ test("material profiles stay presentation-only and out of persistence contracts"
   assert.doesNotMatch(siteDocument, /TemplateMaterialProfile|material-profiles/);
   assert.doesNotMatch(adapter, /TemplateMaterialProfile|material-profiles/);
   assert.match(templateEditor, /getTemplateMaterialProfile/);
+  assert.match(templateEditor, /getTemplateMaterialPlanSummary/);
+  assert.match(templateEditor, /formatTemplateMaterialDirectionSummary/);
   assert.match(templateEditor, /data-template-material-profile/);
+  assert.doesNotMatch(templateEditor, /photoRatios|比例计划/);
   assert.doesNotMatch(templateEditor, /SiteDocumentV1|variantId|method:\s*"PUT"/);
 });

@@ -1,4 +1,9 @@
+import {
+  primaryAssignmentRatioNumber,
+  templateSlotOrientationMode,
+} from "./photo-ratio-policy";
 import type { Work } from "./site-config";
+import type { TemplateId } from "./templates/catalog";
 
 export const PHOTO_LIBRARY_MANIFEST_VERSION = 1 as const;
 
@@ -29,6 +34,11 @@ export type PhotoLibraryManifest = {
 };
 
 export type FocusPosition = { x: number; y: number };
+
+export type AutoComposeTemplateWorksOptions = Readonly<{
+  adaptiveToSourceOrientation?: boolean;
+  templateId?: TemplateId;
+}>;
 
 const DEFAULT_FOCUS: FocusPosition = { x: 50, y: 50 };
 const MAX_ASSETS = 10_000;
@@ -153,6 +163,27 @@ export function formatFocusPosition(x: number, y: number) {
   return `${cleanPercentage(clampPercentage(x))}% ${cleanPercentage(clampPercentage(y))}%`;
 }
 
+export function generatedFrameTitle(slotIndex: number) {
+  const safeSlotIndex = Number.isInteger(slotIndex) && slotIndex >= 0 ? slotIndex : 0;
+  return `FRAME ${String(safeSlotIndex + 1).padStart(2, "0")}`;
+}
+
+/**
+ * Moves an existing work without making a system-generated FRAME label stale.
+ * Human-authored titles are deliberately preserved.
+ */
+export function retargetWorkToSlot(work: Work, slotIndex: number): Work {
+  const safeSlotIndex = Number.isInteger(slotIndex) && slotIndex >= 0 ? slotIndex : 0;
+  const previousSlotIndex = Number.isInteger(work.slotIndex) && (work.slotIndex as number) >= 0
+    ? work.slotIndex as number
+    : null;
+  const title = previousSlotIndex !== null && work.title === generatedFrameTitle(previousSlotIndex)
+    ? generatedFrameTitle(safeSlotIndex)
+    : work.title;
+
+  return { ...work, slotIndex: safeSlotIndex, title };
+}
+
 export function assetToWork(asset: PhotoAsset, slotIndex: number): Work {
   const safeSlotIndex = Number.isInteger(slotIndex) && slotIndex >= 0 ? slotIndex : 0;
   const codeSuffix = asset.id.slice(0, 8).toUpperCase();
@@ -162,7 +193,7 @@ export function assetToWork(asset: PhotoAsset, slotIndex: number): Work {
     slotIndex: safeSlotIndex,
     locked: false,
     code: `P-${codeSuffix}`,
-    title: `FRAME ${String(safeSlotIndex + 1).padStart(2, "0")}`,
+    title: generatedFrameTitle(safeSlotIndex),
     subtitle: `LOCAL LIBRARY / ${asset.orientation.toUpperCase()}`,
     image: asset.variants.full.src,
     preview: asset.variants.card.src,
@@ -184,13 +215,23 @@ function orientationForSlot(ratio: PhotoSlotRatio): Exclude<PhotoOrientation, "s
   return ratioValue(ratio) < 1 ? "portrait" : "landscape";
 }
 
-export function isPhotoAssetCompatibleWithSlot(asset: PhotoAsset, ratio: PhotoSlotRatio) {
+export function isPhotoAssetCompatibleWithSlot(
+  asset: PhotoAsset,
+  ratio: PhotoSlotRatio,
+  adaptiveToSourceOrientation = false,
+) {
+  if (adaptiveToSourceOrientation) return true;
   return asset.orientation === "square" || asset.orientation === orientationForSlot(ratio);
 }
 
-export function isWorkCompatibleWithSlot(work: Work, ratio: PhotoSlotRatio) {
+export function isWorkCompatibleWithSlot(
+  work: Work,
+  ratio: PhotoSlotRatio,
+  adaptiveToSourceOrientation = false,
+) {
   if (!Number.isFinite(work.previewWidth) || !Number.isFinite(work.previewHeight)) return false;
   if (work.previewWidth <= 0 || work.previewHeight <= 0) return false;
+  if (adaptiveToSourceOrientation) return true;
   if (work.previewWidth === work.previewHeight) return true;
   return (work.previewWidth > work.previewHeight) === (ratioValue(ratio) > 1);
 }
@@ -263,15 +304,24 @@ function minimumCostAssignment(
 }
 
 /**
- * Keeps valid locked slots, then globally pairs the closest same-orientation
- * assets with the remaining ratios. A missing orientation deliberately leaves
- * a slot empty so the template can render its editorial placeholder.
+ * Keeps valid locked slots. Fixed templates then globally pair the closest
+ * same-orientation assets with the remaining primary 3:2 / 2:3 targets; a
+ * displayed 16:9 slot is costed as a secondary crop of a 3:2 assignment.
+ * Source-orientation-adaptive templates fill open stable slots in canonical
+ * asset-id order and let their renderer derive the directional presentation.
  */
 export function autoComposeTemplateWorks(
   assets: readonly PhotoAsset[],
   slotRatios: readonly PhotoSlotRatio[],
   existingWorks: readonly Work[] = [],
+  options: AutoComposeTemplateWorksOptions = {},
 ): Work[] {
+  const isAdaptiveSlot = (slotIndex: number) => (
+    options.adaptiveToSourceOrientation === true
+    || (options.templateId !== undefined
+      && templateSlotOrientationMode(options.templateId, slotIndex) === "source-adaptive")
+  );
+  const allSlotsAdaptive = slotRatios.every((_, slotIndex) => isAdaptiveSlot(slotIndex));
   const slots = new Map<number, Work>();
   const usedAssetIds = new Set<string>();
   const availableAssetIds = new Set(assets.map((asset) => asset.id));
@@ -284,7 +334,7 @@ export function autoComposeTemplateWorks(
     const slotIndex = Number.isInteger(work.slotIndex) ? work.slotIndex as number : fallbackIndex;
     if (slotIndex < 0 || slotIndex >= slotRatios.length || slots.has(slotIndex)) return;
     if (work.assetId && !availableAssetIds.has(work.assetId)) return;
-    if (!isWorkCompatibleWithSlot(work, slotRatios[slotIndex])) return;
+    if (!isWorkCompatibleWithSlot(work, slotRatios[slotIndex], isAdaptiveSlot(slotIndex))) return;
     if (work.assetId && usedAssetIds.has(work.assetId)) return;
 
     slots.set(slotIndex, { ...work, slotIndex, locked: true });
@@ -298,8 +348,22 @@ export function autoComposeTemplateWorks(
     seenAssetIds.add(asset.id);
     availableAssets.push(asset);
   }
+  availableAssets.sort((left, right) => left.id.localeCompare(right.id));
 
   const openSlotIndexes = slotRatios.flatMap((_, slotIndex) => slots.has(slotIndex) ? [] : [slotIndex]);
+
+  if (allSlotsAdaptive) {
+    for (let index = 0; index < Math.min(openSlotIndexes.length, availableAssets.length); index += 1) {
+      const slotIndex = openSlotIndexes[index];
+      const asset = availableAssets[index];
+      const existing = existingByAssetId.get(asset.id);
+      slots.set(slotIndex, existing
+        ? { ...retargetWorkToSlot(existing, slotIndex), locked: false }
+        : assetToWork(asset, slotIndex));
+    }
+    return [...slots.values()].sort((left, right) => (left.slotIndex ?? 0) - (right.slotIndex ?? 0));
+  }
+
   const dummyColumnOffset = availableAssets.length;
   const incompatibleCost = 1_000_000;
   const placeholderCost = 100;
@@ -310,8 +374,9 @@ export function autoComposeTemplateWorks(
       if (column >= dummyColumnOffset) return placeholderCost;
       const slotIndex = openSlotIndexes[slotRow];
       const asset = availableAssets[column];
+      if (isAdaptiveSlot(slotIndex)) return 10;
       if (!isPhotoAssetCompatibleWithSlot(asset, slotRatios[slotIndex])) return incompatibleCost;
-      return Math.abs(Math.log(asset.aspectRatio / ratioValue(slotRatios[slotIndex])));
+      return Math.abs(Math.log(asset.aspectRatio / primaryAssignmentRatioNumber(slotRatios[slotIndex])));
     },
   );
 
@@ -319,10 +384,10 @@ export function autoComposeTemplateWorks(
     if (assetColumn >= dummyColumnOffset) continue;
     const slotIndex = openSlotIndexes[slotRow];
     const asset = availableAssets[assetColumn];
-    if (!isPhotoAssetCompatibleWithSlot(asset, slotRatios[slotIndex])) continue;
+    if (!isPhotoAssetCompatibleWithSlot(asset, slotRatios[slotIndex], isAdaptiveSlot(slotIndex))) continue;
     const existing = existingByAssetId.get(asset.id);
     slots.set(slotIndex, existing
-      ? { ...existing, slotIndex, locked: false }
+      ? { ...retargetWorkToSlot(existing, slotIndex), locked: false }
       : assetToWork(asset, slotIndex));
     usedAssetIds.add(asset.id);
   }

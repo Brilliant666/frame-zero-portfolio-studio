@@ -1,15 +1,18 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { isTemplateId, templateCatalog, type TemplateId } from "../../site-config";
 import {
+  formatTemplateMaterialDirectionSummary,
+  getTemplateMaterialPlanSummary,
   getTemplateMaterialProfile,
   type TemplateMaterialProfile,
 } from "../../templates/material-profiles";
 import { AdminSection } from "../admin-form";
 import { useAdmin } from "../admin-provider";
 import styles from "../admin-v2.module.css";
-import TemplateCompositionPreview from "./template-composition-preview";
+import TemplateStructurePreview from "./template-structure-preview";
 
 const mobileModeLabels: Record<TemplateMaterialProfile["mobileBehavior"]["mode"], string> = {
   stack: "顺序堆叠",
@@ -20,13 +23,13 @@ const mobileModeLabels: Record<TemplateMaterialProfile["mobileBehavior"]["mode"]
 };
 
 export default function TemplateEditor() {
+  const router = useRouter();
   const { content, savedContent, setContent } = useAdmin();
   const [inspectedOverride, setInspectedOverride] = useState<TemplateId | null>(null);
   const inspectedId = inspectedOverride ?? content.activeTemplate;
-  const savedTemplate = templateCatalog.find((template) => template.id === savedContent.activeTemplate);
-  const draftTemplate = templateCatalog.find((template) => template.id === content.activeTemplate);
   const inspectedTemplate = templateCatalog.find((template) => template.id === inspectedId) ?? templateCatalog[0];
   const materialProfile = getTemplateMaterialProfile(inspectedTemplate.id);
+  const materialPlan = getTemplateMaterialPlanSummary(inspectedTemplate.id);
   const inspectedIsSaved = savedContent.activeTemplate === inspectedTemplate.id;
   const inspectedIsDraft = content.activeTemplate === inspectedTemplate.id;
 
@@ -34,9 +37,16 @@ export default function TemplateEditor() {
     if (isTemplateId(value)) setInspectedOverride(value);
   };
 
-  const chooseTemplate = (templateId: TemplateId) => {
-    setContent((current) => ({ ...current, activeTemplate: templateId }));
+  const continueToLayout = (templateId: TemplateId) => {
+    if (content.activeTemplate !== templateId) {
+      setContent((current) => ({ ...current, activeTemplate: templateId }));
+    }
+    router.push("/admin/layout");
   };
+
+  const detailState = inspectedIsDraft
+    ? inspectedIsSaved ? "当前主页模板" : "已选为主页 · 未保存"
+    : null;
 
   const statusLabels = (templateId: TemplateId) => [
     savedContent.activeTemplate === templateId ? "已保存" : null,
@@ -51,26 +61,6 @@ export default function TemplateEditor() {
       description="从紧凑列表查看 11 个正式模板；同一时间只展开一个候选详情。"
     >
       <div className={styles.templateOverview}>
-        <div className={styles.templateSelectionSummary} role="status" aria-live="polite">
-          <div>
-            <span>已保存模板</span>
-            <strong>{savedTemplate?.name ?? savedContent.activeTemplate}</strong>
-          </div>
-          <div>
-            <span>当前草稿</span>
-            <strong>{draftTemplate?.name ?? content.activeTemplate}</strong>
-          </div>
-          <div>
-            <span>当前查看</span>
-            <strong>{inspectedTemplate.name}</strong>
-          </div>
-        </div>
-
-        <div className={styles.templateNotice} role="note">
-          查看候选详情不会修改草稿；只有点击“选择此模板”才会更新当前草稿。模板槽位数量或比例可能不同，
-          当前主页的素材排版可能变化；各模板已有的显式槽位排版会继续保留，不会在这里静默删除。
-        </div>
-
         <div className={styles.templateWorkbench}>
           <div className={styles.templateSelectorPane}>
             <label className={styles.templateMobileSelector}>
@@ -128,27 +118,39 @@ export default function TemplateEditor() {
             data-inspected="true"
             aria-labelledby={`template-detail-name-${inspectedTemplate.id}`}
           >
-            <div className={styles.templateDetailVisual}>
-              <div className={`template-swatch ${styles.templateDetailSwatch}`} aria-hidden="true">
-                <i /><b />
-              </div>
-            </div>
-
-            <div className={styles.templateDetailBody}>
-              <div className={styles.templateDetailStates} aria-label="当前候选模板状态">
-                <span data-active={inspectedIsSaved}>{inspectedIsSaved ? "已保存选择" : "不是已保存选择"}</span>
-                <span data-active={inspectedIsDraft}>{inspectedIsDraft ? "当前草稿" : "不是当前草稿"}</span>
-                <span data-active="true">正在查看</span>
-              </div>
+            <header className={styles.templateDetailIntro}>
               <div className={styles.templateDetailHeader}>
                 <span>READY · {String(templateCatalog.indexOf(inspectedTemplate) + 1).padStart(2, "0")}</span>
                 <h3 id={`template-detail-name-${inspectedTemplate.id}`}>{inspectedTemplate.name}</h3>
               </div>
+              {detailState ? (
+                <div className={styles.templateDetailStates} role="status" aria-live="polite">
+                  <span data-template-state={detailState}>{detailState}</span>
+                </div>
+              ) : null}
               <p>{inspectedTemplate.description}</p>
+            </header>
+
+            <div className={styles.templateDetailVisual}>
+              <TemplateStructurePreview templateId={inspectedTemplate.id} />
+            </div>
+
+            <div className={styles.templateDetailBody}>
               <dl className={styles.templateDetailFacts}>
-                <div><dt>照片槽位</dt><dd>{inspectedTemplate.photoSlots} 个</dd></div>
-                <div><dt>比例计划</dt><dd>{inspectedTemplate.photoRatios}</dd></div>
+                <div><dt>照片槽位</dt><dd>{materialPlan.totalSlots} 个</dd></div>
+                <div>
+                  <dt>槽位构成</dt>
+                  <dd>{formatTemplateMaterialDirectionSummary(materialPlan)}</dd>
+                </div>
               </dl>
+              <p className={styles.templateMaterialPlanNote}>
+                {materialPlan.sourceAdaptiveCount > 0
+                  ? "任意方向槽按源素材展示为横图 3:2 或竖图 2:3。"
+                  : "本模板的正式槽位使用固定横竖方向。"}
+                {materialPlan.fixedWideCropCount > 0
+                  ? ` 其中 ${materialPlan.fixedWideCropCount} 个固定横向槽使用 16:9 展示裁切；无需单独准备 16:9 素材。`
+                  : " 16:9 仅在模板需要时作为展示裁切，不是额外素材格式。"}
+              </p>
 
               <section
                 className={styles.templateMaterialProfile}
@@ -168,9 +170,10 @@ export default function TemplateEditor() {
                 </p>
                 <dl className={styles.templateMaterialDemand}>
                   {([
-                    ["横图", materialProfile.landscapeDemand],
-                    ["竖图", materialProfile.portraitDemand],
+                    ["固定横图", materialProfile.landscapeDemand],
+                    ["固定竖图", materialProfile.portraitDemand],
                     ["方图", materialProfile.squareDemand],
+                    ["任意方向", materialProfile.sourceAdaptiveDemand],
                   ] as const).map(([label, demand]) => (
                     <div key={label}>
                       <dt>{label}</dt>
@@ -214,25 +217,19 @@ export default function TemplateEditor() {
                 </ul>
               </section>
 
-              <TemplateCompositionPreview templateId={inspectedTemplate.id} />
             </div>
 
-            <div className={styles.templateDetailActions}>
+            <div className={styles.templateDetailActions} data-template-primary-action="true">
               <button
                 type="button"
-                onClick={() => chooseTemplate(inspectedTemplate.id)}
-                disabled={inspectedIsDraft}
+                onClick={() => continueToLayout(inspectedTemplate.id)}
+                title={inspectedIsDraft
+                  ? "进入当前主页模板的素材排版"
+                  : "将模板写入当前草稿并进入素材排版；不会自动保存"}
               >
-                {inspectedIsDraft ? "当前草稿模板" : "选择此模板"}
+                {inspectedIsDraft ? "进入素材排版" : "设为主页并进入素材排版"}
+                <span aria-hidden="true">→</span>
               </button>
-              <a
-                href={`/?template=${inspectedTemplate.id}`}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`独立预览${inspectedTemplate.name}`}
-              >
-                独立预览 <span aria-hidden="true">↗</span>
-              </a>
             </div>
           </article>
         </div>

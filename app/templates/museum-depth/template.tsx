@@ -11,7 +11,10 @@ import styles from "./template.module.css";
 const MUSEUM_RATIOS = getTemplateSlotRatios("museum-depth");
 
 export default function MuseumDepthTemplate({ content, works, packages, bookingTemplate, copiedKey, onCopy, onOpenWork }: TemplateProps) {
-  const photoSlots = useMemo(() => buildPhotoSlots(works, MUSEUM_RATIOS), [works]);
+  const photoSlots = useMemo(
+    () => buildPhotoSlots(works, MUSEUM_RATIOS, { templateId: "museum-depth" }),
+    [works],
+  );
   const heroSlot = photoSlots[0];
   const heroWork = heroSlot.work;
   const exhibitSlots = photoSlots.slice(1);

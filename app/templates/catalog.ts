@@ -98,7 +98,7 @@ export const templateCatalog = [
     description: "角色阵列、选中演出、任务确认",
     status: "ready",
     photoSlots: 9,
-    photoRatios: "16:9 × 2 · 3:2 × 6 · 2:3 × 1",
+    photoRatios: "3:2 / 2:3 × 9 · 按素材方向自适应",
     slotRatios: ["3:2", "3:2", "16:9", "3:2", "2:3", "3:2", "16:9", "3:2", "3:2"],
   },
   {

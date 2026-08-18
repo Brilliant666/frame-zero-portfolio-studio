@@ -579,15 +579,21 @@
 .sectionSummary p { margin: .9rem 0 0; color: var(--muted); font-size: .82rem; line-height: 1.85; }
 
 .archiveGrid {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
+  display: grid;
   gap: .8rem;
+}
+
+.archiveRow {
+  display: grid;
+  grid-template-columns: var(--neon-archive-columns);
+  align-items: start;
+  gap: .8rem;
+  min-width: 0;
 }
 
 .archiveCard {
   position: relative;
-  flex: 0 0 calc(40.909% - .655rem);
+  width: 100%;
   min-width: 0;
   padding: 0;
   overflow: hidden;
@@ -598,16 +604,6 @@
   text-align: left;
   contain: layout paint style;
 }
-
-.archiveCard[data-photo-slot="1"] { flex-basis: 100%; order: 1; }
-.archiveCard[data-photo-slot="2"] { order: 2; }
-.archiveCard[data-photo-slot="3"] { flex-basis: calc(18.182% - .291rem); order: 3; }
-.archiveCard[data-photo-slot="4"] { order: 4; }
-.archiveCard[data-photo-slot="6"] { flex-basis: 100%; order: 5; }
-.archiveCard[data-photo-slot="5"] { flex-basis: calc(33.333% - .534rem); order: 6; }
-.archiveCard[data-photo-slot="7"] { flex-basis: calc(33.333% - .534rem); order: 7; }
-.archiveCard[data-photo-slot="8"] { flex-basis: calc(33.333% - .534rem); order: 8; }
-.archiveCard[data-photo-slot="9"] { flex-basis: 100%; order: 9; }
 .archivePlaceholder { cursor: default; }
 .archivePlaceholder > div { height: 100%; min-height: 0; }
 .archiveCard img { display: block; width: 100%; height: 100%; object-fit: cover; filter: saturate(.9) contrast(1.02); transform: scale(1.01); transition: transform .45s cubic-bezier(.2, .7, .2, 1), filter .35s ease; }
@@ -692,6 +688,7 @@
 }
 
 .manifesto > img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; filter: saturate(.55) contrast(1.12); }
+.manifestoPending { position: absolute; inset: 0; z-index: -2; background: radial-gradient(circle at 72% 34%, rgba(108, 175, 255, .12), transparent 34%), #02050a; }
 .manifesto::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(3, 7, 16, .97) 0%, rgba(3, 7, 16, .76) 42%, rgba(3, 7, 16, .16) 80%), linear-gradient(0deg, rgba(3, 7, 16, .7), transparent 55%); }
 .manifestoGrid { z-index: 0; opacity: .7; mask-image: linear-gradient(90deg, #000, transparent 78%); }
 .manifestoCopy { position: absolute; z-index: 2; left: clamp(1rem, 7vw, 8rem); bottom: clamp(2rem, 8vw, 7rem); }
@@ -821,8 +818,9 @@
   .archive,
   .services,
   .booking { padding: 6rem .65rem; }
-  .archiveCard,
-  .archiveCard[data-photo-slot] { flex-basis: 100%; order: initial; }
+  .archiveGrid { grid-template-columns: minmax(0, 1fr); gap: .65rem; }
+  .archiveRow { display: contents; }
+  .archiveCard[data-photo-ratio="2:3"] { width: min(72%, 22rem); justify-self: center; }
   .cardOpen { opacity: 1; transform: none; }
   .packageGrid { gap: .65rem; }
   .manifesto { min-height: 78svh; }

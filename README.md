@@ -203,11 +203,28 @@ The [ADMIN-V2 / DESIGN-01 workbench](docs/admin-v2.md) divides the editor into
 six focused routes for templates, profile, packages, layout, contact, and
 advanced compatibility controls. All routes share one client-side draft and
 the existing save endpoint; the single top-bar action saves all changes across
-the six sections. The template route uses a compact eleven-item
-selector and expands only one candidate detail at a time. Desktop editing uses a
+the six sections, while **预览当前草稿** shows that in-memory draft without
+persisting it. The template route keeps its compact eleven-item selector and
+shows one candidate at a time with a neutral, repository-owned structure
+diagram—not the user's photographs or SiteContent. Its detail area leads with
+the candidate name and description, then shows the structure and one material
+direction plan shared with the detailed guidance: fixed landscape, fixed
+portrait, and source-adaptive slots always account for the complete slot set.
+A 16:9 target is presentation cropping, not a separate source-file requirement.
+The route retains one workflow action: choosing a
+new homepage template updates only the draft `activeTemplate`, then opens
+**素材排版**; choosing the already-current draft template simply opens that same
+workspace. Neither path saves or applies a composition. Recommended composition, preview, adoption, and all
+`templateWorks` editing belong to **素材排版**, where generating or previewing a
+recommendation remains read-only until **采用推荐到草稿** is chosen. Desktop editing uses a
 persistent sidebar; mobile keeps every section accessible through a compact
 switcher, while complex photo layout remains desktop-first. The Admin structure
 does not change `SiteContent`, the write payload, D1 schema, or template catalog.
+The top-bar **预览当前草稿** remains the only full draft-page preview; the former
+candidate “查看模板效果” action is not duplicated inside the template picker.
+When that handoff carries an unsaved homepage-template change, the layout
+workspace calls it out explicitly before material editing; the top-bar save is
+still required to persist the choice.
 
 The Polaroid Field keeps its fixed nine-slot contract. On desktop its initial
 view and FIT control calculate a rotation-aware fit with a safe viewport margin;
@@ -237,45 +254,88 @@ repository contains layout code and image metadata only, never the photographs.
 When photos are absent, every template keeps its intended composition with
 designed text placeholders.
 
-### Import a local photo library
+### Add local materials
 
-For normal local editing, open **Admin → 素材排版** and use **添加照片** or
-**添加文件夹**. Multiple files and nested folders are processed one photograph at
-a time, progress remains visible, duplicate content is reported as already
-present, and the material grid refreshes automatically when the batch finishes.
-Adding material updates the local Photo Library immediately; it does not save or
-change the shared SiteContent draft and it never runs automatic layout.
+For normal local editing, open **Admin → 素材排版** and choose the single
+**添加素材** entry. Expand it and use **选择照片** for one or more photographs,
+or **选择文件夹** for a one-time batch that includes supported photographs in
+nested folders. A folder is only a batch source: every accepted item becomes a
+photograph in the same local material library, and no folder object or source
+path becomes product data.
 
-**添加照片** is a one-time choice of one or more files. **添加文件夹** imports a
-one-time snapshot, including supported files in nested folders; later changes to
-that computer folder are not watched or rescanned automatically. **刷新素材库**
-only reloads the generated manifest. A future remembered-source workflow must use
-a trusted local companion and keep any absolute folder path in local-only state;
-it remains `LOCAL_SOURCE_BINDING_FOLLOWUP`.
+Both choices enter the same Web `FileList` batch path. Folder selection is a
+capability enhancement on that path, not a separate importer or a browser-name
+branch. After selection, Admin first shows the pending batch for review. Nothing
+is imported until the user confirms it; cancelling or replacing the pending
+selection leaves the library unchanged. Preview pages contain at most 24
+thumbnails, while confirmation always processes the complete selected batch.
+
+After confirmation, accepted photographs are processed one at a time, progress
+remains visible, and the material grid refreshes automatically when the batch
+finishes. The result summary distinguishes **本次新增**, **恢复可用**,
+**重复跳过**, and **可用素材总计**. Duplicate means identical file content, so a
+differently named copy or the same photograph selected through another folder
+can be skipped; regenerated missing derivatives are reported as restored rather
+than incorrectly described as already present.
+Adding material updates the local Photo Library; it does not save or change the
+shared SiteContent draft and it never runs automatic layout.
+
+The folder selection imports a one-time snapshot. Later changes to that computer
+folder are not watched or rescanned automatically, so select the folder again to
+import new material. **刷新素材列表** only reloads the generated manifest. A
+future remembered-source workflow must use a trusted local companion and keep
+any absolute folder path in local-only state; it remains
+`LOCAL_SOURCE_BINDING_FOLLOWUP`.
 
 The local service streams each selected file through a temporary directory into
-the same importer used by the command line. The importer deduplicates identical
-files by SHA-256, applies EXIF orientation, strips image metadata, and creates
-three colour-managed WebP variants per unique photograph. Original files and
-browser folder paths are not copied into the project or manifest. Each request is
-limited to 200 MiB; requests and manifest updates are serialized, including
-against a concurrent CLI import for the same project.
+the internal importer core. That core deduplicates identical files by SHA-256,
+applies EXIF orientation, strips image metadata, and creates three colour-managed
+WebP variants per unique photograph. Original files and browser folder paths are
+not copied into the project or manifest. Each file is limited to 200 MiB, and
+requests plus manifest updates are serialized through the same project lock.
 
-The CLI remains available for advanced automation, recovery, and intentionally
-adopting linked output directories:
-
-```bash
-npm run photos:import -- --source "<photo-folder>"
-```
+Advanced and command-line importing are not product workflows. Existing
+repository-level entry points, linked-output adoption, automatic interrupted
+write recovery, and stale-lock recovery remain internal compatibility and
+maintenance capabilities. HR-001 did not remove or replace the importer core;
+HR-002 reuses that same core for both photograph and folder selection, and
+HR-003 adds review and explicit confirmation before either batch starts. HR-004
+adds paged review plus the local material-management layer described below.
 
 Generated files stay local in `public/photos/library/`. The browser-safe index is
 `public/photos/library-manifest.json`; it contains stable asset IDs, aspect ratios,
-orientations, and responsive image dimensions, but no source file names or local
-paths. Incremental import state is stored in `.frame-zero/`. Both locations are
+orientations, and responsive image dimensions for active material, but no source file names or local
+paths. A private catalog in `.frame-zero/` stores that browser-safe asset metadata
+plus opaque batch IDs, photo/folder source kind, first-import order, timestamps,
+revision counters, and recycle-bin status. It never stores or returns a file name,
+folder name, or local path. Pre-catalogue assets
+remain usable and are labelled as having unknown historical import order.
+Incremental import state is stored in `.frame-zero/`. Both locations are
 ignored by Git. JPEG, PNG, WebP, AVIF, TIFF, HEIC, and HEIF inputs are considered;
 actual format support depends on the installed Sharp build. Camera RAW formats
 such as ARW, CR3, and NEF are not supported. Damaged or unsupported files are
 reported without stopping the rest of an Admin batch.
+
+The local library can be sorted by newest or oldest known import order and
+filtered by import batch. The folder is a source for that batch, not a permanent
+album or automatic classification. Each card shows whether the current draft or
+saved content refers to it. **移到回收站** removes the photograph from new
+selection and automatic layout while retaining its responsive files and all
+existing references; **恢复** returns it to its original import position. There
+is deliberately no irreversible purge action in this local UI.
+
+Primary assignment treats landscape material as 3:2 and portrait material as
+2:3. A 16:9 shape remains an approved presentation crop where a template needs
+it, rather than a separate source category. The importer still preserves true
+dimensions and square orientation metadata instead of falsifying the source.
+Direction is template-specific rather than a global landscape preference:
+`film-rail` stays landscape-only, `orbital-portal` stays portrait-only, and
+`character-select` adapts every slot to its source. The other eight templates
+keep structural hero/cover slots fixed while ordinary gallery slots adapt to
+source-oriented 3:2 or 2:3 presentation. `character-select` uses three justified
+rows for all nine source-orientation combinations and no longer forces a 1:1
+roster. All eleven templates still require real-material desktop/mobile human
+review before approval.
 
 Imports are additive: choosing the wrong folder, temporarily losing a source file,
 or hitting one damaged photograph will not delete assets already used by a saved
@@ -283,28 +343,22 @@ homepage. The current compatibility manifest still keys its legacy entries by
 SHA-256 so re-imports reuse them; those hashes are migration fingerprints, not
 the future random internal Asset IDs.
 
-Normal projects keep `public/photos/` as a regular ignored directory. If an
-advanced local setup intentionally makes it a junction or symlink, the first run
-must explicitly adopt and pin that target with:
+Normal projects keep `public/photos/` as a regular ignored directory. Internal
+compatibility safeguards continue to pin an intentionally adopted junction or
+symlink with a random owner token and hashed target, preventing an accidental or
+retargeted link from receiving generated files. This is not exposed as an Admin
+import option.
 
-```bash
-npm run photos:import -- "<photo-folder>" adopt-linked-output
-```
-
-Later imports use the normal command. A random owner token plus a hashed target
-prevents an accidental or retargeted link from receiving generated files.
-
-The executable import controls are available only from the loopback Admin. A
-hosted Admin can still browse an existing manifest, but it does not call a
-visitor's `127.0.0.1`; remote object storage is a separate future scope. Manual
-**刷新素材库** and `npm run photos:serve` remain available for diagnostics. The
-standalone service defaults to port 3002 and can use another diagnostic port,
-for example `npm run photos:serve -- --port 3003`; normal `npm run dev` always
-uses automatic loopback port discovery.
+The folder import control is available only from the loopback Admin. A hosted
+Admin can still browse an existing manifest, but it does not call a visitor's
+`127.0.0.1`; remote object storage is a separate future scope. Manual
+**刷新素材列表** remains a manifest reload, while standalone service diagnostics
+remain an internal maintenance path. Normal `npm run dev` uses automatic
+loopback port discovery.
 
 After the material grid refreshes, for the active template you can:
 
-- create an initial ratio-aware layout with **一键智能排版**;
+- generate, preview, and explicitly adopt a ratio-aware recommendation into the current draft;
 - pick or replace a specific fixed slot manually;
 - swap adjacent slots, remove a photograph, or lock it before recomposing;
 - click the subject in a crop preview, or use the two sliders, to set its focal point;
@@ -327,9 +381,6 @@ npm run test:contracts
 npm run test:adapters
 npm run test:photos
 npm run test:composition
-npm run photos:import -- --source "<photo-folder>"
-npm run photos:serve
-npm run photos:serve -- --port 3003
 npm run build
 npm run start
 npm run test:node-runtime

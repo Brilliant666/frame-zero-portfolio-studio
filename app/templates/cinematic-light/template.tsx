@@ -2,12 +2,20 @@
 
 /* eslint-disable @next/next/no-img-element -- responsive WebP variants are generated locally for this portfolio. */
 
-import type { CSSProperties } from "react";
+import { useMemo, type CSSProperties } from "react";
 import { getTemplateSlotRatios } from "../catalog";
-import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
+import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoSlot } from "../shared/photo-slots";
+import { groupSourceOrientationSlots, justifiedPhotoColumns } from "../shared/source-orientation-layout";
 import type { TemplateProps } from "../types";
+import { splitCinematicLightSlots } from "./slot-plan";
 
 const cinematicRatios = getTemplateSlotRatios("cinematic-light");
+
+type CinematicArchiveRowStyle = CSSProperties & { "--cinematic-archive-columns": string };
+
+function cinematicArchiveRowStyle(slots: readonly PhotoSlot[]): CinematicArchiveRowStyle {
+  return { "--cinematic-archive-columns": justifiedPhotoColumns(slots) };
+}
 
 export default function CinematicLightTemplate({
   templateId,
@@ -22,10 +30,18 @@ export default function CinematicLightTemplate({
 }: TemplateProps) {
   const heroTitle = content.hero.title.trim().split(/\s+/);
   const heroTitleLead = heroTitle.shift() ?? "";
-  const photoSlots = buildPhotoSlots(works, cinematicRatios);
-  const heroSlot = photoSlots[0];
+  const photoSlots = useMemo(
+    () => buildPhotoSlots(works, cinematicRatios, { templateId: "cinematic-light" }),
+    [works],
+  );
+  const cinematicSlots = useMemo(() => splitCinematicLightSlots(photoSlots), [photoSlots]);
+  const {
+    hero: heroSlot,
+    archive: archiveSlots,
+    statement: statementSlot,
+  } = cinematicSlots;
+  const archiveRows = useMemo(() => groupSourceOrientationSlots(archiveSlots), [archiveSlots]);
   const heroWork = heroSlot.work;
-  const statementSlot = photoSlots[photoSlots.length - 1];
   const statementWork = statementSlot.work;
 
   return (
@@ -53,7 +69,12 @@ export default function CinematicLightTemplate({
         <div className="system-state"><i /> {content.profile.city}</div>
       </header>
 
-      <section id="top" className="hero">
+      <section
+        id="top"
+        className="hero"
+        data-cinematic-photo-role="hero"
+        data-photo-slot={heroSlot.index + 1}
+      >
         {heroWork ? (
           <picture className="hero-media" data-photo-slot={heroSlot.index + 1} data-photo-ratio={heroSlot.ratio}>
             <source media="(max-width: 600px)" srcSet={heroWork.preview} />
@@ -139,57 +160,79 @@ export default function CinematicLightTemplate({
         </div>
 
         <div className="work-grid">
-          {photoSlots.map((slot, index) => {
-            const work = slot.work;
-            if (!work) {
-              return (
-                <div
-                  className="work-card work-card-placeholder"
-                  data-photo-slot={index + 1}
-                  data-photo-ratio={slot.ratio}
-                  key={`cinematic-placeholder-${index}`}
-                  style={{ "--index": index, ...getPhotoSlotStyle(slot) } as CSSProperties}
-                >
-                  <PhotoPlaceholder slot={slot} tone="light" label="待补充电影画面" />
-                </div>
-              );
-            }
+          {archiveRows.map((row, rowIndex) => (
+            <div
+              className="cinematic-archive-row"
+              data-cinematic-archive-row={rowIndex + 1}
+              key={`cinematic-archive-row-${rowIndex}`}
+              role="presentation"
+              style={cinematicArchiveRowStyle(row)}
+            >
+              {row.map((slot) => {
+                const work = slot.work;
+                const archiveIndex = archiveSlots.indexOf(slot);
+                const archivePosition = archiveIndex + 1;
+                const cardStyle = {
+                  "--index": archiveIndex,
+                  ...getPhotoSlotStyle(slot),
+                } as CSSProperties;
+                if (!work) {
+                  return (
+                    <div
+                      className="work-card work-card-placeholder"
+                      data-cinematic-photo-role="archive"
+                      data-cinematic-archive-position={archivePosition}
+                      data-photo-slot={slot.index + 1}
+                      data-photo-ratio={slot.ratio}
+                      key={`cinematic-placeholder-${slot.index}`}
+                      style={cardStyle}
+                    >
+                      <PhotoPlaceholder slot={slot} tone="light" label="待补充电影画面" />
+                    </div>
+                  );
+                }
 
-            return (
-              <button
-                className="work-card"
-                data-photo-slot={index + 1}
-                data-photo-ratio={slot.ratio}
-                key={work.code}
-                onClick={() => onOpenWork(work)}
-                style={{ "--index": index, ...getPhotoSlotStyle(slot) } as CSSProperties}
-                aria-label={`查看作品 ${work.title}`}
-              >
-                <img
-                  src={work.preview}
-                  srcSet={`${work.preview} ${work.previewWidth}w, ${work.image} ${work.fullWidth}w`}
-                  sizes={slot.ratio === "16:9" ? "(max-width: 900px) 92vw, 92vw" : "(max-width: 900px) 92vw, 41vw"}
-                  width={work.previewWidth}
-                  height={work.previewHeight}
-                  alt={work.subtitle}
-                  loading="lazy"
-                  decoding="async"
-                  style={{ objectPosition: work.position }}
-                />
-                <span className="work-scan" aria-hidden="true" />
-                <span className="work-meta">
-                  <small>{work.code}</small>
-                  <strong>{work.title}</strong>
-                  <em>{work.subtitle}</em>
-                </span>
-                <span className="work-open">OPEN FILE ↗</span>
-              </button>
-            );
-          })}
+                return (
+                  <button
+                    className="work-card"
+                    data-cinematic-photo-role="archive"
+                    data-cinematic-archive-position={archivePosition}
+                    data-photo-slot={slot.index + 1}
+                    data-photo-ratio={slot.ratio}
+                    key={`cinematic-archive-${slot.index}`}
+                    onClick={() => onOpenWork(work)}
+                    style={cardStyle}
+                    aria-label={`查看作品 ${work.title}`}
+                  >
+                    <img
+                      src={work.preview}
+                      srcSet={`${work.preview} ${work.previewWidth}w, ${work.image} ${work.fullWidth}w`}
+                      sizes={slot.ratio === "2:3"
+                        ? "(max-width: 900px) 68vw, 38vw"
+                        : "(max-width: 900px) 92vw, 38vw"}
+                      width={work.previewWidth}
+                      height={work.previewHeight}
+                      alt={work.subtitle}
+                      loading="lazy"
+                      decoding="async"
+                      style={{ objectPosition: work.position }}
+                    />
+                    <span className="work-scan" aria-hidden="true" />
+                    <span className="work-meta">
+                      <small>{work.code}</small>
+                      <strong>{work.title}</strong>
+                      <em>{work.subtitle}</em>
+                    </span>
+                    <span className="work-open">OPEN FILE ↗</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </div>
 
         <div className="archive-footer">
-          <span>{photoSlots.length} CURATED FRAMES</span>
+          <span>{archiveSlots.length} CURATED FRAMES</span>
           <span>COLOR PROFILE / CUSTOM</span>
           <span>STATUS / EXPANDING</span>
         </div>
@@ -227,7 +270,11 @@ export default function CinematicLightTemplate({
         <p className="pricing-note">示例价格用于首版展示；服装、影棚、妆造与跨城交通费用另计。</p>
       </section>
 
-      <section className="statement">
+      <section
+        className="statement"
+        data-cinematic-photo-role="statement"
+        data-photo-slot={statementSlot.index + 1}
+      >
         {statementWork ? (
           <img
             src={statementWork.image}

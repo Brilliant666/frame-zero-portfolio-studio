@@ -1,0 +1,49 @@
+.figure {
+  display: grid;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid #d8d0c8;
+  background: #fff;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  background: #eee9e3;
+  object-fit: cover;
+}
+
+.caption {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .65rem .75rem;
+  border-top: 1px solid #d8d0c8;
+}
+
+.caption strong {
+  flex: 0 0 auto;
+  font-size: .76rem;
+}
+
+.caption span {
+  min-width: 0;
+  color: #746c65;
+  font-size: .68rem;
+  line-height: 1.5;
+  text-align: right;
+}
+
+@media (max-width: 560px) {
+  .caption {
+    display: grid;
+  }
+
+  .caption span {
+    text-align: left;
+  }
+}

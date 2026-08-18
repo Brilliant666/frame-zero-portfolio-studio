@@ -85,12 +85,13 @@ test("keeps editable content and eleven lazy template choices in one configurati
   assert.match(page, /const nextContent = normalizeSiteContent\(result\.content\)/);
   assert.match(page, /document\.title = getClientVisiblePortfolioTitle\(nextContent\.profile\)/);
   assert.doesNotMatch(clientTitle, /FRAME\/\/ZERO|Cosplay 摄影师|openGraph|twitter/u);
-  assert.match(page, /const selected = content\.templateWorks\[templateId\]/);
-  assert.match(page, /buildPhotoSlots\(/);
+  assert.match(page, /useTemplateWorks\(content, templateId\)/);
   assert.match(adminShell, /data-admin-title="true"/);
   assert.match(adminShell, /<strong>ADMIN<\/strong>/);
   assert.doesNotMatch(adminShell, /FRAME\/\/ZERO/);
-  assert.match(adminShell, /预览当前主页/);
+  assert.match(adminShell, /预览当前草稿/);
+  assert.match(adminShell, /DraftTemplatePreviewTrigger/);
+  assert.doesNotMatch(adminShell, /预览当前主页|查看已保存主页/);
   assert.match(adminShell, /ADMIN_SECTIONS\.map/);
   assert.match(api, /onConflictDoUpdate/);
   assert.match(schema, /site_settings/);
@@ -135,13 +136,17 @@ test("keeps every template on a fixed photo-slot contract with missing-image pla
   assert.equal(catalog.match(/photoSlots: \d+/g)?.length, templateIds.length);
   assert.equal(catalog.match(/photoRatios: "/g)?.length, templateIds.length);
   assert.equal(catalog.match(/slotRatios: \[/g)?.length, templateIds.length);
-  assert.match(templateEditor, /photoSlots/);
-  assert.match(templateEditor, /photoRatios/);
+  assert.match(templateEditor, /materialPlan\.totalSlots/);
+  assert.match(templateEditor, /getTemplateMaterialPlanSummary/);
+  assert.match(templateEditor, /formatTemplateMaterialDirectionSummary/);
+  assert.doesNotMatch(templateEditor, /比例计划|photoRatios/);
   assert.match(sharedSlots, /export function buildPhotoSlots/);
   assert.match(sharedSlots, /export function PhotoPlaceholder/);
   assert.match(sharedSlots, /Math\.abs\(Math\.log\(actualRatio \/ targetRatio\)\)/);
-  assert.match(layoutWorkspace, /一键智能排版/);
-  assert.match(layoutWorkspace, /刷新素材库/);
+  assert.match(layoutWorkspace, /LayoutCompositionPreview/);
+  assert.match(layoutWorkspace, /生成排版建议并采用到草稿/);
+  assert.doesNotMatch(layoutWorkspace, /一键智能排版/);
+  assert.match(layoutWorkspace, /刷新素材列表/);
   assert.match(libraryModel, /parsePhotoLibraryManifest/);
   assert.match(libraryModel, /autoComposeTemplateWorks/);
 

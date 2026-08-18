@@ -110,7 +110,7 @@
 .sectionTitle p { color: rgba(21,18,29,.55); }
 .galleryGrid { display: grid; gap: 1rem; }
 .galleryFeatureRow { display: grid; grid-template-columns: minmax(0, 9fr) minmax(0, 4fr); gap: 1rem; align-items: start; }
-.galleryTriptych { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; align-items: start; }
+.galleryTriptych { display: grid; grid-template-columns: var(--prism-triptych-columns); gap: 1rem; align-items: start; }
 .galleryPanorama { display: grid; }
 .galleryCard { position: relative; display: block; width: 100%; min-width: 0; overflow: hidden; background: #e8e3ef; cursor: zoom-in; }
 .galleryPlaceholder { cursor: default; }
