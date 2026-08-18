@@ -1,6 +1,6 @@
 # Human-Directed Product Polish
 
-> - Human-directed polish status: `PR24_LIMITED_BASELINE_READY`
+> - Human-directed polish status: `IN_PROGRESS`
 > - Current phase: `SELF_HOSTED_V1`
 > - Current stage: `STAGE_A2_DEPLOYMENT_BOOTSTRAP`
 > - Stage status: `IN_PROGRESS`
@@ -8,11 +8,12 @@
 > - Engineering launch: `FROZEN`
 > - Engineering launch line: `FROZEN_AT_REPO_SIDE_BOOTSTRAP_READY`
 > - Branch: `product/prelaunch-manual-polish-01`
-> - Current Draft PR: `#24 — fix: refine local workflow and template presentation`
-> - PR #24 closure mode: `LIMITED_CLOSURE + HUMAN_ACCEPTANCE_GATE`
+> - Accepted PR: `#24 — fix: refine local workflow and template presentation`
+> - PR #24 closure mode: `FINAL_HUMAN_ACCEPTANCE + MERGE`
 > - PR #24 feature freeze: `TRUE`
+> - PR #24 limited baseline acceptance: `ACCEPTED`
 > - Human-approved templates: `0 / 11`
-> - Current hand-off: `WAITING_FOR_HUMAN_REVIEW`
+> - Current hand-off: `WAITING_FOR_NEXT_HUMAN_DIRECTED_PRODUCT_POLISH_AUTHORIZATION`
 > - External operations: `NOT_AUTHORIZED`
 > - Base: `main@ced247e5baf19510329c4c3a084a69e6b1ab0c2c`
 
@@ -107,6 +108,10 @@ the human reviewer can accept it.
 
 ## PR #24 limited closure
 
+The block below preserves the exact pre-acceptance closure snapshot for audit
+continuity. The final human acceptance that follows supersedes its live PR gate
+fields without rewriting the historical record.
+
 ```text
 FEATURE_FREEZE = TRUE
 PR24 = OPEN + DRAFT
@@ -121,6 +126,29 @@ CURRENT_SAVED_TEMPLATE_FALLBACK_BROKEN = CLOSED
 ENGINEERING_LAUNCH = FROZEN_AT_REPO_SIDE_BOOTSTRAP_READY
 SERVER_DNS_TLS_OPERATIONS = NONE
 PR24_HAND_OFF = WAITING_FOR_HUMAN_REVIEW
+```
+
+### Final human acceptance
+
+On 2026-08-18, the human reviewer accepted the exact limited-closure head and
+authorized Ready for Review followed by squash merge. This accepts the PR #24
+baseline only; it does not complete pre-launch or human-directed product
+polish, approve any formal template, authorize a next branch or PR, or unfreeze
+the engineering launch line.
+
+```text
+PR24_FINAL_HUMAN_ACCEPTANCE = ACCEPTED
+PR24_LIMITED_BASELINE = ACCEPTED
+PR24_READY_AND_SQUASH_MERGE = AUTHORIZED
+HUMAN_DIRECTED_PRODUCT_POLISH = IN_PROGRESS
+PRE_LAUNCH_PRODUCT_POLISH = IN_PROGRESS
+ELEVEN_TEMPLATE_HUMAN_VISUAL_APPROVAL = PENDING
+HUMAN_APPROVED = 0 / 11
+CURRENT_SAVED_TEMPLATE_FALLBACK_BROKEN = CLOSED
+ENGINEERING_LAUNCH = FROZEN_AT_REPO_SIDE_BOOTSTRAP_READY
+NEXT_BRANCH_CREATED = NO
+NEXT_PR_CREATED = NO
+PR24_HAND_OFF = WAITING_FOR_NEXT_HUMAN_DIRECTED_PRODUCT_POLISH_AUTHORIZATION
 ```
 
 The closure fixes only the saved-template fallback safety defect. It preserves
@@ -170,11 +198,11 @@ the request wording, status, validation claim, or chronology of `HR-001` through
 
 ### Legacy bundle gate integrity
 
-The scope-expanded legacy rollback gate remains an accepted internal supporting
-change pending final review:
+The scope-expanded legacy rollback gate is accepted as an internal supporting
+change:
 
 ```text
-LEGACY_BUNDLE_GATE = ACCEPTED_INTERNAL_SUPPORTING_CHANGE_PENDING_FINAL_REVIEW
+LEGACY_BUNDLE_GATE = ACCEPTED_INTERNAL_SUPPORTING_CHANGE
 PUBLIC_JS_CAP = 550 KiB (not widened)
 ADMIN_DYNAMIC_JS_CAP = 160 KiB
 ADMIN_PER_ENTRY_JS_CAP = 80 KiB

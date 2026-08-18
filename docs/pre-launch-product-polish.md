@@ -6,11 +6,12 @@
 > - External operations: `NOT_AUTHORIZED`
 > - Product experience foundation: `ACCEPTED`
 > - Automated visual QA baseline: `ACCEPTED`
-> - Human-directed product polish: `PR24_LIMITED_BASELINE_READY`
+> - Human-directed product polish: `IN_PROGRESS`
 > - Eleven-template human visual approval: `PENDING`
 > - Human-approved templates: `0 / 11`
 > - PR #24 feature freeze: `TRUE`
-> - Current hand-off: `WAITING_FOR_HUMAN_REVIEW`
+> - PR #24 limited baseline acceptance: `ACCEPTED`
+> - Current hand-off: `WAITING_FOR_NEXT_HUMAN_DIRECTED_PRODUCT_POLISH_AUTHORIZATION`
 > - Current PR base: `main@ced247e5baf19510329c4c3a084a69e6b1ab0c2c`
 
 This temporary product-experience lane improves the local photographer journey
@@ -38,19 +39,21 @@ formal template, or replace a template-by-template human aesthetic review.
 PRODUCT_EXPERIENCE_FOUNDATION = ACCEPTED
 AUTOMATED_VISUAL_QA_BASELINE = ACCEPTED
 PRE_LAUNCH_PRODUCT_POLISH = IN_PROGRESS
-HUMAN_DIRECTED_PRODUCT_POLISH = PR24_LIMITED_BASELINE_READY
+HUMAN_DIRECTED_PRODUCT_POLISH = IN_PROGRESS
+PR24_LIMITED_BASELINE = ACCEPTED
 ELEVEN_TEMPLATE_HUMAN_VISUAL_APPROVAL = PENDING
 HUMAN_APPROVED = 0 / 11
 ```
 
 ## PR #24 limited acceptance boundary
 
-PR #24 is in `LIMITED_CLOSURE + HUMAN_ACCEPTANCE_GATE`. Its feature scope is
-frozen, and its only functional closure item is fail-safe handling of unavailable
-saved-template legacy fallback media. The closure does not automatically Apply
-or save a layout, change `SiteDocumentV1`, change template identities or slot
-counts, or add hosted capabilities. The resulting hand-off is
-`WAITING_FOR_HUMAN_REVIEW`, not a final product or template approval.
+PR #24 completed `LIMITED_CLOSURE + HUMAN_ACCEPTANCE_GATE`, and the human
+reviewer accepted that exact limited baseline for Ready and squash merge. Its
+feature scope remains frozen. The closure does not automatically Apply or save
+a layout, change `SiteDocumentV1`, change template identities or slot counts,
+or add hosted capabilities. The resulting hand-off is
+`WAITING_FOR_NEXT_HUMAN_DIRECTED_PRODUCT_POLISH_AUTHORIZATION`, not a final
+product or template approval.
 
 The authoritative audit reconciliation and separately categorized
 `NEXT_PR_P1`, `NEXT_PR_P2`, `PRE_DEPLOYMENT_P1`, `FUTURE_HOSTED`, and

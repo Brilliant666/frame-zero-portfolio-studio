@@ -1,6 +1,6 @@
 # Portfolio Platform Current Status
 
-> - Updated: 2026-08-15
+> - Updated: 2026-08-18
 > - Baseline: `main@ced247e5baf19510329c4c3a084a69e6b1ab0c2c`
 
 ```text
@@ -17,13 +17,14 @@ Current product priority: LOCAL_PRODUCT_EXPERIENCE
 Product experience foundation: ACCEPTED
 Automated visual QA baseline: ACCEPTED
 Pre-launch product polish: IN_PROGRESS
-Human-directed product polish: PR24_LIMITED_BASELINE_READY
+Human-directed product polish: IN_PROGRESS
 Eleven-template human visual approval: PENDING
 Human-approved templates: 0 / 11
-PR #24 closure mode: LIMITED_CLOSURE + HUMAN_ACCEPTANCE_GATE
+PR #24 closure mode: FINAL_HUMAN_ACCEPTANCE + MERGE
 PR #24 feature freeze: TRUE
-PR #24 product baseline: PR24_LIMITED_BASELINE_READY
-PR #24 hand-off: WAITING_FOR_HUMAN_REVIEW
+PR #24 product baseline: ACCEPTED
+PR #24 limited baseline acceptance: ACCEPTED
+PR #24 hand-off: WAITING_FOR_NEXT_HUMAN_DIRECTED_PRODUCT_POLISH_AUTHORIZATION
 External operations: NOT_AUTHORIZED
 Completed milestone: STANDARD_NEXT_NODE_PARITY
 Next milestone: DEPLOYMENT_BOOTSTRAP_READY
@@ -130,9 +131,10 @@ composition previews, explicit layout application, and eleven-template visual
 QA. It does not authorize target-server preflight, deployment, Stage B,
 PostgreSQL, production Auth, hosted upload, DNS, TLS, or production data.
 
-Human review has accepted the product-experience foundation and its automated
-visual-QA baseline. PR #24 is now feature-frozen as a limited product-polish
-baseline and awaits the human acceptance gate. This does not close
+Human review has accepted the product-experience foundation, its automated
+visual-QA baseline, and PR #24 as the limited product-polish baseline. Ready
+and squash merge are authorized for that exact accepted head. This does not
+close
 `PRE_LAUNCH_PRODUCT_POLISH`, complete the eleven-template visual review, or
 claim V1 product-experience completion. No formal template has
 `HUMAN_APPROVED` status (`0 / 11`); all eleven remain ready for human recheck or
