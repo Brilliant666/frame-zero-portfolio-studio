@@ -11,11 +11,13 @@ import {
   useState,
   type CSSProperties,
   type KeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
 } from "react";
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import { buildPolaroidFieldLayout } from "./field-layout";
+import { getPolaroidViewFromHash, POLAROID_VIEW_HASHES, type PolaroidView } from "./navigation";
 import {
   constrainView,
   fitRectsToViewport,
@@ -70,10 +72,80 @@ export default function PolaroidFieldTemplate({
   const viewModeRef = useRef<"fit" | "manual">("fit");
   const minimumScaleRef = useRef(PREFERRED_MIN_SCALE);
   const frameRef = useRef<number | null>(null);
+  const navigationFrameRef = useRef<number | null>(null);
   const [view, setView] = useState<ViewState>(INITIAL_VIEW);
   const [minimumScale, setMinimumScale] = useState(PREFERRED_MIN_SCALE);
   const [dragging, setDragging] = useState(false);
   const [desktopFieldEnabled, setDesktopFieldEnabled] = useState(false);
+  const [activeView, setActiveView] = useState<PolaroidView>("field");
+
+  const scrollToViewTarget = useCallback((targetId: string, focusTarget: boolean) => {
+    if (navigationFrameRef.current !== null) {
+      window.cancelAnimationFrame(navigationFrameRef.current);
+    }
+
+    navigationFrameRef.current = window.requestAnimationFrame(() => {
+      navigationFrameRef.current = null;
+      const target = document.getElementById(targetId);
+      if (!target) return;
+
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+      if (focusTarget) target.focus({ preventScroll: true });
+    });
+  }, []);
+
+  const activateView = useCallback((
+    view: PolaroidView,
+    hash = POLAROID_VIEW_HASHES[view],
+    focusTarget = false,
+  ) => {
+    setActiveView(view);
+    if (!isPreview && window.location.hash !== hash) {
+      window.history.pushState(null, "", hash);
+    }
+    scrollToViewTarget(hash.slice(1), focusTarget);
+  }, [isPreview, scrollToViewTarget]);
+
+  const handleViewLink = useCallback((
+    event: ReactMouseEvent<HTMLAnchorElement>,
+    view: PolaroidView,
+    hash = POLAROID_VIEW_HASHES[view],
+    focusTarget = false,
+  ) => {
+    event.preventDefault();
+    activateView(view, hash, focusTarget);
+  }, [activateView]);
+
+  useEffect(() => {
+    if (isPreview) return;
+
+    const syncViewFromLocation = (focusTarget: boolean) => {
+      const hash = window.location.hash;
+      const view = getPolaroidViewFromHash(hash);
+      const targetHash = hash === "#polaroid-field" || Object.values(POLAROID_VIEW_HASHES).includes(hash)
+        ? hash
+        : POLAROID_VIEW_HASHES[view];
+      setActiveView(view);
+      if (hash) scrollToViewTarget(targetHash.slice(1), focusTarget);
+    };
+
+    syncViewFromLocation(false);
+    const handleHistoryNavigation = () => syncViewFromLocation(true);
+    window.addEventListener("hashchange", handleHistoryNavigation);
+    window.addEventListener("popstate", handleHistoryNavigation);
+
+    return () => {
+      window.removeEventListener("hashchange", handleHistoryNavigation);
+      window.removeEventListener("popstate", handleHistoryNavigation);
+    };
+  }, [isPreview, scrollToViewTarget]);
+
+  useEffect(() => () => {
+    if (navigationFrameRef.current !== null) {
+      window.cancelAnimationFrame(navigationFrameRef.current);
+    }
+  }, []);
 
   const commitView = useCallback((next: ViewState) => {
     if (frameRef.current !== null) {
@@ -326,23 +398,54 @@ export default function PolaroidFieldTemplate({
   };
 
   return (
-    <main className={`${styles.shell} ${booted ? styles.ready : ""}`} data-template={templateId}>
-      <a className={styles.skipLink} href="#polaroid-field">跳到作品星图</a>
+    <main
+      className={`${styles.shell} ${booted ? styles.ready : ""}`}
+      data-template={templateId}
+      data-polaroid-active-view={activeView}
+    >
+      <a
+        className={styles.skipLink}
+        href="#polaroid-field"
+        onClick={(event) => handleViewLink(event, "field", "#polaroid-field", true)}
+      >跳到作品星图</a>
 
-      <header className={styles.topbar}>
-        <a className={styles.brand} href="#polaroid-top" aria-label="返回页面顶部">
+      <header className={`${styles.topbar} ${isPreview ? styles.previewTopbar : ""}`}>
+        <a
+          className={styles.brand}
+          href="#polaroid-top"
+          aria-label="返回作品首页"
+          onClick={(event) => handleViewLink(event, "field", "#polaroid-top")}
+        >
           <span>{content.profile.mark}</span>
           <strong>{content.profile.brand}</strong>
         </a>
-        <nav aria-label="页面导航">
-          <a href="#polaroid-field">FIELD</a>
-          <a href="#polaroid-packages">PACKAGES</a>
-          <a href="#polaroid-booking">BOOKING</a>
+        <nav aria-label="作品集页面导航">
+          <a
+            href="#polaroid-top"
+            aria-current={activeView === "field" ? "page" : undefined}
+            onClick={(event) => handleViewLink(event, "field")}
+          >作品</a>
+          <a
+            href="#polaroid-packages"
+            aria-current={activeView === "packages" ? "page" : undefined}
+            onClick={(event) => handleViewLink(event, "packages")}
+          >拍摄套餐</a>
+          <a
+            href="#polaroid-booking"
+            aria-current={activeView === "booking" ? "page" : undefined}
+            onClick={(event) => handleViewLink(event, "booking")}
+          >联系约拍</a>
         </nav>
         <p>{isPreview ? "TEMPLATE PREVIEW" : content.profile.availability}</p>
       </header>
 
-      <section id="polaroid-top" className={styles.hero}>
+      <section
+        id="polaroid-top"
+        className={styles.hero}
+        data-polaroid-view="field"
+        hidden={activeView !== "field"}
+        tabIndex={-1}
+      >
         <div className={styles.heroIndex}>FIELD NOTE / 001—009</div>
         <div className={styles.heroTitle}>
           <p>{content.hero.eyebrow}</p>
@@ -352,7 +455,10 @@ export default function PolaroidFieldTemplate({
           <p>{content.profile.intro}</p>
           <strong>{content.profile.photographer} · {content.profile.role}</strong>
           <span>{content.hero.services}</span>
-          <a href="#polaroid-field">进入影像星野 <b>↓</b></a>
+          <a
+            href="#polaroid-field"
+            onClick={(event) => handleViewLink(event, "field", "#polaroid-field", true)}
+          >进入影像星野 <b>↓</b></a>
         </div>
         <div className={styles.heroSeal} aria-hidden="true">
           <span>{String(fieldSlots.length).padStart(2, "0")}</span>
@@ -360,7 +466,14 @@ export default function PolaroidFieldTemplate({
         </div>
       </section>
 
-      <section id="polaroid-field" className={styles.fieldSection} aria-labelledby="field-title">
+      <section
+        id="polaroid-field"
+        className={styles.fieldSection}
+        aria-labelledby="field-title"
+        data-polaroid-view="field"
+        hidden={activeView !== "field"}
+        tabIndex={-1}
+      >
         <div className={styles.sectionHeading}>
           <div>
             <small>01 / CONSTELLATION OF CHARACTERS</small>
@@ -540,7 +653,14 @@ export default function PolaroidFieldTemplate({
         </div>
       </section>
 
-      <section id="polaroid-packages" className={styles.packageSection} aria-labelledby="package-title">
+      <section
+        id="polaroid-packages"
+        className={styles.packageSection}
+        aria-labelledby="package-title"
+        data-polaroid-view="packages"
+        hidden={activeView !== "packages"}
+        tabIndex={-1}
+      >
         <div className={styles.sectionHeading}>
           <div>
             <small>02 / CHOOSE YOUR PHOTO WALK</small>
@@ -565,14 +685,24 @@ export default function PolaroidFieldTemplate({
                   {item.deliverables.map((deliverable) => <li key={deliverable}>{deliverable}</li>)}
                 </ul>
               </div>
-              <a href="#polaroid-booking">收藏这段旅程 <span>↘</span></a>
+              <a
+                href="#polaroid-booking"
+                onClick={(event) => handleViewLink(event, "booking", "#polaroid-booking", true)}
+              >收藏这段旅程 <span>↘</span></a>
             </article>
           ))}
         </div>
         <p className={styles.packageNote}>展示价格不含妆造、服装、场地和跨城交通；最终方案会在拍摄前与你逐项确认。</p>
       </section>
 
-      <section id="polaroid-booking" className={styles.bookingSection} aria-labelledby="booking-title">
+      <section
+        id="polaroid-booking"
+        className={styles.bookingSection}
+        aria-labelledby="booking-title"
+        data-polaroid-view="booking"
+        hidden={activeView !== "booking"}
+        tabIndex={-1}
+      >
         <div className={styles.bookingIntro}>
           <small>03 / SEND A FIELD NOTE</small>
           <h2 id="booking-title">把下一颗星<br /><span>钉在这里</span></h2>
@@ -625,7 +755,10 @@ export default function PolaroidFieldTemplate({
         <button type="button" onClick={() => void onCopy(content.contact.wechat, "polaroid-mobile")}>
           {copiedKey === "polaroid-mobile" ? "微信已复制 ✓" : "复制微信"}
         </button>
-        <a href="#polaroid-booking">写下约拍便签 ↗</a>
+        <a
+          href="#polaroid-booking"
+          onClick={(event) => handleViewLink(event, "booking", "#polaroid-booking", true)}
+        >写下约拍便签 ↗</a>
       </div>
     </main>
   );

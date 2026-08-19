@@ -16,8 +16,8 @@
 > - PR #25 workspace: `HUMAN_DIRECTED_PRODUCT_POLISH_WORKSPACE`
 > - PR #25 workspace status: `ACTIVE`
 > - PR #25 mode: `LIGHTWEIGHT_HUMAN_REQUEST_ONLY`
-> - PR #25 current request: `NONE`
-> - PR #25 next request ID: `HR25-001`
+> - PR #25 current request: `HR25-001 — READY_FOR_HUMAN_RECHECK`
+> - PR #25 next request ID: `HR25-002`
 > - Human-approved templates: `0 / 11`
 > - Current hand-off: `HUMAN_INPUT_REQUIRED`
 > - External operations: `NOT_AUTHORIZED`
@@ -76,8 +76,8 @@ Base: main@dc471795139dc47649368bb37c0178fb77188fea
 Status: ACTIVE
 Workspace: HUMAN_DIRECTED_PRODUCT_POLISH_WORKSPACE
 Mode: LIGHTWEIGHT_HUMAN_REQUEST_ONLY
-Current request: NONE
-Next request ID: HR25-001
+Current request: HR25-001 — READY_FOR_HUMAN_RECHECK
+Next request ID: HR25-002
 PR24_LIMITED_BASELINE: ACCEPTED
 PRE_LAUNCH_PRODUCT_POLISH: IN_PROGRESS
 ELEVEN_TEMPLATE_HUMAN_VISUAL_APPROVAL: PENDING
@@ -122,6 +122,7 @@ implemented without a new, explicit human request.
 
 | ID | Human request | Area | Status | Commit | Validation | Human decision |
 | --- | --- | --- | --- | --- | --- | --- |
+| HR25-001 | Split the single-page `polaroid-field` presentation behind the three existing top tabs; enlarge the navigation and replace its English labels with Chinese. Approved scope: keep one route, expose one section at a time through URL hashes with history support, preserve visible sticky/mobile navigation and accessible active state, route internal calls to the matching section, and recalibrate the field canvas without discarding its view state. | `polaroid-field` section navigation and responsive presentation | READY_FOR_HUMAN_RECHECK | `fix: split polaroid content into views` | Focused test 9/9; TypeScript and ESLint pass; browser verified same-route three-view navigation, 14.1–14.7 px Chinese labels, 44 px targets, sticky behavior, 390 px no-overflow layout, direct hash/refresh/back behavior, admin preview URL isolation and toolbar clearance, and preserved field zoom across section switches. | PENDING |
 
 ## PR #24 request protocol
 

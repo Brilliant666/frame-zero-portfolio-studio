@@ -39,6 +39,55 @@ function importFieldLayoutModule(t) {
   );
 }
 
+function importNavigationModule(t) {
+  return importTypescriptModule(
+    t,
+    "../app/templates/polaroid-field/navigation.ts",
+    "navigation.ts",
+  );
+}
+
+function extractBraceBlock(source, marker) {
+  const markerIndex = source.indexOf(marker);
+  assert.notEqual(markerIndex, -1, `expected to find ${marker}`);
+  const openIndex = source.indexOf("{", markerIndex + marker.length);
+  assert.notEqual(openIndex, -1, `expected ${marker} to open a block`);
+
+  let depth = 1;
+  for (let index = openIndex + 1; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    if (source[index] === "}") depth -= 1;
+    if (depth === 0) return source.slice(openIndex + 1, index);
+  }
+
+  assert.fail(`expected ${marker} to close its block`);
+}
+
+function parseDeclarations(block) {
+  return Object.fromEntries(block
+    .split(";")
+    .map((declaration) => declaration.trim())
+    .filter(Boolean)
+    .map((declaration) => {
+      const colonIndex = declaration.indexOf(":");
+      return [
+        declaration.slice(0, colonIndex).trim(),
+        declaration.slice(colonIndex + 1).trim(),
+      ];
+    }));
+}
+
+function remValue(value) {
+  const match = value.match(/^([\d.]+)rem$/);
+  assert.ok(match, `expected a rem value, received ${value}`);
+  return Number(match[1]);
+}
+
+function minimumClampRem(value) {
+  assert.ok(value.startsWith("clamp(") && value.endsWith(")"), `expected clamp(), received ${value}`);
+  return remValue(value.slice("clamp(".length, -1).split(",", 1)[0].trim());
+}
+
 const VIEWPORT = { width: 1536, height: 720 };
 const FIT_INSET = 32;
 const REM = 16;
@@ -213,6 +262,83 @@ test("field layout is ratio-aware, deterministic, and rejects a non-nine-slot co
   assert.equal(portrait.placements[0].height, landscape.placements[0].height);
   assert.deepEqual(buildPolaroidFieldLayout(DEFAULT_RATIOS), landscape);
   assert.throws(() => buildPolaroidFieldLayout(DEFAULT_RATIOS.slice(0, 8)), /exactly 9 ratios/);
+});
+
+test("polaroid navigation maps stable hashes to the three same-route views", async (t) => {
+  const { POLAROID_VIEW_HASHES, getPolaroidViewFromHash } = await importNavigationModule(t);
+
+  assert.deepEqual(POLAROID_VIEW_HASHES, {
+    field: "#polaroid-top",
+    packages: "#polaroid-packages",
+    booking: "#polaroid-booking",
+  });
+  assert.equal(getPolaroidViewFromHash(""), "field");
+  assert.equal(getPolaroidViewFromHash("#polaroid-top"), "field");
+  assert.equal(getPolaroidViewFromHash(POLAROID_VIEW_HASHES.field), "field");
+  assert.equal(getPolaroidViewFromHash(POLAROID_VIEW_HASHES.packages), "packages");
+  assert.equal(getPolaroidViewFromHash(POLAROID_VIEW_HASHES.booking), "booking");
+  assert.equal(getPolaroidViewFromHash("  #POLAROID-BOOKING  "), "booking");
+  assert.equal(getPolaroidViewFromHash("#unknown-section"), "field");
+});
+
+test("polaroid template exposes accessible Chinese view navigation on desktop and mobile", async () => {
+  const [template, css] = await Promise.all([
+    fs.readFile(new URL("../app/templates/polaroid-field/template.tsx", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/templates/polaroid-field/polaroid-field.module.css", import.meta.url), "utf8"),
+  ]);
+  const navStart = template.indexOf('<nav aria-label="作品集页面导航">');
+  const navEnd = template.indexOf("</nav>", navStart);
+  assert.notEqual(navStart, -1);
+  assert.notEqual(navEnd, -1);
+  const nav = template.slice(navStart, navEnd);
+
+  for (const [view, hash, label] of [
+    ["field", "#polaroid-top", "作品"],
+    ["packages", "#polaroid-packages", "拍摄套餐"],
+    ["booking", "#polaroid-booking", "联系约拍"],
+  ]) {
+    assert.ok(nav.includes(`href="${hash}"`), `${label} keeps a same-route hash URL`);
+    assert.ok(nav.includes(`>${label}</a>`), `${label} is visible in Chinese`);
+    assert.ok(nav.includes(`activeView === "${view}"`), `${label} exposes its selected state`);
+  }
+
+  for (const [id, view] of [
+    ["polaroid-top", "field"],
+    ["polaroid-field", "field"],
+    ["polaroid-packages", "packages"],
+    ["polaroid-booking", "booking"],
+  ]) {
+    const sectionStart = template.indexOf(`id="${id}"`);
+    assert.notEqual(sectionStart, -1, `expected section ${id}`);
+    const sectionOpeningTag = template.slice(sectionStart, template.indexOf(">", sectionStart));
+    assert.ok(sectionOpeningTag.includes(`data-polaroid-view="${view}"`));
+    assert.ok(sectionOpeningTag.includes(`hidden={activeView !== "${view}"}`));
+  }
+
+  assert.ok(template.includes('window.history.pushState(null, "", hash)'));
+  assert.ok(template.includes('window.addEventListener("hashchange", handleHistoryNavigation)'));
+  assert.ok(template.includes('window.addEventListener("popstate", handleHistoryNavigation)'));
+  assert.ok(template.includes('window.removeEventListener("hashchange", handleHistoryNavigation)'));
+  assert.ok(template.includes('window.removeEventListener("popstate", handleHistoryNavigation)'));
+  assert.ok(
+    template.includes('className={`${styles.topbar} ${isPreview ? styles.previewTopbar : ""}`}'),
+    "admin previews opt out of the sticky public header",
+  );
+
+  const desktopNav = parseDeclarations(extractBraceBlock(css, ".topbar nav"));
+  const desktopLink = parseDeclarations(extractBraceBlock(css, ".topbar nav a"));
+  const previewTopbar = parseDeclarations(extractBraceBlock(css, ".previewTopbar"));
+  assert.equal(desktopNav.display, "flex");
+  assert.ok(remValue(desktopLink["min-height"]) >= 2.75, "desktop links provide a 44px touch target");
+  assert.ok(minimumClampRem(desktopLink["font-size"]) >= .875, "navigation text stays at least 14px");
+  assert.equal(previewTopbar.position, "relative");
+  assert.equal(previewTopbar.top, "auto");
+
+  const mobileCss = extractBraceBlock(css, "@media (max-width: 800px)");
+  const mobileNav = parseDeclarations(extractBraceBlock(mobileCss, ".topbar nav"));
+  const mobileLink = parseDeclarations(extractBraceBlock(mobileCss, ".topbar nav a"));
+  assert.equal(mobileNav.display, "grid");
+  assert.ok(remValue(mobileLink["min-height"]) >= 2.75, "mobile links provide a 44px touch target");
 });
 
 test("template wiring preserves nine slots, keyboard access, FIT reset, mobile layout, and reduced motion", async () => {
