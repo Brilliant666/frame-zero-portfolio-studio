@@ -486,6 +486,123 @@ test("polaroid template exposes accessible Chinese view navigation on desktop an
   );
 });
 
+test("polaroid gateway leaves the profile card and becomes a responsive central field entrance", async () => {
+  const [template, css] = await Promise.all([
+    fs.readFile(new URL("../app/templates/polaroid-field/template.tsx", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/templates/polaroid-field/polaroid-field.module.css", import.meta.url), "utf8"),
+  ]);
+  const sourceFile = ts.createSourceFile(
+    "polaroid-field-template.tsx",
+    template,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+
+  const openingElement = (node) => (
+    ts.isJsxElement(node) ? node.openingElement : node
+  );
+  const attribute = (node, name) => openingElement(node).attributes.properties.find((item) => (
+    ts.isJsxAttribute(item) && item.name.getText(sourceFile) === name
+  ));
+  const attributeValue = (node, name) => {
+    const item = attribute(node, name);
+    if (!item?.initializer) return undefined;
+    if (ts.isStringLiteral(item.initializer)) return item.initializer.text;
+    if (ts.isJsxExpression(item.initializer)) return item.initializer.expression?.getText(sourceFile);
+    return item.initializer.getText(sourceFile);
+  };
+  const tagName = (node) => openingElement(node).tagName.getText(sourceFile);
+  const directVisibleText = (node) => node.children
+    .filter(ts.isJsxText)
+    .map((child) => child.text)
+    .join(" ")
+    .replaceAll(/\s+/g, " ")
+    .trim();
+
+  let hero;
+  const matchingGateways = [];
+  function visit(node) {
+    if (
+      ts.isJsxElement(node)
+      && tagName(node) === "section"
+      && attributeValue(node, "id") === "polaroid-top"
+    ) hero = node;
+    if (
+      ts.isJsxElement(node)
+      && tagName(node) === "a"
+      && directVisibleText(node) === "进入影像星野"
+    ) matchingGateways.push(node);
+    ts.forEachChild(node, visit);
+  }
+  visit(sourceFile);
+
+  assert.ok(hero, "expected the field hero section");
+  assert.equal(matchingGateways.length, 1, "the field entrance has one visible gateway label");
+  const heroChildren = hero.children.filter((node) => ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node));
+  assert.deepEqual(
+    heroChildren.map((node) => attributeValue(node, "className")),
+    ["styles.heroTitle", "styles.heroCopy", "styles.heroOrbitTrack", "styles.heroGateway", "styles.heroSeal"],
+    "mobile source order reads title, profile context, then the field entrance",
+  );
+
+  const heroCopy = heroChildren[1];
+  let heroCopyLinks = 0;
+  function countHeroCopyLinks(node) {
+    if (ts.isJsxElement(node) && tagName(node) === "a") heroCopyLinks += 1;
+    ts.forEachChild(node, countHeroCopyLinks);
+  }
+  countHeroCopyLinks(heroCopy);
+  assert.equal(heroCopyLinks, 0, "the profile card contains context rather than the field action");
+
+  const orbitTrack = heroChildren[2];
+  assert.equal(attributeValue(orbitTrack, "aria-hidden"), "true", "the orbit rail stays decorative");
+
+  const gateway = matchingGateways[0];
+  assert.equal(attributeValue(gateway, "className"), "styles.heroGateway");
+  assert.equal(attributeValue(gateway, "href"), "#polaroid-field");
+  const onClick = attribute(gateway, "onClick");
+  assert.ok(onClick?.initializer && ts.isJsxExpression(onClick.initializer));
+  assert.ok(onClick.initializer.expression && ts.isArrowFunction(onClick.initializer.expression));
+  const handlerCall = onClick.initializer.expression.body;
+  assert.ok(ts.isCallExpression(handlerCall));
+  assert.equal(handlerCall.expression.getText(sourceFile), "handleViewLink");
+  assert.deepEqual(
+    handlerCall.arguments.map((argument) => argument.getText(sourceFile)),
+    ["event", '"field"', '"#polaroid-field"', "true"],
+    "the relocated gateway preserves same-view hash navigation and focus",
+  );
+  const gatewayMarker = gateway.children.find((node) => ts.isJsxElement(node) && tagName(node) === "b");
+  assert.ok(gatewayMarker);
+  assert.equal(attributeValue(gatewayMarker, "aria-hidden"), "true", "the arrow does not duplicate the link name");
+
+  const desktopTrack = parseDeclarations(extractCssRule(css, ".heroOrbitTrack"));
+  const desktopGuide = parseDeclarations(extractCssRule(css, ".heroOrbitTrack::after"));
+  const desktopGateway = parseDeclarations(extractCssRule(css, ".heroGateway"));
+  const gatewayFocus = parseDeclarations(extractCssRule(css, ".heroGateway:focus-visible"));
+  assert.equal(desktopTrack.position, "absolute");
+  assert.equal(desktopTrack["pointer-events"], "none");
+  assert.ok(desktopTrack["border-top"], "desktop orbit rail has a visible connection line");
+  assert.equal(desktopGuide.position, "absolute");
+  assert.ok(desktopGuide.height && desktopGuide.background, "orbit rail includes a vertical guide toward the work");
+  assert.equal(desktopGateway.position, "absolute");
+  assert.notEqual(desktopGateway.top, "auto");
+  assert.equal(desktopGateway.left, "50%", "desktop gateway uses the hero's horizontal center line");
+  assert.match(desktopGateway.transform, /translate\(\s*-50%\s*,/u);
+  assert.ok(remValue(desktopGateway["min-height"]) >= 2.75, "gateway preserves a 44px pointer target");
+  assert.ok(gatewayFocus.outline && gatewayFocus.outline !== "none", "gateway keeps a visible keyboard focus style");
+
+  const mobileCss = extractBraceBlock(css, "@media (max-width: 800px)");
+  const mobileTrack = parseDeclarations(extractCssRule(mobileCss, ".heroOrbitTrack"));
+  const mobileGateway = parseDeclarations(extractCssRule(mobileCss, ".heroGateway"));
+  assert.equal(mobileTrack.display, "none", "mobile removes the decorative desktop rail");
+  assert.equal(mobileGateway.position, "relative");
+  assert.equal(mobileGateway.top, "auto");
+  assert.equal(mobileGateway.left, "auto");
+  assert.equal(mobileGateway.width, "100%");
+  assert.equal(mobileGateway.transform, "none", "mobile gateway returns to normal single-column flow");
+});
+
 test("polaroid field view anchors desktop context above the centered work and keeps a mobile fallback", async () => {
   const css = await fs.readFile(
     new URL("../app/templates/polaroid-field/polaroid-field.module.css", import.meta.url),

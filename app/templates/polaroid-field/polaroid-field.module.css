@@ -173,9 +173,9 @@
   content: "";
   position: absolute;
   z-index: 0;
-  top: 4%;
-  right: 6%;
-  width: clamp(11rem, 22vw, 23rem);
+  top: -8%;
+  right: 15%;
+  width: clamp(20rem, 38vw, 44rem);
   aspect-ratio: 1;
   border: 1px dashed rgba(24,34,39,.26);
   border-radius: 50%;
@@ -186,8 +186,8 @@
   content: "✦";
   position: absolute;
   z-index: 0;
-  top: 8%;
-  right: 18%;
+  top: 10%;
+  right: 32%;
   color: var(--coral);
   font-size: clamp(4rem, 9vw, 9rem);
   transform: rotate(12deg);
@@ -274,21 +274,80 @@
   line-height: 1.45;
 }
 
-.heroCopy > a {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-top: .4rem;
-  padding: .65rem 0 .25rem;
-  border-top: 1px solid var(--ink);
-  font-size: .72rem;
-  font-weight: 900;
+.heroOrbitTrack {
+  position: absolute;
+  z-index: 1;
+  top: 45%;
+  left: 50%;
+  width: clamp(12rem, 24vw, 29rem);
+  height: 1px;
+  border-top: 1px dashed rgba(24, 34, 39, .42);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
-.heroCopy > a b {
+.heroOrbitTrack::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: .5rem;
+  aspect-ratio: 1;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  background: var(--sun);
+  box-shadow: 0 0 0 .35rem rgba(255, 253, 247, .8);
+  transform: translate(-50%, -50%);
+}
+
+.heroOrbitTrack::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1px;
+  height: clamp(7rem, 10vw, 10rem);
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(239, 94, 73, .7) 0 3px,
+    transparent 3px 8px
+  );
+  transform: translateX(-50%);
+}
+
+.heroGateway {
+  position: absolute;
+  z-index: 4;
+  top: 45%;
+  left: 50%;
+  display: inline-flex;
+  min-width: clamp(9rem, 12vw, 11rem);
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: .75rem;
+  padding: .7rem 1rem;
+  border: 1px solid var(--ink);
+  background: rgba(255, 253, 247, .94);
+  box-shadow: 5px 5px 0 rgba(24, 34, 39, .12);
+  font: 900 clamp(.72rem, .66rem + .14vw, .84rem) ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .08em;
+  transform: translate(-50%, -50%);
+}
+
+.heroGateway b {
   color: var(--coral);
-  font-size: 1.3rem;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.heroGateway:hover {
+  background: #fffdf7;
+}
+
+.heroGateway:focus-visible {
+  outline: 3px solid var(--coral);
+  outline-offset: 4px;
 }
 
 .heroSeal {
@@ -1254,6 +1313,7 @@
   .hero::before {
     top: 2.5rem;
     right: -7rem;
+    width: clamp(11rem, 52vw, 15rem);
   }
 
   .hero::after {
@@ -1267,6 +1327,19 @@
 
   .heroCopy {
     transform: rotate(.5deg);
+  }
+
+  .heroOrbitTrack {
+    display: none;
+  }
+
+  .heroGateway {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 100%;
+    min-width: 0;
+    transform: none;
   }
 
   .heroSeal {

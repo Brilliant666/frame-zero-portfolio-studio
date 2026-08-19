@@ -462,11 +462,13 @@ export default function PolaroidFieldTemplate({
           <p>{content.profile.intro}</p>
           <strong>{content.profile.photographer} · {content.profile.role}</strong>
           <span>{content.hero.services}</span>
-          <a
-            href="#polaroid-field"
-            onClick={(event) => handleViewLink(event, "field", "#polaroid-field", true)}
-          >进入影像星野 <b>↓</b></a>
         </div>
+        <span className={styles.heroOrbitTrack} aria-hidden="true" />
+        <a
+          className={styles.heroGateway}
+          href="#polaroid-field"
+          onClick={(event) => handleViewLink(event, "field", "#polaroid-field", true)}
+        >进入影像星野 <b aria-hidden="true">↓</b></a>
         <div className={styles.heroSeal} aria-hidden="true">
           <span>{String(fieldSlots.length).padStart(2, "0")}</span>
           <small>MEMORIES<br />IN ORBIT</small>
