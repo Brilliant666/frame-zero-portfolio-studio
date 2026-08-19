@@ -88,6 +88,42 @@ function minimumClampRem(value) {
   return remValue(value.slice("clamp(".length, -1).split(",", 1)[0].trim());
 }
 
+function maximumClampRem(value) {
+  assert.ok(value.startsWith("clamp(") && value.endsWith(")"), `expected clamp(), received ${value}`);
+  const values = value.slice("clamp(".length, -1).split(",");
+  assert.equal(values.length, 3, `expected three clamp values, received ${value}`);
+  return remValue(values[2].trim());
+}
+
+function splitCssValues(value) {
+  const values = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    if (value[index] === "(") depth += 1;
+    if (value[index] === ")") depth -= 1;
+    if (/\s/.test(value[index]) && depth === 0) {
+      if (start < index) values.push(value.slice(start, index));
+      start = index + 1;
+    }
+  }
+  if (start < value.length) values.push(value.slice(start));
+  return values;
+}
+
+function extractCssRule(source, selector, occurrence = 0) {
+  const marker = `${selector} {`;
+  let ruleIndex = -1;
+  let searchStart = 0;
+  for (let index = 0; index <= occurrence; index += 1) {
+    ruleIndex = source.indexOf(marker, searchStart);
+    if (ruleIndex === -1) break;
+    searchStart = ruleIndex + marker.length;
+  }
+  assert.notEqual(ruleIndex, -1, `expected CSS rule ${selector}`);
+  return extractBraceBlock(source.slice(ruleIndex), selector);
+}
+
 const VIEWPORT = { width: 1536, height: 720 };
 const FIT_INSET = 32;
 const REM = 16;
@@ -330,7 +366,7 @@ test("polaroid template exposes accessible Chinese view navigation on desktop an
   const previewTopbar = parseDeclarations(extractBraceBlock(css, ".previewTopbar"));
   assert.equal(desktopNav.display, "flex");
   assert.ok(remValue(desktopLink["min-height"]) >= 2.75, "desktop links provide a 44px touch target");
-  assert.ok(minimumClampRem(desktopLink["font-size"]) >= .875, "navigation text stays at least 14px");
+  assert.ok(minimumClampRem(desktopLink["font-size"]) >= 1, "navigation text stays at least 16px");
   assert.equal(previewTopbar.position, "relative");
   assert.equal(previewTopbar.top, "auto");
 
@@ -339,6 +375,116 @@ test("polaroid template exposes accessible Chinese view navigation on desktop an
   const mobileLink = parseDeclarations(extractBraceBlock(mobileCss, ".topbar nav a"));
   assert.equal(mobileNav.display, "grid");
   assert.ok(remValue(mobileLink["min-height"]) >= 2.75, "mobile links provide a 44px touch target");
+  assert.ok(
+    mobileLink["font-size"] === undefined || minimumClampRem(mobileLink["font-size"]) >= 1,
+    "mobile navigation inherits or preserves the 16px text floor",
+  );
+});
+
+test("polaroid field view keeps the hero and gallery introduction compact", async () => {
+  const css = await fs.readFile(
+    new URL("../app/templates/polaroid-field/polaroid-field.module.css", import.meta.url),
+    "utf8",
+  );
+  const hero = parseDeclarations(extractCssRule(css, ".hero"));
+  const heroPadding = splitCssValues(hero.padding);
+  assert.ok(maximumClampRem(hero["min-height"]) <= 28, "hero no longer occupies a full desktop viewport");
+  assert.ok(maximumClampRem(heroPadding[0]) <= 2.5, "hero vertical padding stays compact");
+
+  const field = parseDeclarations(extractCssRule(css, ".fieldSection"));
+  const fieldPadding = splitCssValues(field["padding-block"]);
+  assert.ok(maximumClampRem(fieldPadding[0]) <= 1.75, "field begins close to the hero");
+  assert.ok(maximumClampRem(fieldPadding[1]) <= 5, "field keeps a bounded closing rhythm");
+
+  const fieldHeading = parseDeclarations(extractCssRule(css, ".fieldSection .sectionHeading"));
+  assert.ok(maximumClampRem(fieldHeading["margin-bottom"]) <= 1.1, "field heading stays close to the canvas");
+
+  const heroSeal = parseDeclarations(extractCssRule(css, ".heroSeal", 1));
+  assert.ok(maximumClampRem(heroSeal.width) <= 7, "desktop seal stays clear of the hero copy");
+  assert.ok(Number.parseFloat(heroSeal.bottom) >= 40 && heroSeal.bottom.endsWith("%"), "desktop seal is lifted above the action");
+  assert.equal(heroSeal["pointer-events"], "none");
+
+  const mobileCss = extractBraceBlock(css, "@media (max-width: 800px)");
+  const mobileHero = parseDeclarations(extractCssRule(mobileCss, ".hero"));
+  const mobileHeroPadding = splitCssValues(mobileHero.padding).map(remValue);
+  assert.ok(mobileHeroPadding[0] <= 3 && mobileHeroPadding[2] <= 3.5);
+  const mobileHeroSeal = parseDeclarations(extractCssRule(mobileCss, ".heroSeal"));
+  assert.equal(mobileHeroSeal.display, "none", "mobile hero removes the overlapping seal");
+  const mobileField = parseDeclarations(extractCssRule(mobileCss, ".fieldSection"));
+  const mobileFieldPadding = splitCssValues(mobileField["padding-block"]).map(remValue);
+  assert.ok(mobileFieldPadding[0] <= 2.5 && mobileFieldPadding[1] <= 3.5);
+
+  const mobileCta = parseDeclarations(extractCssRule(mobileCss, ".mobileCta"));
+  const fieldMobileCta = parseDeclarations(extractCssRule(
+    mobileCss,
+    '.shell[data-polaroid-active-view="field"] .mobileCta',
+  ));
+  assert.equal(mobileCta.display, "grid", "mobile CTA remains available in the contact flows");
+  assert.equal(fieldMobileCta.display, "none", "field view does not cover the gallery with the mobile CTA");
+});
+
+test("polaroid package facts use only non-empty trust items and stay out of the field view", async () => {
+  const template = await fs.readFile(
+    new URL("../app/templates/polaroid-field/template.tsx", import.meta.url),
+    "utf8",
+  );
+  const fieldStart = template.indexOf('id="polaroid-field"');
+  const packageStart = template.indexOf('id="polaroid-packages"');
+  const bookingStart = template.indexOf('id="polaroid-booking"');
+  assert.ok(fieldStart >= 0 && packageStart > fieldStart && bookingStart > packageStart);
+  const fieldSection = template.slice(fieldStart, packageStart);
+  const packageSection = template.slice(packageStart, bookingStart);
+  const packageNoteIndex = packageSection.indexOf("styles.packageNote");
+  const factRowIndex = packageSection.indexOf("styles.factRow");
+  assert.ok(!fieldSection.includes("styles.factRow"), "facts do not lengthen the field view");
+  assert.notEqual(packageNoteIndex, -1, "package note remains present");
+  assert.ok(factRowIndex > packageNoteIndex, "facts follow the package note");
+
+  const sourceFile = ts.createSourceFile(
+    "polaroid-field-template.tsx",
+    template,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  let trustFilter;
+  let trustRender;
+
+  function visit(node) {
+    if (
+      ts.isVariableDeclaration(node)
+      && ts.isIdentifier(node.name)
+      && node.name.text === "trustItems"
+      && node.initializer
+      && ts.isCallExpression(node.initializer)
+      && node.initializer.expression.getText(sourceFile) === "content.trustItems.filter"
+    ) {
+      trustFilter = node.initializer.arguments[0];
+    }
+    if (
+      ts.isConditionalExpression(node)
+      && node.condition.getText(sourceFile).replaceAll(/\s/g, "") === "trustItems.length>0"
+      && node.whenTrue.getText(sourceFile).includes("styles.factRow")
+    ) {
+      trustRender = node;
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(sourceFile);
+
+  assert.ok(trustFilter && ts.isArrowFunction(trustFilter), "trust items have an explicit filter");
+  assert.ok(ts.isBinaryExpression(trustFilter.body));
+  assert.equal(trustFilter.body.operatorToken.kind, ts.SyntaxKind.BarBarToken);
+  assert.deepEqual(
+    [trustFilter.body.left, trustFilter.body.right]
+      .map((node) => node.getText(sourceFile))
+      .sort(),
+    ["label.trim()", "value.trim()"],
+  );
+  assert.ok(trustRender, "all-empty facts skip the entire row");
+  assert.equal(trustRender.whenFalse.kind, ts.SyntaxKind.NullKeyword);
+  assert.ok(trustRender.whenTrue.getText(sourceFile).includes("trustItems.map"));
+  assert.ok(!trustRender.whenTrue.getText(sourceFile).includes("content.trustItems.map"));
 });
 
 test("polaroid header removes the fixed field note and suppresses blank availability", async () => {

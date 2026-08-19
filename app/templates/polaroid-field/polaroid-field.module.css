@@ -112,9 +112,9 @@
   min-height: 2.75rem;
   align-items: center;
   padding: .65rem .1rem;
-  font-size: clamp(.88rem, .82rem + .12vw, 1rem);
+  font-size: clamp(1rem, .94rem + .18vw, 1.18rem);
   font-weight: 800;
-  letter-spacing: .06em;
+  letter-spacing: .04em;
 }
 
 .topbar nav a::after {
@@ -161,21 +161,21 @@
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(16rem, .75fr);
-  gap: clamp(2rem, 7vw, 8rem);
-  align-items: end;
+  gap: clamp(2rem, 6vw, 6rem);
+  align-items: center;
   width: min(100%, 1680px);
-  min-height: clamp(38rem, 72svh, 58rem);
+  min-height: clamp(17rem, 34svh, 28rem);
   margin: 0 auto;
-  padding: clamp(5rem, 11vw, 11rem) clamp(1rem, 4vw, 4.5rem) clamp(4rem, 8vw, 7rem);
+  padding: clamp(1.25rem, 2.5vw, 2.5rem) clamp(1rem, 4vw, 4.5rem);
 }
 
 .hero::before {
   content: "";
   position: absolute;
   z-index: 0;
-  top: 7%;
-  right: 4%;
-  width: clamp(14rem, 29vw, 30rem);
+  top: 4%;
+  right: 6%;
+  width: clamp(11rem, 22vw, 23rem);
   aspect-ratio: 1;
   border: 1px dashed rgba(24,34,39,.26);
   border-radius: 50%;
@@ -186,8 +186,8 @@
   content: "✦";
   position: absolute;
   z-index: 0;
-  top: 9%;
-  right: 17%;
+  top: 8%;
+  right: 18%;
   color: var(--coral);
   font-size: clamp(4rem, 9vw, 9rem);
   transform: rotate(12deg);
@@ -240,10 +240,10 @@
 
 .heroCopy {
   display: grid;
-  gap: .7rem;
-  align-self: end;
+  gap: .45rem;
+  align-self: center;
   max-width: 33rem;
-  padding: clamp(1.4rem, 3vw, 2.3rem);
+  padding: clamp(1rem, 1.8vw, 1.5rem);
   border: 1px solid rgba(24,34,39,.22);
   background: rgba(255,253,247,.6);
   box-shadow: 9px 9px 0 rgba(24,34,39,.09);
@@ -251,10 +251,10 @@
 }
 
 .heroCopy > p {
-  margin: 0 0 .4rem;
+  margin: 0 0 .2rem;
   font-family: Georgia, "Songti SC", serif;
-  font-size: clamp(1.15rem, 2vw, 1.65rem);
-  line-height: 1.55;
+  font-size: clamp(1.05rem, 1.6vw, 1.4rem);
+  line-height: 1.4;
 }
 
 .heroCopy strong {
@@ -264,7 +264,7 @@
 .heroCopy > span {
   color: var(--ink-soft);
   font-size: .72rem;
-  line-height: 1.6;
+  line-height: 1.45;
 }
 
 .heroCopy > a {
@@ -272,8 +272,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-top: .75rem;
-  padding: .9rem 0 .45rem;
+  margin-top: .4rem;
+  padding: .65rem 0 .25rem;
   border-top: 1px solid var(--ink);
   font-size: .72rem;
   font-weight: 900;
@@ -288,9 +288,9 @@
   position: absolute;
   z-index: 3;
   right: clamp(1rem, 4vw, 4.5rem);
-  bottom: 9%;
+  bottom: 45%;
   display: grid;
-  width: clamp(7rem, 11vw, 10rem);
+  width: clamp(5.5rem, 7vw, 7rem);
   aspect-ratio: 1;
   place-items: center;
   padding: 1rem;
@@ -299,6 +299,7 @@
   background: var(--sun);
   text-align: center;
   transform: rotate(8deg);
+  pointer-events: none;
 }
 
 .heroSeal span {
@@ -322,6 +323,19 @@
 .fieldSection {
   background: rgba(255,253,247,.6);
   border-block: 1px solid rgba(24,34,39,.18);
+  padding-block: clamp(1rem, 1.5vw, 1.75rem) clamp(3rem, 5vw, 5rem);
+}
+
+.fieldSection .sectionHeading {
+  margin-bottom: clamp(.75rem, 1.1vw, 1.1rem);
+}
+
+.fieldSection .sectionHeading h2 {
+  font-size: clamp(2.75rem, 4.5vw, 4.75rem);
+}
+
+.fieldSection .sectionHeading small {
+  margin-bottom: .35rem;
 }
 
 .sectionHeading {
@@ -677,7 +691,7 @@
 .factRow {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  margin-top: 2rem;
+  margin-top: clamp(2rem, 4vw, 3.5rem);
   border-block: 1px solid rgba(24,34,39,.32);
 }
 
@@ -1161,18 +1175,18 @@
 
   .hero {
     grid-template-columns: 1fr;
-    gap: 2.5rem;
+    gap: 1.25rem;
     min-height: auto;
-    padding: 7rem 1rem 5rem;
+    padding: 2.5rem 1rem 3.25rem;
   }
 
   .hero::before {
-    top: 6rem;
+    top: 2.5rem;
     right: -7rem;
   }
 
   .hero::after {
-    top: 7rem;
+    top: 3.5rem;
     right: 1rem;
   }
 
@@ -1185,15 +1199,17 @@
   }
 
   .heroSeal {
-    right: 1rem;
-    bottom: 1.2rem;
-    width: 6.5rem;
+    display: none;
   }
 
   .fieldSection,
   .packageSection,
   .bookingSection {
     padding: 5rem 1rem;
+  }
+
+  .fieldSection {
+    padding-block: 2.5rem 3.5rem;
   }
 
   .sectionHeading {
@@ -1327,6 +1343,10 @@
   .mobileCta a {
     background: var(--ink);
     color: #fff;
+  }
+
+  .shell[data-polaroid-active-view="field"] .mobileCta {
+    display: none;
   }
 }
 

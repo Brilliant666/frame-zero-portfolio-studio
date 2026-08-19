@@ -65,6 +65,7 @@ export default function PolaroidFieldTemplate({
     [fieldSlots],
   );
   const headerStatus = isPreview ? "TEMPLATE PREVIEW" : content.profile.availability.trim();
+  const trustItems = content.trustItems.filter(({ label, value }) => label.trim() || value.trim());
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -643,14 +644,6 @@ export default function PolaroidFieldTemplate({
 
         </div>
 
-        <div className={styles.factRow} aria-label="约拍关键信息">
-          {content.trustItems.map((item, index) => (
-            <div key={`${item.label}-${index}`}>
-              <small>{item.label}</small>
-              <strong>{item.value}</strong>
-            </div>
-          ))}
-        </div>
       </section>
 
       <section
@@ -693,6 +686,16 @@ export default function PolaroidFieldTemplate({
           ))}
         </div>
         <p className={styles.packageNote}>展示价格不含妆造、服装、场地和跨城交通；最终方案会在拍摄前与你逐项确认。</p>
+        {trustItems.length > 0 ? (
+          <div className={styles.factRow} aria-label="约拍关键信息">
+            {trustItems.map((item, index) => (
+              <div key={`${item.label}-${index}`}>
+                <small>{item.label}</small>
+                <strong>{item.value}</strong>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </section>
 
       <section
