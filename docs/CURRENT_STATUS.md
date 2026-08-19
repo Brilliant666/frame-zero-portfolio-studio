@@ -27,7 +27,7 @@ PR #24 product baseline: ACCEPTED
 PR #24 limited baseline acceptance: ACCEPTED
 PR #25 workspace status: ACTIVE
 PR #25 mode: LIGHTWEIGHT_HUMAN_REQUEST_ONLY
-PR #25 current request: HR25-004 — READY_FOR_HUMAN_RECHECK
+PR #25 current request: HR25-003 CONTINUATION — READY_FOR_HUMAN_RECHECK
 PR #25 next request ID: HR25-005
 PR #25 hand-off: HUMAN_RECHECK_REQUIRED
 External operations: NOT_AUTHORIZED

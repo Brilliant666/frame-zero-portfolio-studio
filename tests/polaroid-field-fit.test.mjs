@@ -263,10 +263,19 @@ test("all 128 adaptive orientation combinations keep rotated cards bounded and s
     const bounds = layout.placements.map(getPolaroidFieldPlacementBounds);
     const { canvas, cards } = layoutGeometry(layout);
     const fit = fitRectsToViewport(VIEWPORT, canvas, cards, FIT_INSET);
+    const heroBounds = bounds[4];
 
     assert.deepEqual(layout.placements.map(({ slotIndex }) => slotIndex), [0, 1, 2, 3, 4, 5, 6, 7, 8]);
     assert.equal(layout.placements[4].band, "hero");
     assert.equal(layout.placements[4].ratio, "2:3");
+    assert.ok(
+      Math.abs((heroBounds.left + heroBounds.right) / 2 - layout.canvasWidth / 2) < tolerance,
+      `mask ${orientationMask}: hero stays on the canvas horizontal center`,
+    );
+    assert.ok(
+      Math.abs((heroBounds.top + heroBounds.bottom) / 2 - layout.canvasHeight / 2) < tolerance,
+      `mask ${orientationMask}: hero stays on the canvas vertical center`,
+    );
     assert.equal(layout.threads.length, 10);
     assert.ok(fit, `mask ${orientationMask}: FIT exists`);
     assert.ok(fit.view.scale > .72, `mask ${orientationMask}: FIT remains legible`);
@@ -477,13 +486,21 @@ test("polaroid template exposes accessible Chinese view navigation on desktop an
   );
 });
 
-test("polaroid field view keeps the hero and gallery introduction compact", async () => {
+test("polaroid field view anchors desktop context above the centered work and keeps a mobile fallback", async () => {
   const css = await fs.readFile(
     new URL("../app/templates/polaroid-field/polaroid-field.module.css", import.meta.url),
     "utf8",
   );
   const hero = parseDeclarations(extractCssRule(css, ".hero"));
   const heroPadding = splitCssValues(hero.padding);
+  const heroTitle = parseDeclarations(extractCssRule(css, ".heroTitle"));
+  const heroCopy = parseDeclarations(extractCssRule(css, ".heroCopy"));
+  assert.equal(hero.width, "100%", "desktop hero uses the full content width for opposing anchors");
+  assert.equal(hero["align-items"], "start", "desktop hero context stays above the work");
+  assert.equal(heroTitle["align-self"], "start");
+  assert.equal(heroTitle["justify-self"], "start", "title anchors to the upper inline start");
+  assert.equal(heroCopy["align-self"], "start");
+  assert.equal(heroCopy["justify-self"], "end", "information card anchors to the upper inline end");
   assert.ok(maximumClampRem(hero["min-height"]) <= 28, "hero no longer occupies a full desktop viewport");
   assert.ok(maximumClampRem(heroPadding[0]) <= 2.5, "hero vertical padding stays compact");
 
@@ -497,12 +514,15 @@ test("polaroid field view keeps the hero and gallery introduction compact", asyn
 
   const heroSeal = parseDeclarations(extractCssRule(css, ".heroSeal", 1));
   assert.ok(maximumClampRem(heroSeal.width) <= 7, "desktop seal stays clear of the hero copy");
-  assert.ok(Number.parseFloat(heroSeal.bottom) >= 40 && heroSeal.bottom.endsWith("%"), "desktop seal is lifted above the action");
+  assert.notEqual(heroSeal.top, "auto", "desktop seal uses the upper edge as its vertical anchor");
+  assert.notEqual(heroSeal.right, "auto", "desktop seal remains anchored to the inline end");
+  assert.equal(heroSeal.bottom, "auto");
   assert.equal(heroSeal["pointer-events"], "none");
 
   const mobileCss = extractBraceBlock(css, "@media (max-width: 800px)");
   const mobileHero = parseDeclarations(extractCssRule(mobileCss, ".hero"));
   const mobileHeroPadding = splitCssValues(mobileHero.padding).map(remValue);
+  assert.equal(mobileHero["grid-template-columns"], "1fr", "mobile restores a readable single-column flow");
   assert.ok(mobileHeroPadding[0] <= 3 && mobileHeroPadding[2] <= 3.5);
   const mobileHeroSeal = parseDeclarations(extractCssRule(mobileCss, ".heroSeal"));
   assert.equal(mobileHeroSeal.display, "none", "mobile hero removes the overlapping seal");
