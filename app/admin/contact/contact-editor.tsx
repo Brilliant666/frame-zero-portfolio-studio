@@ -4,6 +4,8 @@ import { AdminField, AdminSection, FormGroup } from "../admin-form";
 import { useAdmin } from "../admin-provider";
 import styles from "../admin-v2.module.css";
 
+const MAX_SOCIAL_LINKS = 8;
+
 export default function ContactEditor() {
   const { content, setContent } = useAdmin();
 
@@ -24,6 +26,20 @@ export default function ContactEditor() {
     });
   };
 
+  const addSocialItem = () => {
+    setContent((current) => current.social.length >= MAX_SOCIAL_LINKS ? current : ({
+      ...current,
+      social: [...current.social, { label: "", handle: "" }],
+    }));
+  };
+
+  const removeSocialItem = (index: number) => {
+    setContent((current) => ({
+      ...current,
+      social: current.social.filter((_, itemIndex) => itemIndex !== index),
+    }));
+  };
+
   return (
     <AdminSection
       eyebrow="CONTACT"
@@ -41,7 +57,10 @@ export default function ContactEditor() {
           </div>
         </FormGroup>
 
-        <FormGroup title="社交账号" description="平台名称与账号继续使用原有成对数组结构。">
+        <FormGroup
+          title="平台账号与二维码"
+          description="可填写普通账号，或填写完整的 HTTPS 平台主页链接；主页链接会在漂浮拍立得模板中提供本地生成的二维码。若要显示 QQ 联系方式，请将平台名称填写为 QQ。"
+        >
           <div className={styles.pairGrid}>
             {content.social.map((item, index) => (
               <div className={styles.pairRow} key={index}>
@@ -49,13 +68,29 @@ export default function ContactEditor() {
                   ...current,
                   social: current.social.map((entry, itemIndex) => itemIndex === index ? { ...entry, label: value } : entry),
                 }))} />
-                <AdminField label={`账号 ${index + 1}`} value={item.handle} onChange={(value) => setContent((current) => ({
-                  ...current,
-                  social: current.social.map((entry, itemIndex) => itemIndex === index ? { ...entry, handle: value } : entry),
-                }))} />
+                <AdminField
+                  label={`账号或主页链接 ${index + 1}`}
+                  value={item.handle}
+                  placeholder="账号，或 https:// 开头的主页链接"
+                  onChange={(value) => setContent((current) => ({
+                    ...current,
+                    social: current.social.map((entry, itemIndex) => itemIndex === index ? { ...entry, handle: value } : entry),
+                  }))}
+                />
+                <div className={`${styles.rowActions} ${styles.socialRowActions}`}>
+                  <button type="button" onClick={() => removeSocialItem(index)} aria-label={`删除平台账号 ${index + 1}`}>删除</button>
+                </div>
               </div>
             ))}
           </div>
+          <button
+            type="button"
+            className={styles.secondaryButton}
+            onClick={addSocialItem}
+            disabled={content.social.length >= MAX_SOCIAL_LINKS}
+          >
+            {content.social.length >= MAX_SOCIAL_LINKS ? "已达到 8 个平台账号" : "添加平台账号"}
+          </button>
         </FormGroup>
 
         <FormGroup title="约拍表单字段" description="主页复制的约拍清单顺序；可使用键盘完成编辑和排序。">

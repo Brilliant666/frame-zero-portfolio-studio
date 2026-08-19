@@ -47,6 +47,14 @@ function importNavigationModule(t) {
   );
 }
 
+function importSocialLinksModule(t) {
+  return importTypescriptModule(
+    t,
+    "../app/templates/polaroid-field/social-links.ts",
+    "social-links.ts",
+  );
+}
+
 function extractBraceBlock(source, marker) {
   const markerIndex = source.indexOf(marker);
   assert.notEqual(markerIndex, -1, `expected to find ${marker}`);
@@ -315,6 +323,94 @@ test("polaroid navigation maps stable hashes to the three same-route views", asy
   assert.equal(getPolaroidViewFromHash(POLAROID_VIEW_HASHES.booking), "booking");
   assert.equal(getPolaroidViewFromHash("  #POLAROID-BOOKING  "), "booking");
   assert.equal(getPolaroidViewFromHash("#unknown-section"), "field");
+});
+
+test("polaroid contact options resolve QQ only from social rows and accept safe HTTPS URLs", async (t) => {
+  const { findQqContact, getSafeSocialUrl } = await importSocialLinksModule(t);
+
+  assert.equal(findQqContact([
+    { label: "邮箱", handle: "123456789@qq.example" },
+    { label: " qq ", handle: " QQ_DEMO_123 " },
+  ]), "QQ_DEMO_123");
+  assert.equal(findQqContact([
+    { label: "QQ", handle: "   " },
+    { label: "QQ", handle: " second-qq " },
+  ]), "second-qq");
+  assert.equal(findQqContact([{ label: "邮箱", handle: "123456789@qq.example" }]), null);
+  assert.equal(findQqContact([{ label: "微信", handle: "QQ" }]), null);
+
+  assert.equal(
+    getSafeSocialUrl("  https://portfolio.example/profile?q=作品#gallery  "),
+    "https://portfolio.example/profile?q=%E4%BD%9C%E5%93%81#gallery",
+  );
+  for (const unsafe of [
+    "",
+    "portfolio.example/profile",
+    "http://portfolio.example/profile",
+    "mailto:owner@framezero.example",
+    "javascript:alert(1)",
+    "data:text/html,unsafe",
+    "//portfolio.example/profile",
+    "https://owner@portfolio.example/profile",
+    "https://owner:secret@portfolio.example/profile",
+    "https://",
+    `https://portfolio.example/${"a".repeat(2_100)}`,
+  ]) assert.equal(getSafeSocialUrl(unsafe), null, unsafe);
+});
+
+test("contact Admin manages up to eight account-or-HTTPS rows without changing SiteContent schema", async () => {
+  const [editor, siteConfigSource] = await Promise.all([
+    fs.readFile(new URL("../app/admin/contact/contact-editor.tsx", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/site-config.ts", import.meta.url), "utf8"),
+  ]);
+  assert.ok(editor.includes("const MAX_SOCIAL_LINKS = 8"));
+  assert.ok(editor.includes("current.social.length >= MAX_SOCIAL_LINKS"));
+  assert.ok(editor.includes('social: [...current.social, { label: "", handle: "" }]'));
+  assert.ok(editor.includes("current.social.filter((_, itemIndex) => itemIndex !== index)"));
+  assert.ok(editor.includes("disabled={content.social.length >= MAX_SOCIAL_LINKS}"));
+  assert.ok(editor.includes("添加平台账号"));
+  assert.ok(editor.includes("删除平台账号"));
+  assert.ok(editor.includes("普通账号"));
+  assert.ok(editor.includes("HTTPS"));
+  assert.ok(editor.includes("平台名称填写为 QQ"));
+
+  const siteContentType = siteConfigSource.slice(
+    siteConfigSource.indexOf("export type SiteContent"),
+    siteConfigSource.indexOf("export const siteConfig"),
+  );
+  assert.ok(siteContentType.includes("contact: { wechat: string; email: string; note: string }"));
+  assert.ok(siteContentType.includes("social: Array<{ label: string; handle: string }>"));
+  assert.ok(!siteContentType.includes("qq:"));
+  assert.ok(!siteContentType.includes("url:"));
+});
+
+test("polaroid contact rendering removes Email and generates QR locally only after disclosure", async () => {
+  const [template, qrComponent] = await Promise.all([
+    fs.readFile(new URL("../app/templates/polaroid-field/template.tsx", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/templates/polaroid-field/social-qr-code.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.ok(!template.includes("mailto:"));
+  assert.ok(!template.includes("content.contact.email"));
+  assert.ok(!template.includes("EMAIL /"));
+  assert.ok(template.includes("findQqContact(socialItems)"));
+  assert.ok(template.includes('onCopy(qqContact, "polaroid-qq")'));
+  assert.ok(template.includes(".filter(({ handle }) => handle)"), "empty social handles do not render blank platform cards");
+  assert.ok(template.includes("getSafeSocialUrl(item.handle)"));
+  assert.ok(template.includes('<a href={href} target="_blank" rel="noopener noreferrer">'));
+  assert.ok(template.includes("{href ? <SocialQrCode href={href} label={label} /> : null}"));
+  assert.ok(template.includes(") : <span>{item.handle}</span>}"));
+
+  assert.ok(qrComponent.includes("<details"));
+  assert.ok(qrComponent.includes("onToggle={handleToggle}"));
+  assert.ok(qrComponent.includes("if (!open"));
+  assert.ok(qrComponent.includes('import("qrcode")'));
+  assert.ok(qrComponent.includes("toDataURL(href"));
+  assert.ok(qrComponent.includes("[href, open"));
+  assert.ok(!/^import .*?["']qrcode["']/mu.test(qrComponent), "qrcode stays out of the initial module graph");
+  assert.ok(!/\b(?:fetch|XMLHttpRequest|WebSocket|sendBeacon|localStorage|sessionStorage|indexedDB|caches)\b/u.test(qrComponent));
+  assert.ok(!qrComponent.includes("document.cookie"));
+  assert.ok(!/https?:\/\//u.test(qrComponent), "QR generation does not call an external service");
+  assert.ok(!qrComponent.includes("dangerouslySetInnerHTML"));
 });
 
 test("polaroid template exposes accessible Chinese view navigation on desktop and mobile", async () => {

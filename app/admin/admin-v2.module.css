@@ -719,7 +719,9 @@
 }
 .rowActions button:last-child { color: #8b2d1d; }
 .rowActions button:disabled { opacity: .35; cursor: default; }
+.socialRowActions { grid-column: 1 / -1; justify-content: flex-end; }
 .secondaryButton { margin: 0 1.1rem 1.1rem; background: #fff; color: var(--admin-v2-ink); }
+.secondaryButton:disabled { opacity: .5; cursor: default; }
 
 .mobileLayoutNote {
   display: none;

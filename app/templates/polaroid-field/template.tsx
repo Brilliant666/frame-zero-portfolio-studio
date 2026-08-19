@@ -18,6 +18,8 @@ import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import { buildPolaroidFieldLayout } from "./field-layout";
 import { getPolaroidViewFromHash, POLAROID_VIEW_HASHES, type PolaroidView } from "./navigation";
+import SocialQrCode from "./social-qr-code";
+import { findQqContact, getSafeSocialUrl } from "./social-links";
 import {
   constrainView,
   fitRectsToViewport,
@@ -66,6 +68,10 @@ export default function PolaroidFieldTemplate({
   );
   const headerStatus = isPreview ? "TEMPLATE PREVIEW" : content.profile.availability.trim();
   const trustItems = content.trustItems.filter(({ label, value }) => label.trim() || value.trim());
+  const socialItems = content.social
+    .map(({ label, handle }) => ({ label: label.trim(), handle: handle.trim() }))
+    .filter(({ handle }) => handle);
+  const qqContact = findQqContact(socialItems);
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -709,18 +715,23 @@ export default function PolaroidFieldTemplate({
         <div className={styles.bookingIntro}>
           <small>03 / SEND A FIELD NOTE</small>
           <h2 id="booking-title">把下一颗星<br /><span>钉在这里</span></h2>
-          <p>告诉我角色、日期与想要留下的情绪。复制清单后，通过微信或邮箱发送，就可以开始一起搭建画面。</p>
+          <p>
+            告诉我角色、日期与想要留下的情绪。复制清单后，
+            {qqContact ? "通过微信或 QQ 发送" : "通过微信发送"}，就可以开始一起搭建画面。
+          </p>
 
           <button type="button" onClick={() => void onCopy(content.contact.wechat, "polaroid-wechat")}>
             <span>WECHAT / 点击复制</span>
             <strong>{content.contact.wechat}</strong>
             <b aria-live="polite">{copiedKey === "polaroid-wechat" ? "已复制 ✓" : "COPY ↗"}</b>
           </button>
-          <a href={`mailto:${content.contact.email}`}>
-            <span>EMAIL / 写一封信</span>
-            <strong>{content.contact.email}</strong>
-            <b>OPEN ↗</b>
-          </a>
+          {qqContact ? (
+            <button type="button" onClick={() => void onCopy(qqContact, "polaroid-qq")}>
+              <span>QQ / 点击复制</span>
+              <strong>{qqContact}</strong>
+              <b aria-live="polite">{copiedKey === "polaroid-qq" ? "已复制 ✓" : "COPY ↗"}</b>
+            </button>
+          ) : null}
           <p className={styles.contactNote}>{content.contact.note}</p>
         </div>
 
@@ -745,9 +756,19 @@ export default function PolaroidFieldTemplate({
             <span>{content.profile.photographer} · {content.profile.role}</span>
           </div>
           <div className={styles.socials}>
-            {content.social.map((item) => (
-              <span key={`${item.label}-${item.handle}`}><b>{item.label}</b>{item.handle}</span>
-            ))}
+            {socialItems.map((item, index) => {
+              const label = item.label || `平台 ${index + 1}`;
+              const href = getSafeSocialUrl(item.handle);
+              return (
+                <article className={styles.socialItem} key={`${label}-${item.handle}-${index}`}>
+                  <b>{label}</b>
+                  {href ? (
+                    <a href={href} target="_blank" rel="noopener noreferrer">{item.handle}<span>打开主页 ↗</span></a>
+                  ) : <span>{item.handle}</span>}
+                  {href ? <SocialQrCode href={href} label={label} /> : null}
+                </article>
+              );
+            })}
           </div>
           <p>{content.statement.lineOne}{content.statement.lineTwo}</p>
           <small>© 2026 / EVERY MEMORY HAS COORDINATES.</small>
