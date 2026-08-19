@@ -193,15 +193,6 @@
   transform: rotate(12deg);
 }
 
-.heroIndex {
-  position: absolute;
-  top: 9%;
-  left: clamp(1rem, 4vw, 4.5rem);
-  color: var(--ink-soft);
-  font: 700 .62rem ui-monospace, SFMono-Regular, Consolas, monospace;
-  letter-spacing: .14em;
-}
-
 .heroTitle,
 .heroCopy,
 .heroSeal {
@@ -1183,11 +1174,6 @@
   .hero::after {
     top: 7rem;
     right: 1rem;
-  }
-
-  .heroIndex {
-    top: 2.5rem;
-    left: 1rem;
   }
 
   .heroTitle h1 {

@@ -64,6 +64,7 @@ export default function PolaroidFieldTemplate({
     () => buildPolaroidFieldLayout(fieldSlots.map((slot) => slot.ratio)),
     [fieldSlots],
   );
+  const headerStatus = isPreview ? "TEMPLATE PREVIEW" : content.profile.availability.trim();
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -436,7 +437,7 @@ export default function PolaroidFieldTemplate({
             onClick={(event) => handleViewLink(event, "booking")}
           >联系约拍</a>
         </nav>
-        <p>{isPreview ? "TEMPLATE PREVIEW" : content.profile.availability}</p>
+        {headerStatus ? <p>{headerStatus}</p> : null}
       </header>
 
       <section
@@ -446,7 +447,6 @@ export default function PolaroidFieldTemplate({
         hidden={activeView !== "field"}
         tabIndex={-1}
       >
-        <div className={styles.heroIndex}>FIELD NOTE / 001—009</div>
         <div className={styles.heroTitle}>
           <p>{content.hero.eyebrow}</p>
           <h1>漂浮<br /><span>拍立得星图</span></h1>

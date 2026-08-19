@@ -341,6 +341,61 @@ test("polaroid template exposes accessible Chinese view navigation on desktop an
   assert.ok(remValue(mobileLink["min-height"]) >= 2.75, "mobile links provide a 44px touch target");
 });
 
+test("polaroid header removes the fixed field note and suppresses blank availability", async () => {
+  const [template, css] = await Promise.all([
+    fs.readFile(new URL("../app/templates/polaroid-field/template.tsx", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/templates/polaroid-field/polaroid-field.module.css", import.meta.url), "utf8"),
+  ]);
+  assert.ok(!template.includes("FIELD NOTE / 001—009"));
+  assert.ok(!template.includes("styles.heroIndex"));
+  assert.ok(!css.includes(".heroIndex"));
+
+  const sourceFile = ts.createSourceFile(
+    "polaroid-field-template.tsx",
+    template,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  let availabilityLabelName;
+  const conditionalRenders = [];
+
+  function visit(node) {
+    if (
+      ts.isVariableDeclaration(node)
+      && ts.isIdentifier(node.name)
+      && node.initializer
+      && ts.isConditionalExpression(node.initializer)
+      && node.initializer.condition.getText(sourceFile) === "isPreview"
+      && node.initializer.whenTrue.getText(sourceFile) === '"TEMPLATE PREVIEW"'
+      && ts.isCallExpression(node.initializer.whenFalse)
+      && node.initializer.whenFalse.arguments.length === 0
+      && node.initializer.whenFalse.expression.getText(sourceFile) === "content.profile.availability.trim"
+    ) {
+      availabilityLabelName = node.name.text;
+    }
+    if (
+      ts.isConditionalExpression(node)
+      && node.whenFalse.kind === ts.SyntaxKind.NullKeyword
+      && node.whenTrue.getText(sourceFile).includes("<p>")
+    ) {
+      conditionalRenders.push(node);
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(sourceFile);
+
+  assert.ok(availabilityLabelName, "availability is trimmed from the existing profile field");
+  const availabilityRender = conditionalRenders.find((node) => (
+    node.condition.getText(sourceFile) === availabilityLabelName
+    && node.whenTrue.getText(sourceFile).includes(availabilityLabelName)
+  ));
+  assert.ok(availabilityRender, "availability uses a conditional render");
+  assert.equal(availabilityRender.condition.getText(sourceFile), availabilityLabelName);
+  assert.equal(availabilityRender.whenFalse.kind, ts.SyntaxKind.NullKeyword);
+  assert.ok(availabilityRender.whenTrue.getText(sourceFile).includes(availabilityLabelName));
+});
+
 test("template wiring preserves nine slots, keyboard access, FIT reset, mobile layout, and reduced motion", async () => {
   const [template, css, catalog] = await Promise.all([
     fs.readFile(new URL("../app/templates/polaroid-field/template.tsx", import.meta.url), "utf8"),
