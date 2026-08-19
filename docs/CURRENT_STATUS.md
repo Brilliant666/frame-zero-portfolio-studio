@@ -1,7 +1,7 @@
 # Portfolio Platform Current Status
 
-> - Updated: 2026-08-18
-> - Baseline: `main@ced247e5baf19510329c4c3a084a69e6b1ab0c2c`
+> - Updated: 2026-08-19
+> - Baseline: `main@dc471795139dc47649368bb37c0178fb77188fea`
 
 ```text
 Current phase: SELF_HOSTED_V1
@@ -18,13 +18,18 @@ Product experience foundation: ACCEPTED
 Automated visual QA baseline: ACCEPTED
 Pre-launch product polish: IN_PROGRESS
 Human-directed product polish: IN_PROGRESS
+PR #25 workspace: HUMAN_DIRECTED_PRODUCT_POLISH_WORKSPACE
 Eleven-template human visual approval: PENDING
 Human-approved templates: 0 / 11
 PR #24 closure mode: FINAL_HUMAN_ACCEPTANCE + MERGE
 PR #24 feature freeze: TRUE
 PR #24 product baseline: ACCEPTED
 PR #24 limited baseline acceptance: ACCEPTED
-PR #24 hand-off: WAITING_FOR_NEXT_HUMAN_DIRECTED_PRODUCT_POLISH_AUTHORIZATION
+PR #25 workspace status: ACTIVE
+PR #25 mode: LIGHTWEIGHT_HUMAN_REQUEST_ONLY
+PR #25 current request: NONE
+PR #25 next request ID: HR25-001
+PR #25 hand-off: HUMAN_INPUT_REQUIRED
 External operations: NOT_AUTHORIZED
 Completed milestone: STANDARD_NEXT_NODE_PARITY
 Next milestone: DEPLOYMENT_BOOTSTRAP_READY

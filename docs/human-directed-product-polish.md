@@ -7,15 +7,21 @@
 > - Online status: `NOT_ONLINE_PREVIEW`
 > - Engineering launch: `FROZEN`
 > - Engineering launch line: `FROZEN_AT_REPO_SIDE_BOOTSTRAP_READY`
-> - Branch: `product/prelaunch-manual-polish-01`
+> - Branch: `product/prelaunch-manual-polish-02`
 > - Accepted PR: `#24 — fix: refine local workflow and template presentation`
+> - Current Draft PR workspace: `#25 — fix: continue human-directed product polish`
 > - PR #24 closure mode: `FINAL_HUMAN_ACCEPTANCE + MERGE`
 > - PR #24 feature freeze: `TRUE`
 > - PR #24 limited baseline acceptance: `ACCEPTED`
+> - PR #25 workspace: `HUMAN_DIRECTED_PRODUCT_POLISH_WORKSPACE`
+> - PR #25 workspace status: `ACTIVE`
+> - PR #25 mode: `LIGHTWEIGHT_HUMAN_REQUEST_ONLY`
+> - PR #25 current request: `NONE`
+> - PR #25 next request ID: `HR25-001`
 > - Human-approved templates: `0 / 11`
-> - Current hand-off: `WAITING_FOR_NEXT_HUMAN_DIRECTED_PRODUCT_POLISH_AUTHORIZATION`
+> - Current hand-off: `HUMAN_INPUT_REQUIRED`
 > - External operations: `NOT_AUTHORIZED`
-> - Base: `main@ced247e5baf19510329c4c3a084a69e6b1ab0c2c`
+> - Base: `main@dc471795139dc47649368bb37c0178fb77188fea`
 
 This document is the long-lived ledger for explicit, item-by-item human product
 polish. The `NEXT` hand-off recorded when the product-experience foundation was
@@ -42,14 +48,13 @@ geometry across the eleven-template review. The existing 39-photo local
 library was used only as uncommitted validation input; the frozen V1 slot
 counts, identities, `SiteDocumentV1`, and legacy adapter remain unchanged.
 
-This is not an automated backlog. Codex handles exactly one concrete human
-request, validates it in proportion to risk, creates one focused commit, pushes
-it to the same Draft PR, reports the result, and stops at
-`WAITING_FOR_HUMAN_REVIEW`. Observations outside the request may be recorded but
-must not be implemented without a new human instruction. PR #24 is now
-feature-frozen: its limited closure does not mark human-directed or pre-launch
-product polish complete, and a merge would not constitute final template
-visual approval.
+This is not an automated backlog. PR #24 is accepted and merged as the limited
+baseline. PR #25 is a lightweight, human-request-only workspace: Codex handles
+exactly one concrete request, validates it in proportion to risk, creates one
+focused commit, pushes it to the same Draft PR, reports the result, and stops at
+`HUMAN_INPUT_REQUIRED`. Observations outside the request may be recorded but
+must not be implemented without a new human instruction. Neither PR establishes
+final template visual approval or completes pre-launch product polish.
 
 The formal project state remains:
 
@@ -64,7 +69,61 @@ The product-experience foundation and automated visual-QA baseline are
 accepted. `PRE_LAUNCH_PRODUCT_POLISH` remains in progress, and eleven-template
 human visual approval remains pending.
 
-## Request protocol
+## PR #25 — Lightweight Human-Directed Polish
+
+```text
+Base: main@dc471795139dc47649368bb37c0178fb77188fea
+Status: ACTIVE
+Workspace: HUMAN_DIRECTED_PRODUCT_POLISH_WORKSPACE
+Mode: LIGHTWEIGHT_HUMAN_REQUEST_ONLY
+Current request: NONE
+Next request ID: HR25-001
+PR24_LIMITED_BASELINE: ACCEPTED
+PRE_LAUNCH_PRODUCT_POLISH: IN_PROGRESS
+ELEVEN_TEMPLATE_HUMAN_VISUAL_APPROVAL: PENDING
+HUMAN_APPROVED: 0 / 11
+ENGINEERING_LAUNCH_LINE: FROZEN_AT_REPO_SIDE_BOOTSTRAP_READY
+```
+
+The workspace never selects or implements a known follow-up automatically.
+Each future request uses `HR25-001`, `HR25-002`, and so on, and follows this
+bounded sequence:
+
+```text
+human request
+-> reproduce / inspect
+-> minimum scope
+-> implement
+-> focused validation
+-> browser check when applicable
+-> atomic commit
+-> push
+-> concise report
+-> stop for human input
+```
+
+### `KNOWN_FOLLOWUPS_NOT_AUTO_AUTHORIZED`
+
+- `NEXT_PR_P1`: `ONE_LEVEL_LAYOUT_UNDO`,
+  `CLEAR_TEMPLATE_CONFIRMATION_AND_UNDO`,
+  `IMPORT_FAILURE_IDENTIFICATION`, `DELETE_SEMANTICS_HUMAN_DECISION`, and
+  `CONTINUED_TEMPLATE_BY_TEMPLATE_VISUAL_POLISH`;
+- `NEXT_PR_P2`: `DRAG_DROP_IMPORT`, `AUTO_DETECT_DROP_SOURCE`,
+  `BULK_ASSET_MANAGEMENT`, `ASSET_DETAIL`, `TAGS_ALBUMS`, `TRUE_REROLL`, and
+  `PREVIEW_DEVICE_SWITCHER`;
+- `PRE_DEPLOYMENT_P1`: `PUBLIC_IDENTITY_SSR_MISMATCH`;
+- `LOCAL_ONLY_FUTURE`: `SOURCE_FOLDER_BINDING`, `RESCAN`, `WATCHER`, and
+  `AUTO_SYNC`;
+- `FUTURE_HOSTED`: `POSTGRESQL`, `AUTH`, `HOSTED_ASSETS`, `HOSTED_UPLOAD`, and
+  `ASSET_RESOLVER`.
+
+These are inventory only. They are not selected work and must not be
+implemented without a new, explicit human request.
+
+| ID | Human request | Area | Status | Commit | Validation | Human decision |
+| --- | --- | --- | --- | --- | --- | --- |
+
+## PR #24 request protocol
 
 Each human request follows this bounded sequence:
 
@@ -81,7 +140,7 @@ Each human request follows this bounded sequence:
 11. `REPORT`
 12. `WAITING_FOR_HUMAN_REVIEW`
 
-Requests receive sequential IDs beginning with `HR-001`. The request wording
+PR #24 requests received sequential IDs beginning with `HR-001`. The request wording
 must preserve the human intent without expanding it into a broader redesign.
 Each request should map to one focused commit whenever practical. No force push,
 stacked PR, per-issue PR, or opportunistic dependency/architecture cleanup is
@@ -335,7 +394,7 @@ enabled for every PR update.
 After the bootstrap and after every future micro-slice, the required state is:
 
 ```text
-WAITING_FOR_HUMAN_REVIEW
+HUMAN_INPUT_REQUIRED
 ```
 
 The Draft PR is never marked Ready or merged without separate human approval.
