@@ -14,8 +14,16 @@
 .brand b::first-line { transform: rotate(-45deg); }
 .brand span { display: grid; gap: .15rem; font-weight: 700; }
 .brand small { color: rgba(255,255,255,.38); font-size: .45rem; }
-.header nav { display: flex; gap: 2rem; }
-.header nav a:hover { color: var(--orange); }
+.header nav { display: flex; align-items: center; gap: 2rem; font-size: 1rem; letter-spacing: .04em; }
+.header nav a { position: relative; display: inline-flex; min-height: 2.75rem; align-items: center; padding: .65rem .15rem; transition: color .2s ease; }
+.header nav a::after { content: ""; position: absolute; right: .15rem; bottom: .2rem; left: .15rem; height: 2px; background: var(--orange); transform: scaleX(0); transform-origin: right; transition: transform .2s ease; }
+.header nav a:hover,
+.header nav a:focus-visible,
+.header nav a[aria-current="page"] { color: var(--orange); }
+.header nav a:hover::after,
+.header nav a:focus-visible::after,
+.header nav a[aria-current="page"]::after { transform: scaleX(1); transform-origin: left; }
+.header nav a:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
 .status { justify-self: end; color: rgba(255,255,255,.52); }
 .status i { display: inline-block; width: .45rem; height: .45rem; margin-right: .4rem; border-radius: 50%; background: var(--ice); box-shadow: 0 0 1rem var(--ice); }
 
@@ -107,7 +115,11 @@
 @keyframes portal-arrive { from { opacity: 0; transform: scale(.82) rotate(2deg); filter: blur(12px) saturate(1.6); } to { opacity: 1; transform: none; filter: none; } }
 
 @media (max-width: 1000px) {
-  .header { grid-template-columns: 1fr auto; padding: 0 1rem; }.header nav { display: none; }
+  .header { grid-template-columns: minmax(0, 1fr); gap: .35rem; min-height: 0; padding: .55rem 1rem .4rem; }
+  .brand b { width: 2rem; height: 2rem; }
+  .brand small, .status { display: none; }
+  .header nav { display: grid; width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .25rem; border-top: 1px solid rgba(142,234,255,.12); }
+  .header nav a { justify-content: center; min-width: 0; padding-inline: .35rem; text-align: center; white-space: nowrap; }
   .hero { grid-template-columns: 1fr 1.2fr; padding-inline: 1rem; }.activeMeta { grid-column: 1/-1; display: grid; grid-template-columns: auto 1fr; gap: 1rem; padding: 0 0 2rem; }.activeMeta > div { grid-column: 1/-1; display: grid; grid-template-columns: 1fr 1fr; }
   .portalImage { width: min(46vw,27rem); }.aperture { width: min(52vw,32rem); }
   .sectionHead { grid-template-columns: 1fr; gap: .7rem; }
@@ -118,7 +130,7 @@
 }
 
 @media (max-width: 650px) {
-  .status { max-width: 8rem; text-align: right; }.hero { grid-template-columns: 1fr; padding-top: 6.5rem; }.heroCopy h1 { font-size: 17vw; }.portalStage { min-height: 28rem; }.portalImage { width: 82vw; }.aperture { width: 92vw; }.activeMeta { display: block; }.activeMeta > div { display: block; }
+  .hero { grid-template-columns: 1fr; padding-top: 6.5rem; }.heroCopy h1 { font-size: 17vw; }.portalStage { min-height: 28rem; }.portalImage { width: 82vw; }.aperture { width: 92vw; }.activeMeta { display: block; }.activeMeta > div { display: block; }
   .orbitSection, .missions { padding: 5rem 1rem; }.orbitScene { display: flex; width: auto; min-height: 0; margin: 0; padding: 1rem max(0rem, calc((100vw - 84vw) / 2)) 1.5rem; gap: .8rem; overflow-x: auto; border: 0; border-radius: 0; scroll-padding-inline: 8vw; scroll-snap-type: x mandatory; }.orbitCard,.orbitCard:hover,.orbitPlaceholder:hover { position: relative; flex: 0 0 76vw; width: auto; transform: none; scroll-snap-align: center; scroll-snap-stop: always; }.orbitCard > span { padding: .75rem; }.missionGrid { grid-template-columns: 1fr; }.contact { padding: 6rem 1rem; }.contactCopy h2 { font-size: 15vw; }.console pre { min-height: 18rem; }.footer { grid-template-columns: 1fr; gap: .5rem; }
 }
 

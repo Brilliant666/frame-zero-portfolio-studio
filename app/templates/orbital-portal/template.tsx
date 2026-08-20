@@ -6,13 +6,26 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "r
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
+import { useTemplateSectionNavigation } from "../shared/use-template-section-navigation";
 import { getOrbitalPortalObjectPosition } from "./portal-focus";
 import styles from "./template.module.css";
 
 const ORBIT_RATIOS = getTemplateSlotRatios("orbital-portal");
+const ORBIT_VIEW_HASHES = {
+  works: "#portal-works",
+  packages: "#portal-modes",
+  contact: "#portal-contact",
+} as const;
+const ORBIT_VIEW_ALIASES = [{ hash: "#portal-top", view: "works" }] as const;
 
-export default function OrbitalPortalTemplate({ content, works, packages, bookingTemplate, copiedKey, onCopy, onOpenWork }: TemplateProps) {
+export default function OrbitalPortalTemplate({ content, works, packages, bookingTemplate, copiedKey, isPreview, onCopy, onBeforeViewChange, onOpenWork }: TemplateProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const { activeView, handleInternalLinkClick } = useTemplateSectionNavigation({
+    aliases: ORBIT_VIEW_ALIASES,
+    hashes: ORBIT_VIEW_HASHES,
+    isPreview,
+    onBeforeViewChange,
+  });
   const orbitSlots = useMemo(
     () => buildPhotoSlots(works, ORBIT_RATIOS, { templateId: "orbital-portal" }),
     [works],
@@ -37,14 +50,19 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
   }, [move]);
 
   return (
-    <main className={styles.shell} data-template="orbital-portal">
+    <main
+      className={styles.shell}
+      data-template="orbital-portal"
+      data-template-active-view={activeView}
+      onClick={handleInternalLinkClick}
+    >
       <header className={styles.header}>
         <a href="#portal-top" className={styles.brand}><b>{content.profile.mark}</b><span>{content.profile.brand}<small>ORBITAL OPTICAL LAB</small></span></a>
-        <nav aria-label="轨道门户模板导航"><a href="#portal-works">ORBIT</a><a href="#portal-modes">MISSIONS</a><a href="#portal-contact">CONTACT</a></nav>
+        <nav aria-label="轨道门户模板导航"><a href="#portal-works" aria-current={activeView === "works" ? "page" : undefined}>作品</a><a href="#portal-modes" aria-current={activeView === "packages" ? "page" : undefined}>拍摄套餐</a><a href="#portal-contact" aria-current={activeView === "contact" ? "page" : undefined}>联系约拍</a></nav>
         <span className={styles.status}><i /> {content.profile.city}</span>
       </header>
 
-      <section id="portal-top" className={styles.hero}>
+      <section id="portal-top" className={styles.hero} data-template-view="works" hidden={activeView !== "works"} tabIndex={-1}>
         <div className={styles.stars} aria-hidden="true" />
         <div className={styles.heroCopy}>
           <small>VISUAL GATE / 00—{String(ORBIT_RATIOS.length).padStart(2, "0")}</small>
@@ -90,7 +108,7 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
         </aside>
       </section>
 
-      <section id="portal-works" className={styles.orbitSection}>
+      <section id="portal-works" className={styles.orbitSection} data-template-view="works" hidden={activeView !== "works"} tabIndex={-1}>
         <div className={styles.sectionHead}>
           <span>01 / CHARACTER ORBIT</span>
           <h2>每个角色，<br />都有自己的引力。</h2>
@@ -134,7 +152,7 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
         </div>
       </section>
 
-      <section id="portal-modes" className={styles.missions}>
+      <section id="portal-modes" className={styles.missions} data-template-view="packages" hidden={activeView !== "packages"} tabIndex={-1}>
         <div className={styles.sectionHead}><span>02 / MISSION LEVEL</span><h2>选择进入方式</h2><p>{content.profile.availability}</p></div>
         <div className={styles.missionGrid}>
           {packages.map((item, index) => (
@@ -149,7 +167,7 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
         </div>
       </section>
 
-      <section id="portal-contact" className={styles.contact}>
+      <section id="portal-contact" className={styles.contact} data-template-view="contact" hidden={activeView !== "contact"} tabIndex={-1}>
         <div className={styles.contactCopy}>
           <small>03 / TRANSMIT REQUEST</small>
           <h2>把角色坐标<br />发送给我。</h2>

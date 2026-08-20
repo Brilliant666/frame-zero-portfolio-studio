@@ -5,11 +5,18 @@
 import { useRef } from "react";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
+import { useTemplateSectionNavigation } from "../shared/use-template-section-navigation";
 import type { TemplateProps } from "../types";
 import styles from "./film-rail.module.css";
 import { splitFilmRailSlots } from "./slot-plan";
 
 const filmRatios = getTemplateSlotRatios("film-rail");
+const filmViewHashes = {
+  works: "#film-archive",
+  packages: "#film-services",
+  contact: "#film-booking",
+} as const;
+const filmViewAliases = [{ hash: "#film-top", view: "works" }] as const;
 
 export default function FilmRailTemplate({
   templateId,
@@ -18,13 +25,21 @@ export default function FilmRailTemplate({
   packages,
   bookingTemplate,
   copiedKey,
+  isPreview,
   onCopy,
+  onBeforeViewChange,
   onOpenWork,
 }: TemplateProps) {
   const railRef = useRef<HTMLDivElement>(null);
   const photoSlots = buildPhotoSlots(works, filmRatios, { templateId: "film-rail" });
   const { hero: leadSlot, frames: filmSlots } = splitFilmRailSlots(photoSlots);
   const leadWork = leadSlot.work;
+  const { activeView, handleInternalLinkClick } = useTemplateSectionNavigation({
+    aliases: filmViewAliases,
+    hashes: filmViewHashes,
+    isPreview,
+    onBeforeViewChange,
+  });
 
   const moveRail = (direction: -1 | 1) => {
     const rail = railRef.current;
@@ -37,7 +52,12 @@ export default function FilmRailTemplate({
   };
 
   return (
-    <main className={styles.shell} data-template={templateId}>
+    <main
+      className={styles.shell}
+      data-template={templateId}
+      data-template-active-view={activeView}
+      onClick={handleInternalLinkClick}
+    >
       <a className={styles.skipLink} href="#film-archive">跳到作品胶片</a>
 
       <header className={styles.header}>
@@ -46,14 +66,14 @@ export default function FilmRailTemplate({
           <span>{content.profile.brand}<small>MOTION PICTURE ARCHIVE</small></span>
         </a>
         <nav aria-label="胶片模板主导航">
-          <a href="#film-archive">FILM</a>
-          <a href="#film-services">SERVICES</a>
-          <a href="#film-booking">BOOKING</a>
+          <a href="#film-archive" aria-current={activeView === "works" ? "page" : undefined}>作品</a>
+          <a href="#film-services" aria-current={activeView === "packages" ? "page" : undefined}>拍摄套餐</a>
+          <a href="#film-booking" aria-current={activeView === "contact" ? "page" : undefined}>联系约拍</a>
         </nav>
         <span className={styles.reelStatus}>ROLL 01 · {String(filmSlots.length).padStart(2, "0")} FRAMES</span>
       </header>
 
-      <section className={styles.hero} id="film-top">
+      <section className={styles.hero} id="film-top" data-template-view="works" hidden={activeView !== "works"} tabIndex={-1}>
         <div className={styles.heroCopy}>
           <p className={styles.kicker}>FRAME//ZERO PRESENTS · COSPLAY PHOTOGRAPHY</p>
           <h1>
@@ -106,7 +126,7 @@ export default function FilmRailTemplate({
         </div>
       </section>
 
-      <section className={styles.archive} id="film-archive" aria-labelledby="film-heading">
+      <section className={styles.archive} id="film-archive" data-template-view="works" hidden={activeView !== "works"} tabIndex={-1} aria-labelledby="film-heading">
         <div className={styles.sectionHeading}>
           <div>
             <p>ROLL 01 / SELECTED NEGATIVES</p>
@@ -193,13 +213,13 @@ export default function FilmRailTemplate({
         </nav>
       </section>
 
-      <section className={styles.intertitle} aria-label="摄影宣言">
+      <section className={styles.intertitle} data-template-view="works" hidden={activeView !== "works"} aria-label="摄影宣言">
         <p>{content.statement.eyebrow}</p>
         <h2>{content.statement.lineOne}<br /><em>{content.statement.lineTwo}</em></h2>
         <span>— {content.profile.photographer} / {content.profile.role}</span>
       </section>
 
-      <section className={styles.services} id="film-services" aria-labelledby="services-heading">
+      <section className={styles.services} id="film-services" data-template-view="packages" hidden={activeView !== "packages"} tabIndex={-1} aria-labelledby="services-heading">
         <div className={styles.sectionHeading}>
           <div><p>PRODUCTION MENU / 2026</p><h2 id="services-heading">选择你的拍摄卷</h2></div>
           <p>每一种套餐都是一卷独立制作：确认角色、拍摄、选片，再将完整叙事交到你手中。</p>
@@ -220,7 +240,7 @@ export default function FilmRailTemplate({
         </div>
       </section>
 
-      <section className={styles.booking} id="film-booking" aria-labelledby="booking-heading">
+      <section className={styles.booking} id="film-booking" data-template-view="contact" hidden={activeView !== "contact"} tabIndex={-1} aria-labelledby="booking-heading">
         <div className={styles.bookingIntro}>
           <p>CASTING CALL / NOW OPEN</p>
           <h2 id="booking-heading">下一卷电影，<br />由你的角色主演。</h2>

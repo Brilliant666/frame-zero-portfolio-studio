@@ -6,10 +6,17 @@ import { useMemo, type CSSProperties } from "react";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoSlot } from "../shared/photo-slots";
 import { groupSourceOrientationSlots, justifiedPhotoColumns } from "../shared/source-orientation-layout";
+import { useTemplateSectionNavigation } from "../shared/use-template-section-navigation";
 import type { TemplateProps } from "../types";
 import { splitCinematicLightSlots } from "./slot-plan";
 
 const cinematicRatios = getTemplateSlotRatios("cinematic-light");
+const cinematicViewHashes = {
+  works: "#archive",
+  packages: "#services",
+  contact: "#booking",
+} as const;
+const cinematicViewAliases = [{ hash: "#top", view: "works" }] as const;
 
 type CinematicArchiveRowStyle = CSSProperties & { "--cinematic-archive-columns": string };
 
@@ -25,7 +32,9 @@ export default function CinematicLightTemplate({
   bookingTemplate,
   booted,
   copiedKey,
+  isPreview,
   onCopy,
+  onBeforeViewChange,
   onOpenWork,
 }: TemplateProps) {
   const heroTitle = content.hero.title.trim().split(/\s+/);
@@ -43,9 +52,20 @@ export default function CinematicLightTemplate({
   const archiveRows = useMemo(() => groupSourceOrientationSlots(archiveSlots), [archiveSlots]);
   const heroWork = heroSlot.work;
   const statementWork = statementSlot.work;
+  const { activeView, handleInternalLinkClick } = useTemplateSectionNavigation({
+    aliases: cinematicViewAliases,
+    hashes: cinematicViewHashes,
+    isPreview,
+    onBeforeViewChange,
+  });
 
   return (
-    <main className="site-shell" data-template={templateId}>
+    <main
+      className="site-shell"
+      data-template={templateId}
+      data-template-active-view={activeView}
+      onClick={handleInternalLinkClick}
+    >
       <div className={`boot-screen ${booted ? "is-complete" : ""}`} aria-hidden="true">
         <div className="boot-crosshair" />
         <p>{content.profile.brand} OPTICAL SYSTEM</p>
@@ -62,9 +82,9 @@ export default function CinematicLightTemplate({
           </span>
         </a>
         <nav aria-label="主导航">
-          <a href="#archive">ARCHIVE</a>
-          <a href="#services">SERVICES</a>
-          <a href="#booking">BOOKING</a>
+          <a href="#archive" aria-current={activeView === "works" ? "page" : undefined}>作品</a>
+          <a href="#services" aria-current={activeView === "packages" ? "page" : undefined}>拍摄套餐</a>
+          <a href="#booking" aria-current={activeView === "contact" ? "page" : undefined}>联系约拍</a>
         </nav>
         <div className="system-state"><i /> {content.profile.city}</div>
       </header>
@@ -72,8 +92,11 @@ export default function CinematicLightTemplate({
       <section
         id="top"
         className="hero"
+        data-template-view="works"
         data-cinematic-photo-role="hero"
         data-photo-slot={heroSlot.index + 1}
+        hidden={activeView !== "works"}
+        tabIndex={-1}
       >
         {heroWork ? (
           <picture className="hero-media" data-photo-slot={heroSlot.index + 1} data-photo-ratio={heroSlot.ratio}>
@@ -134,14 +157,14 @@ export default function CinematicLightTemplate({
         <div className="scroll-signal"><span /> SCROLL TO DECODE</div>
       </section>
 
-      <div className="signal-strip" aria-hidden="true">
+      <div className="signal-strip" data-template-view="works" hidden={activeView !== "works"} aria-hidden="true">
         <div>
           COSPLAY · CHARACTER · LIGHT · COLOR · STORY · COSPLAY · CHARACTER · LIGHT · COLOR · STORY ·&nbsp;
           COSPLAY · CHARACTER · LIGHT · COLOR · STORY ·
         </div>
       </div>
 
-      <section className="trust-strip" aria-label="约拍关键信息">
+      <section className="trust-strip" data-template-view="works" hidden={activeView !== "works"} aria-label="约拍关键信息">
         {content.trustItems.map((item) => (
           <div key={item.label}>
             <small>{item.label}</small>
@@ -150,7 +173,7 @@ export default function CinematicLightTemplate({
         ))}
       </section>
 
-      <section id="archive" className="archive section-wrap">
+      <section id="archive" className="archive section-wrap" data-template-view="works" hidden={activeView !== "works"} tabIndex={-1}>
         <div className="section-heading">
           <div>
             <p className="section-code">[ 01 / SELECTED ARCHIVE ]</p>
@@ -238,7 +261,7 @@ export default function CinematicLightTemplate({
         </div>
       </section>
 
-      <section id="services" className="services section-wrap">
+      <section id="services" className="services section-wrap" data-template-view="packages" hidden={activeView !== "packages"} tabIndex={-1}>
         <div className="section-heading services-heading">
           <div>
             <p className="section-code">[ 02 / VISUAL MODES ]</p>
@@ -272,8 +295,10 @@ export default function CinematicLightTemplate({
 
       <section
         className="statement"
+        data-template-view="works"
         data-cinematic-photo-role="statement"
         data-photo-slot={statementSlot.index + 1}
+        hidden={activeView !== "works"}
       >
         {statementWork ? (
           <img
@@ -298,7 +323,7 @@ export default function CinematicLightTemplate({
         </div>
       </section>
 
-      <section id="booking" className="booking section-wrap">
+      <section id="booking" className="booking section-wrap" data-template-view="contact" hidden={activeView !== "contact"} tabIndex={-1}>
         <div className="booking-panel">
           <div className="booking-copy">
             <p className="section-code">[ 03 / REQUEST A MISSION ]</p>

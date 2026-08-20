@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getClientVisiblePortfolioTitle } from "./client-visible-title";
 import { isTemplateId, normalizeSiteContent, siteConfig, type SiteContent, type TemplateId } from "./site-config";
 import Lightbox from "./templates/shared/lightbox";
@@ -23,6 +23,7 @@ export default function Home() {
     moveActiveWork,
     setActiveWork,
   } = useTemplateInteractions(works);
+  const closeActiveWork = useCallback(() => setActiveWork(null), [setActiveWork]);
   const packages = useMemo(() => content.packages.filter((item) => item.enabled), [content.packages]);
   const bookingTemplate = useMemo(
     () => ["【约拍任务申请】", ...content.bookingFields].join("\n"),
@@ -101,6 +102,7 @@ export default function Home() {
         copiedKey={copiedKey}
         isPreview={previewTemplate !== null}
         onCopy={copyText}
+        onBeforeViewChange={closeActiveWork}
         onOpenWork={(work) => setActiveWork(work)}
       />
       {activeWork && (
