@@ -74,7 +74,7 @@ export default function ContactEditor() {
           title="平台账号与二维码"
           description="可填写普通账号、完整 HTTPS 链接，或直接粘贴只含一个链接的平台分享文案；识别出的链接会在漂浮拍立得中提供本地生成的二维码。"
         >
-          <div className={styles.pairGrid}>
+          <div className={`${styles.pairGrid} ${styles.socialGrid}`}>
             {content.social.map((item, index) => {
               const safeUrl = getSafeSocialUrl(item.handle);
               const linkHelp = safeUrl

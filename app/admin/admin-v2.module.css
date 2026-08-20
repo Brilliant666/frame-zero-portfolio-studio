@@ -299,7 +299,8 @@
 .fullSpan { grid-column: 1 / -1; }
 
 .pairGrid { padding: 1.1rem; }
-.pairRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+.pairRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: .8rem; }
+.socialGrid { grid-template-columns: minmax(0, 1fr); }
 
 .field { display: grid; min-width: 0; gap: .4rem; }
 .field > span,
@@ -719,7 +720,7 @@
 }
 .rowActions button:last-child { color: #8b2d1d; }
 .rowActions button:disabled { opacity: .35; cursor: default; }
-.socialRowActions { grid-column: 1 / -1; justify-content: flex-end; }
+.rowActions.socialRowActions { grid-column: 1 / -1; justify-content: flex-end; }
 .secondaryButton { margin: 0 1.1rem 1.1rem; background: #fff; color: var(--admin-v2-ink); }
 .secondaryButton:disabled { opacity: .5; cursor: default; }
 
@@ -1219,6 +1220,7 @@
 
 @media (max-width: 760px) {
   .templateWorkbench { grid-template-columns: minmax(0, 1fr); }
+  .pairRow { grid-template-columns: minmax(0, 1fr); }
   .templateList { display: none; }
   .templateMobileSelector { display: grid; min-width: 0; gap: .35rem; }
   .templateMobileSelector > span { font-size: .78rem; font-weight: 700; }

@@ -376,9 +376,10 @@ test("polaroid social links extract exactly one safe HTTPS URL from platform sha
 });
 
 test("contact Admin keeps WeChat, Email, and note while normalizing safe platform share links", async () => {
-  const [editor, siteConfigSource] = await Promise.all([
+  const [editor, siteConfigSource, adminStyles] = await Promise.all([
     fs.readFile(new URL("../app/admin/contact/contact-editor.tsx", import.meta.url), "utf8"),
     fs.readFile(new URL("../app/site-config.ts", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/admin/admin-v2.module.css", import.meta.url), "utf8"),
   ]);
   const contactStart = editor.indexOf('<FormGroup title="联系方式"');
   const platformStart = editor.indexOf("title=\"平台账号与二维码\"");
@@ -411,6 +412,19 @@ test("contact Admin keeps WeChat, Email, and note while normalizing safe platfor
   assert.ok(editor.includes("分享"), "the editor explains that a whole platform share message is accepted");
   assert.ok(editor.includes("getSafeSocialUrl(value)"));
   assert.ok(editor.includes("onBlur={(value) => normalizeSocialHandle(index, value)}"), "recognized share text is normalized after editing");
+  assert.ok(editor.includes("`${styles.pairGrid} ${styles.socialGrid}`"), "social entries use the dedicated full-width row layout");
+  assert.match(
+    adminStyles,
+    /\.pairRow\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)[^}]*align-items:\s*start[^}]*\}/,
+    "platform and account fields align at the top even when only the account field has help text",
+  );
+  assert.match(adminStyles, /\.socialGrid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)[^}]*\}/);
+  assert.match(adminStyles, /\.rowActions\.socialRowActions\s*\{[^}]*grid-column:\s*1\s*\/\s*-1[^}]*\}/);
+  assert.match(
+    extractBraceBlock(adminStyles, "@media (max-width: 760px)"),
+    /\.pairRow\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)[^}]*\}/,
+    "narrow screens stack platform and account fields without creating an implicit action column",
+  );
 
   const siteContentType = siteConfigSource.slice(
     siteConfigSource.indexOf("export type SiteContent"),
