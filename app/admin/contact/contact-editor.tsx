@@ -2,6 +2,7 @@
 
 import { AdminField, AdminSection, FormGroup } from "../admin-form";
 import { useAdmin } from "../admin-provider";
+import { getSafeSocialUrl } from "../../social-links";
 import styles from "../admin-v2.module.css";
 
 const MAX_SOCIAL_LINKS = 8;
@@ -40,6 +41,18 @@ export default function ContactEditor() {
     }));
   };
 
+  const updateSocialHandle = (index: number, handle: string) => {
+    setContent((current) => ({
+      ...current,
+      social: current.social.map((entry, itemIndex) => itemIndex === index ? { ...entry, handle } : entry),
+    }));
+  };
+
+  const normalizeSocialHandle = (index: number, value: string) => {
+    const href = getSafeSocialUrl(value);
+    if (href) updateSocialHandle(index, href);
+  };
+
   return (
     <AdminSection
       eyebrow="CONTACT"
@@ -59,29 +72,36 @@ export default function ContactEditor() {
 
         <FormGroup
           title="平台账号与二维码"
-          description="可填写普通账号，或填写完整的 HTTPS 平台主页链接；主页链接会在漂浮拍立得模板中提供本地生成的二维码。若要显示 QQ 联系方式，请将平台名称填写为 QQ。"
+          description="可填写普通账号、完整 HTTPS 链接，或直接粘贴只含一个链接的平台分享文案；识别出的链接会在漂浮拍立得中提供本地生成的二维码。"
         >
           <div className={styles.pairGrid}>
-            {content.social.map((item, index) => (
+            {content.social.map((item, index) => {
+              const safeUrl = getSafeSocialUrl(item.handle);
+              const linkHelp = safeUrl
+                ? "已识别安全 HTTPS 链接；离开输入框后会自动精简为链接。"
+                : item.handle.toLowerCase().includes("https://")
+                  ? "未识别：分享文案必须只包含一个无账号密码的 HTTPS 链接。"
+                  : "普通账号会作为文本展示，不生成二维码。";
+              return (
               <div className={styles.pairRow} key={index}>
                 <AdminField label={`平台 ${index + 1}`} value={item.label} onChange={(value) => setContent((current) => ({
                   ...current,
                   social: current.social.map((entry, itemIndex) => itemIndex === index ? { ...entry, label: value } : entry),
                 }))} />
                 <AdminField
-                  label={`账号或主页链接 ${index + 1}`}
+                  label={`账号、主页链接或分享文案 ${index + 1}`}
                   value={item.handle}
-                  placeholder="账号，或 https:// 开头的主页链接"
-                  onChange={(value) => setContent((current) => ({
-                    ...current,
-                    social: current.social.map((entry, itemIndex) => itemIndex === index ? { ...entry, handle: value } : entry),
-                  }))}
+                  placeholder="账号、https:// 链接，或平台分享文案"
+                  help={linkHelp}
+                  onChange={(value) => updateSocialHandle(index, value)}
+                  onBlur={(value) => normalizeSocialHandle(index, value)}
                 />
                 <div className={`${styles.rowActions} ${styles.socialRowActions}`}>
                   <button type="button" onClick={() => removeSocialItem(index)} aria-label={`删除平台账号 ${index + 1}`}>删除</button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
           <button
             type="button"

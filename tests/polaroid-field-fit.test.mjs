@@ -50,7 +50,7 @@ function importNavigationModule(t) {
 function importSocialLinksModule(t) {
   return importTypescriptModule(
     t,
-    "../app/templates/polaroid-field/social-links.ts",
+    "../app/social-links.ts",
     "social-links.ts",
   );
 }
@@ -334,26 +334,32 @@ test("polaroid navigation maps stable hashes to the three same-route views", asy
   assert.equal(getPolaroidViewFromHash("#unknown-section"), "field");
 });
 
-test("polaroid contact options resolve QQ only from social rows and accept safe HTTPS URLs", async (t) => {
-  const { findQqContact, getSafeSocialUrl } = await importSocialLinksModule(t);
+test("polaroid social links extract exactly one safe HTTPS URL from platform share text", async (t) => {
+  const { getSafeSocialUrl } = await importSocialLinksModule(t);
 
-  assert.equal(findQqContact([
-    { label: "邮箱", handle: "123456789@qq.example" },
-    { label: " qq ", handle: " QQ_DEMO_123 " },
-  ]), "QQ_DEMO_123");
-  assert.equal(findQqContact([
-    { label: "QQ", handle: "   " },
-    { label: "QQ", handle: " second-qq " },
-  ]), "second-qq");
-  assert.equal(findQqContact([{ label: "邮箱", handle: "123456789@qq.example" }]), null);
-  assert.equal(findQqContact([{ label: "微信", handle: "QQ" }]), null);
+  for (const [shareText, expected] of [
+    [
+      "  https://portfolio.example/profile?q=works#gallery  ",
+      "https://portfolio.example/profile?q=works#gallery",
+    ],
+    [
+      "小红书分享：角色正片 https://redbook-share.example/discovery/item/demo-42?source=share，复制后打开 App。",
+      "https://redbook-share.example/discovery/item/demo-42?source=share",
+    ],
+    [
+      "抖音分享（https://video-share.example/AbC123/）。长按复制此消息。",
+      "https://video-share.example/AbC123/",
+    ],
+    [
+      "第一行是分享说明\nhttps://portfolio.example/creator/demo\n最后一行是账号提示",
+      "https://portfolio.example/creator/demo",
+    ],
+  ]) assert.equal(getSafeSocialUrl(shareText), expected, shareText);
 
-  assert.equal(
-    getSafeSocialUrl("  https://portfolio.example/profile?q=作品#gallery  "),
-    "https://portfolio.example/profile?q=%E4%BD%9C%E5%93%81#gallery",
-  );
   for (const unsafe of [
     "",
+    "小红书号：FRAMEZERO_COS",
+    "@FRAMEZERO_STUDIO",
     "portfolio.example/profile",
     "http://portfolio.example/profile",
     "mailto:owner@framezero.example",
@@ -363,15 +369,36 @@ test("polaroid contact options resolve QQ only from social rows and accept safe 
     "https://owner@portfolio.example/profile",
     "https://owner:secret@portfolio.example/profile",
     "https://",
+    "两个主页 https://one.example/profile 和 https://two.example/profile",
+    "重复链接 https://repeat.example/profile https://repeat.example/profile",
     `https://portfolio.example/${"a".repeat(2_100)}`,
   ]) assert.equal(getSafeSocialUrl(unsafe), null, unsafe);
 });
 
-test("contact Admin manages up to eight account-or-HTTPS rows without changing SiteContent schema", async () => {
+test("contact Admin keeps WeChat, Email, and note while normalizing safe platform share links", async () => {
   const [editor, siteConfigSource] = await Promise.all([
     fs.readFile(new URL("../app/admin/contact/contact-editor.tsx", import.meta.url), "utf8"),
     fs.readFile(new URL("../app/site-config.ts", import.meta.url), "utf8"),
   ]);
+  const contactStart = editor.indexOf('<FormGroup title="联系方式"');
+  const platformStart = editor.indexOf("title=\"平台账号与二维码\"");
+  assert.notEqual(contactStart, -1);
+  assert.notEqual(platformStart, -1);
+  assert.ok(contactStart < platformStart, "the shared contact fields stay in the primary Admin section");
+  const contactFields = editor.slice(contactStart, platformStart);
+  assert.ok(contactFields.includes('label="微信号"'));
+  assert.ok(contactFields.includes("content.contact.wechat"));
+  assert.ok(contactFields.includes('label="邮箱"'));
+  assert.ok(contactFields.includes("content.contact.email"));
+  assert.ok(contactFields.includes('label="联系区说明"'));
+  assert.ok(contactFields.includes("content.contact.note"));
+  assert.ok(!editor.includes('label="QQ号"'));
+  assert.ok(!editor.includes("findQqContact"));
+  assert.ok(!editor.includes("isQqSocialEntry"));
+  assert.ok(!editor.includes("updateQqContact"));
+  assert.ok(!editor.includes("<details"), "shared contact fields are not hidden behind template-specific UI");
+  assert.ok(!editor.includes("其他模板兼容内容"));
+
   assert.ok(editor.includes("const MAX_SOCIAL_LINKS = 8"));
   assert.ok(editor.includes("current.social.length >= MAX_SOCIAL_LINKS"));
   assert.ok(editor.includes('social: [...current.social, { label: "", handle: "" }]'));
@@ -381,7 +408,9 @@ test("contact Admin manages up to eight account-or-HTTPS rows without changing S
   assert.ok(editor.includes("删除平台账号"));
   assert.ok(editor.includes("普通账号"));
   assert.ok(editor.includes("HTTPS"));
-  assert.ok(editor.includes("平台名称填写为 QQ"));
+  assert.ok(editor.includes("分享"), "the editor explains that a whole platform share message is accepted");
+  assert.ok(editor.includes("getSafeSocialUrl(value)"));
+  assert.ok(editor.includes("onBlur={(value) => normalizeSocialHandle(index, value)}"), "recognized share text is normalized after editing");
 
   const siteContentType = siteConfigSource.slice(
     siteConfigSource.indexOf("export type SiteContent"),
@@ -393,19 +422,23 @@ test("contact Admin manages up to eight account-or-HTTPS rows without changing S
   assert.ok(!siteContentType.includes("url:"));
 });
 
-test("polaroid contact rendering removes Email and generates QR locally only after disclosure", async () => {
+test("polaroid contact renders WeChat and Email while generating safe platform QR locally on demand", async () => {
   const [template, qrComponent] = await Promise.all([
     fs.readFile(new URL("../app/templates/polaroid-field/template.tsx", import.meta.url), "utf8"),
     fs.readFile(new URL("../app/templates/polaroid-field/social-qr-code.tsx", import.meta.url), "utf8"),
   ]);
-  assert.ok(!template.includes("mailto:"));
-  assert.ok(!template.includes("content.contact.email"));
-  assert.ok(!template.includes("EMAIL /"));
-  assert.ok(template.includes("findQqContact(socialItems)"));
-  assert.ok(template.includes('onCopy(qqContact, "polaroid-qq")'));
+  assert.ok(template.includes('onCopy(content.contact.wechat, "polaroid-wechat")'));
+  assert.ok(template.includes("mailto:${content.contact.email}"));
+  assert.ok(template.includes("content.contact.note"));
+  assert.ok(template.includes("styles.contactNote"));
+  assert.ok(!template.includes("findQqContact"));
+  assert.ok(!template.includes("isQqSocialEntry"));
+  assert.ok(!template.includes("updateQqContact"));
+  assert.ok(!template.includes("polaroid-qq"));
+  assert.ok(!template.includes("QQ / 点击复制"));
   assert.ok(template.includes(".filter(({ handle }) => handle)"), "empty social handles do not render blank platform cards");
   assert.ok(template.includes("getSafeSocialUrl(item.handle)"));
-  assert.ok(template.includes('<a href={href} target="_blank" rel="noopener noreferrer">'));
+  assert.ok(template.includes('<a href={href} target="_blank" rel="noopener noreferrer">{href}'));
   assert.ok(template.includes("{href ? <SocialQrCode href={href} label={label} /> : null}"));
   assert.ok(template.includes(") : <span>{item.handle}</span>}"));
 

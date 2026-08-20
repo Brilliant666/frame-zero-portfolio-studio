@@ -64,6 +64,7 @@ export function AdminField({
   label,
   value,
   onChange,
+  onBlur,
   area = false,
   placeholder,
   help,
@@ -71,6 +72,7 @@ export function AdminField({
   label: string;
   value: string;
   onChange: (value: string) => void;
+  onBlur?: (value: string) => void;
   area?: boolean;
   placeholder?: string;
   help?: string;
@@ -79,9 +81,19 @@ export function AdminField({
     <label className={styles.field}>
       <span>{label}</span>
       {area ? (
-        <textarea value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />
+        <textarea
+          value={value}
+          placeholder={placeholder}
+          onChange={(event) => onChange(event.target.value)}
+          onBlur={(event) => onBlur?.(event.currentTarget.value)}
+        />
       ) : (
-        <input value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />
+        <input
+          value={value}
+          placeholder={placeholder}
+          onChange={(event) => onChange(event.target.value)}
+          onBlur={(event) => onBlur?.(event.currentTarget.value)}
+        />
       )}
       {help ? <small>{help}</small> : null}
     </label>
