@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
+import PlatformAccounts from "../shared/platform-accounts";
 import { useTemplateSectionNavigation } from "../shared/use-template-section-navigation";
 import type { TemplateProps } from "../types";
 import styles from "./film-rail.module.css";
@@ -321,6 +322,7 @@ export default function FilmRailTemplate({
             </a>
           </div>
           <p className={styles.contactNote}>{content.contact.note}</p>
+          <PlatformAccounts accounts={content.social} tone="dark" />
         </div>
 
         <div className={styles.callSheet}>
@@ -334,7 +336,7 @@ export default function FilmRailTemplate({
 
       <footer className={styles.footer}>
         <strong>{content.profile.brand}</strong>
-        <div>{content.social.map((item) => <span key={item.label}>{item.label} / {item.handle}</span>)}</div>
+        <span>{content.profile.city}</span>
         <small>© 2026 · END OF PRODUCTION</small>
       </footer>
     </main>

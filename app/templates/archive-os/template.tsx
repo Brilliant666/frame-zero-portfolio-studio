@@ -7,6 +7,7 @@ import type { Work } from "../../site-config";
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
+import PlatformAccounts from "../shared/platform-accounts";
 import styles from "./archive-os.module.css";
 
 const ARCHIVE_RATIOS = getTemplateSlotRatios("archive-os");
@@ -333,6 +334,7 @@ export default function ArchiveOsTemplate({
             <a href={`mailto:${content.contact.email}`}><small>EMAIL / NEW MESSAGE</small><strong>{content.contact.email}</strong><span>OPEN ↗</span></a>
           </div>
           <p className={styles.note}>{content.contact.note}</p>
+          <PlatformAccounts accounts={content.social} tone="dark" />
         </div>
 
         <div className={styles.requestWindow}>
@@ -346,7 +348,7 @@ export default function ArchiveOsTemplate({
 
       <footer className={styles.footer}>
         <strong>{content.profile.brand} / ARCHIVE OS</strong>
-        <div>{content.social.map((item) => <span key={item.label}>{item.label} · {item.handle}</span>)}</div>
+        <span>{content.profile.city}</span>
         <small>© 2026 · ALL SYSTEMS OPERATIONAL</small>
       </footer>
     </main>

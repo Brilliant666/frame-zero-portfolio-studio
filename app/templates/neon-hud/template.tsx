@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "r
 import { primaryPhotoRatioForDimensions } from "../../photo-ratio-policy";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoSlot } from "../shared/photo-slots";
+import PlatformAccounts from "../shared/platform-accounts";
 import { groupSourceOrientationSlots, justifiedPhotoColumns } from "../shared/source-orientation-layout";
 import { useTemplateSectionNavigation } from "../shared/use-template-section-navigation";
 import type { TemplateProps } from "../types";
@@ -438,11 +439,7 @@ export default function NeonHudTemplate({
               <span><small>EMAIL / 发送邮件</small><strong>{content.contact.email}</strong></span>
               <b>OPEN ↗</b>
             </a>
-            <div className={styles.socialLinks}>
-              {content.social.map((item) => (
-                <span key={`${item.label}-${item.handle}`}><small>{item.label}</small><strong>{item.handle}</strong></span>
-              ))}
-            </div>
+            <PlatformAccounts accounts={content.social} tone="dark" />
           </div>
 
           <div className={styles.terminal}>

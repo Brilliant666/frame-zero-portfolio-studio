@@ -997,8 +997,6 @@ footer {
 }
 
 footer p { margin: 0; }
-.footer-links { display: flex; gap: 1.4rem; }
-
 .mobile-booking-bar {
   display: none;
 }
@@ -1128,7 +1126,6 @@ footer p { margin: 0; }
   .mode-arrow { grid-column: 3; grid-row: 1; }
   .booking-panel { grid-template-columns: 1fr; }
   footer { grid-template-columns: 1fr 1fr; align-items: start; }
-  .footer-links { display: grid; gap: .45rem; }
 }
 
 @media (max-width: 560px) {
@@ -1169,7 +1166,6 @@ footer p { margin: 0; }
   .quick-contact { grid-template-columns: 1fr; }
   .booking-terminal pre { min-height: 14rem; }
   footer { grid-template-columns: 1fr; gap: 1rem; padding-top: 4rem; }
-  .footer-links { gap: .55rem; }
   .mobile-booking-bar {
     position: fixed;
     z-index: 90;

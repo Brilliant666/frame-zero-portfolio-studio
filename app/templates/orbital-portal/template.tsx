@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "r
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
+import PlatformAccounts from "../shared/platform-accounts";
 import { useTemplateSectionNavigation } from "../shared/use-template-section-navigation";
 import { getOrbitalPortalObjectPosition } from "./portal-focus";
 import styles from "./template.module.css";
@@ -176,6 +177,7 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
             <span>WECHAT CHANNEL</span><strong>{copiedKey === "portal-wechat" ? "已复制 ✓" : content.contact.wechat}</strong>
           </button>
           <a href={`mailto:${content.contact.email}`}><span>EMAIL SIGNAL</span><strong>{content.contact.email}</strong></a>
+          <PlatformAccounts accounts={content.social} tone="dark" />
         </div>
         <div className={styles.console}>
           <div><span>PORTAL_REQUEST.SYS</span><i /><i /><i /></div>

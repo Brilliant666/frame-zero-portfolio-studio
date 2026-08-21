@@ -5,6 +5,7 @@
 import { useMemo, type CSSProperties } from "react";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoSlot } from "../shared/photo-slots";
+import PlatformAccounts from "../shared/platform-accounts";
 import { groupSourceOrientationSlots, justifiedPhotoColumns } from "../shared/source-orientation-layout";
 import { useTemplateSectionNavigation } from "../shared/use-template-section-navigation";
 import type { TemplateProps } from "../types";
@@ -343,6 +344,7 @@ export default function CinematicLightTemplate({
               </a>
             </div>
             <p className="demo-note">{content.contact.note}</p>
+            <PlatformAccounts accounts={content.social} tone="light" />
           </div>
 
           <div className="booking-terminal">
@@ -360,9 +362,7 @@ export default function CinematicLightTemplate({
         <footer>
           <div className="footer-brand">{content.profile.brand}</div>
           <p>{content.profile.photographer} · {content.profile.role}</p>
-          <div className="footer-links">
-            {content.social.map((item) => <span key={item.label}>{item.label} / {item.handle}</span>)}
-          </div>
+          <span>{content.profile.city}</span>
           <small>© 2026 ALL VISUALS RESERVED.</small>
         </footer>
       </section>

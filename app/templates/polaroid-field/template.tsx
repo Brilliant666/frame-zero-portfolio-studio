@@ -14,12 +14,11 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from "react";
 import type { TemplateProps } from "../types";
-import { getSafeSocialUrl } from "../../social-links";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
+import PlatformAccounts from "../shared/platform-accounts";
 import { buildPolaroidFieldLayout } from "./field-layout";
 import { getPolaroidViewFromHash, POLAROID_VIEW_HASHES, type PolaroidView } from "./navigation";
-import SocialQrCode from "./social-qr-code";
 import {
   constrainView,
   fitRectsToViewport,
@@ -68,9 +67,6 @@ export default function PolaroidFieldTemplate({
   );
   const headerStatus = isPreview ? "TEMPLATE PREVIEW" : content.profile.availability.trim();
   const trustItems = content.trustItems.filter(({ label, value }) => label.trim() || value.trim());
-  const socialItems = content.social
-    .map(({ label, handle }) => ({ label: label.trim(), handle: handle.trim() }))
-    .filter(({ handle }) => handle);
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -754,21 +750,7 @@ export default function PolaroidFieldTemplate({
             <strong>{content.profile.brand}</strong>
             <span>{content.profile.photographer} · {content.profile.role}</span>
           </div>
-          <div className={styles.socials}>
-            {socialItems.map((item, index) => {
-              const label = item.label || `平台 ${index + 1}`;
-              const href = getSafeSocialUrl(item.handle);
-              return (
-                <article className={styles.socialItem} key={`${label}-${item.handle}-${index}`}>
-                  <b>{label}</b>
-                  {href ? (
-                    <a href={href} target="_blank" rel="noopener noreferrer">{href}<span>打开主页 ↗</span></a>
-                  ) : <span>{item.handle}</span>}
-                  {href ? <SocialQrCode href={href} label={label} /> : null}
-                </article>
-              );
-            })}
-          </div>
+          <PlatformAccounts accounts={content.social} tone="dark" />
           <p>{content.statement.lineOne}{content.statement.lineTwo}</p>
           <small>© 2026 / EVERY MEMORY HAS COORDINATES.</small>
         </footer>

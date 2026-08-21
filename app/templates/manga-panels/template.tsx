@@ -5,6 +5,7 @@
 import { useMemo, type CSSProperties } from "react";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoSlot } from "../shared/photo-slots";
+import PlatformAccounts from "../shared/platform-accounts";
 import { groupSourceOrientationSlots, justifiedPhotoColumns } from "../shared/source-orientation-layout";
 import type { TemplateProps } from "../types";
 import styles from "./manga-panels.module.css";
@@ -306,11 +307,7 @@ export default function MangaPanelsTemplate({
               <b>写信 ↗</b>
             </a>
 
-            <div className={styles.socials}>
-              {content.social.map((item) => (
-                <span key={`${item.label}-${item.handle}`}><b>{item.label}</b>{item.handle}</span>
-              ))}
-            </div>
+            <PlatformAccounts accounts={content.social} tone="dark" />
           </div>
 
           <div className={styles.requestPanel}>

@@ -7,6 +7,7 @@ import { intrinsicPhotoOrientation } from "../../photo-ratio-policy";
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoSlot } from "../shared/photo-slots";
+import PlatformAccounts from "../shared/platform-accounts";
 import { groupSourceOrientationSlots, justifiedPhotoColumns } from "../shared/source-orientation-layout";
 import { useTemplateSectionNavigation } from "../shared/use-template-section-navigation";
 import styles from "./template.module.css";
@@ -257,6 +258,7 @@ export default function CharacterSelectTemplate({ content, works, packages, book
             <button type="button" onClick={() => void onCopy(content.contact.wechat, "select-wechat")}><small>WECHAT</small><strong>{copiedKey === "select-wechat" ? "已复制 ✓" : content.contact.wechat}</strong></button>
             <a href={`mailto:${content.contact.email}`}><small>EMAIL</small><strong>{content.contact.email}</strong></a>
           </div>
+          <PlatformAccounts accounts={content.social} tone="light" />
         </div>
         <div className={styles.missionPanel}>
           <div><span>MISSION DATA</span><b>● LIVE</b></div>

@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
+import PlatformAccounts from "../shared/platform-accounts";
 import { useTemplateSectionNavigation } from "../shared/use-template-section-navigation";
 import styles from "./template.module.css";
 
@@ -282,6 +283,7 @@ export default function EditorialDuetTemplate({
             </a>
           </div>
           <small className={styles.contactNote}>{content.contact.note}</small>
+          <PlatformAccounts accounts={content.social} tone="light" />
         </div>
 
         <div className={styles.bookingSheet}>
@@ -299,7 +301,7 @@ export default function EditorialDuetTemplate({
 
       <footer className={styles.footer}>
         <strong>{content.profile.brand}</strong>
-        <div>{content.social.map((item) => <span key={`${item.label}-${item.handle}`}>{item.label} / {item.handle}</span>)}</div>
+        <div>{content.profile.photographer} / {content.profile.role}</div>
         <span>{content.profile.city}</span>
         <small>© 2026 ALL VISUALS RESERVED.</small>
       </footer>

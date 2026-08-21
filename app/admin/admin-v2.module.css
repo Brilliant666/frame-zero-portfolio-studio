@@ -301,6 +301,49 @@
 .pairGrid { padding: 1.1rem; }
 .pairRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: .8rem; }
 .socialGrid { grid-template-columns: minmax(0, 1fr); }
+.platformQrEditor {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  min-width: 0;
+  min-height: 8rem;
+  border: 1px solid var(--admin-v2-line);
+  background: #faf8f5;
+}
+.platformQrPreview {
+  display: grid;
+  min-width: 0;
+  min-height: 8rem;
+  place-items: center;
+  overflow: hidden;
+  border-right: 1px solid var(--admin-v2-line);
+  background: #ebe7e1;
+}
+.platformQrPreview > span { color: #8e8780; font: 700 .8rem var(--font-geist-mono), monospace; letter-spacing: .12em; }
+.platformQrPreview a { display: grid; width: 100%; height: 100%; min-height: 8rem; place-items: center; padding: .5rem; }
+.platformQrPreview img { display: block; width: auto; max-width: 100%; height: auto; max-height: 10rem; object-fit: contain; }
+.platformQrControls { display: grid; min-width: 0; align-content: center; gap: .45rem; padding: .8rem; }
+.platformQrControls > strong { font-size: .78rem; }
+.platformQrControls > p { margin: 0; color: var(--admin-v2-muted); font-size: .72rem; line-height: 1.5; }
+.platformQrControls > div { display: flex; flex-wrap: wrap; gap: .45rem; }
+.platformQrControls label,
+.platformQrControls button {
+  display: inline-grid;
+  min-height: 2.75rem;
+  align-items: center;
+  padding: .55rem .8rem;
+  border: 1px solid var(--admin-v2-ink);
+  background: #fff;
+  color: var(--admin-v2-ink);
+  font: 700 .75rem var(--font-geist-sans), sans-serif;
+  cursor: pointer;
+}
+.platformQrControls label { position: relative; overflow: hidden; }
+.platformQrControls label input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.platformQrControls label[aria-disabled="true"],
+.platformQrControls button:disabled { opacity: .45; cursor: default; }
+.platformQrControls button { color: #8b2d1d; }
+.platformQrControls small { color: var(--admin-v2-muted); font-size: .72rem; line-height: 1.5; }
 
 .field { display: grid; min-width: 0; gap: .4rem; }
 .field > span,
@@ -334,6 +377,9 @@
 .disclosureSummary:focus-visible,
 .rowActions button:focus-visible,
 .secondaryButton:focus-visible,
+.platformQrPreview a:focus-visible,
+.platformQrControls label:has(input:focus-visible),
+.platformQrControls button:focus-visible,
 .toggle input:focus-visible + span {
   outline: 3px solid #222;
   outline-offset: 2px;
@@ -1221,6 +1267,9 @@
 @media (max-width: 760px) {
   .templateWorkbench { grid-template-columns: minmax(0, 1fr); }
   .pairRow { grid-template-columns: minmax(0, 1fr); }
+  .platformQrEditor { grid-template-columns: minmax(0, 1fr); }
+  .platformQrPreview { min-height: 12rem; border-right: 0; border-bottom: 1px solid var(--admin-v2-line); }
+  .platformQrPreview img { max-height: 18rem; }
   .templateList { display: none; }
   .templateMobileSelector { display: grid; min-width: 0; gap: .35rem; }
   .templateMobileSelector > span { font-size: .78rem; font-weight: 700; }

@@ -102,7 +102,8 @@
 .contactCopy h2 { margin: 1rem 0; font-size: clamp(4rem,7vw,8rem); line-height: .82; letter-spacing: -.07em; }
 .contactCopy > p { max-width: 30rem; color: rgba(255,255,255,.5); line-height: 1.7; }
 .contactCopy > button, .contactCopy > a { display: grid; gap: .3rem; width: min(100%,32rem); margin-top: .65rem; padding: .9rem 1rem; border: 1px solid rgba(142,234,255,.16); background: rgba(142,234,255,.04); color: #fff; text-align: left; cursor: pointer; }
-.contactCopy > * span { color: var(--ice); font: .5rem var(--font-geist-mono), monospace; }
+.contactCopy > button span,
+.contactCopy > a span { color: var(--ice); font: .5rem var(--font-geist-mono), monospace; }
 .console { align-self: center; padding: .8rem; border: 1px solid rgba(142,234,255,.2); background: #0d121b; box-shadow: 0 2rem 5rem rgba(0,0,0,.35); }
 .console > div { display: flex; align-items: center; gap: .4rem; padding: .7rem; color: var(--ice); font: .55rem var(--font-geist-mono), monospace; }
 .console > div span { margin-right: auto; }.console > div i { width: .45rem; height: .45rem; border-radius: 50%; background: rgba(255,255,255,.24); }

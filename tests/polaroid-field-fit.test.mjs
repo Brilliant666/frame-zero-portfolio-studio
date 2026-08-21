@@ -431,15 +431,15 @@ test("contact Admin keeps WeChat, Email, and note while normalizing safe platfor
     siteConfigSource.indexOf("export const siteConfig"),
   );
   assert.ok(siteContentType.includes("contact: { wechat: string; email: string; note: string }"));
-  assert.ok(siteContentType.includes("social: Array<{ label: string; handle: string }>"));
+  assert.ok(siteContentType.includes("social: Array<{ label: string; handle: string; qrAssetId?: string }>"));
   assert.ok(!siteContentType.includes("qq:"));
   assert.ok(!siteContentType.includes("url:"));
 });
 
-test("polaroid contact renders WeChat and Email while generating safe platform QR locally on demand", async () => {
-  const [template, qrComponent] = await Promise.all([
+test("polaroid contact renders WeChat and Email while delegating uploaded cards to the shared renderer", async () => {
+  const [template, platformAccounts] = await Promise.all([
     fs.readFile(new URL("../app/templates/polaroid-field/template.tsx", import.meta.url), "utf8"),
-    fs.readFile(new URL("../app/templates/polaroid-field/social-qr-code.tsx", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/templates/shared/platform-accounts.tsx", import.meta.url), "utf8"),
   ]);
   assert.ok(template.includes('onCopy(content.contact.wechat, "polaroid-wechat")'));
   assert.ok(template.includes("mailto:${content.contact.email}"));
@@ -450,23 +450,22 @@ test("polaroid contact renders WeChat and Email while generating safe platform Q
   assert.ok(!template.includes("updateQqContact"));
   assert.ok(!template.includes("polaroid-qq"));
   assert.ok(!template.includes("QQ / 点击复制"));
-  assert.ok(template.includes(".filter(({ handle }) => handle)"), "empty social handles do not render blank platform cards");
-  assert.ok(template.includes("getSafeSocialUrl(item.handle)"));
-  assert.ok(template.includes('<a href={href} target="_blank" rel="noopener noreferrer">{href}'));
-  assert.ok(template.includes("{href ? <SocialQrCode href={href} label={label} /> : null}"));
-  assert.ok(template.includes(") : <span>{item.handle}</span>}"));
+  assert.ok(template.includes('import PlatformAccounts from "../shared/platform-accounts"'));
+  assert.ok(template.includes('<PlatformAccounts accounts={content.social} tone="dark" />'));
+  assert.ok(!template.includes("content.social.map"));
+  assert.ok(!template.includes("SocialQrCode"));
 
-  assert.ok(qrComponent.includes("<details"));
-  assert.ok(qrComponent.includes("onToggle={handleToggle}"));
-  assert.ok(qrComponent.includes("if (!open"));
-  assert.ok(qrComponent.includes('import("qrcode")'));
-  assert.ok(qrComponent.includes("toDataURL(href"));
-  assert.ok(qrComponent.includes("[href, open"));
-  assert.ok(!/^import .*?["']qrcode["']/mu.test(qrComponent), "qrcode stays out of the initial module graph");
-  assert.ok(!/\b(?:fetch|XMLHttpRequest|WebSocket|sendBeacon|localStorage|sessionStorage|indexedDB|caches)\b/u.test(qrComponent));
-  assert.ok(!qrComponent.includes("document.cookie"));
-  assert.ok(!/https?:\/\//u.test(qrComponent), "QR generation does not call an external service");
-  assert.ok(!qrComponent.includes("dangerouslySetInnerHTML"));
+  assert.ok(platformAccounts.includes("getSafeSocialUrl"));
+  assert.ok(platformAccounts.includes("getPlatformQrAssetPath"));
+  assert.ok(platformAccounts.includes("if (!handle && !qrUrl) return []"));
+  assert.ok(platformAccounts.includes("<details"));
+  assert.ok(platformAccounts.includes("<summary>查看{account.label}分享卡片</summary>"));
+  assert.ok(platformAccounts.includes('loading="lazy"'));
+  assert.ok(platformAccounts.includes('decoding="async"'));
+  assert.ok(platformAccounts.includes('rel="noopener noreferrer"'));
+  assert.ok(!platformAccounts.includes("toDataURL"));
+  assert.ok(!platformAccounts.includes("data:image"));
+  assert.ok(!platformAccounts.includes("dangerouslySetInnerHTML"));
 });
 
 test("polaroid template exposes accessible Chinese view navigation on desktop and mobile", async () => {

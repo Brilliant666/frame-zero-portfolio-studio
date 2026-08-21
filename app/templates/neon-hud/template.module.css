@@ -741,15 +741,9 @@
 .contactPanel > a:focus-visible { background: rgba(108, 175, 255, .06); }
 .contactPanel > button span,
 .contactPanel > a span { display: grid; min-width: 0; gap: .35rem; }
-.contactPanel small,
-.socialLinks small { color: var(--muted); font: .5rem var(--font-geist-mono), monospace; letter-spacing: .1em; }
+.contactPanel small { color: var(--muted); font: .5rem var(--font-geist-mono), monospace; letter-spacing: .1em; }
 .contactPanel strong { overflow: hidden; font-size: .82rem; text-overflow: ellipsis; }
 .contactPanel b { flex: 0 0 auto; color: var(--electric); font: .52rem var(--font-geist-mono), monospace; }
-
-.socialLinks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.socialLinks > span { display: grid; min-width: 0; gap: .4rem; padding: 1rem; border-right: 1px solid var(--line); }
-.socialLinks > span:last-child { border-right: 0; }
-.socialLinks strong { overflow: hidden; color: rgba(237, 246, 255, .72); font: .55rem var(--font-geist-mono), monospace; text-overflow: ellipsis; white-space: nowrap; }
 
 .terminal pre { min-height: 19rem; margin: 0; padding: 1.25rem; overflow: auto; color: rgba(237, 246, 255, .7); font: .68rem/1.9 var(--font-geist-mono), monospace; white-space: pre-wrap; }
 .terminal > button { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 1rem; min-height: 3.4rem; padding: .8rem 1rem; border-top: 1px solid var(--electric); background: var(--electric); color: #04101f; cursor: pointer; font: 700 .58rem var(--font-geist-mono), monospace; letter-spacing: .08em; }
@@ -838,8 +832,6 @@
   .manifesto::after { background: linear-gradient(0deg, rgba(3, 7, 16, .94) 0%, rgba(3, 7, 16, .56) 70%, rgba(3, 7, 16, .12)); }
   .manifestoCopy { right: 1rem; bottom: 3rem; left: 1rem; }
   .bookingGrid { grid-template-columns: 1fr; }
-  .socialLinks { grid-template-columns: 1fr; }
-  .socialLinks > span { border-right: 0; border-bottom: 1px solid var(--line); }
   .footer { grid-template-columns: 1fr; padding-top: 5rem; }
   .footer small { text-align: left; }
   .mobileBar {

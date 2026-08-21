@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "r
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoSlot } from "../shared/photo-slots";
+import PlatformAccounts from "../shared/platform-accounts";
 import { justifiedPhotoColumns } from "../shared/source-orientation-layout";
 import { useTemplateSectionNavigation } from "../shared/use-template-section-navigation";
 import styles from "./template.module.css";
@@ -216,6 +217,7 @@ export default function PrismLiquidTemplate({ content, works, packages, bookingT
             </button>
             <a href={`mailto:${content.contact.email}`}><span>EMAIL</span><strong>{content.contact.email}</strong></a>
           </div>
+          <PlatformAccounts accounts={content.social} tone="light" />
         </div>
         <div className={styles.requestCard}>
           <span>MISSION / REQUEST</span>

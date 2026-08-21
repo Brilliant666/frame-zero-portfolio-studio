@@ -6,6 +6,7 @@ import { useMemo, type CSSProperties } from "react";
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
+import PlatformAccounts from "../shared/platform-accounts";
 import { useTemplateSectionNavigation } from "../shared/use-template-section-navigation";
 import styles from "./template.module.css";
 
@@ -138,6 +139,7 @@ export default function MuseumDepthTemplate({ content, works, packages, bookingT
           <span>03 / PLAN YOUR VISIT</span><h2>预约一次<br />私人展览。</h2><p>{content.contact.note}</p>
           <button type="button" onClick={() => void onCopy(content.contact.wechat, "museum-wechat")}><small>WECHAT / 点击复制</small><strong>{copiedKey === "museum-wechat" ? "已复制 ✓" : content.contact.wechat}</strong></button>
           <a href={`mailto:${content.contact.email}`}><small>EMAIL</small><strong>{content.contact.email}</strong></a>
+          <PlatformAccounts accounts={content.social} tone="dark" />
         </div>
         <div className={styles.requestForm}>
           <div><span>VISITOR REQUEST</span><small>OPEN / 10:00—22:00</small></div>

@@ -261,6 +261,18 @@ test("does not treat the legacy SiteContent shape as an implicit V1 migration", 
   assertIssue(result, "$.templateWorks", "unknown_field");
 });
 
+test("rejects a legacy platform QR asset at its exact nested V1 path", async (t) => {
+  const { parseSiteDocumentV1 } = await importContract(t);
+  const input = validDocument();
+  input.social[0].qrAssetId = "c".repeat(64);
+
+  assertIssue(
+    parseSiteDocumentV1(input),
+    "$.social[0].qrAssetId",
+    "unknown_field",
+  );
+});
+
 test("rejects tenant, storage, URL, and legacy work fields instead of silently dropping them", async (t) => {
   const { parseSiteDocumentV1 } = await importContract(t);
   const input = validDocument();
