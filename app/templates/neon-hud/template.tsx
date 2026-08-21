@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- portfolio assets include local responsive WebP derivatives. */
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { primaryPhotoRatioForDimensions } from "../../photo-ratio-policy";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoSlot } from "../shared/photo-slots";
 import { groupSourceOrientationSlots, justifiedPhotoColumns } from "../shared/source-orientation-layout";
@@ -54,6 +55,9 @@ export default function NeonHudTemplate({
   const safeIndex = Math.min(Math.max(activeIndex, 0), interactiveSlots.length - 1);
   const activeSlot = interactiveSlots[safeIndex];
   const activeWork = activeSlot.work;
+  const activeStageRatio = activeWork
+    ? primaryPhotoRatioForDimensions(activeWork.previewWidth, activeWork.previewHeight) ?? "3:2"
+    : activeSlot.ratio === "2:3" ? "2:3" : "3:2";
   const manifestoSlot = photoSlots[neonManifestoSlotIndex] ?? null;
   const manifestoWork = manifestoSlot?.work ?? null;
   const { activeView, handleInternalLinkClick } = useTemplateSectionNavigation({
@@ -138,7 +142,7 @@ export default function NeonHudTemplate({
           </div>
 
           <div className={styles.viewportBody}>
-            <div className={styles.stage}>
+            <div className={styles.stage} data-stage-ratio={activeStageRatio}>
               {activeWork ? (
                 <button
                   className={styles.stageButton}

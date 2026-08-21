@@ -1,6 +1,6 @@
 # Portfolio Platform Current Status
 
-> - Updated: 2026-08-19
+> - Updated: 2026-08-21
 > - Baseline: `main@dc471795139dc47649368bb37c0178fb77188fea`
 
 ```text
@@ -27,8 +27,8 @@ PR #24 product baseline: ACCEPTED
 PR #24 limited baseline acceptance: ACCEPTED
 PR #25 workspace status: ACTIVE
 PR #25 mode: LIGHTWEIGHT_HUMAN_REQUEST_ONLY
-PR #25 current request: HR25-005 — READY_FOR_HUMAN_RECHECK
-PR #25 next request ID: HR25-006
+PR #25 current request: HR25-006 — READY_FOR_HUMAN_RECHECK
+PR #25 next request ID: HR25-007
 PR #25 hand-off: HUMAN_RECHECK_REQUIRED
 External operations: NOT_AUTHORIZED
 Completed milestone: STANDARD_NEXT_NODE_PARITY
