@@ -192,6 +192,65 @@ test("film renderer keeps its hero outside the eight-frame rail", async () => {
   assert.doesNotMatch(css, /\.timeline > div \{[^}]*repeat\(9, 1fr\)/);
 });
 
+test("film rail exposes boundary-aware controls on the two track edges", async () => {
+  const [template, css] = await Promise.all([
+    fs.readFile(new URL("../app/templates/film-rail/template.tsx", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/templates/film-rail/film-rail.module.css", import.meta.url), "utf8"),
+  ]);
+
+  const filmStockStart = template.indexOf("className={styles.filmStock}");
+  const railStart = template.indexOf("className={styles.rail}", filmStockStart);
+  const controlsStart = template.indexOf("className={styles.railControls}", filmStockStart);
+  assert.ok(filmStockStart >= 0 && controlsStart > filmStockStart && controlsStart < railStart,
+    "the controls must overlay the film stock instead of remaining in its heading");
+
+  const controls = template.slice(controlsStart, railStart);
+  assert.match(controls, /role="group"\s+aria-label="胶片轨道控制"/);
+  assert.equal((controls.match(/aria-controls="film-rail"/g) ?? []).length, 2);
+  assert.match(controls, /className=\{styles\.railPrevious\}[\s\S]*?onClick=\{\(\) => handleRailMove\(-1\)\}[\s\S]*?aria-label="向左滑动胶片轨道"[\s\S]*?aria-disabled=\{railEdges\.atStart\}/);
+  assert.match(controls, /className=\{styles\.railNext\}[\s\S]*?onClick=\{\(\) => handleRailMove\(1\)\}[\s\S]*?aria-label="向右滑动胶片轨道"[\s\S]*?aria-disabled=\{railEdges\.atEnd\}/);
+  assert.doesNotMatch(controls, /(?:^|\s)disabled=/,
+    "edge controls must remain focusable when they reach a boundary");
+  assert.match(template, /useState\(\{ atStart: true, atEnd: false \}\)/);
+  assert.match(template, /atStart:\s*rail\.scrollLeft <= 2/);
+  assert.match(template, /atEnd:\s*maxScrollLeft <= 2 \|\| rail\.scrollLeft >= maxScrollLeft - 2/);
+  assert.match(template, /rail\.addEventListener\("scroll", syncRailEdges, \{ passive: true \}\)/);
+  assert.match(template, /new ResizeObserver\(syncRailEdges\)/);
+  assert.match(template, /window\.addEventListener\("resize", syncRailEdges\)/);
+  assert.match(template, /\[activeView, filmSlots\.length, syncRailEdges\]/);
+  assert.match(template, /const handleRailMove = \(direction: -1 \| 1\) => \{[\s\S]*?const isAtRequestedEdge = direction === -1 \? railEdges\.atStart : railEdges\.atEnd;[\s\S]*?if \(isAtRequestedEdge\) return;[\s\S]*?moveRail\(direction\);[\s\S]*?\};/);
+
+  assert.match(css, /\.railControls\s*\{[^}]*position:\s*absolute[^}]*inset:\s*0[^}]*pointer-events:\s*none/s);
+  assert.match(css, /\.railControls button\s*\{[^}]*min-width:\s*44px[^}]*min-height:\s*44px[^}]*pointer-events:\s*auto/s);
+  assert.match(css, /\.railPrevious\s*\{[^}]*left:/s);
+  assert.match(css, /\.railNext\s*\{[^}]*right:/s);
+  assert.match(css, /\.railControls button\[aria-disabled="true"\]\s*\{/);
+  assert.doesNotMatch(css, /\.railControls button:disabled\s*\{/);
+  assert.match(css, /@media \(max-width: 720px\)[\s\S]*\.railControls button\s*\{[^}]*width:\s*3rem[^}]*height:\s*3rem/s);
+});
+
+test("film edge controls retain drag, snap, timeline, and reduced-motion behavior", async () => {
+  const [template, css] = await Promise.all([
+    fs.readFile(new URL("../app/templates/film-rail/template.tsx", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/templates/film-rail/film-rail.module.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(template, /window\.matchMedia\("\(prefers-reduced-motion: reduce\)"\)\.matches/);
+  assert.match(template, /rail\.scrollBy\(\{[\s\S]*?left:\s*direction \* Math\.max\(280, rail\.clientWidth \* 0\.78\)[\s\S]*?behavior:\s*reduceMotion \? "auto" : "smooth"/);
+  assert.match(template, /<div className=\{styles\.rail\} id="film-rail" ref=\{railRef\} tabIndex=\{0\} aria-label="横向作品胶片">/);
+  assert.match(template, /href=\{`#film-frame-\$\{index \+ 1\}`\}/);
+
+  const railRule = css.match(/\.rail\s*\{(?<body>[^}]*)\}/s)?.groups?.body ?? "";
+  assert.match(railRule, /overflow-x:\s*auto/);
+  assert.match(railRule, /scroll-snap-type:\s*x mandatory/);
+  assert.match(railRule, /scrollbar-width:\s*thin/);
+  assert.match(railRule, /overscroll-behavior-inline:\s*contain/);
+  assert.match(railRule, /-webkit-overflow-scrolling:\s*touch/);
+  assert.match(css, /\.frame\s*\{[^}]*scroll-snap-align:\s*center[^}]*scroll-snap-stop:\s*always/s);
+  assert.match(css, /@media \(pointer: coarse\)\s*\{[\s\S]*?\.rail\s*\{[^}]*scroll-snap-type:\s*x proximity/s);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*?scroll-behavior:\s*auto !important/s);
+});
+
 test("neon and manga keep their frozen nine-slot selections while separating structural surfaces", async (t) => {
   const { assetToWork, autoComposeTemplateWorks } = await importTypeScriptModule(t, "app/photo-library.ts");
   const { templateCatalog } = await importTypeScriptModule(t, "app/templates/catalog.ts");

@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element -- the portfolio supplies local responsive WebP derivatives. */
 
-import { useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import { useTemplateSectionNavigation } from "../shared/use-template-section-navigation";
@@ -31,6 +31,7 @@ export default function FilmRailTemplate({
   onOpenWork,
 }: TemplateProps) {
   const railRef = useRef<HTMLDivElement>(null);
+  const [railEdges, setRailEdges] = useState({ atStart: true, atEnd: false });
   const photoSlots = buildPhotoSlots(works, filmRatios, { templateId: "film-rail" });
   const { hero: leadSlot, frames: filmSlots } = splitFilmRailSlots(photoSlots);
   const leadWork = leadSlot.work;
@@ -41,6 +42,44 @@ export default function FilmRailTemplate({
     onBeforeViewChange,
   });
 
+  const syncRailEdges = useCallback(() => {
+    const rail = railRef.current;
+    if (!rail || rail.clientWidth === 0) return;
+
+    const maxScrollLeft = Math.max(0, rail.scrollWidth - rail.clientWidth);
+    const nextEdges = {
+      atStart: rail.scrollLeft <= 2,
+      atEnd: maxScrollLeft <= 2 || rail.scrollLeft >= maxScrollLeft - 2,
+    };
+    setRailEdges((currentEdges) => (
+      currentEdges.atStart === nextEdges.atStart && currentEdges.atEnd === nextEdges.atEnd
+        ? currentEdges
+        : nextEdges
+    ));
+  }, []);
+
+  useEffect(() => {
+    if (activeView !== "works") return;
+
+    const rail = railRef.current;
+    if (!rail) return;
+
+    const frame = window.requestAnimationFrame(syncRailEdges);
+    const resizeObserver = typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver(syncRailEdges);
+    resizeObserver?.observe(rail);
+    rail.addEventListener("scroll", syncRailEdges, { passive: true });
+    window.addEventListener("resize", syncRailEdges);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      resizeObserver?.disconnect();
+      rail.removeEventListener("scroll", syncRailEdges);
+      window.removeEventListener("resize", syncRailEdges);
+    };
+  }, [activeView, filmSlots.length, syncRailEdges]);
+
   const moveRail = (direction: -1 | 1) => {
     const rail = railRef.current;
     if (!rail) return;
@@ -49,6 +88,12 @@ export default function FilmRailTemplate({
       left: direction * Math.max(280, rail.clientWidth * 0.78),
       behavior: reduceMotion ? "auto" : "smooth",
     });
+  };
+
+  const handleRailMove = (direction: -1 | 1) => {
+    const isAtRequestedEdge = direction === -1 ? railEdges.atStart : railEdges.atEnd;
+    if (isAtRequestedEdge) return;
+    moveRail(direction);
   };
 
   return (
@@ -132,15 +177,33 @@ export default function FilmRailTemplate({
             <p>ROLL 01 / SELECTED NEGATIVES</p>
             <h2 id="film-heading">八格连续放映</h2>
           </div>
-          <p>左右拖动胶片，或使用帧号时间轴定位。点击任意画面查看完整作品。</p>
-          <div className={styles.railControls} aria-label="胶片轨道控制">
-            <button type="button" onClick={() => moveRail(-1)} aria-controls="film-rail" aria-label="向前一帧">←</button>
-            <button type="button" onClick={() => moveRail(1)} aria-controls="film-rail" aria-label="向后一帧">→</button>
-          </div>
+          <p>左右拖动胶片、使用两侧按钮，或通过帧号时间轴定位。点击任意画面查看完整作品。</p>
         </div>
 
         <div className={styles.filmStock}>
           <div className={styles.sprockets} aria-hidden="true" />
+          <div className={styles.railControls} role="group" aria-label="胶片轨道控制">
+            <button
+              type="button"
+              className={styles.railPrevious}
+              onClick={() => handleRailMove(-1)}
+              aria-controls="film-rail"
+              aria-label="向左滑动胶片轨道"
+              aria-disabled={railEdges.atStart}
+            >
+              <span aria-hidden="true">←</span>
+            </button>
+            <button
+              type="button"
+              className={styles.railNext}
+              onClick={() => handleRailMove(1)}
+              aria-controls="film-rail"
+              aria-label="向右滑动胶片轨道"
+              aria-disabled={railEdges.atEnd}
+            >
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
           <div className={styles.rail} id="film-rail" ref={railRef} tabIndex={0} aria-label="横向作品胶片">
             {filmSlots.map((slot, index) => {
               const work = slot.work;
