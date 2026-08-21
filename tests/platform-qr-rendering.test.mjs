@@ -32,16 +32,30 @@ test("shared platform account cards preserve links, accessibility, and natural i
   ]);
   assert.match(component, /getSafeSocialUrl/);
   assert.match(component, /getPlatformQrAssetPath/);
-  assert.match(component, /<details/);
-  assert.match(component, /<summary>查看\{account\.label\}分享卡片<\/summary>/);
+  assert.doesNotMatch(component, /<details|<summary/);
+  assert.match(component, /<div className=\{styles\.shareCard\} role="group" aria-label=\{`\$\{account\.label\}分享卡片`\}>/);
+  assert.match(component, /已上传的分享卡片会在下方完整显示/);
   assert.match(component, /loading="lazy"/);
   assert.match(component, /decoding="async"/);
   assert.match(component, /aria-label=\{`打开\$\{account\.label\}分享卡片原图`\}/);
-  assert.match(styles, /\.profileLink,\s*\.shareCard summary\s*\{\s*min-height:\s*44px;/s);
+  assert.match(styles, /\.profileLink,\s*\.fullImageLink\s*\{\s*min-height:\s*44px;/s);
+  assert.doesNotMatch(styles, /summary|details-marker/);
   assert.match(styles, /height:\s*auto;/);
+  assert.match(styles, /max-height:\s*min\(78svh,\s*48rem\);/);
   assert.match(styles, /object-fit:\s*contain;/);
   assert.match(styles, /overflow-wrap:\s*anywhere;/);
   assert.match(styles, /@media \(max-width:\s*640px\)/);
+});
+
+test("template contact styles do not override shared platform account typography", async () => {
+  const [neonStyles, museumStyles] = await Promise.all([
+    fs.readFile("app/templates/neon-hud/template.module.css", "utf8"),
+    fs.readFile("app/templates/museum-depth/template.module.css", "utf8"),
+  ]);
+  assert.doesNotMatch(neonStyles, /\.contactPanel strong/);
+  assert.match(neonStyles, /\.contactPanel > button strong,\s*\.contactPanel > a strong/);
+  assert.doesNotMatch(museumStyles, /\.visitCopy strong/);
+  assert.match(museumStyles, /\.visitCopy > button strong,\.visitCopy > a strong/);
 });
 
 test("Admin treats each uploaded QR as an explicit saved row reference", async () => {

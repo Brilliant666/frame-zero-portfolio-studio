@@ -89,7 +89,7 @@
 }
 
 .profileLink,
-.shareCard summary {
+.fullImageLink {
   min-height: 44px;
 }
 
@@ -113,7 +113,6 @@
 }
 
 .profileLink:focus-visible,
-.shareCard summary:focus-visible,
 .fullImageLink:focus-visible {
   outline: 2px solid var(--accounts-accent);
   outline-offset: 3px;
@@ -121,39 +120,8 @@
 
 .shareCard {
   min-width: 0;
-  border-top: 1px solid var(--accounts-line);
-}
-
-.shareCard summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: .75rem;
-  color: var(--accounts-text);
-  cursor: pointer;
-  font-size: .68rem;
-  font-weight: 750;
-  list-style: none;
-}
-
-.shareCard summary::-webkit-details-marker {
-  display: none;
-}
-
-.shareCard summary::after {
-  content: "+";
-  flex: 0 0 auto;
-  color: var(--accounts-accent);
-  font-size: 1rem;
-}
-
-.shareCard[open] summary::after {
-  content: "−";
-}
-
-.shareCardPanel {
-  min-width: 0;
   padding-top: .7rem;
+  border-top: 1px solid var(--accounts-line);
 }
 
 .fullImageLink {
@@ -169,10 +137,10 @@
 
 .fullImageLink img {
   display: block;
-  width: min(100%, 32rem);
+  width: auto;
   max-width: 100%;
   height: auto;
-  max-height: none;
+  max-height: min(78svh, 48rem);
   border: 1px solid var(--accounts-line);
   background: var(--accounts-panel);
   object-fit: contain;

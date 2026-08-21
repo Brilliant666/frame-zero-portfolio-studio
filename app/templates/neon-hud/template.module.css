@@ -742,7 +742,8 @@
 .contactPanel > button span,
 .contactPanel > a span { display: grid; min-width: 0; gap: .35rem; }
 .contactPanel small { color: var(--muted); font: .5rem var(--font-geist-mono), monospace; letter-spacing: .1em; }
-.contactPanel strong { overflow: hidden; font-size: .82rem; text-overflow: ellipsis; }
+.contactPanel > button strong,
+.contactPanel > a strong { overflow: hidden; font-size: .82rem; text-overflow: ellipsis; }
 .contactPanel b { flex: 0 0 auto; color: var(--electric); font: .52rem var(--font-geist-mono), monospace; }
 
 .terminal pre { min-height: 19rem; margin: 0; padding: 1.25rem; overflow: auto; color: rgba(237, 246, 255, .7); font: .68rem/1.9 var(--font-geist-mono), monospace; white-space: pre-wrap; }

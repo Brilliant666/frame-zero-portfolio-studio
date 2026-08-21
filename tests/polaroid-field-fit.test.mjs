@@ -458,8 +458,10 @@ test("polaroid contact renders WeChat and Email while delegating uploaded cards 
   assert.ok(platformAccounts.includes("getSafeSocialUrl"));
   assert.ok(platformAccounts.includes("getPlatformQrAssetPath"));
   assert.ok(platformAccounts.includes("if (!handle && !qrUrl) return []"));
-  assert.ok(platformAccounts.includes("<details"));
-  assert.ok(platformAccounts.includes("<summary>查看{account.label}分享卡片</summary>"));
+  assert.ok(!platformAccounts.includes("<details"));
+  assert.ok(!platformAccounts.includes("<summary"));
+  assert.ok(platformAccounts.includes("styles.shareCard"));
+  assert.ok(platformAccounts.includes("已上传的分享卡片会在下方完整显示"));
   assert.ok(platformAccounts.includes('loading="lazy"'));
   assert.ok(platformAccounts.includes('decoding="async"'));
   assert.ok(platformAccounts.includes('rel="noopener noreferrer"'));

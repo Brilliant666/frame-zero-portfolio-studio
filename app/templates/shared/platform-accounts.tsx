@@ -31,7 +31,7 @@ export default function PlatformAccounts({ accounts, tone = "light" }: PlatformA
     <section className={styles.accounts} data-tone={tone} aria-label="平台账号与分享卡片">
       <div className={styles.heading}>
         <h3>平台账号</h3>
-        <p>填写主页链接时可直接打开；如已上传分享卡片，可展开查看完整图片。</p>
+        <p>填写主页链接时可直接打开；已上传的分享卡片会在下方完整显示。</p>
       </div>
 
       <div className={styles.grid}>
@@ -49,26 +49,23 @@ export default function PlatformAccounts({ accounts, tone = "light" }: PlatformA
             ) : null}
 
             {account.qrUrl ? (
-              <details className={styles.shareCard}>
-                <summary>查看{account.label}分享卡片</summary>
-                <div className={styles.shareCardPanel}>
-                  <a
-                    className={styles.fullImageLink}
-                    href={account.qrUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`打开${account.label}分享卡片原图`}
-                  >
-                    <img
-                      src={account.qrUrl}
-                      alt={`${account.label}平台分享卡片`}
-                      loading="lazy"
-                      decoding="async"
-                    />
-                    <span>打开原图 ↗</span>
-                  </a>
-                </div>
-              </details>
+              <div className={styles.shareCard} role="group" aria-label={`${account.label}分享卡片`}>
+                <a
+                  className={styles.fullImageLink}
+                  href={account.qrUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`打开${account.label}分享卡片原图`}
+                >
+                  <img
+                    src={account.qrUrl}
+                    alt={`${account.label}平台分享卡片`}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <span>打开原图 ↗</span>
+                </a>
+              </div>
             ) : null}
           </article>
         ))}
