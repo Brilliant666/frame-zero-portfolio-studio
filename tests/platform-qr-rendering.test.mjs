@@ -32,6 +32,8 @@ test("shared platform account cards preserve links, accessibility, and natural i
   ]);
   assert.match(component, /getSafeSocialUrl/);
   assert.match(component, /getPlatformQrAssetPath/);
+  assert.match(component, /layout\?: "grid" \| "stack"/);
+  assert.match(component, /data-layout=\{layout\}/);
   assert.doesNotMatch(component, /<details|<summary/);
   assert.match(component, /<div className=\{styles\.shareCard\} role="group" aria-label=\{`\$\{account\.label\}分享卡片`\}>/);
   assert.match(component, /已上传的分享卡片会在下方完整显示/);
@@ -43,6 +45,7 @@ test("shared platform account cards preserve links, accessibility, and natural i
   assert.match(styles, /height:\s*auto;/);
   assert.match(styles, /max-height:\s*min\(78svh,\s*48rem\);/);
   assert.match(styles, /object-fit:\s*contain;/);
+  assert.match(styles, /\.accounts\[data-layout="stack"\] \.grid\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/s);
   assert.match(styles, /overflow-wrap:\s*anywhere;/);
   assert.match(styles, /@media \(max-width:\s*640px\)/);
 });
@@ -72,7 +75,7 @@ test("manga keeps contact and booking on the left while showing uploaded cards o
   assert.ok(booking.indexOf('className={styles.contactPanel}') < booking.indexOf('className={styles.requestPanel}'));
   assert.ok(booking.indexOf('className={styles.requestPanel}') < booking.indexOf('className={styles.platformPanel}'));
   assert.match(booking, /<aside className=\{styles\.platformPanel\} aria-label="平台账号与二维码">/);
-  assert.match(booking, /<PlatformAccounts accounts=\{content\.social\} tone="dark" \/>/);
+  assert.match(booking, /<PlatformAccounts accounts=\{content\.social\} layout="stack" tone="dark" \/>/);
 
   assert.match(booking, /onClick=\{\(\) => void onCopy\(content\.contact\.email, "manga-email"\)\}/);
   assert.match(booking, /<strong>\{content\.contact\.email\}<\/strong>/);

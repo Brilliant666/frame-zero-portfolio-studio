@@ -7,10 +7,11 @@ import styles from "./platform-accounts.module.css";
 
 type PlatformAccountsProps = Readonly<{
   accounts: SiteContent["social"];
+  layout?: "grid" | "stack";
   tone?: "light" | "dark";
 }>;
 
-export default function PlatformAccounts({ accounts, tone = "light" }: PlatformAccountsProps) {
+export default function PlatformAccounts({ accounts, layout = "grid", tone = "light" }: PlatformAccountsProps) {
   const visibleAccounts = accounts.flatMap((account, index) => {
     const handle = account.handle.trim();
     const qrUrl = getPlatformQrAssetPath(account.qrAssetId);
@@ -28,7 +29,7 @@ export default function PlatformAccounts({ accounts, tone = "light" }: PlatformA
   if (visibleAccounts.length === 0) return null;
 
   return (
-    <section className={styles.accounts} data-tone={tone} aria-label="平台账号与分享卡片">
+    <section className={styles.accounts} data-layout={layout} data-tone={tone} aria-label="平台账号与分享卡片">
       <div className={styles.heading}>
         <h3>平台账号</h3>
         <p>填写主页链接时可直接打开；已上传的分享卡片会在下方完整显示。</p>

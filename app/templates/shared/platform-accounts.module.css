@@ -57,6 +57,10 @@
   min-width: 0;
 }
 
+.accounts[data-layout="stack"] .grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .account {
   display: grid;
   min-width: 0;

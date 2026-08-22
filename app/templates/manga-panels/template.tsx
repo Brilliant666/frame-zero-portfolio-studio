@@ -330,7 +330,7 @@ export default function MangaPanelsTemplate({
           </div>
 
           <aside className={styles.platformPanel} aria-label="平台账号与二维码">
-            <PlatformAccounts accounts={content.social} tone="dark" />
+            <PlatformAccounts accounts={content.social} layout="stack" tone="dark" />
           </aside>
         </div>
 
