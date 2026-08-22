@@ -301,13 +301,15 @@ export default function MangaPanelsTemplate({
               <strong>{content.contact.wechat}</strong>
               <b aria-live="polite">{copiedKey === "manga-wechat" ? "已复制 ✓" : "复制 ↗"}</b>
             </button>
-            <a className={styles.contactAction} href={`mailto:${content.contact.email}`}>
+            <button
+              type="button"
+              className={styles.contactAction}
+              onClick={() => void onCopy(content.contact.email, "manga-email")}
+            >
               <span>邮箱 / EMAIL</span>
               <strong>{content.contact.email}</strong>
-              <b>写信 ↗</b>
-            </a>
-
-            <PlatformAccounts accounts={content.social} tone="dark" />
+              <b aria-live="polite">{copiedKey === "manga-email" ? "已复制 ✓" : "复制 ↗"}</b>
+            </button>
           </div>
 
           <div className={styles.requestPanel}>
@@ -326,6 +328,10 @@ export default function MangaPanelsTemplate({
               <b>CTRL + C</b>
             </button>
           </div>
+
+          <aside className={styles.platformPanel} aria-label="平台账号与二维码">
+            <PlatformAccounts accounts={content.social} tone="dark" />
+          </aside>
         </div>
 
         <footer className={styles.footer}>

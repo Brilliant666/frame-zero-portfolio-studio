@@ -330,14 +330,14 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: grayscale(.7) contrast(1.18) saturate(.55);
+  filter: contrast(1.05) saturate(1.04);
   transform: scale(1.025);
   transition: filter .45s ease, transform .65s cubic-bezier(.2, .75, .2, 1);
 }
 
 .leadPanel:hover img,
 .leadPanel:focus-visible img {
-  filter: grayscale(0) contrast(1.05) saturate(1.08);
+  filter: contrast(1.03) saturate(1.08);
   transform: scale(1.07);
 }
 
@@ -607,7 +607,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: grayscale(.78) contrast(1.16) saturate(.45);
+  filter: contrast(1.04) saturate(1.03);
   transform: scale(1.015);
   transition: filter .45s ease, transform .65s cubic-bezier(.2, .75, .2, 1);
 }
@@ -621,7 +621,7 @@
 
 .panel:not(.panelPlaceholder):hover img,
 .panel:not(.panelPlaceholder):focus-visible img {
-  filter: grayscale(0) contrast(1.02) saturate(1.06);
+  filter: contrast(1.02) saturate(1.07);
   transform: scale(1.065);
 }
 
@@ -966,8 +966,11 @@
 .bookingGrid {
   display: grid;
   grid-template-columns: minmax(20rem, .85fr) minmax(28rem, 1.15fr);
+  grid-template-areas:
+    "contact platform"
+    "request platform";
   gap: clamp(1.25rem, 4vw, 4rem);
-  align-items: stretch;
+  align-items: start;
 }
 
 .contactPanel,
@@ -978,6 +981,7 @@
 }
 
 .contactPanel {
+  grid-area: contact;
   padding: clamp(1.3rem, 3vw, 2.5rem);
   background: var(--vermilion);
   box-shadow: 10px 10px 0 #fff;
@@ -1099,11 +1103,21 @@
 }
 
 .requestPanel {
+  grid-area: request;
   display: flex;
   flex-direction: column;
   background: var(--paper-bright);
   color: var(--ink);
   box-shadow: 10px 10px 0 var(--vermilion);
+}
+
+.platformPanel {
+  grid-area: platform;
+  min-width: 0;
+}
+
+.platformPanel > section {
+  margin-top: 0;
 }
 
 .requestPanel::after {
@@ -1246,6 +1260,10 @@
 
   .bookingGrid {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "contact"
+      "request"
+      "platform";
   }
 }
 

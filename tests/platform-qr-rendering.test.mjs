@@ -58,6 +58,34 @@ test("template contact styles do not override shared platform account typography
   assert.match(museumStyles, /\.visitCopy > button strong,\.visitCopy > a strong/);
 });
 
+test("manga keeps contact and booking on the left while showing uploaded cards on the right", async () => {
+  const [template, styles] = await Promise.all([
+    fs.readFile("app/templates/manga-panels/template.tsx", "utf8"),
+    fs.readFile("app/templates/manga-panels/manga-panels.module.css", "utf8"),
+  ]);
+  const bookingStart = template.indexOf('<div className={styles.bookingGrid}>');
+  const bookingEnd = template.indexOf('<footer className={styles.footer}>', bookingStart);
+  const booking = template.slice(bookingStart, bookingEnd);
+
+  assert.notEqual(bookingStart, -1);
+  assert.notEqual(bookingEnd, -1);
+  assert.ok(booking.indexOf('className={styles.contactPanel}') < booking.indexOf('className={styles.requestPanel}'));
+  assert.ok(booking.indexOf('className={styles.requestPanel}') < booking.indexOf('className={styles.platformPanel}'));
+  assert.match(booking, /<aside className=\{styles\.platformPanel\} aria-label="平台账号与二维码">/);
+  assert.match(booking, /<PlatformAccounts accounts=\{content\.social\} tone="dark" \/>/);
+
+  assert.match(booking, /onClick=\{\(\) => void onCopy\(content\.contact\.email, "manga-email"\)\}/);
+  assert.match(booking, /<strong>\{content\.contact\.email\}<\/strong>/);
+  assert.match(booking, /copiedKey === "manga-email" \? "已复制 ✓" : "复制 ↗"/);
+  assert.doesNotMatch(booking, /mailto:\$\{content\.contact\.email\}|写信/);
+
+  assert.match(styles, /grid-template-areas:\s*"contact platform"\s*"request platform";/s);
+  assert.match(styles, /\.contactPanel\s*\{[^}]*grid-area:\s*contact;/s);
+  assert.match(styles, /\.requestPanel\s*\{[^}]*grid-area:\s*request;/s);
+  assert.match(styles, /\.platformPanel\s*\{[^}]*grid-area:\s*platform;/s);
+  assert.match(styles, /@media \(max-width: 980px\)[\s\S]*grid-template-areas:\s*"contact"\s*"request"\s*"platform";/s);
+});
+
 test("Admin treats each uploaded QR as an explicit saved row reference", async () => {
   const [editor, attachment, client, siteConfig] = await Promise.all([
     fs.readFile("app/admin/contact/contact-editor.tsx", "utf8"),

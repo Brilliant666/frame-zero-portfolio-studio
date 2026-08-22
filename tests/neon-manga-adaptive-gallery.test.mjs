@@ -196,6 +196,24 @@ test("manga keeps the cover identity outside its eight ordered storyboard panels
   assert.doesNotMatch(css, /\bflex-basis|(?:^|[;{])\s*order:\s*(?:initial|[0-9]+)/m);
 });
 
+test("manga keeps cover and storyboard photography in color before interaction", async () => {
+  const [, , , css] = await rendererSources();
+  const leadImageRule = css.match(/\.leadPanel img\s*\{(?<body>[^}]*)\}/s)?.groups?.body ?? "";
+  const storyboardImageRule = css.match(/\.panel img\s*\{(?<body>[^}]*)\}/s)?.groups?.body ?? "";
+
+  for (const [label, rule] of [
+    ["cover", leadImageRule],
+    ["storyboard", storyboardImageRule],
+  ]) {
+    assert.notEqual(rule, "", `${label} image rule exists`);
+    assert.doesNotMatch(rule, /grayscale\s*\(/, `${label} image is not desaturated by default`);
+    assert.match(rule, /saturate\(1(?:\.\d+)?\)/, `${label} image keeps full color by default`);
+  }
+
+  assert.match(css, /\.leadPanel:hover img,\s*\.leadPanel:focus-visible img\s*\{[^}]*transform:\s*scale\(1\.07\)/s);
+  assert.match(css, /\.panel:not\(\.panelPlaceholder\):hover img,\s*\.panel:not\(\.panelPlaceholder\):focus-visible img\s*\{[^}]*transform:\s*scale\(1\.065\)/s);
+});
+
 test("neon and manga mobile galleries keep adaptive portraits off full-width lanes", async () => {
   const [neonTemplate, neonCss, mangaTemplate, mangaCss] = await rendererSources();
 
