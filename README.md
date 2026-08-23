@@ -202,9 +202,9 @@ and is never started by the production build.
 The [ADMIN-V2 / DESIGN-01 workbench](docs/admin-v2.md) divides the editor into
 six focused routes for templates, profile, packages, layout, contact, and
 advanced compatibility controls. All routes share one client-side draft and
-the existing save endpoint; the single top-bar action saves all changes across
-the six sections, while **预览当前草稿** shows that in-memory draft without
-persisting it. The template route keeps its compact eleven-item selector and
+the existing save endpoint; the fixed top-bar **保存修改** action is the only
+global persistence control and saves changes across all six sections. There is
+no separate global draft-page preview. The template route keeps its compact eleven-item selector and
 shows one candidate at a time with a neutral, repository-owned structure
 diagram—not the user's photographs or SiteContent. Its detail area leads with
 the candidate name and description, then shows the structure and one material
@@ -217,13 +217,13 @@ new homepage template updates only the draft `activeTemplate`, then opens
 workspace. Neither path saves or applies a composition. Recommended composition, preview, adoption, and all
 `templateWorks` editing belong to **素材排版**, where generating or previewing a
 recommendation remains read-only until **采用推荐到草稿** is chosen. Desktop editing uses a
-persistent sidebar; mobile keeps every section accessible through a compact
+fixed top bar and persistent sidebar; mobile keeps every section accessible through a compact
 switcher, while complex photo layout remains desktop-first. The Admin structure
 does not change `SiteContent`, the write payload, D1 schema, or template catalog.
-The top-bar **预览当前草稿** remains the only full draft-page preview; the former
-candidate “查看模板效果” action is not duplicated inside the template picker.
+The former candidate “查看模板效果” action is not duplicated inside the template picker;
+the material-layout recommendation preview remains the scoped read-only visual check.
 When that handoff carries an unsaved homepage-template change, the layout
-workspace calls it out explicitly before material editing; the top-bar save is
+workspace calls it out explicitly before material editing; the top-bar **保存修改** action is
 still required to persist the choice.
 
 The Polaroid Field keeps its fixed nine-slot contract. On desktop its initial

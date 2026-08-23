@@ -1,6 +1,6 @@
 # Portfolio Platform Current Status
 
-> - Updated: 2026-08-21
+> - Updated: 2026-08-23
 > - Baseline: `main@dc471795139dc47649368bb37c0178fb77188fea`
 
 ```text
@@ -27,8 +27,8 @@ PR #24 product baseline: ACCEPTED
 PR #24 limited baseline acceptance: ACCEPTED
 PR #25 workspace status: ACTIVE
 PR #25 mode: LIGHTWEIGHT_HUMAN_REQUEST_ONLY
-PR #25 current request: HR25-008 — READY_FOR_HUMAN_RECHECK
-PR #25 next request ID: HR25-009
+PR #25 current request: HR25-013 — READY_FOR_HUMAN_RECHECK
+PR #25 next request ID: HR25-014
 PR #25 hand-off: HUMAN_RECHECK_REQUIRED
 External operations: NOT_AUTHORIZED
 Completed milestone: STANDARD_NEXT_NODE_PARITY
@@ -143,7 +143,7 @@ close
 `PRE_LAUNCH_PRODUCT_POLISH`, complete the eleven-template visual review, or
 claim V1 product-experience completion. No formal template has
 `HUMAN_APPROVED` status (`0 / 11`); all eleven remain ready for human recheck or
-later template-by-template polish in a new human-directed product-polish PR.
+continued template-by-template polish in PR #25 under explicit human requests.
 
 See [stage-a2-deployment-bootstrap.md](stage-a2-deployment-bootstrap.md) for
 the current Definition of Done matrix and explicit external-operation boundary.
