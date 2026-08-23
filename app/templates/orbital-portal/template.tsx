@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- local portfolio assets already provide responsive derivatives. */
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { primaryPhotoRatioForDimensions } from "../../photo-ratio-policy";
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
@@ -35,6 +36,9 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
   const safeActiveIndex = filledOrbitSlots.length === 0 ? 0 : Math.min(activeIndex, filledOrbitSlots.length - 1);
   const activeSlot = filledOrbitSlots[safeActiveIndex] ?? orbitSlots[0];
   const activeWork = activeSlot.work;
+  const activePortalRatio = activeWork
+    ? primaryPhotoRatioForDimensions(activeWork.previewWidth, activeWork.previewHeight) ?? "3:2"
+    : activeSlot.ratio === "2:3" ? "2:3" : "3:2";
   const activePortalObjectPosition = activeWork ? getOrbitalPortalObjectPosition(activeWork) : undefined;
   const move = useCallback((direction: -1 | 1) => {
     if (filledOrbitSlots.length === 0) return;
@@ -73,7 +77,7 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
           <a href="#portal-works">开启视觉轨道 <span>↘</span></a>
         </div>
 
-        <div className={styles.portalStage}>
+        <div className={styles.portalStage} data-portal-ratio={activePortalRatio}>
           <div className={styles.aperture} aria-hidden="true"><i /><i /><i /></div>
           {activeWork ? (
             <button type="button" className={styles.portalImage} onClick={() => onOpenWork(activeWork)} aria-label={`打开作品 ${activeWork.title}`}>
@@ -81,7 +85,9 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
                 key={activeWork.image}
                 src={activeWork.preview}
                 srcSet={`${activeWork.preview} ${activeWork.previewWidth}w, ${activeWork.image} ${activeWork.fullWidth}w`}
-                sizes="(max-width: 700px) 76vw, 38vw"
+                sizes={activePortalRatio === "2:3"
+                  ? "(max-width: 650px) 55vw, (max-width: 1000px) 31vw, 26vw"
+                  : "(max-width: 650px) 82vw, (max-width: 1000px) 46vw, 38vw"}
                 width={activeWork.previewWidth}
                 height={activeWork.previewHeight}
                 alt={activeWork.subtitle}

@@ -129,7 +129,7 @@ test("material profiles preserve differentiated implementation-driven demands", 
     [orbital.landscapeDemand.recommended, orbital.portraitDemand.recommended, orbital.squareDemand.recommended],
     [0, 8, 0],
   );
-  assert.equal(orbital.secondaryPresentations[0].target, "3:2");
+  assert.equal(orbital.secondaryPresentations[0].target, "variable");
   assert.equal(orbital.secondaryPresentations[0].slotIndexes.length, 8);
 
   const character = getTemplateMaterialProfile("character-select");
