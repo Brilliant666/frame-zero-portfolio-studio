@@ -81,11 +81,11 @@
 .orbitPlaceholder:hover { border-color: rgba(255,255,255,.23); transform: rotate(var(--angle)) translateX(clamp(13rem,32vw,31rem)) rotate(calc(-1 * var(--angle))); }
 .orbitPlaceholder > * { min-height: 0; }
 
-.missions { background: #eef3f3; color: #10151a; }
-.missions .sectionHead > span { color: #0b6473; }
-.missions .sectionHead p { color: rgba(16,21,26,.5); }
+.missions { background: radial-gradient(circle at 82% 16%, rgba(142,234,255,.08), transparent 28%), #05070b; color: #f7f3ed; }
+.missions .sectionHead > span { color: var(--ice); }
+.missions .sectionHead p { color: rgba(255,255,255,.5); }
 .missionGrid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; }
-.missionGrid article { position: relative; overflow: hidden; padding: 2rem; border: 1px solid rgba(14,41,48,.15); background: rgba(255,255,255,.6); }
+.missionGrid article { position: relative; overflow: hidden; padding: 2rem; border: 1px solid rgba(142,234,255,.22); background: #eef3f3; color: #10151a; box-shadow: 0 1.5rem 4rem rgba(0,0,0,.22); }
 .missionHalo { position: absolute; top: -8rem; right: -7rem; width: 15rem; height: 15rem; border: 1px solid rgba(9,133,157,.18); border-radius: 50%; box-shadow: 0 0 0 2rem rgba(9,133,157,.035),0 0 0 4rem rgba(9,133,157,.02); }
 .missionGrid article > span { color: #0b7183; font: .6rem var(--font-geist-mono), monospace; }
 .missionGrid article > small { float: right; color: rgba(16,21,26,.42); }

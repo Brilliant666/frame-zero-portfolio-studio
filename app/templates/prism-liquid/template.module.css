@@ -2,10 +2,14 @@
   --violet: #7b2cff;
   --blue: #1f7aff;
   --coral: #ff4f72;
+  --paper: #fbfbff;
+  --paper-soft: #f8f5ff;
+  --ink: #15121d;
+  --inverse: #17121d;
   min-height: 100vh;
   overflow: hidden;
-  background: #fbfbff;
-  color: #15121d;
+  background: var(--paper);
+  color: var(--ink);
   font-family: var(--font-geist-sans), sans-serif;
 }
 
@@ -129,11 +133,11 @@
 .galleryGrid strong { font-size: .9rem; }
 .galleryGrid em { grid-column: 2; color: rgba(21,18,29,.54); font-size: .68rem; font-style: normal; }
 
-.services { background: #17121d; color: #fff; }
-.services .sectionTitle small { color: #ff8de0; }
-.services .sectionTitle p { color: rgba(255,255,255,.5); }
-.packageGrid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid rgba(255,255,255,.16); }
-.packageGrid article { position: relative; padding: 2rem; border-right: 1px solid rgba(255,255,255,.16); background: radial-gradient(circle at 90% 0, rgba(123,44,255,calc(.08 + var(--package-index) * .05)), transparent 45%); }
+.services { background: var(--paper-soft); color: var(--ink); }
+.services .sectionTitle small { color: #6934c0; }
+.services .sectionTitle p { color: rgba(21,18,29,.55); }
+.packageGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; padding-top: 1rem; border-top: 1px solid rgba(48,26,83,.14); }
+.packageGrid article { position: relative; padding: 2rem; border: 1px solid rgba(255,255,255,.16); background: radial-gradient(circle at 90% 0, rgba(123,44,255,calc(.08 + var(--package-index) * .05)), transparent 45%), var(--inverse); color: #fff; box-shadow: 0 1.5rem 3.5rem rgba(45,18,91,.1); }
 .packageGrid article > span { color: #ff86dd; font: .65rem var(--font-geist-mono), monospace; }
 .packageGrid article > small { float: right; color: rgba(255,255,255,.42); }
 .packageGrid h3 { margin: 3rem 0 .8rem; font: 400 2rem Georgia, serif; }
@@ -144,7 +148,7 @@
 .packageGrid li::before { content: "◇"; margin-right: .5rem; color: #8c6dff; }
 .packageGrid a { display: inline-block; padding: .7rem .9rem; border: 1px solid rgba(255,255,255,.28); font-size: .7rem; }
 
-.booking { position: relative; display: grid; grid-template-columns: 1fr minmax(24rem, .85fr); gap: 6vw; min-height: 80vh; padding: 9vw 6vw; overflow: hidden; background: #f8f5ff; }
+.booking { position: relative; display: grid; grid-template-columns: 1fr minmax(24rem, .85fr); gap: 6vw; min-height: 80vh; padding: 9vw 6vw; overflow: hidden; background: var(--paper-soft); }
 .bookingGlow { position: absolute; right: 52%; bottom: -20rem; width: 40rem; height: 40rem; border-radius: 50%; background: radial-gradient(circle, rgba(122,44,255,.32), rgba(255,76,157,.12) 38%, transparent 70%); }
 .bookingCopy { position: relative; align-self: center; }
 .bookingCopy h2 { margin: 1rem 0; font: 400 clamp(4rem, 8vw, 8rem)/.82 Georgia, serif; letter-spacing: -.07em; }
@@ -157,7 +161,7 @@
 .requestCard > span { display: block; padding: .7rem; color: #6934c0; font: .6rem var(--font-geist-mono), monospace; }
 .requestCard pre { min-height: 22rem; margin: 0; padding: 1.3rem; background: rgba(242,237,252,.8); color: rgba(29,19,48,.72); font: .72rem/1.85 var(--font-geist-mono), monospace; white-space: pre-wrap; }
 .requestCard button { width: 100%; padding: 1rem; background: linear-gradient(90deg, #7a2cff, #ef4aa3); color: #fff; cursor: pointer; font-weight: 700; }
-.footer { display: grid; grid-template-columns: 1fr auto auto; gap: 2rem; padding: 1.4rem 4vw; background: #17121d; color: rgba(255,255,255,.58); font: .6rem var(--font-geist-mono), monospace; }
+.footer { display: grid; grid-template-columns: 1fr auto auto; gap: 2rem; padding: 1.4rem 4vw; background: var(--inverse); color: rgba(255,255,255,.58); font: .6rem var(--font-geist-mono), monospace; }
 .footer strong { color: #fff; }
 
 @keyframes liquid-morph { to { border-radius: 58% 42% 55% 45% / 40% 56% 44% 60%; transform: scale(1.025) rotate(-1deg); } }
@@ -184,7 +188,6 @@
   .sectionTitle { grid-template-columns: 1fr; gap: .7rem; }
   .galleryFeatureRow { grid-template-columns: minmax(0, 9fr) minmax(0, 4fr); }
   .packageGrid { grid-template-columns: 1fr; }
-  .packageGrid article { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.16); }
   .booking { grid-template-columns: 1fr; padding: 7rem 1rem; }
 }
 

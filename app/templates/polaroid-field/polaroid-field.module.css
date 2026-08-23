@@ -940,13 +940,18 @@
   grid-template-columns: minmax(18rem, .8fr) minmax(28rem, 1.2fr);
   gap: clamp(2rem, 7vw, 8rem);
   background:
-    radial-gradient(circle at 12% 15%, rgba(255,255,255,.08) 0 .7px, transparent .8px) 0 0 / 8px 8px,
-    var(--ink);
-  color: #fff;
+    radial-gradient(circle at 12% 15%, rgba(24,34,39,.08) 0 .7px, transparent .8px) 0 0 / 8px 8px,
+    var(--cream);
+  color: var(--ink);
 }
 
 .bookingIntro {
   align-self: center;
+  padding: clamp(1.5rem, 3vw, 2.75rem);
+  background: var(--ink);
+  color: #fff;
+  box-shadow: .9rem 1rem 0 rgba(135,182,199,.32), 0 1.5rem 3rem rgba(24,34,39,.14);
+  transform: rotate(-.45deg);
 }
 
 .bookingIntro h2 {
@@ -1115,8 +1120,11 @@
   gap: 2rem;
   align-items: end;
   margin-top: clamp(3rem, 7vw, 7rem);
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(255,255,255,.35);
+  padding: 1.5rem;
+  border-top: 0;
+  background: var(--ink);
+  color: #fff;
+  box-shadow: .7rem .75rem 0 rgba(232,100,79,.24);
 }
 
 .footer > div:first-child {

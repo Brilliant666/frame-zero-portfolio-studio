@@ -289,31 +289,36 @@
 
 .rates {
   padding: clamp(6rem, 11vw, 11rem) clamp(1rem, 4vw, 5rem);
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--paper);
+  color: var(--ink);
   content-visibility: auto;
   contain-intrinsic-size: auto 900px;
 }
 
 .sectionTitle { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(18rem, .65fr); align-items: end; gap: 2rem; max-width: 110rem; margin: 0 auto clamp(4rem, 7vw, 7rem); }
-.sectionTitle > p { grid-column: 1 / -1; }
+.sectionTitle > p { grid-column: 1 / -1; width: max-content; padding: .35rem .55rem; background: var(--ink); color: var(--paper); }
 .sectionTitle h2 { margin: 0; font: 500 clamp(3.5rem, 7.5vw, 8rem)/.8 "Iowan Old Style", "Baskerville", "Times New Roman", serif; letter-spacing: -.065em; }
 .sectionTitle h2 em { color: var(--accent); font-style: italic; }
-.sectionTitle > span { max-width: 30rem; padding-left: 1.2rem; border-left: 1px solid rgba(242, 239, 232, .2); color: rgba(242, 239, 232, .55); font-size: .75rem; line-height: 1.8; }
+.sectionTitle > span { max-width: 30rem; padding-left: 1.2rem; border-left: 1px solid var(--line); color: var(--muted); font-size: .75rem; line-height: 1.8; }
 
-.rateList { max-width: 110rem; margin: 0 auto; border-top: 1px solid rgba(242, 239, 232, .2); }
-.rateList article { display: grid; grid-template-columns: 3rem minmax(11rem, .8fr) minmax(14rem, 1.1fr) minmax(16rem, 1fr) 3rem; align-items: center; gap: clamp(1rem, 3vw, 3rem); padding: 2rem .5rem; border-bottom: 1px solid rgba(242, 239, 232, .2); transition: background .25s ease, padding .25s ease; }
-.rateList article:hover { padding-inline: 1.2rem; background: rgba(242, 239, 232, .045); }
+.rateList { max-width: 110rem; margin: 0 auto; border-top: 1px solid var(--line); }
+.rateList article { display: grid; grid-template-columns: 3rem minmax(11rem, .8fr) minmax(14rem, 1.1fr) minmax(16rem, 1fr) 3rem; align-items: center; gap: clamp(1rem, 3vw, 3rem); padding: 2rem .5rem; border-bottom: 1px solid var(--line); transition: background .25s ease, color .25s ease, padding .25s ease; }
+.rateList article:hover,
+.rateList article:focus-within { padding-inline: 1.2rem; background: var(--ink); color: var(--paper); }
 .rateNumber,
 .rateName small,
 .rateTerms span { color: var(--accent); font: .5rem var(--font-geist-mono), monospace; letter-spacing: .1em; }
 .rateName h3 { margin: .3rem 0 0; font: italic 500 clamp(1.8rem, 3.2vw, 3.4rem) "Iowan Old Style", "Baskerville", serif; letter-spacing: -.04em; }
-.rateList article > p { margin: 0; color: rgba(242, 239, 232, .56); font-size: .75rem; line-height: 1.75; }
+.rateList article > p { margin: 0; color: var(--muted); font-size: .75rem; line-height: 1.75; }
 .rateTerms { display: grid; grid-template-columns: 1fr auto; gap: .35rem 1rem; }
 .rateTerms strong { font-size: 1rem; }
-.rateTerms ul { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: .35rem .8rem; margin: .55rem 0 0; padding: 0; color: rgba(242, 239, 232, .52); font: .5rem var(--font-geist-mono), monospace; list-style: none; }
+.rateTerms ul { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: .35rem .8rem; margin: .55rem 0 0; padding: 0; color: var(--muted); font: .5rem var(--font-geist-mono), monospace; list-style: none; }
 .rateTerms li::before { content: "+ "; color: var(--accent); }
-.rateList article > a { display: grid; width: 2.6rem; height: 2.6rem; place-items: center; border: 1px solid rgba(242, 239, 232, .3); border-radius: 50%; color: var(--accent); font: .48rem var(--font-geist-mono), monospace; transition: background .2s ease, color .2s ease; }
+.rateList article:hover > p,
+.rateList article:hover .rateTerms ul,
+.rateList article:focus-within > p,
+.rateList article:focus-within .rateTerms ul { color: rgba(242,239,232,.62); }
+.rateList article > a { display: grid; width: 2.6rem; height: 2.6rem; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--accent); font: .48rem var(--font-geist-mono), monospace; transition: background .2s ease, color .2s ease; }
 .rateList article > a:hover,
 .rateList article > a:focus-visible { background: var(--accent); color: var(--ink); }
 
