@@ -78,6 +78,7 @@ test("proxy negative assertions cover every currently unfinished public surface"
     "/api/draft",
     "/api/upload",
     "/api/uploads",
+    "/api/platform-qr/",
     "/api/unreviewed",
   ]) assert.match(verifier, new RegExp(pathName.replaceAll("/", "\\/")));
   for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {

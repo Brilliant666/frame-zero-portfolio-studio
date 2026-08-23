@@ -20,7 +20,7 @@
     "test:migrations": "node --test tests/stable-id-migration.test.mjs",
     "test:adapters": "node --test tests/legacy-site-content-adapter.test.mjs",
     "test:photos": "node --test tests/photo-import.test.mjs tests/photo-import-service.test.mjs tests/dev-local.test.mjs tests/photo-import-client.test.mjs tests/photo-library-management.test.mjs",
-    "test:platform-qr": "node --test tests/platform-qr-assets.test.mjs tests/platform-qr-attachment.test.mjs tests/platform-qr-client.test.mjs tests/platform-qr-route.test.mjs tests/platform-qr-service.test.mjs tests/platform-qr-rendering.test.mjs",
+    "test:platform-qr": "node --test tests/platform-qr-assets.test.mjs tests/platform-qr-attachment.test.mjs tests/platform-qr-client.test.mjs tests/platform-qr-route.test.mjs tests/platform-qr-service.test.mjs tests/platform-card-availability.test.mjs tests/platform-qr-rendering.test.mjs",
     "test:layouts": "node --test tests/photo-layout.test.mjs tests/neon-manga-adaptive-gallery.test.mjs",
     "test:materials": "node --test tests/template-material-profiles.test.mjs",
     "test:composition": "node --test tests/template-composition.test.mjs",

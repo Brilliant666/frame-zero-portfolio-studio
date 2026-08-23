@@ -25,21 +25,33 @@ test("all eleven contact surfaces use exactly one shared platform account render
   }
 });
 
-test("shared platform account cards preserve links, accessibility, and natural image ratio", async () => {
-  const [component, styles] = await Promise.all([
+test("shared platform account cards preserve links, accessibility, natural ratio, and fail-safe rendering", async () => {
+  const [component, availability, styles] = await Promise.all([
     fs.readFile("app/templates/shared/platform-accounts.tsx", "utf8"),
+    fs.readFile("app/templates/shared/platform-card-availability.ts", "utf8"),
     fs.readFile("app/templates/shared/platform-accounts.module.css", "utf8"),
   ]);
+  assert.match(component, /"use client"/);
+  assert.match(component, /probePlatformCardAvailability/);
+  assert.match(component, /useEffect/);
+  assert.match(component, /if \(status !== "available"\) return null/);
+  assert.match(component, /onError=\{\(\) => setStatus\("unavailable"\)\}/);
+  assert.match(component, /\{account\.qrUrl \? \([\s\S]*<PlatformShareCard/);
+  assert.doesNotMatch(component, /setInterval|setTimeout/);
+  assert.match(availability, /method:\s*"HEAD"/);
+  assert.match(availability, /cache:\s*"no-store"/);
+  assert.match(availability, /response\.ok && contentType === "image\/png"/);
+  assert.match(availability, /catch\s*\{\s*return false;/s);
   assert.match(component, /getSafeSocialUrl/);
   assert.match(component, /getPlatformQrAssetPath/);
   assert.match(component, /layout\?: "grid" \| "stack"/);
   assert.match(component, /data-layout=\{layout\}/);
   assert.doesNotMatch(component, /<details|<summary/);
-  assert.match(component, /<div className=\{styles\.shareCard\} role="group" aria-label=\{`\$\{account\.label\}分享卡片`\}>/);
+  assert.match(component, /<div className=\{styles\.shareCard\} role="group" aria-label=\{`\$\{label\}分享卡片`\}>/);
   assert.match(component, /已上传的分享卡片会在下方完整显示/);
   assert.match(component, /loading="lazy"/);
   assert.match(component, /decoding="async"/);
-  assert.match(component, /aria-label=\{`打开\$\{account\.label\}分享卡片原图`\}/);
+  assert.match(component, /aria-label=\{`打开\$\{label\}分享卡片原图`\}/);
   assert.match(styles, /\.profileLink,\s*\.fullImageLink\s*\{\s*min-height:\s*44px;/s);
   assert.doesNotMatch(styles, /summary|details-marker/);
   assert.match(styles, /height:\s*auto;/);

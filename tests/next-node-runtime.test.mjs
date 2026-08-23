@@ -157,6 +157,13 @@ test("Standard Next.js standalone starts over HTTP with current route parity", a
   assert.equal((await fetch(`${origin}${stylesheet}`)).status, 200);
   assert.equal((await fetch(`${origin}/favicon.svg`)).status, 200);
 
+  const unavailablePlatformCardPath = `/api/platform-qr/${"d".repeat(64)}`;
+  for (const method of ["GET", "HEAD"]) {
+    const response = await fetch(`${origin}${unavailablePlatformCardPath}`, { method });
+    assert.equal(response.status, 404, `${method} ${unavailablePlatformCardPath}`);
+    assert.equal(await response.text(), "");
+  }
+
   const adminRedirect = await fetch(`${origin}/admin`, { redirect: "manual" });
   assert.ok([307, 308].includes(adminRedirect.status));
   assert.equal(new URL(adminRedirect.headers.get("location"), origin).pathname, "/admin/template");

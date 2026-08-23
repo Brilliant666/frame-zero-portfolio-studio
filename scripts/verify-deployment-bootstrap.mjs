@@ -218,6 +218,7 @@ async function assertPublicContract(httpsPort) {
     "/api/draft",
     "/api/upload",
     "/api/uploads",
+    `/api/platform-qr/${"d".repeat(64)}`,
     "/api/unreviewed",
   ]) {
     assert.equal((await httpsRequest(httpsPort, pathname)).status, 404, pathname);
