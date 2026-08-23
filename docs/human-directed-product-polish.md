@@ -14,12 +14,13 @@
 > - PR #24 feature freeze: `TRUE`
 > - PR #24 limited baseline acceptance: `ACCEPTED`
 > - PR #25 workspace: `HUMAN_DIRECTED_PRODUCT_POLISH_WORKSPACE`
-> - PR #25 workspace status: `ACTIVE`
-> - PR #25 mode: `LIGHTWEIGHT_HUMAN_REQUEST_ONLY`
+> - PR #25 workspace status: `FEATURE_FROZEN`
+> - PR #25 mode: `LIMITED_CLOSURE + THIRTEEN_REQUEST_STAGE_REVIEW`
 > - PR #25 current request: `HR25-013 — READY_FOR_HUMAN_RECHECK`
-> - PR #25 next request ID: `HR25-014`
+> - PR #25 next request: `HR25-014 — NOT_STARTED`
+> - PR #25 feature freeze: `TRUE`
 > - Human-approved templates: `0 / 11`
-> - Current hand-off: `HUMAN_RECHECK_REQUIRED`
+> - Current hand-off: `WAITING_FOR_HUMAN_REVIEW`
 > - External operations: `NOT_AUTHORIZED`
 > - Base: `main@dc471795139dc47649368bb37c0178fb77188fea`
 
@@ -59,12 +60,14 @@ to cards, forms, and presentation panels. These results remain
 `READY_FOR_HUMAN_RECHECK`; they do not imply template approval.
 
 This is not an automated backlog. PR #24 is accepted and merged as the limited
-baseline. PR #25 is a lightweight, human-request-only workspace: Codex handles
-exactly one concrete request, validates it in proportion to risk, creates one
-focused commit, pushes it to the same Draft PR, reports the result, and stops at
-`HUMAN_INPUT_REQUIRED`. Observations outside the request may be recorded but
-must not be implemented without a new human instruction. Neither PR establishes
-final template visual approval or completes pre-launch product polish.
+baseline. Before the feature freeze, PR #25 operated as a lightweight,
+human-request-only workspace: Codex handled exactly one concrete request,
+validated it in proportion to risk, pushed a focused commit to the same Draft
+PR, reported the result, and stopped for human input. The workspace is now in
+limited closure and no longer accepts another request. Observations outside the
+closure may be recorded but must not be implemented without later human
+authorization. Neither PR establishes final template visual approval or
+completes pre-launch product polish.
 
 The formal project state remains:
 
@@ -83,16 +86,23 @@ human visual approval remains pending.
 
 ```text
 Base: main@dc471795139dc47649368bb37c0178fb77188fea
-Status: ACTIVE
+Status: FEATURE_FROZEN
 Workspace: HUMAN_DIRECTED_PRODUCT_POLISH_WORKSPACE
-Mode: LIGHTWEIGHT_HUMAN_REQUEST_ONLY
+Mode: LIMITED_CLOSURE + THIRTEEN_REQUEST_STAGE_REVIEW
 Current request: HR25-013 — READY_FOR_HUMAN_RECHECK
-Next request ID: HR25-014
+Next request: HR25-014 — NOT_STARTED
+PR25_FEATURE_FREEZE: TRUE
+PR25_HR25_001_TO_013: IMPLEMENTED_READY_FOR_HUMAN_REVIEW
+PR25_LIMITED_BASELINE: READY_FOR_HUMAN_DECISION
 PR24_LIMITED_BASELINE: ACCEPTED
 PRE_LAUNCH_PRODUCT_POLISH: IN_PROGRESS
 ELEVEN_TEMPLATE_HUMAN_VISUAL_APPROVAL: PENDING
 HUMAN_APPROVED: 0 / 11
 ENGINEERING_LAUNCH_LINE: FROZEN_AT_REPO_SIDE_BOOTSTRAP_READY
+PLATFORM_CARD_LOCAL_ONLY: ACCEPTED_FOR_LOCAL_PRODUCT_EXPERIENCE
+PLATFORM_CARD_PUBLIC_RENDER_FAILSAFE: CLOSED
+PLATFORM_CARD_HOSTED_RESOLUTION_PENDING: P1_PRE_DEPLOYMENT
+CURRENT_HAND_OFF: WAITING_FOR_HUMAN_REVIEW
 ```
 
 The workspace never selects or implements a known follow-up automatically.
@@ -121,7 +131,9 @@ human request
 - `NEXT_PR_P2`: `DRAG_DROP_IMPORT`, `AUTO_DETECT_DROP_SOURCE`,
   `BULK_ASSET_MANAGEMENT`, `ASSET_DETAIL`, `TAGS_ALBUMS`, `TRUE_REROLL`, and
   `PREVIEW_DEVICE_SWITCHER`;
-- `PRE_DEPLOYMENT_P1`: `PUBLIC_IDENTITY_SSR_MISMATCH`;
+- `PRE_DEPLOYMENT_P1`: `PUBLIC_IDENTITY_SSR_MISMATCH`,
+  `PLATFORM_CARD_HOSTED_RESOLUTION_PENDING`, `/` and `/star` route identity,
+  and production `ASSET_RESOLVER`;
 - `LOCAL_ONLY_FUTURE`: `SOURCE_FOLDER_BINDING`, `RESCAN`, `WATCHER`, and
   `AUTO_SYNC`;
 - `FUTURE_HOSTED`: `POSTGRESQL`, `AUTH`, `HOSTED_ASSETS`, `HOSTED_UPLOAD`, and
@@ -145,6 +157,52 @@ implemented without a new, explicit human request.
 | HR25-011 | Replace the confusing Admin save/preview pair with one global “保存修改” action and keep the complete top bar fixed above every Admin section. Preserve the shared draft PUT endpoint, keyboard save, dirty-state protection, failure recovery, and compact mobile affordance; make successful saves explain that refreshing the homepage displays the latest content. | Admin global persistence action and fixed top bar | READY_FOR_HUMAN_RECHECK | `fix: pin admin save controls (HR25-011)` | Admin state, rendered HTML, responsive CSS, route parity, and save-contract regressions pass; full `npm test`, ESLint, Legacy build, and Standard Next build pass; `/admin/template` and the public template route return HTTP 200 locally. | PENDING |
 | HR25-012 | Make the `orbital-portal` active work frame follow the selected source orientation instead of forcing every work into a horizontal crop. Keep all eight formal portrait slots, selection order, focus protection, lightbox behavior, navigation, and responsive portal sizing unchanged outside the active presentation. | `orbital-portal` active-work orientation and material guidance | READY_FOR_HUMAN_RECHECK | `fix: respect orbital portal orientation (HR25-012)` | Focus and renderer regressions verify the 3:2/2:3 active portal, unchanged portrait slot contract, responsive size variables, and variable secondary material target; full repository tests and both production builds pass. Browser recheck confirms the selected portrait remains portrait in the desktop portal. | PENDING |
 | HR25-013 | Resolve page-level light/dark discontinuity in the first five high-priority paged templates: `polaroid-field`, `film-rail`, `prism-liquid`, `editorial-duet`, and `orbital-portal`. Keep one canvas tone across each template's three views and confine inverse colors to contact panels, package cards, rate interactions, or mission cards without flattening each template's visual identity. | Five high-priority paged-template canvas systems | READY_FOR_HUMAN_RECHECK | `fix: unify paged template canvas tones (HR25-013)` | New cross-template style regression is included in `test:polish`; all five desktop pages and representative 390 px views were browser-checked with zero horizontal overflow; full `npm test`, ESLint, Legacy build, and Standard Next build pass. | PENDING |
+
+## PR #25 limited closure and stage review
+
+The PR #25 feature scope is frozen after HR25-013. HR25-014 has not started,
+and no later product issue is selected. The additive audit in
+[pr25-stage-review.md](pr25-stage-review.md) maps every pre-closure commit and
+production-code category to Bootstrap or HR25-001 through HR25-013. It found no
+unmapped product code, unknown commit, or unauthorized frozen-contract change.
+
+This closure does not rewrite the historical HR rows above. It records the
+final relationship between HR25-004 and HR25-008:
+
+- HR25-004 is `PARTIALLY_SUPERSEDED_BY_HR25-008`. Its retained behavior is safe
+  credential-free HTTPS recognition, extraction of exactly one safe link from
+  share text, platform-account editing, aligned Admin platform rows, and direct
+  opening of safe profile links. The temporary Polaroid QQ special case was
+  withdrawn during HR25-004 itself.
+- HR25-004's `LINK_GENERATED_QR` behavior is no longer current.
+- HR25-008 is `CURRENT_PLATFORM_CARD_IMPLEMENTATION`: one optional uploaded
+  platform sharing card per Legacy/local `SiteContent.social` row, referenced
+  by opaque `qrAssetId`, normalized into ignored private local state, and shared
+  across all eleven template renderers.
+
+The public renderer now performs one fail-closed HEAD capability probe and
+mounts a card only after a `200 image/png` result. Missing configuration, asset
+404, route/upstream unavailability, wrong content type, and later image-load
+failure omit the image and original-image action without altering account text,
+safe profile links, `qrAssetId`, the draft, or persistence. There is no polling.
+Production Caddy still denies unreviewed `/api/*`; no local companion or private
+PNG is exposed or copied into the production artifact.
+
+```text
+PR25_FEATURE_FREEZE = TRUE
+PR25_HR25_001_TO_013 = IMPLEMENTED_READY_FOR_HUMAN_REVIEW
+PR25_LIMITED_BASELINE = READY_FOR_HUMAN_DECISION
+PRE_LAUNCH_PRODUCT_POLISH = IN_PROGRESS
+HUMAN_DIRECTED_PRODUCT_POLISH = IN_PROGRESS
+ELEVEN_TEMPLATE_HUMAN_VISUAL_APPROVAL = PENDING
+HUMAN_APPROVED = 0 / 11
+PLATFORM_CARD_LOCAL_ONLY = ACCEPTED_FOR_LOCAL_PRODUCT_EXPERIENCE
+PLATFORM_CARD_PUBLIC_RENDER_FAILSAFE = CLOSED
+PLATFORM_CARD_HOSTED_RESOLUTION_PENDING = P1_PRE_DEPLOYMENT
+ENGINEERING_LAUNCH_LINE = FROZEN_AT_REPO_SIDE_BOOTSTRAP_READY
+CURRENT_HAND_OFF = WAITING_FOR_HUMAN_REVIEW
+HR25-014 = NOT_STARTED
+```
 
 ## PR #24 request protocol
 
@@ -414,11 +472,11 @@ gates run when the change risk or final review requires them. GitHub Quality,
 Public repository safety, Container, and Deployment Bootstrap gates remain
 enabled for every PR update.
 
-After the bootstrap and after every future micro-slice, the required state is:
+After this closure, the required state is:
 
 ```text
-HUMAN_INPUT_REQUIRED
+WAITING_FOR_HUMAN_REVIEW
 ```
 
-The Draft PR is never marked Ready or merged without separate human approval.
-No next product issue is selected automatically.
+The Draft PR is not marked Ready or merged without separate human approval. No
+next product issue is selected automatically, and HR25-014 remains not started.

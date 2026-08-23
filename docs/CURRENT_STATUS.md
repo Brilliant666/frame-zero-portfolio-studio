@@ -1,6 +1,6 @@
 # Portfolio Platform Current Status
 
-> - Updated: 2026-08-23
+> - Updated: 2026-08-24
 > - Baseline: `main@dc471795139dc47649368bb37c0178fb77188fea`
 
 ```text
@@ -25,11 +25,17 @@ PR #24 closure mode: FINAL_HUMAN_ACCEPTANCE + MERGE
 PR #24 feature freeze: TRUE
 PR #24 product baseline: ACCEPTED
 PR #24 limited baseline acceptance: ACCEPTED
-PR #25 workspace status: ACTIVE
-PR #25 mode: LIGHTWEIGHT_HUMAN_REQUEST_ONLY
+PR #25 workspace status: FEATURE_FROZEN
+PR #25 mode: LIMITED_CLOSURE + THIRTEEN_REQUEST_STAGE_REVIEW
 PR #25 current request: HR25-013 — READY_FOR_HUMAN_RECHECK
-PR #25 next request ID: HR25-014
-PR #25 hand-off: HUMAN_RECHECK_REQUIRED
+PR #25 next request: HR25-014 — NOT_STARTED
+PR #25 feature freeze: TRUE
+PR #25 HR25-001..013: IMPLEMENTED_READY_FOR_HUMAN_REVIEW
+PR #25 limited baseline: READY_FOR_HUMAN_DECISION
+PR #25 hand-off: WAITING_FOR_HUMAN_REVIEW
+Platform card local-only: ACCEPTED_FOR_LOCAL_PRODUCT_EXPERIENCE
+Platform card public render fail-safe: CLOSED
+Platform card hosted resolution pending: P1_PRE_DEPLOYMENT
 External operations: NOT_AUTHORIZED
 Completed milestone: STANDARD_NEXT_NODE_PARITY
 Next milestone: DEPLOYMENT_BOOTSTRAP_READY
@@ -144,6 +150,17 @@ close
 claim V1 product-experience completion. No formal template has
 `HUMAN_APPROVED` status (`0 / 11`); all eleven remain ready for human recheck or
 continued template-by-template polish in PR #25 under explicit human requests.
+
+PR #25 is now feature-frozen after HR25-013. HR25-001 through HR25-013 are
+implemented and ready for human review, not human-approved. The closure audit
+mapped every pre-closure commit and production change to Bootstrap or an
+explicit HR request. Its only product-code closure change makes uploaded local
+platform cards fail visually safe when their loopback companion, asset, or
+route is unavailable; account text and safe HTTPS links remain usable. The
+feature is still a Legacy/local SiteContent extension, while hosted platform
+card resolution remains `P1_PRE_DEPLOYMENT`. See
+[pr25-stage-review.md](pr25-stage-review.md) for the audit matrices and frozen
+architecture boundaries.
 
 See [stage-a2-deployment-bootstrap.md](stage-a2-deployment-bootstrap.md) for
 the current Definition of Done matrix and explicit external-operation boundary.

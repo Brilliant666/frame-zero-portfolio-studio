@@ -199,6 +199,16 @@ supervisor passes that private origin to the Admin server process; users do not
 need to find or manage the companion port. It is a local editing companion only
 and is never started by the production build.
 
+Uploaded platform sharing cards use that same ignored, loopback-only private
+state and are referenced from legacy/local `SiteContent` by an optional opaque
+`social[].qrAssetId`. The shared public renderer probes a card once and mounts
+its image only when the local route returns a PNG; missing configuration, a
+missing asset, an unavailable companion, or a denied production route therefore
+leaves account text and safe HTTPS profile links intact without a broken image.
+This is accepted only for the local product experience. Production Caddy still
+denies `/api/platform-qr/*`, `SiteDocumentV1` remains unchanged, and hosted
+AssetStorage/AssetResolver support is `P1_PRE_DEPLOYMENT`.
+
 The [ADMIN-V2 / DESIGN-01 workbench](docs/admin-v2.md) divides the editor into
 six focused routes for templates, profile, packages, layout, contact, and
 advanced compatibility controls. All routes share one client-side draft and
