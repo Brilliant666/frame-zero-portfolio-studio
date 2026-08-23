@@ -6,7 +6,9 @@
   --admin-v2-canvas: #eeeae4;
   --admin-v2-accent: #f06400;
   --admin-v2-accent-text: #a63d00;
+  --admin-v2-topbar-height: 5.25rem;
   min-height: 100vh;
+  padding-top: var(--admin-v2-topbar-height);
   background: var(--admin-v2-canvas);
   color: var(--admin-v2-ink);
 }
@@ -25,14 +27,16 @@
 .skipLink:focus { transform: translateY(0); }
 
 .topbar {
-  position: sticky;
+  position: fixed;
   z-index: 50;
-  top: 0;
+  inset: 0 0 auto;
   display: grid;
   grid-template-columns: auto minmax(12rem, 1fr) auto;
-  min-height: 5.25rem;
+  height: var(--admin-v2-topbar-height);
+  width: 100%;
   border-bottom: 1px solid var(--admin-v2-line);
   background: rgba(247, 244, 239, .96);
+  box-shadow: 0 .35rem 1rem rgba(45, 35, 28, .08);
   backdrop-filter: blur(18px);
 }
 
@@ -57,6 +61,7 @@
 
 .currentSection {
   display: grid;
+  min-width: 0;
   align-content: center;
   gap: .1rem;
 }
@@ -70,12 +75,15 @@
 }
 
 .currentSection h1 {
+  overflow: hidden;
   margin: 0;
   font-size: clamp(1.25rem, 2vw, 1.75rem);
   letter-spacing: -.035em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.topbarActions { gap: .65rem; }
+.topbarActions { min-width: 0; gap: .65rem; }
 
 .saveStatus {
   display: grid;
@@ -87,38 +95,22 @@
 
 .saveStatus strong {
   font-size: .82rem;
+  white-space: nowrap;
 }
 
 .saveStatus[data-tone="dirty"] strong,
 .saveStatus[data-tone="error"] strong { color: #a23a20; }
 .saveStatus[data-tone="success"] strong { color: #28623a; }
 
-.previewLink,
-.saveButton {
-  min-height: 2.75rem;
-  border: 1px solid var(--admin-v2-line);
-  font-size: .82rem;
-  font-weight: 700;
-}
-
-.previewLink {
-  display: inline-flex;
-  align-items: center;
-  gap: .35rem;
-  padding: .72rem .9rem;
-  background: #fff;
-  color: var(--admin-v2-ink);
-  cursor: pointer;
-}
-
-.previewText { display: inline; }
-
 .saveButton {
   min-width: 5.5rem;
+  min-height: 2.75rem;
   padding: .72rem 1.1rem;
-  border-color: var(--admin-v2-accent);
+  border: 1px solid var(--admin-v2-accent);
   background: var(--admin-v2-accent);
   color: #211006;
+  font-size: .82rem;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -131,7 +123,6 @@
   cursor: default;
 }
 
-.previewLink:focus-visible,
 .saveButton:focus-visible,
 .sidebar a:focus-visible,
 .mobileSwitcher select:focus-visible {
@@ -144,16 +135,16 @@
 .body {
   display: grid;
   grid-template-columns: 16rem minmax(0, 1fr);
-  min-height: calc(100vh - 5.25rem);
+  min-height: calc(100vh - var(--admin-v2-topbar-height));
 }
 
 .sidebar {
   position: sticky;
-  top: 5.25rem;
+  top: var(--admin-v2-topbar-height);
   display: flex;
   flex-direction: column;
   align-self: start;
-  height: calc(100dvh - 5.25rem);
+  height: calc(100dvh - var(--admin-v2-topbar-height));
   border-right: 1px solid var(--admin-v2-line);
   background: var(--admin-v2-paper);
 }
@@ -214,6 +205,7 @@
   min-width: 0;
   margin: 0 auto;
   padding: clamp(1.25rem, 3vw, 2.5rem);
+  scroll-margin-top: calc(var(--admin-v2-topbar-height) + 1rem);
 }
 
 .errorSummary {
@@ -1230,8 +1222,18 @@
   .adminTitleBlock { display: none; }
   .currentSection { padding-left: 1rem; }
   .saveStatus { min-width: 0; }
-  .saveStatus span, .previewText { display: none; }
-  .previewLink { width: 2.75rem; justify-content: center; padding: .65rem; }
+  .saveStatusDetail {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    border: 0;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
   .body { grid-template-columns: 1fr; min-height: auto; }
   .sidebar { display: none; }
   .mobileSwitcher {
@@ -1311,7 +1313,7 @@
 }
 
 @media (max-width: 480px) {
-  .topbar { min-height: 4.5rem; }
+  .shell { --admin-v2-topbar-height: 4.5rem; }
   .currentSection span { display: none; }
   .currentSection h1 { font-size: 1.15rem; }
   .topbarActions { padding: .55rem .65rem; }

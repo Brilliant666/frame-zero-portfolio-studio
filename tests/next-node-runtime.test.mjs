@@ -167,7 +167,7 @@ test("Standard Next.js standalone starts over HTTP with current route parity", a
     const html = await response.text();
     assert.match(html, /<title>内容管理后台<\/title>/);
     assert.match(html, new RegExp(`data-admin-section="${section}"`));
-    assert.match(html, /aria-label="保存全部修改"/);
+    assert.match(html, /aria-label="保存修改"/);
   }
 
   for (const templateId of templateIds) {

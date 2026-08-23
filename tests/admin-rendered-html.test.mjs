@@ -64,12 +64,10 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
     assert.match(html, /<meta property="og:site_name" content="内容管理后台"\/>/);
     assert.match(html, /<meta name="twitter:title" content="内容管理后台"\/>/);
     assert.match(html, /<link rel="icon" href="(?:https?:\/\/[^\"]+)?\/favicon\.svg"\/>/);
-    assert.match(html, /aria-label="保存全部修改"/);
-    assert.match(html, /title="保存全部修改"/);
-    assert.equal(html.match(/aria-label="保存全部修改"/g)?.length, 1);
-    assert.match(html, /data-admin-draft-preview-trigger="true"/);
-    assert.match(html, /预览当前草稿/);
-    assert.doesNotMatch(html, /查看已保存主页|预览当前主页/);
+    assert.match(html, /aria-label="保存修改"/);
+    assert.match(html, /title="保存修改"/);
+    assert.equal(html.match(/aria-label="保存修改"/g)?.length, 1);
+    assert.doesNotMatch(html, /data-admin-draft-preview-trigger="true"|预览当前草稿/);
     assert.equal(html.match(/<h1\b/g)?.length, 1);
     assert.equal(html.match(/data-admin-section="[^"]+"/g)?.length, 1);
     assert.match(html, new RegExp(`data-admin-section="${section}"`));
@@ -212,7 +210,7 @@ test("hosted Admin renders no executable local photo ingest controls", async () 
   assert.doesNotMatch(html, /data-add-materials-trigger=|data-photo-picker=|data-photo-import-preflight=/);
   assert.doesNotMatch(html, /选择照片|选择文件夹|确认导入|重新选择|高级 \/ 命令行导入|photos:import/);
   assert.doesNotMatch(html, /aria-label="素材库视图"|>在库素材 |移入回收站|恢复素材/);
-  assert.match(html, /aria-label="保存全部修改"/);
+  assert.match(html, /aria-label="保存修改"/);
 });
 
 test("a local-looking hosted hostname cannot enable the loopback controls", async () => {

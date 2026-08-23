@@ -83,7 +83,7 @@ test("admin status distinguishes load errors, save errors, dirty, and success", 
   assert.deepEqual(getAdminStatus("error", "idle", false), { label: "读取失败", tone: "error" });
   assert.deepEqual(getAdminStatus("ready", "saving", true), { label: "正在保存", tone: "busy" });
   assert.deepEqual(getAdminStatus("ready", "error", true), { label: "保存失败", tone: "error" });
-  assert.deepEqual(getAdminStatus("ready", "success", true), { label: "未保存", tone: "dirty" });
+  assert.deepEqual(getAdminStatus("ready", "success", true), { label: "有未保存修改", tone: "dirty" });
   assert.deepEqual(getAdminStatus("ready", "success", false), { label: "保存成功", tone: "success" });
   assert.deepEqual(getAdminStatus("ready", "idle", false), { label: "已保存", tone: "saved" });
 });

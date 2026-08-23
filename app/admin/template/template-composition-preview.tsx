@@ -243,7 +243,7 @@ export function LayoutCompositionPreview({
             </button>
           </div>
           <p className={styles.templateCompositionPreviewBoundary}>
-            采用推荐排版只更新当前模板的本地草稿；仍需顶栏“保存全部修改”才会持久化。
+            采用推荐排版只更新当前模板的本地草稿；仍需点击顶栏“保存修改”才会持久化。
           </p>
           {dialogOpen ? (
             <TemplatePreviewDialog

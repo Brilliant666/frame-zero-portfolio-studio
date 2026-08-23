@@ -56,7 +56,7 @@ export function getAdminStatus(
   if (loadState === "error") return { label: "读取失败", tone: "error" };
   if (saveState === "saving") return { label: "正在保存", tone: "busy" };
   if (saveState === "error") return { label: "保存失败", tone: "error" };
-  if (dirty) return { label: "未保存", tone: "dirty" };
+  if (dirty) return { label: "有未保存修改", tone: "dirty" };
   if (saveState === "success") return { label: "保存成功", tone: "success" };
   return { label: "已保存", tone: "saved" };
 }

@@ -89,9 +89,8 @@ test("keeps editable content and eleven lazy template choices in one configurati
   assert.match(adminShell, /data-admin-title="true"/);
   assert.match(adminShell, /<strong>ADMIN<\/strong>/);
   assert.doesNotMatch(adminShell, /FRAME\/\/ZERO/);
-  assert.match(adminShell, /预览当前草稿/);
-  assert.match(adminShell, /DraftTemplatePreviewTrigger/);
-  assert.doesNotMatch(adminShell, /预览当前主页|查看已保存主页/);
+  assert.doesNotMatch(adminShell, /预览当前草稿|DraftTemplatePreviewTrigger|data-admin-draft-preview-trigger/);
+  assert.match(adminShell, /"保存修改"/);
   assert.match(adminShell, /ADMIN_SECTIONS\.map/);
   assert.match(api, /onConflictDoUpdate/);
   assert.match(schema, /site_settings/);

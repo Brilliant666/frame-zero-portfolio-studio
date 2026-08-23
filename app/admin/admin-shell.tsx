@@ -7,21 +7,29 @@ import { ADMIN_SECTIONS, getAdminSection } from "./admin-navigation";
 import { formatSavedAt, useAdmin } from "./admin-provider";
 import { getAdminStatus } from "./admin-state";
 import styles from "./admin-v2.module.css";
-import DraftTemplatePreviewTrigger from "./draft-preview";
 
 export default function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
   const router = useRouter();
   const current = getAdminSection(pathname);
-  const { content, dirty, editorLabel, loadState, message, reload, save, saveState, updatedAt } = useAdmin();
+  const { dirty, editorLabel, loadState, message, reload, save, saveState, updatedAt } = useAdmin();
   const savedAt = formatSavedAt(updatedAt);
   const status = getAdminStatus(loadState, saveState, dirty);
   const saveDisabled = !dirty || loadState !== "ready" || saveState === "saving";
-  const saveActionLabel = saveState === "saving" ? "正在保存全部修改" : "保存全部修改";
+  const saveActionLabel = saveState === "saving"
+    ? "正在保存修改"
+    : saveState === "error"
+      ? "重试保存"
+      : "保存修改";
   const showStatusMessage = loadState !== "ready"
     || saveState === "error"
     || saveState === "saving"
     || saveState === "success";
+  const statusDetail = showStatusMessage
+    ? message
+    : savedAt
+      ? `上次保存 ${savedAt}`
+      : "保存后，主页刷新即显示最新内容";
 
   return (
     <div className={styles.shell} data-admin-v2="true">
@@ -47,25 +55,21 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
             aria-atomic="true"
           >
             <strong>{status.label}</strong>
-            <span>{showStatusMessage ? message : savedAt ? `上次保存 ${savedAt}` : editorLabel}</span>
+            <span className={styles.saveStatusDetail}>{statusDetail}</span>
           </div>
-          <DraftTemplatePreviewTrigger
-            templateId={content.activeTemplate}
-            label="预览当前草稿"
-            className={styles.previewLink}
-            scope="admin"
-          />
           <button
             type="button"
             className={styles.saveButton}
             onClick={() => void save()}
             disabled={saveDisabled}
             aria-label={saveActionLabel}
+            aria-keyshortcuts="Control+S Meta+S"
+            aria-busy={saveState === "saving"}
             title={saveActionLabel}
           >
             <span className={styles.saveButtonFull} aria-hidden="true">{saveActionLabel}</span>
             <span className={styles.saveButtonCompact} aria-hidden="true">
-              {saveState === "saving" ? "保存中…" : "保存"}
+              {saveState === "saving" ? "保存中…" : saveState === "error" ? "重试" : "保存"}
             </span>
           </button>
         </div>

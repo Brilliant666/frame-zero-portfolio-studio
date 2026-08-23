@@ -183,7 +183,7 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   assert.match(layoutPreview, /刷新排版建议/);
   assert.match(layoutPreview, /预览推荐排版/);
   assert.match(layoutPreview, /采用推荐到草稿/);
-  assert.match(layoutPreview, /仍需顶栏“保存全部修改”才会持久化/);
+  assert.match(layoutPreview, /仍需点击顶栏“保存修改”才会持久化/);
   assert.match(layoutPreview, /applyTemplateCompositionPreview\(current, planned\)/);
   assert.match(layoutPreview, /data-hero-missing=\{planned\.heroMissingCount\}/);
   assert.match(layoutPreview, /主视觉 \{planned\.heroMissingCount\} 张/);
@@ -581,12 +581,10 @@ test("layout recommendations receive active library assets while template struct
   assert.doesNotMatch(structurePreview, /PhotoAsset|libraryItems|libraryState|library-manifest|planTemplateCompositionPreview|loadLocalPhotoLibrary/);
 });
 
-test("Admin V2 keeps shared draft persistence on the unchanged site-content endpoint", async () => {
-  const [provider, shell, draftPreview, draftPreviewDialog, template, structurePreview, layout, layoutPreview] = await Promise.all([
+test("Admin V2 keeps one shared save action on the unchanged site-content endpoint", async () => {
+  const [provider, shell, template, structurePreview, layout, layoutPreview] = await Promise.all([
     source("app/admin/admin-provider.tsx"),
     source("app/admin/admin-shell.tsx"),
-    source("app/admin/draft-preview.tsx"),
-    source("app/admin/draft-preview-dialog.tsx"),
     source("app/admin/template/template-editor.tsx"),
     source("app/admin/template/template-structure-preview.tsx"),
     source("app/admin/layout/layout-workspace.tsx"),
@@ -597,16 +595,14 @@ test("Admin V2 keeps shared draft persistence on the unchanged site-content endp
   assert.match(provider, /JSON\.stringify\(\{ content: submitted \}\)/);
   assert.match(provider, /beforeunload/);
   assert.match(provider, /isAdminSaveShortcut/);
+  assert.match(provider, /saveState !== "success"/);
+  assert.match(provider, /window\.setTimeout\(\(\) => setSaveState\("idle"\), 2500\)/);
   assert.doesNotMatch(provider, /site_settings|SiteDocument|migration|repository/);
-  assert.equal([provider, shell, draftPreview, draftPreviewDialog, template, structurePreview, layout, layoutPreview]
+  assert.equal([provider, shell, template, structurePreview, layout, layoutPreview]
     .reduce((count, input) => count + (input.match(/method:\s*"PUT"/g)?.length ?? 0), 0), 1);
-  assert.match(shell, /<DraftTemplatePreviewTrigger/);
-  assert.match(shell, /templateId=\{content\.activeTemplate\}/);
-  assert.match(shell, /预览当前草稿/);
-  assert.doesNotMatch(shell, /查看已保存主页|预览当前主页/);
-  assert.match(draftPreview, /data-admin-draft-preview-trigger=\{scope === "admin" \? "true" : undefined\}/);
-  assert.match(draftPreviewDialog, /直接使用当前内存草稿 · 不读取已保存主页 · 不保存/);
-  assert.doesNotMatch([shell, draftPreview, draftPreviewDialog, template, structurePreview, layout, layoutPreview].join("\n"), /\/api\/site-content/);
+  assert.doesNotMatch(shell, /DraftTemplatePreviewTrigger|预览当前草稿|data-admin-draft-preview-trigger/);
+  assert.match(shell, /aria-keyshortcuts="Control\+S Meta\+S"/);
+  assert.doesNotMatch([shell, template, structurePreview, layout, layoutPreview].join("\n"), /\/api\/site-content/);
 });
 
 test("responsive CSS exposes a mobile section switcher and single-column layout without hiding data", async () => {
@@ -618,8 +614,11 @@ test("responsive CSS exposes a mobile section switcher and single-column layout 
   assert.match(shell, /<select value=\{current\.href\}/);
   assert.match(shell, /data-admin-title="true"/);
   assert.doesNotMatch(shell, /FRAME\/\/ZERO/);
-  assert.match(shell, /saveActionLabel = saveState === "saving" \? "正在保存全部修改" : "保存全部修改"/);
+  assert.match(shell, /"正在保存修改"/);
+  assert.match(shell, /"重试保存"/);
+  assert.match(shell, /"保存修改"/);
   assert.match(shell, /aria-label=\{saveActionLabel\}/);
+  assert.match(shell, /aria-keyshortcuts="Control\+S Meta\+S"/);
   assert.match(shell, /title=\{saveActionLabel\}/);
   assert.match(shell, /className=\{styles\.saveButtonFull\}/);
   assert.match(shell, /className=\{styles\.saveButtonCompact\}/);
@@ -645,6 +644,11 @@ test("responsive CSS exposes a mobile section switcher and single-column layout 
   assert.match(css, /\.templateMobileSelector\s*\{\s*display:\s*grid/);
   assert.match(css, /grid-template-areas: "slots" "editor" "assets"/);
   assert.match(css, /@media \(max-width: 480px\)/);
+  assert.match(css, /\.shell\s*\{[^}]*padding-top:\s*var\(--admin-v2-topbar-height\)/s);
+  assert.match(css, /\.topbar\s*\{[^}]*position:\s*fixed;[^}]*inset:\s*0 0 auto;[^}]*height:\s*var\(--admin-v2-topbar-height\)/s);
+  assert.match(css, /\.sidebar\s*\{[^}]*top:\s*var\(--admin-v2-topbar-height\);[^}]*height:\s*calc\(100dvh - var\(--admin-v2-topbar-height\)\)/s);
+  assert.match(css, /\.main\s*\{[^}]*scroll-margin-top:\s*calc\(var\(--admin-v2-topbar-height\) \+ 1rem\)/s);
+  assert.doesNotMatch(css, /\.previewLink|\.previewText/);
   assert.match(css, /@media \(max-width: 480px\)[\s\S]*\.templateMaterialDemand,[\s\S]*\.templateMaterialSignals\s*\{\s*grid-template-columns:\s*1fr;/);
   assert.match(css, /@media \(max-width: 480px\)[\s\S]*\.templatePreviewSlotMap\s*\{\s*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.saveButtonCompact\s*\{\s*display:\s*none/);
