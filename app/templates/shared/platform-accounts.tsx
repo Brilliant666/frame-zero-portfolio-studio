@@ -1,8 +1,12 @@
 /* eslint-disable @next/next/no-img-element -- uploaded platform cards retain their original dimensions. */
 
+"use client";
+
+import { useEffect, useState } from "react";
 import type { SiteContent } from "../../site-config";
 import { getPlatformQrAssetPath } from "../../platform-qr";
 import { getSafeSocialUrl } from "../../social-links";
+import { probePlatformCardAvailability } from "./platform-card-availability";
 import styles from "./platform-accounts.module.css";
 
 type PlatformAccountsProps = Readonly<{
@@ -10,6 +14,44 @@ type PlatformAccountsProps = Readonly<{
   layout?: "grid" | "stack";
   tone?: "light" | "dark";
 }>;
+
+function PlatformShareCard({ label, url }: Readonly<{ label: string; url: string }>) {
+  const [status, setStatus] = useState<"checking" | "available" | "unavailable">("checking");
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void probePlatformCardAvailability(url, { signal: controller.signal })
+      .then((available) => {
+        if (!controller.signal.aborted) {
+          setStatus(available ? "available" : "unavailable");
+        }
+      });
+    return () => controller.abort();
+  }, [url]);
+
+  if (status !== "available") return null;
+
+  return (
+    <div className={styles.shareCard} role="group" aria-label={`${label}分享卡片`}>
+      <a
+        className={styles.fullImageLink}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`打开${label}分享卡片原图`}
+      >
+        <img
+          src={url}
+          alt={`${label}平台分享卡片`}
+          loading="lazy"
+          decoding="async"
+          onError={() => setStatus("unavailable")}
+        />
+        <span>打开原图 ↗</span>
+      </a>
+    </div>
+  );
+}
 
 export default function PlatformAccounts({ accounts, layout = "grid", tone = "light" }: PlatformAccountsProps) {
   const visibleAccounts = accounts.flatMap((account, index) => {
@@ -50,23 +92,7 @@ export default function PlatformAccounts({ accounts, layout = "grid", tone = "li
             ) : null}
 
             {account.qrUrl ? (
-              <div className={styles.shareCard} role="group" aria-label={`${account.label}分享卡片`}>
-                <a
-                  className={styles.fullImageLink}
-                  href={account.qrUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`打开${account.label}分享卡片原图`}
-                >
-                  <img
-                    src={account.qrUrl}
-                    alt={`${account.label}平台分享卡片`}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                  <span>打开原图 ↗</span>
-                </a>
-              </div>
+              <PlatformShareCard key={account.qrUrl} label={account.label} url={account.qrUrl} />
             ) : null}
           </article>
         ))}
