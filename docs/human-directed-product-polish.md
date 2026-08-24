@@ -8,19 +8,19 @@
 > - Engineering launch: `FROZEN`
 > - Engineering launch line: `FROZEN_AT_REPO_SIDE_BOOTSTRAP_READY`
 > - Branch: `product/prelaunch-manual-polish-02`
-> - Accepted PR: `#24 — fix: refine local workflow and template presentation`
-> - Current Draft PR workspace: `#25 — fix: continue human-directed product polish`
+> - Accepted PR #24: `#24 — fix: refine local workflow and template presentation`
+> - Accepted PR #25 stage batch: `#25 — fix: continue human-directed product polish`
 > - PR #24 closure mode: `FINAL_HUMAN_ACCEPTANCE + MERGE`
 > - PR #24 feature freeze: `TRUE`
 > - PR #24 limited baseline acceptance: `ACCEPTED`
 > - PR #25 workspace: `HUMAN_DIRECTED_PRODUCT_POLISH_WORKSPACE`
 > - PR #25 workspace status: `FEATURE_FROZEN`
-> - PR #25 mode: `LIMITED_CLOSURE + THIRTEEN_REQUEST_STAGE_REVIEW`
-> - PR #25 current request: `HR25-013 — READY_FOR_HUMAN_RECHECK`
+> - PR #25 mode: `FINAL_HUMAN_ACCEPTANCE + MERGE`
+> - PR #25 accepted batch: `HR25-001..013 — ACCEPTED_AS_STAGE_BASELINE`
 > - PR #25 next request: `HR25-014 — NOT_STARTED`
 > - PR #25 feature freeze: `TRUE`
 > - Human-approved templates: `0 / 11`
-> - Current hand-off: `WAITING_FOR_HUMAN_REVIEW`
+> - Current hand-off: `READY_AND_SQUASH_MERGE_AUTHORIZED`
 > - External operations: `NOT_AUTHORIZED`
 > - Base: `main@dc471795139dc47649368bb37c0178fb77188fea`
 
@@ -63,11 +63,12 @@ This is not an automated backlog. PR #24 is accepted and merged as the limited
 baseline. Before the feature freeze, PR #25 operated as a lightweight,
 human-request-only workspace: Codex handled exactly one concrete request,
 validated it in proportion to risk, pushed a focused commit to the same Draft
-PR, reported the result, and stopped for human input. The workspace is now in
-limited closure and no longer accepts another request. Observations outside the
-closure may be recorded but must not be implemented without later human
-authorization. Neither PR establishes final template visual approval or
-completes pre-launch product polish.
+PR, reported the result, and stopped for human input. The workspace then entered
+limited closure, and its HR25-001 through HR25-013 batch is now accepted as a
+stage baseline. It no longer accepts another request. Observations outside the
+accepted batch may be recorded but must not be implemented without later human
+authorization in a separate workspace. Neither PR establishes final template
+visual approval or completes pre-launch product polish.
 
 The formal project state remains:
 
@@ -88,12 +89,13 @@ human visual approval remains pending.
 Base: main@dc471795139dc47649368bb37c0178fb77188fea
 Status: FEATURE_FROZEN
 Workspace: HUMAN_DIRECTED_PRODUCT_POLISH_WORKSPACE
-Mode: LIMITED_CLOSURE + THIRTEEN_REQUEST_STAGE_REVIEW
-Current request: HR25-013 — READY_FOR_HUMAN_RECHECK
+Mode: FINAL_HUMAN_ACCEPTANCE + MERGE
+Accepted batch: HR25-001..013 — ACCEPTED_AS_STAGE_BASELINE
 Next request: HR25-014 — NOT_STARTED
 PR25_FEATURE_FREEZE: TRUE
-PR25_HR25_001_TO_013: IMPLEMENTED_READY_FOR_HUMAN_REVIEW
-PR25_LIMITED_BASELINE: READY_FOR_HUMAN_DECISION
+PR25_HR25_001_TO_013: ACCEPTED_AS_STAGE_BASELINE
+PR25_LIMITED_BASELINE: ACCEPTED
+PR25_STAGE_REVIEW: ACCEPTED
 PR24_LIMITED_BASELINE: ACCEPTED
 PRE_LAUNCH_PRODUCT_POLISH: IN_PROGRESS
 ELEVEN_TEMPLATE_HUMAN_VISUAL_APPROVAL: PENDING
@@ -102,12 +104,12 @@ ENGINEERING_LAUNCH_LINE: FROZEN_AT_REPO_SIDE_BOOTSTRAP_READY
 PLATFORM_CARD_LOCAL_ONLY: ACCEPTED_FOR_LOCAL_PRODUCT_EXPERIENCE
 PLATFORM_CARD_PUBLIC_RENDER_FAILSAFE: CLOSED
 PLATFORM_CARD_HOSTED_RESOLUTION_PENDING: P1_PRE_DEPLOYMENT
-CURRENT_HAND_OFF: WAITING_FOR_HUMAN_REVIEW
+CURRENT_HAND_OFF: READY_AND_SQUASH_MERGE_AUTHORIZED
 ```
 
-The workspace never selects or implements a known follow-up automatically.
-Each future request uses `HR25-001`, `HR25-002`, and so on, and follows this
-bounded sequence:
+The historical PR #25 workspace never selected or implemented a known follow-up
+automatically and now accepts no further requests. Its requests used
+`HR25-001`, `HR25-002`, and so on, following this bounded sequence:
 
 ```text
 human request
@@ -190,8 +192,9 @@ PNG is exposed or copied into the production artifact.
 
 ```text
 PR25_FEATURE_FREEZE = TRUE
-PR25_HR25_001_TO_013 = IMPLEMENTED_READY_FOR_HUMAN_REVIEW
-PR25_LIMITED_BASELINE = READY_FOR_HUMAN_DECISION
+PR25_HR25_001_TO_013 = ACCEPTED_AS_STAGE_BASELINE
+PR25_LIMITED_BASELINE = ACCEPTED
+PR25_STAGE_REVIEW = ACCEPTED
 PRE_LAUNCH_PRODUCT_POLISH = IN_PROGRESS
 HUMAN_DIRECTED_PRODUCT_POLISH = IN_PROGRESS
 ELEVEN_TEMPLATE_HUMAN_VISUAL_APPROVAL = PENDING
@@ -200,9 +203,20 @@ PLATFORM_CARD_LOCAL_ONLY = ACCEPTED_FOR_LOCAL_PRODUCT_EXPERIENCE
 PLATFORM_CARD_PUBLIC_RENDER_FAILSAFE = CLOSED
 PLATFORM_CARD_HOSTED_RESOLUTION_PENDING = P1_PRE_DEPLOYMENT
 ENGINEERING_LAUNCH_LINE = FROZEN_AT_REPO_SIDE_BOOTSTRAP_READY
-CURRENT_HAND_OFF = WAITING_FOR_HUMAN_REVIEW
+CURRENT_HAND_OFF = READY_AND_SQUASH_MERGE_AUTHORIZED
 HR25-014 = NOT_STARTED
 ```
+
+### Final human acceptance
+
+The human reviewer accepted the exact pre-acceptance head
+`f8726a4994f72995257a897805049fac28863209` as the PR #25 stage baseline and
+authorized Ready plus squash merge after the final governance head passes all
+required checks. This acceptance covers HR25-001 through HR25-013 and the
+limited stage review. It does not complete `PRE_LAUNCH_PRODUCT_POLISH` or
+`HUMAN_DIRECTED_PRODUCT_POLISH`, does not complete the eleven-template visual
+review, and does not change `HUMAN_APPROVED = 0 / 11`. All eleven formal
+templates remain `READY_FOR_HUMAN_RECHECK`.
 
 ## PR #24 request protocol
 
@@ -472,11 +486,14 @@ gates run when the change risk or final review requires them. GitHub Quality,
 Public repository safety, Container, and Deployment Bootstrap gates remain
 enabled for every PR update.
 
-After this closure, the required state is:
+After final human acceptance and before the authorized squash merge, the
+required state is:
 
 ```text
-WAITING_FOR_HUMAN_REVIEW
+READY_AND_SQUASH_MERGE_AUTHORIZED
 ```
 
-The Draft PR is not marked Ready or merged without separate human approval. No
-next product issue is selected automatically, and HR25-014 remains not started.
+The separate human approval has now been recorded for the exact accepted batch.
+The PR may be marked Ready and squash-merged only after the final governance
+head passes all required checks. No next product issue is selected automatically,
+and HR25-014 remains not started.

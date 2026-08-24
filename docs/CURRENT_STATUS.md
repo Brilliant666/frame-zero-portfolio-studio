@@ -26,13 +26,14 @@ PR #24 feature freeze: TRUE
 PR #24 product baseline: ACCEPTED
 PR #24 limited baseline acceptance: ACCEPTED
 PR #25 workspace status: FEATURE_FROZEN
-PR #25 mode: LIMITED_CLOSURE + THIRTEEN_REQUEST_STAGE_REVIEW
-PR #25 current request: HR25-013 — READY_FOR_HUMAN_RECHECK
+PR #25 mode: FINAL_HUMAN_ACCEPTANCE + MERGE
+PR #25 accepted batch: HR25-001..013 — ACCEPTED_AS_STAGE_BASELINE
 PR #25 next request: HR25-014 — NOT_STARTED
 PR #25 feature freeze: TRUE
-PR #25 HR25-001..013: IMPLEMENTED_READY_FOR_HUMAN_REVIEW
-PR #25 limited baseline: READY_FOR_HUMAN_DECISION
-PR #25 hand-off: WAITING_FOR_HUMAN_REVIEW
+PR #25 HR25-001..013: ACCEPTED_AS_STAGE_BASELINE
+PR #25 limited baseline: ACCEPTED
+PR #25 stage review: ACCEPTED
+PR #25 hand-off: READY_AND_SQUASH_MERGE_AUTHORIZED
 Platform card local-only: ACCEPTED_FOR_LOCAL_PRODUCT_EXPERIENCE
 Platform card public render fail-safe: CLOSED
 Platform card hosted resolution pending: P1_PRE_DEPLOYMENT
@@ -149,15 +150,20 @@ close
 `PRE_LAUNCH_PRODUCT_POLISH`, complete the eleven-template visual review, or
 claim V1 product-experience completion. No formal template has
 `HUMAN_APPROVED` status (`0 / 11`); all eleven remain ready for human recheck or
-continued template-by-template polish in PR #25 under explicit human requests.
+continued template-by-template polish in a later explicitly authorized
+workspace.
 
-PR #25 is now feature-frozen after HR25-013. HR25-001 through HR25-013 are
-implemented and ready for human review, not human-approved. The closure audit
-mapped every pre-closure commit and production change to Bootstrap or an
-explicit HR request. Its only product-code closure change makes uploaded local
-platform cards fail visually safe when their loopback companion, asset, or
-route is unavailable; account text and safe HTTPS links remain usable. The
-feature is still a Legacy/local SiteContent extension, while hosted platform
+PR #25 is feature-frozen after HR25-013. Human review has accepted HR25-001
+through HR25-013 and the limited stage review as the second human-directed
+product-polish stage baseline. Ready and squash merge are authorized for the
+exact accepted head after its final CI succeeds. This stage acceptance does not
+complete pre-launch or human-directed product polish and does not mark any
+formal template `HUMAN_APPROVED`; all eleven remain ready for human recheck.
+The closure audit mapped every pre-closure commit and production change to
+Bootstrap or an explicit HR request. Its only product-code closure change makes
+uploaded local platform cards fail visually safe when their loopback companion,
+asset, or route is unavailable; account text and safe HTTPS links remain usable.
+The feature is still a Legacy/local SiteContent extension, while hosted platform
 card resolution remains `P1_PRE_DEPLOYMENT`. See
 [pr25-stage-review.md](pr25-stage-review.md) for the audit matrices and frozen
 architecture boundaries.

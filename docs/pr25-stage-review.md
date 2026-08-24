@@ -6,13 +6,16 @@
 > - Baseline: `main@dc471795139dc47649368bb37c0178fb77188fea`
 > - Branch: `product/prelaunch-manual-polish-02`
 > - Pre-closure head: `8f05aa5a1e5fcdde6980396e133f1b1c41a2e4f4`
-> - State: `WAITING_FOR_HUMAN_REVIEW`
+> - Accepted pre-acceptance head: `f8726a4994f72995257a897805049fac28863209`
+> - State: `READY_AND_SQUASH_MERGE_AUTHORIZED`
 > - Feature freeze: `TRUE`
 
-This is an additive closure audit. It does not rewrite any human request or
-convert automated evidence into human approval. PR #25 remains Open + Draft;
-all eleven templates remain `READY_FOR_HUMAN_RECHECK`, with
-`HUMAN_APPROVED = 0 / 11`.
+This is an additive closure audit. It does not rewrite any human request. The
+human reviewer has accepted HR25-001 through HR25-013 and this stage review as
+the second human-directed product-polish stage baseline. That stage acceptance
+authorizes Ready and squash merge after final-head CI; it does not convert any
+of the eleven formal templates to `HUMAN_APPROVED`. They remain
+`READY_FOR_HUMAN_RECHECK`, with `HUMAN_APPROVED = 0 / 11`.
 
 ## `THIRTEEN_REQUEST_AUDIT_MATRIX`
 
@@ -163,13 +166,16 @@ None of these inventories is authorized by this closure.
 
 ```text
 P0 = 0
+PR25_HR25_001_TO_013 = ACCEPTED_AS_STAGE_BASELINE
+PR25_LIMITED_BASELINE = ACCEPTED
+PR25_STAGE_REVIEW = ACCEPTED
 ELEVEN_TEMPLATE_HUMAN_VISUAL_APPROVAL = PENDING
 HUMAN_APPROVED = 0 / 11
 PR25_FEATURE_FREEZE = TRUE
 HR25-014 = NOT_STARTED
-CURRENT_HAND_OFF = WAITING_FOR_HUMAN_REVIEW
+CURRENT_HAND_OFF = READY_AND_SQUASH_MERGE_AUTHORIZED
 ```
 
 Automated tests, CI, screenshots, browser smoke, a clean console, or a PR merge
-do not mean `HUMAN_APPROVED`. The next action is a human decision to accept the
-PR #25 batch or request one final bounded fix.
+do not mean `HUMAN_APPROVED`. Human stage acceptance is now recorded; the next
+authorized actions are final-head CI, Ready, and squash merge only.
