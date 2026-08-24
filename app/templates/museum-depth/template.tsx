@@ -6,11 +6,25 @@ import { useMemo, type CSSProperties } from "react";
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
+import PlatformAccounts from "../shared/platform-accounts";
+import { useTemplateSectionNavigation } from "../shared/use-template-section-navigation";
 import styles from "./template.module.css";
 
 const MUSEUM_RATIOS = getTemplateSlotRatios("museum-depth");
+const MUSEUM_VIEW_HASHES = {
+  works: "#museum-exhibition",
+  packages: "#museum-tickets",
+  contact: "#museum-visit",
+} as const;
+const MUSEUM_VIEW_ALIASES = [{ hash: "#museum-top", view: "works" }] as const;
 
-export default function MuseumDepthTemplate({ content, works, packages, bookingTemplate, copiedKey, onCopy, onOpenWork }: TemplateProps) {
+export default function MuseumDepthTemplate({ content, works, packages, bookingTemplate, copiedKey, isPreview, onCopy, onBeforeViewChange, onOpenWork }: TemplateProps) {
+  const { activeView, handleInternalLinkClick } = useTemplateSectionNavigation({
+    aliases: MUSEUM_VIEW_ALIASES,
+    hashes: MUSEUM_VIEW_HASHES,
+    isPreview,
+    onBeforeViewChange,
+  });
   const photoSlots = useMemo(
     () => buildPhotoSlots(works, MUSEUM_RATIOS, { templateId: "museum-depth" }),
     [works],
@@ -20,14 +34,19 @@ export default function MuseumDepthTemplate({ content, works, packages, bookingT
   const exhibitSlots = photoSlots.slice(1);
 
   return (
-    <main className={styles.shell} data-template="museum-depth">
+    <main
+      className={styles.shell}
+      data-template="museum-depth"
+      data-template-active-view={activeView}
+      onClick={handleInternalLinkClick}
+    >
       <header className={styles.header}>
         <a href="#museum-top" className={styles.brand}>{content.profile.brand}<small>VIRTUAL EXHIBITION</small></a>
-        <nav aria-label="深度展厅模板导航"><a href="#museum-exhibition">EXHIBITION</a><a href="#museum-tickets">TICKETS</a><a href="#museum-visit">VISIT</a></nav>
+        <nav aria-label="深度展厅模板导航"><a href="#museum-exhibition" aria-current={activeView === "works" ? "page" : undefined}>作品</a><a href="#museum-tickets" aria-current={activeView === "packages" ? "page" : undefined}>拍摄套餐</a><a href="#museum-visit" aria-current={activeView === "contact" ? "page" : undefined}>联系约拍</a></nav>
         <span>{content.profile.city}</span>
       </header>
 
-      <section id="museum-top" className={styles.hero}>
+      <section id="museum-top" className={styles.hero} data-template-view="works" hidden={activeView !== "works"} tabIndex={-1}>
         <div className={styles.heroNumber}>01</div>
         <div className={styles.heroCopy}>
           <small>FRAME//ZERO PRESENTS · EXHIBITION 2026</small>
@@ -66,7 +85,7 @@ export default function MuseumDepthTemplate({ content, works, packages, bookingT
         <div className={styles.heroInfo}>{content.trustItems.map((item) => <p key={item.label}><small>{item.label}</small><strong>{item.value}</strong></p>)}</div>
       </section>
 
-      <section id="museum-exhibition" className={styles.exhibition}>
+      <section id="museum-exhibition" className={styles.exhibition} data-template-view="works" hidden={activeView !== "works"} tabIndex={-1}>
         <div className={styles.corridorLines} aria-hidden="true"><i /><i /><i /><i /></div>
         <div className={styles.exhibitionIntro}><span>CURATED ARCHIVE / {exhibitSlots.length} ROOMS</span><h2>向展厅深处<br />缓慢行进。</h2><p>点击任意展框查看完整画幅。滚动时，作品会从空间深处靠近。</p></div>
         <div className={styles.exhibitList}>
@@ -97,7 +116,7 @@ export default function MuseumDepthTemplate({ content, works, packages, bookingT
         </div>
       </section>
 
-      <section id="museum-tickets" className={styles.tickets}>
+      <section id="museum-tickets" className={styles.tickets} data-template-view="packages" hidden={activeView !== "packages"} tabIndex={-1}>
         <div className={styles.sectionHead}><span>02 / PRIVATE SESSION</span><h2>选择你的参观方式</h2><p>{content.hero.services}</p></div>
         <div className={styles.ticketGrid}>
           {packages.map((item) => (
@@ -111,15 +130,16 @@ export default function MuseumDepthTemplate({ content, works, packages, bookingT
         </div>
       </section>
 
-      <section className={styles.statement}>
+      <section className={styles.statement} data-template-view="works" hidden={activeView !== "works"}>
         <span>{content.statement.eyebrow}</span><h2>{content.statement.lineOne}<br />{content.statement.lineTwo}</h2><p>{content.profile.brand} · PERMANENT COLLECTION</p>
       </section>
 
-      <section id="museum-visit" className={styles.visit}>
+      <section id="museum-visit" className={styles.visit} data-template-view="contact" hidden={activeView !== "contact"} tabIndex={-1}>
         <div className={styles.visitCopy}>
           <span>03 / PLAN YOUR VISIT</span><h2>预约一次<br />私人展览。</h2><p>{content.contact.note}</p>
           <button type="button" onClick={() => void onCopy(content.contact.wechat, "museum-wechat")}><small>WECHAT / 点击复制</small><strong>{copiedKey === "museum-wechat" ? "已复制 ✓" : content.contact.wechat}</strong></button>
           <a href={`mailto:${content.contact.email}`}><small>EMAIL</small><strong>{content.contact.email}</strong></a>
+          <PlatformAccounts accounts={content.social} tone="dark" />
         </div>
         <div className={styles.requestForm}>
           <div><span>VISITOR REQUEST</span><small>OPEN / 10:00—22:00</small></div>

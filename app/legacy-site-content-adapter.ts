@@ -83,6 +83,7 @@ export type LegacySiteContentAdapterErrorCode =
   | "slot_out_of_range"
   | "invalid_asset_id"
   | "snapshot_conflict"
+  | "unsupported_social_qr_asset"
   | "site_document_invalid";
 
 export type LegacySiteContentAdapterError = Readonly<{
@@ -651,7 +652,15 @@ function parseLegacySiteContent(
       addError(errors, "invalid_type", path, "Expected an object.");
       return { label: "", handle: "" };
     }
-    rejectUnknownFields(item, ["label", "handle"], path, errors);
+    rejectUnknownFields(item, ["label", "handle", "qrAssetId"], path, errors);
+    if (hasOwn(item, "qrAssetId")) {
+      addError(
+        errors,
+        "unsupported_social_qr_asset",
+        fieldPath(path, "qrAssetId"),
+        "Local platform QR assets require a future SiteDocument and AssetResolver decision.",
+      );
+    }
     return {
       label: requiredString(item, "label", path, errors),
       handle: requiredString(item, "handle", path, errors),

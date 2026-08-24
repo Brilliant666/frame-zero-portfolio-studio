@@ -1,0 +1,171 @@
+.accounts {
+  --accounts-bg: rgba(255, 255, 255, .54);
+  --accounts-panel: rgba(255, 255, 255, .72);
+  --accounts-text: #191713;
+  --accounts-muted: rgba(25, 23, 19, .62);
+  --accounts-line: rgba(25, 23, 19, .2);
+  --accounts-accent: #c44731;
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  gap: .85rem;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--accounts-line);
+  background: var(--accounts-bg);
+  color: var(--accounts-text);
+}
+
+.accounts[data-tone="dark"] {
+  --accounts-bg: rgba(255, 255, 255, .045);
+  --accounts-panel: rgba(255, 255, 255, .06);
+  --accounts-text: #fff4e6;
+  --accounts-muted: rgba(255, 244, 230, .64);
+  --accounts-line: rgba(255, 244, 230, .22);
+  --accounts-accent: #f07a5f;
+}
+
+.heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .6rem 1rem;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.heading h3,
+.heading p {
+  margin: 0;
+}
+
+.heading h3 {
+  font-size: .78rem;
+  letter-spacing: .08em;
+}
+
+.heading p {
+  color: var(--accounts-muted);
+  font-size: .64rem;
+  line-height: 1.65;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: .7rem;
+  min-width: 0;
+}
+
+.accounts[data-layout="stack"] .grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.account {
+  display: grid;
+  min-width: 0;
+  max-width: 100%;
+  align-content: start;
+  gap: .6rem;
+  padding: .8rem;
+  border: 1px solid var(--accounts-line);
+  background: var(--accounts-panel);
+}
+
+.identity {
+  display: grid;
+  min-width: 0;
+  gap: .25rem;
+}
+
+.identity strong {
+  color: var(--accounts-accent);
+  font-size: .68rem;
+  letter-spacing: .06em;
+}
+
+.identity span {
+  color: var(--accounts-text);
+  font-size: .7rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.profileLink,
+.fullImageLink {
+  min-height: 44px;
+}
+
+.profileLink {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  gap: .45rem;
+  color: var(--accounts-text) !important;
+  font-size: .68rem;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+  text-decoration: underline;
+  text-decoration-color: var(--accounts-accent);
+  text-underline-offset: .25rem;
+}
+
+.profileLink:hover {
+  color: var(--accounts-accent) !important;
+}
+
+.profileLink:focus-visible,
+.fullImageLink:focus-visible {
+  outline: 2px solid var(--accounts-accent);
+  outline-offset: 3px;
+}
+
+.shareCard {
+  min-width: 0;
+  padding-top: .7rem;
+  border-top: 1px solid var(--accounts-line);
+}
+
+.fullImageLink {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  gap: .55rem;
+  justify-items: start;
+  color: var(--accounts-text) !important;
+  text-decoration: none;
+}
+
+.fullImageLink img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: min(78svh, 48rem);
+  border: 1px solid var(--accounts-line);
+  background: var(--accounts-panel);
+  object-fit: contain;
+}
+
+.fullImageLink span {
+  color: var(--accounts-accent);
+  font-size: .64rem;
+  font-weight: 750;
+}
+
+@media (max-width: 640px) {
+  .accounts {
+    padding: .8rem;
+  }
+
+  .heading {
+    grid-template-columns: 1fr;
+  }
+
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

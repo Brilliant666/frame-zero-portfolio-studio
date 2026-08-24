@@ -22,6 +22,10 @@
   box-sizing: border-box;
 }
 
+.shell [hidden] {
+  display: none !important;
+}
+
 .shell a {
   color: inherit;
   text-decoration: none;
@@ -51,8 +55,9 @@
 }
 
 .topbar {
-  position: relative;
+  position: sticky;
   z-index: 30;
+  top: 0;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
@@ -63,6 +68,11 @@
   padding: .8rem clamp(1rem, 4vw, 4.5rem);
   border-bottom: 1px solid rgba(24, 34, 39, .28);
   background: rgba(238, 231, 216, .9);
+}
+
+.previewTopbar {
+  position: relative;
+  top: auto;
 }
 
 .brand {
@@ -96,15 +106,15 @@
   gap: clamp(1rem, 3vw, 2.8rem);
 }
 
-.topbar nav a,
-.topbar > p {
-  font: 750 .58rem ui-monospace, SFMono-Regular, Consolas, monospace;
-  letter-spacing: .11em;
-}
-
 .topbar nav a {
   position: relative;
-  padding: .4rem 0;
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  padding: .65rem .1rem;
+  font-size: clamp(1rem, .94rem + .18vw, 1.18rem);
+  font-weight: 800;
+  letter-spacing: .04em;
 }
 
 .topbar nav a::after {
@@ -121,37 +131,51 @@
 }
 
 .topbar nav a:hover::after,
-.topbar nav a:focus-visible::after {
+.topbar nav a:focus-visible::after,
+.topbar nav a[aria-current="page"]::after {
   transform: scaleX(1);
   transform-origin: left;
+}
+
+.topbar nav a[aria-current="page"] {
+  color: var(--coral);
 }
 
 .topbar > p {
   justify-self: end;
   margin: 0;
   color: var(--ink-soft);
+  font: 750 .68rem ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .11em;
   text-align: right;
+}
+
+.hero,
+.fieldSection,
+.packageSection,
+.bookingSection {
+  scroll-margin-top: 5rem;
 }
 
 .hero {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(16rem, .75fr);
-  gap: clamp(2rem, 7vw, 8rem);
-  align-items: end;
-  width: min(100%, 1680px);
-  min-height: clamp(38rem, 72svh, 58rem);
+  gap: clamp(2rem, 6vw, 6rem);
+  align-items: start;
+  width: 100%;
+  min-height: clamp(16rem, 30svh, 24rem);
   margin: 0 auto;
-  padding: clamp(5rem, 11vw, 11rem) clamp(1rem, 4vw, 4.5rem) clamp(4rem, 8vw, 7rem);
+  padding: clamp(.75rem, 1vw, 1rem) clamp(1rem, 4vw, 4.5rem) clamp(.9rem, 1.5vw, 1.5rem);
 }
 
 .hero::before {
   content: "";
   position: absolute;
   z-index: 0;
-  top: 7%;
-  right: 4%;
-  width: clamp(14rem, 29vw, 30rem);
+  top: -8%;
+  right: 15%;
+  width: clamp(20rem, 38vw, 44rem);
   aspect-ratio: 1;
   border: 1px dashed rgba(24,34,39,.26);
   border-radius: 50%;
@@ -162,20 +186,11 @@
   content: "✦";
   position: absolute;
   z-index: 0;
-  top: 9%;
-  right: 17%;
+  top: 10%;
+  right: 32%;
   color: var(--coral);
   font-size: clamp(4rem, 9vw, 9rem);
   transform: rotate(12deg);
-}
-
-.heroIndex {
-  position: absolute;
-  top: 9%;
-  left: clamp(1rem, 4vw, 4.5rem);
-  color: var(--ink-soft);
-  font: 700 .62rem ui-monospace, SFMono-Regular, Consolas, monospace;
-  letter-spacing: .14em;
 }
 
 .heroTitle,
@@ -183,6 +198,11 @@
 .heroSeal {
   position: relative;
   z-index: 2;
+}
+
+.heroTitle {
+  align-self: start;
+  justify-self: start;
 }
 
 .heroTitle > p,
@@ -225,10 +245,12 @@
 
 .heroCopy {
   display: grid;
-  gap: .7rem;
-  align-self: end;
+  gap: .45rem;
+  width: min(100%, 33rem);
+  align-self: start;
+  justify-self: end;
   max-width: 33rem;
-  padding: clamp(1.4rem, 3vw, 2.3rem);
+  padding: clamp(1rem, 1.8vw, 1.5rem);
   border: 1px solid rgba(24,34,39,.22);
   background: rgba(255,253,247,.6);
   box-shadow: 9px 9px 0 rgba(24,34,39,.09);
@@ -236,10 +258,10 @@
 }
 
 .heroCopy > p {
-  margin: 0 0 .4rem;
+  margin: 0 0 .2rem;
   font-family: Georgia, "Songti SC", serif;
-  font-size: clamp(1.15rem, 2vw, 1.65rem);
-  line-height: 1.55;
+  font-size: clamp(1.05rem, 1.6vw, 1.4rem);
+  line-height: 1.4;
 }
 
 .heroCopy strong {
@@ -249,33 +271,93 @@
 .heroCopy > span {
   color: var(--ink-soft);
   font-size: .72rem;
-  line-height: 1.6;
+  line-height: 1.45;
 }
 
-.heroCopy > a {
-  display: flex;
+.heroOrbitTrack {
+  position: absolute;
+  z-index: 1;
+  top: 45%;
+  left: 50%;
+  width: clamp(12rem, 24vw, 29rem);
+  height: 1px;
+  border-top: 1px dashed rgba(24, 34, 39, .42);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.heroOrbitTrack::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: .5rem;
+  aspect-ratio: 1;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  background: var(--sun);
+  box-shadow: 0 0 0 .35rem rgba(255, 253, 247, .8);
+  transform: translate(-50%, -50%);
+}
+
+.heroOrbitTrack::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1px;
+  height: clamp(7rem, 10vw, 10rem);
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(239, 94, 73, .7) 0 3px,
+    transparent 3px 8px
+  );
+  transform: translateX(-50%);
+}
+
+.heroGateway {
+  position: absolute;
+  z-index: 4;
+  top: 45%;
+  left: 50%;
+  display: inline-flex;
+  min-width: clamp(9rem, 12vw, 11rem);
+  min-height: 2.75rem;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-top: .75rem;
-  padding: .9rem 0 .45rem;
-  border-top: 1px solid var(--ink);
-  font-size: .72rem;
-  font-weight: 900;
+  justify-content: center;
+  gap: .75rem;
+  padding: .7rem 1rem;
+  border: 1px solid var(--ink);
+  background: rgba(255, 253, 247, .94);
+  box-shadow: 5px 5px 0 rgba(24, 34, 39, .12);
+  font: 900 clamp(.72rem, .66rem + .14vw, .84rem) ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .08em;
+  transform: translate(-50%, -50%);
 }
 
-.heroCopy > a b {
+.heroGateway b {
   color: var(--coral);
-  font-size: 1.3rem;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.heroGateway:hover {
+  background: #fffdf7;
+}
+
+.heroGateway:focus-visible {
+  outline: 3px solid var(--coral);
+  outline-offset: 4px;
 }
 
 .heroSeal {
   position: absolute;
   z-index: 3;
-  right: clamp(1rem, 4vw, 4.5rem);
-  bottom: 9%;
+  top: clamp(1.5rem, 2vw, 2.25rem);
+  right: clamp(.75rem, 1.5vw, 1.75rem);
+  bottom: auto;
   display: grid;
-  width: clamp(7rem, 11vw, 10rem);
+  width: clamp(5.5rem, 7vw, 7rem);
   aspect-ratio: 1;
   place-items: center;
   padding: 1rem;
@@ -284,6 +366,7 @@
   background: var(--sun);
   text-align: center;
   transform: rotate(8deg);
+  pointer-events: none;
 }
 
 .heroSeal span {
@@ -307,6 +390,19 @@
 .fieldSection {
   background: rgba(255,253,247,.6);
   border-block: 1px solid rgba(24,34,39,.18);
+  padding-block: clamp(1rem, 1.5vw, 1.75rem) clamp(3rem, 5vw, 5rem);
+}
+
+.fieldSection .sectionHeading {
+  margin-bottom: clamp(.75rem, 1.1vw, 1.1rem);
+}
+
+.fieldSection .sectionHeading h2 {
+  font-size: clamp(2.75rem, 4.5vw, 4.75rem);
+}
+
+.fieldSection .sectionHeading small {
+  margin-bottom: .35rem;
 }
 
 .sectionHeading {
@@ -662,7 +758,7 @@
 .factRow {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  margin-top: 2rem;
+  margin-top: clamp(2rem, 4vw, 3.5rem);
   border-block: 1px solid rgba(24,34,39,.32);
 }
 
@@ -844,13 +940,18 @@
   grid-template-columns: minmax(18rem, .8fr) minmax(28rem, 1.2fr);
   gap: clamp(2rem, 7vw, 8rem);
   background:
-    radial-gradient(circle at 12% 15%, rgba(255,255,255,.08) 0 .7px, transparent .8px) 0 0 / 8px 8px,
-    var(--ink);
-  color: #fff;
+    radial-gradient(circle at 12% 15%, rgba(24,34,39,.08) 0 .7px, transparent .8px) 0 0 / 8px 8px,
+    var(--cream);
+  color: var(--ink);
 }
 
 .bookingIntro {
   align-self: center;
+  padding: clamp(1.5rem, 3vw, 2.75rem);
+  background: var(--ink);
+  color: #fff;
+  box-shadow: .9rem 1rem 0 rgba(135,182,199,.32), 0 1.5rem 3rem rgba(24,34,39,.14);
+  transform: rotate(-.45deg);
 }
 
 .bookingIntro h2 {
@@ -1019,8 +1120,11 @@
   gap: 2rem;
   align-items: end;
   margin-top: clamp(3rem, 7vw, 7rem);
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(255,255,255,.35);
+  padding: 1.5rem;
+  border-top: 0;
+  background: var(--ink);
+  color: #fff;
+  box-shadow: .7rem .75rem 0 rgba(232,100,79,.24);
 }
 
 .footer > div:first-child {
@@ -1038,24 +1142,6 @@
 .footer > small {
   font: 650 .52rem ui-monospace, SFMono-Regular, Consolas, monospace;
   letter-spacing: .08em;
-}
-
-.socials {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.socials span {
-  display: grid;
-  gap: .15rem;
-  color: rgba(255,255,255,.65);
-  font-size: .58rem;
-}
-
-.socials b {
-  color: var(--coral);
-  font: 700 .48rem ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
 .footer > p {
@@ -1118,36 +1204,48 @@
   }
 
   .topbar {
-    grid-template-columns: 1fr auto;
-    min-height: 4.25rem;
+    grid-template-columns: 1fr;
+    gap: .35rem;
+    min-height: 0;
     padding-inline: 1rem;
   }
 
-  .topbar nav,
+  .topbar nav {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .25rem;
+    border-top: 1px solid rgba(24, 34, 39, .16);
+  }
+
+  .topbar nav a {
+    justify-content: center;
+    min-width: 0;
+    min-height: 2.75rem;
+    padding: .65rem .35rem;
+    text-align: center;
+  }
+
   .topbar > p {
     display: none;
   }
 
   .hero {
     grid-template-columns: 1fr;
-    gap: 2.5rem;
+    gap: 1.25rem;
     min-height: auto;
-    padding: 7rem 1rem 5rem;
+    padding: 2.5rem 1rem 3.25rem;
   }
 
   .hero::before {
-    top: 6rem;
+    top: 2.5rem;
     right: -7rem;
+    width: clamp(11rem, 52vw, 15rem);
   }
 
   .hero::after {
-    top: 7rem;
+    top: 3.5rem;
     right: 1rem;
-  }
-
-  .heroIndex {
-    top: 2.5rem;
-    left: 1rem;
   }
 
   .heroTitle h1 {
@@ -1158,16 +1256,31 @@
     transform: rotate(.5deg);
   }
 
+  .heroOrbitTrack {
+    display: none;
+  }
+
+  .heroGateway {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 100%;
+    min-width: 0;
+    transform: none;
+  }
+
   .heroSeal {
-    right: 1rem;
-    bottom: 1.2rem;
-    width: 6.5rem;
+    display: none;
   }
 
   .fieldSection,
   .packageSection,
   .bookingSection {
     padding: 5rem 1rem;
+  }
+
+  .fieldSection {
+    padding-block: 2.5rem 3.5rem;
   }
 
   .sectionHeading {
@@ -1301,6 +1414,10 @@
   .mobileCta a {
     background: var(--ink);
     color: #fff;
+  }
+
+  .shell[data-polaroid-active-view="field"] .mobileCta {
+    display: none;
   }
 }
 

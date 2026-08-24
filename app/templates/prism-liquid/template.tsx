@@ -6,10 +6,18 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "r
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoSlot } from "../shared/photo-slots";
+import PlatformAccounts from "../shared/platform-accounts";
 import { justifiedPhotoColumns } from "../shared/source-orientation-layout";
+import { useTemplateSectionNavigation } from "../shared/use-template-section-navigation";
 import styles from "./template.module.css";
 
 const PRISM_RATIOS = getTemplateSlotRatios("prism-liquid");
+const PRISM_VIEW_HASHES = {
+  works: "#prism-gallery",
+  packages: "#prism-services",
+  contact: "#prism-booking",
+} as const;
+const PRISM_VIEW_ALIASES = [{ hash: "#prism-top", view: "works" }] as const;
 
 type PrismTriptychStyle = CSSProperties & { "--prism-triptych-columns": string };
 
@@ -17,8 +25,14 @@ function prismTriptychRowStyle(slots: readonly PhotoSlot[]): PrismTriptychStyle 
   return { "--prism-triptych-columns": justifiedPhotoColumns(slots) };
 }
 
-export default function PrismLiquidTemplate({ content, works, packages, bookingTemplate, copiedKey, onCopy, onOpenWork }: TemplateProps) {
+export default function PrismLiquidTemplate({ content, works, packages, bookingTemplate, copiedKey, isPreview, onCopy, onBeforeViewChange, onOpenWork }: TemplateProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const { activeView, handleInternalLinkClick } = useTemplateSectionNavigation({
+    aliases: PRISM_VIEW_ALIASES,
+    hashes: PRISM_VIEW_HASHES,
+    isPreview,
+    onBeforeViewChange,
+  });
   const gallerySlots = useMemo(
     () => buildPhotoSlots(works, PRISM_RATIOS, { templateId: "prism-liquid" }),
     [works],
@@ -44,18 +58,23 @@ export default function PrismLiquidTemplate({ content, works, packages, bookingT
   }, [move]);
 
   return (
-    <main className={styles.shell} data-template="prism-liquid">
+    <main
+      className={styles.shell}
+      data-template="prism-liquid"
+      data-template-active-view={activeView}
+      onClick={handleInternalLinkClick}
+    >
       <header className={styles.header}>
         <a href="#prism-top" className={styles.brand}>{content.profile.mark}<span>{content.profile.brand}</span></a>
         <nav aria-label="流体棱镜模板导航">
-          <a href="#prism-gallery">WORKS</a>
-          <a href="#prism-services">MODES</a>
-          <a href="#prism-booking">BOOKING</a>
+          <a href="#prism-gallery" aria-current={activeView === "works" ? "page" : undefined}>作品</a>
+          <a href="#prism-services" aria-current={activeView === "packages" ? "page" : undefined}>拍摄套餐</a>
+          <a href="#prism-booking" aria-current={activeView === "contact" ? "page" : undefined}>联系约拍</a>
         </nav>
         <span className={styles.availability}>{content.profile.availability}</span>
       </header>
 
-      <section id="prism-top" className={styles.hero}>
+      <section id="prism-top" className={styles.hero} data-template-view="works" hidden={activeView !== "works"} tabIndex={-1}>
         <div className={styles.liquidField} aria-hidden="true"><i /><i /><i /></div>
         <div className={styles.heroCopy}>
           <small>PRISM / LIQUID · COSPLAY PHOTOGRAPHY</small>
@@ -120,7 +139,7 @@ export default function PrismLiquidTemplate({ content, works, packages, bookingT
         <a className={styles.scrollCue} href="#prism-gallery">EXPLORE THE SPECTRUM ↓</a>
       </section>
 
-      <section id="prism-gallery" className={styles.gallery}>
+      <section id="prism-gallery" className={styles.gallery} data-template-view="works" hidden={activeView !== "works"} tabIndex={-1}>
         <div className={styles.sectionTitle}>
           <small>01 / REFRACTED ARCHIVE</small>
           <h2>九种角色，<br />九束不同的光。</h2>
@@ -168,7 +187,7 @@ export default function PrismLiquidTemplate({ content, works, packages, bookingT
         </div>
       </section>
 
-      <section id="prism-services" className={styles.services}>
+      <section id="prism-services" className={styles.services} data-template-view="packages" hidden={activeView !== "packages"} tabIndex={-1}>
         <div className={styles.sectionTitle}>
           <small>02 / CHOOSE A FREQUENCY</small>
           <h2>拍摄模式</h2>
@@ -186,7 +205,7 @@ export default function PrismLiquidTemplate({ content, works, packages, bookingT
         </div>
       </section>
 
-      <section id="prism-booking" className={styles.booking}>
+      <section id="prism-booking" className={styles.booking} data-template-view="contact" hidden={activeView !== "contact"} tabIndex={-1}>
         <div className={styles.bookingGlow} aria-hidden="true" />
         <div className={styles.bookingCopy}>
           <small>03 / OPEN A NEW PORTAL</small>
@@ -198,6 +217,7 @@ export default function PrismLiquidTemplate({ content, works, packages, bookingT
             </button>
             <a href={`mailto:${content.contact.email}`}><span>EMAIL</span><strong>{content.contact.email}</strong></a>
           </div>
+          <PlatformAccounts accounts={content.social} tone="light" />
         </div>
         <div className={styles.requestCard}>
           <span>MISSION / REQUEST</span>

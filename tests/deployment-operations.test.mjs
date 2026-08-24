@@ -24,6 +24,7 @@ test("operator tooling exposes only the reviewed non-destructive lifecycle", asy
   assert.match(source, /"caddy", "validate", "--config", "\/etc\/caddy\/Caddyfile"/);
   assert.match(source, /--no-build/);
   assert.match(source, /\/api\/site-content/);
+  assert.match(source, /\/api\/platform-qr\//);
   assert.match(source, /mutation\.status, 405/);
   assert.doesNotMatch(source, /down", "-v"|down --volumes|volume.*(?:rm|prune)|system.*prune|image.*prune/i);
   assert.doesNotMatch(source, /docker\s+(?:login|push)|\bssh\b|kubectl|NEXT_PUBLIC_/i);

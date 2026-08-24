@@ -7,10 +7,18 @@ import { intrinsicPhotoOrientation } from "../../photo-ratio-policy";
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoSlot } from "../shared/photo-slots";
+import PlatformAccounts from "../shared/platform-accounts";
 import { groupSourceOrientationSlots, justifiedPhotoColumns } from "../shared/source-orientation-layout";
+import { useTemplateSectionNavigation } from "../shared/use-template-section-navigation";
 import styles from "./template.module.css";
 
 const CHARACTER_RATIOS = getTemplateSlotRatios("character-select");
+const characterViewHashes = {
+  works: "#select-top",
+  packages: "#select-loadout",
+  contact: "#select-mission",
+} as const;
+const characterViewAliases = [{ hash: "#select-roster", view: "works" }] as const;
 
 type CharacterRowStyle = CSSProperties & { "--character-columns": string };
 
@@ -26,7 +34,7 @@ function sourceOrientation(slot: PhotoSlot) {
     : "empty";
 }
 
-export default function CharacterSelectTemplate({ content, works, packages, bookingTemplate, copiedKey, onCopy, onOpenWork }: TemplateProps) {
+export default function CharacterSelectTemplate({ content, works, packages, bookingTemplate, copiedKey, isPreview, onCopy, onBeforeViewChange, onOpenWork }: TemplateProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedPackage, setSelectedPackage] = useState(0);
   const photoSlots = useMemo(() => buildPhotoSlots(
@@ -43,6 +51,12 @@ export default function CharacterSelectTemplate({ content, works, packages, book
   const activeSlot = photoSlots[safeActiveIndex] ?? photoSlots[0];
   const activeWork = activeSlot.work;
   const activePackage = packages[selectedPackage] ?? packages[0];
+  const { activeView, handleInternalLinkClick } = useTemplateSectionNavigation({
+    aliases: characterViewAliases,
+    hashes: characterViewHashes,
+    isPreview,
+    onBeforeViewChange,
+  });
   const move = useCallback((direction: -1 | 1) => {
     if (availableIndexes.length === 0) return;
     setActiveIndex((index) => {
@@ -62,18 +76,27 @@ export default function CharacterSelectTemplate({ content, works, packages, book
   }, [move]);
 
   return (
-    <main className={styles.shell} data-template="character-select">
+    <main
+      className={styles.shell}
+      data-template="character-select"
+      data-template-active-view={activeView}
+      onClick={handleInternalLinkClick}
+    >
       <header className={styles.header}>
         <a href="#select-top" className={styles.logo}><span>{content.profile.mark}</span>{content.profile.brand}</a>
         <div className={styles.headerTitle}>CHARACTER CAPTURE SYSTEM <b>ONLINE</b></div>
-        <nav aria-label="角色选择模板导航"><a href="#select-roster">ROSTER</a><a href="#select-loadout">LOADOUT</a><a href="#select-mission">MISSION</a></nav>
+        <nav aria-label="主导航">
+          <a href="#select-top" aria-current={activeView === "works" ? "page" : undefined}>作品</a>
+          <a href="#select-loadout" aria-current={activeView === "packages" ? "page" : undefined}>拍摄套餐</a>
+          <a href="#select-mission" aria-current={activeView === "contact" ? "page" : undefined}>联系约拍</a>
+        </nav>
       </header>
 
-      <section id="select-top" className={styles.hero}>
+      <section id="select-top" className={styles.hero} data-template-view="works" hidden={activeView !== "works"} tabIndex={-1}>
         <div className={styles.speedLines} aria-hidden="true" />
         <div className={styles.heroTopline}><span>PLAYER 01 / {content.profile.photographer}</span><strong>SELECT YOUR CHARACTER</strong><span>{content.profile.city}</span></div>
 
-        <div className={styles.roster} id="select-roster" aria-label="选择角色作品">
+        <div className={styles.roster} id="select-roster" aria-label="选择角色作品" tabIndex={-1}>
           {photoRows.map((row, rowIndex) => (
             <div
               className={styles.rosterRow}
@@ -167,7 +190,7 @@ export default function CharacterSelectTemplate({ content, works, packages, book
         <div className={styles.heroFooter}><span>{content.hero.services}</span><span>ARROW KEYS ENABLED</span><span>{content.profile.availability}</span></div>
       </section>
 
-      <section id="select-loadout" className={styles.loadout}>
+      <section id="select-loadout" className={styles.loadout} data-template-view="packages" hidden={activeView !== "packages"} tabIndex={-1}>
         <div className={styles.sectionTitle}><span>STAGE 02</span><h2>选择任务装备</h2><p>每种模式对应不同拍摄强度、时长与交付规格。</p></div>
         <div className={styles.loadoutLayout}>
           <div className={styles.packageTabs}>
@@ -193,7 +216,7 @@ export default function CharacterSelectTemplate({ content, works, packages, book
         </div>
       </section>
 
-      <section className={styles.archive}>
+      <section className={styles.archive} data-template-view="works" hidden={activeView !== "works"}>
         <div className={styles.sectionTitle}><span>BONUS STAGE</span><h2>完整角色图鉴</h2><p>选择任意画面进入全屏查看。</p></div>
         <div className={styles.archiveGrid}>
           {photoRows.map((row, rowIndex) => (
@@ -226,7 +249,7 @@ export default function CharacterSelectTemplate({ content, works, packages, book
         </div>
       </section>
 
-      <section id="select-mission" className={styles.mission}>
+      <section id="select-mission" className={styles.mission} data-template-view="contact" hidden={activeView !== "contact"} tabIndex={-1}>
         <div className={styles.missionCopy}>
           <span>FINAL STAGE / REQUEST</span>
           <h2>READY?<br /><em>FIGHT FOR THE FRAME.</em></h2>
@@ -235,6 +258,7 @@ export default function CharacterSelectTemplate({ content, works, packages, book
             <button type="button" onClick={() => void onCopy(content.contact.wechat, "select-wechat")}><small>WECHAT</small><strong>{copiedKey === "select-wechat" ? "已复制 ✓" : content.contact.wechat}</strong></button>
             <a href={`mailto:${content.contact.email}`}><small>EMAIL</small><strong>{content.contact.email}</strong></a>
           </div>
+          <PlatformAccounts accounts={content.social} tone="light" />
         </div>
         <div className={styles.missionPanel}>
           <div><span>MISSION DATA</span><b>● LIVE</b></div>

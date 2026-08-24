@@ -1,4 +1,5 @@
 import { isTemplateId, templateCatalog, type TemplateId } from "./templates/catalog";
+import { normalizePlatformQrAssetId } from "./platform-qr";
 
 export { isTemplateId, templateCatalog };
 export type { TemplateId };
@@ -47,7 +48,7 @@ export type SiteContent = {
   templateWorks: Partial<Record<TemplateId, Work[]>>;
   packages: PhotographyPackage[];
   contact: { wechat: string; email: string; note: string };
-  social: Array<{ label: string; handle: string }>;
+  social: Array<{ label: string; handle: string; qrAssetId?: string }>;
   bookingFields: string[];
   statement: { eyebrow: string; lineOne: string; lineTwo: string };
 };
@@ -342,10 +343,15 @@ export function normalizeSiteContent(value: unknown): SiteContent {
     }));
   }
   if (Array.isArray(incoming.social)) {
-    normalized.social = incoming.social.slice(0, 8).map((item, index) => ({
-      label: typeof item?.label === "string" ? item.label : `平台 ${index + 1}`,
-      handle: typeof item?.handle === "string" ? item.handle : "",
-    }));
+    normalized.social = incoming.social.slice(0, 8).map((item, index) => {
+      const socialItem = {
+        label: typeof item?.label === "string" ? item.label : `平台 ${index + 1}`,
+        handle: typeof item?.handle === "string" ? item.handle : "",
+      } as SiteContent["social"][number];
+      const qrAssetId = normalizePlatformQrAssetId(item?.qrAssetId);
+      if (qrAssetId) socialItem.qrAssetId = qrAssetId;
+      return socialItem;
+    });
   }
   if (Array.isArray(incoming.bookingFields)) {
     normalized.bookingFields = incoming.bookingFields

@@ -62,7 +62,7 @@ export const templateCatalog = [
     description: "镜头光圈、空间轨道、角色聚焦",
     status: "ready",
     photoSlots: 8,
-    photoRatios: "2:3 × 8 · 主视觉 3:2",
+    photoRatios: "2:3 × 8 · 主视觉随素材方向",
     slotRatios: ["2:3", "2:3", "2:3", "2:3", "2:3", "2:3", "2:3", "2:3"],
   },
   {

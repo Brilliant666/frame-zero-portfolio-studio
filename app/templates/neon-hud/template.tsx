@@ -3,15 +3,24 @@
 /* eslint-disable @next/next/no-img-element -- portfolio assets include local responsive WebP derivatives. */
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { primaryPhotoRatioForDimensions } from "../../photo-ratio-policy";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder, type PhotoSlot } from "../shared/photo-slots";
+import PlatformAccounts from "../shared/platform-accounts";
 import { groupSourceOrientationSlots, justifiedPhotoColumns } from "../shared/source-orientation-layout";
+import { useTemplateSectionNavigation } from "../shared/use-template-section-navigation";
 import type { TemplateProps } from "../types";
 import styles from "./template.module.css";
 
 const neonRatios = getTemplateSlotRatios("neon-hud");
 const neonInteractiveSlotIndexes = [0, 1, 2, 3, 4, 5, 6, 7] as const;
 const neonManifestoSlotIndex = 8;
+const neonViewHashes = {
+  works: "#hud-archive",
+  packages: "#hud-services",
+  contact: "#hud-contact",
+} as const;
+const neonViewAliases = [{ hash: "#hud-top", view: "works" }] as const;
 
 type NeonArchiveRowStyle = CSSProperties & { "--neon-archive-columns": string };
 
@@ -26,7 +35,9 @@ export default function NeonHudTemplate({
   bookingTemplate,
   booted,
   copiedKey,
+  isPreview,
   onCopy,
+  onBeforeViewChange,
   onOpenWork,
 }: TemplateProps) {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -45,8 +56,17 @@ export default function NeonHudTemplate({
   const safeIndex = Math.min(Math.max(activeIndex, 0), interactiveSlots.length - 1);
   const activeSlot = interactiveSlots[safeIndex];
   const activeWork = activeSlot.work;
+  const activeStageRatio = activeWork
+    ? primaryPhotoRatioForDimensions(activeWork.previewWidth, activeWork.previewHeight) ?? "3:2"
+    : activeSlot.ratio === "2:3" ? "2:3" : "3:2";
   const manifestoSlot = photoSlots[neonManifestoSlotIndex] ?? null;
   const manifestoWork = manifestoSlot?.work ?? null;
+  const { activeView, handleInternalLinkClick } = useTemplateSectionNavigation({
+    aliases: neonViewAliases,
+    hashes: neonViewHashes,
+    isPreview,
+    onBeforeViewChange,
+  });
 
   const move = useCallback((direction: -1 | 1) => {
     setActiveIndex((index) => (index + direction + interactiveSlots.length) % interactiveSlots.length);
@@ -72,7 +92,12 @@ export default function NeonHudTemplate({
   const progress = `${((safeIndex + 1) / interactiveSlots.length) * 100}%`;
 
   return (
-    <main className={styles.root} data-template="neon-hud">
+    <main
+      className={styles.root}
+      data-template="neon-hud"
+      data-template-active-view={activeView}
+      onClick={handleInternalLinkClick}
+    >
       <div className={`${styles.boot} ${booted ? styles.bootComplete : ""}`} aria-hidden="true">
         <div className={styles.bootReticle}><span /></div>
         <p>{content.profile.mark} / OPTICAL LINK</p>
@@ -89,9 +114,9 @@ export default function NeonHudTemplate({
           </span>
         </a>
         <nav aria-label="主导航">
-          <a href="#hud-archive">ARCHIVE</a>
-          <a href="#hud-services">MODES</a>
-          <a href="#hud-contact">BOOKING</a>
+          <a href="#hud-archive" aria-current={activeView === "works" ? "page" : undefined}>作品</a>
+          <a href="#hud-services" aria-current={activeView === "packages" ? "page" : undefined}>拍摄套餐</a>
+          <a href="#hud-contact" aria-current={activeView === "contact" ? "page" : undefined}>联系约拍</a>
         </nav>
         <div className={styles.headerStatus}>
           <span className={styles.liveDot} />
@@ -99,7 +124,7 @@ export default function NeonHudTemplate({
         </div>
       </header>
 
-      <section id="hud-top" className={styles.hero} aria-label="主作品取景器">
+      <section id="hud-top" className={styles.hero} data-template-view="works" hidden={activeView !== "works"} tabIndex={-1} aria-label="主作品取景器">
         <div className={styles.heroGrid} aria-hidden="true" />
         <div className={styles.heroIntro}>
           <p>{content.hero.eyebrow}</p>
@@ -118,7 +143,7 @@ export default function NeonHudTemplate({
           </div>
 
           <div className={styles.viewportBody}>
-            <div className={styles.stage}>
+            <div className={styles.stage} data-stage-ratio={activeStageRatio}>
               {activeWork ? (
                 <button
                   className={styles.stageButton}
@@ -239,7 +264,7 @@ export default function NeonHudTemplate({
         </div>
       </section>
 
-      <section className={styles.telemetryStrip} aria-label="约拍关键信息">
+      <section className={styles.telemetryStrip} data-template-view="works" hidden={activeView !== "works"} aria-label="约拍关键信息">
         {content.trustItems.map((item, index) => (
           <div key={`${item.label}-${index}`}>
             <span>0{index + 1}</span>
@@ -249,7 +274,7 @@ export default function NeonHudTemplate({
         ))}
       </section>
 
-      <section id="hud-archive" className={styles.archive}>
+      <section id="hud-archive" className={styles.archive} data-template-view="works" hidden={activeView !== "works"} tabIndex={-1}>
         <div className={styles.sectionHead}>
           <div>
             <p>{"// 01 · TARGET ARCHIVE"}</p>
@@ -327,7 +352,7 @@ export default function NeonHudTemplate({
         </div>
       </section>
 
-      <section id="hud-services" className={styles.services}>
+      <section id="hud-services" className={styles.services} data-template-view="packages" hidden={activeView !== "packages"} tabIndex={-1}>
         <div className={styles.sectionHead}>
           <div>
             <p>{"// 02 · CAPTURE MODES"}</p>
@@ -364,7 +389,7 @@ export default function NeonHudTemplate({
         <p className={styles.serviceNote}>* 当前为演示价格与交付内容，后台修改后此处会同步更新。</p>
       </section>
 
-      <section className={styles.manifesto}>
+      <section className={styles.manifesto} data-template-view="works" hidden={activeView !== "works"}>
         {manifestoWork ? (
           <img
             src={manifestoWork.preview}
@@ -396,7 +421,7 @@ export default function NeonHudTemplate({
         </div>
       </section>
 
-      <section id="hud-contact" className={styles.booking}>
+      <section id="hud-contact" className={styles.booking} data-template-view="contact" hidden={activeView !== "contact"} tabIndex={-1}>
         <div className={styles.bookingHead}>
           <p>{"// 03 · TRANSMISSION CHANNEL"}</p>
           <h2>建立连接，<br /><em>发起约拍任务。</em></h2>
@@ -414,11 +439,7 @@ export default function NeonHudTemplate({
               <span><small>EMAIL / 发送邮件</small><strong>{content.contact.email}</strong></span>
               <b>OPEN ↗</b>
             </a>
-            <div className={styles.socialLinks}>
-              {content.social.map((item) => (
-                <span key={`${item.label}-${item.handle}`}><small>{item.label}</small><strong>{item.handle}</strong></span>
-              ))}
-            </div>
+            <PlatformAccounts accounts={content.social} tone="dark" />
           </div>
 
           <div className={styles.terminal}>

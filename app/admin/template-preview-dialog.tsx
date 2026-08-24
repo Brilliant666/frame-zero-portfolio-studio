@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { TemplateId, Work } from "../site-config";
 import TemplateRenderer from "../templates/template-renderer";
 import Lightbox from "../templates/shared/lightbox";
@@ -60,6 +60,7 @@ export default function TemplatePreviewDialog({
     moveActiveWork,
     setActiveWork,
   } = useTemplateInteractions(works);
+  const closeActiveWork = useCallback(() => setActiveWork(null), [setActiveWork]);
   const previewContent = useMemo(() => ({
     ...content,
     activeTemplate: templateId,
@@ -128,6 +129,7 @@ export default function TemplatePreviewDialog({
           copiedKey={copiedKey}
           isPreview
           onCopy={copyText}
+          onBeforeViewChange={closeActiveWork}
           onOpenWork={setActiveWork}
         />
         {activeWork ? (

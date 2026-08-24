@@ -7,15 +7,22 @@
 > - Online status: `NOT_ONLINE_PREVIEW`
 > - Engineering launch: `FROZEN`
 > - Engineering launch line: `FROZEN_AT_REPO_SIDE_BOOTSTRAP_READY`
-> - Branch: `product/prelaunch-manual-polish-01`
-> - Accepted PR: `#24 — fix: refine local workflow and template presentation`
+> - Branch: `product/prelaunch-manual-polish-02`
+> - Accepted PR #24: `#24 — fix: refine local workflow and template presentation`
+> - Accepted PR #25 stage batch: `#25 — fix: continue human-directed product polish`
 > - PR #24 closure mode: `FINAL_HUMAN_ACCEPTANCE + MERGE`
 > - PR #24 feature freeze: `TRUE`
 > - PR #24 limited baseline acceptance: `ACCEPTED`
+> - PR #25 workspace: `HUMAN_DIRECTED_PRODUCT_POLISH_WORKSPACE`
+> - PR #25 workspace status: `FEATURE_FROZEN`
+> - PR #25 mode: `FINAL_HUMAN_ACCEPTANCE + MERGE`
+> - PR #25 accepted batch: `HR25-001..013 — ACCEPTED_AS_STAGE_BASELINE`
+> - PR #25 next request: `HR25-014 — NOT_STARTED`
+> - PR #25 feature freeze: `TRUE`
 > - Human-approved templates: `0 / 11`
-> - Current hand-off: `WAITING_FOR_NEXT_HUMAN_DIRECTED_PRODUCT_POLISH_AUTHORIZATION`
+> - Current hand-off: `READY_AND_SQUASH_MERGE_AUTHORIZED`
 > - External operations: `NOT_AUTHORIZED`
-> - Base: `main@ced247e5baf19510329c4c3a084a69e6b1ab0c2c`
+> - Base: `main@dc471795139dc47649368bb37c0178fb77188fea`
 
 This document is the long-lived ledger for explicit, item-by-item human product
 polish. The `NEXT` hand-off recorded when the product-experience foundation was
@@ -42,14 +49,26 @@ geometry across the eleven-template review. The existing 39-photo local
 library was used only as uncommitted validation input; the frozen V1 slot
 counts, identities, `SiteDocumentV1`, and legacy adapter remain unchanged.
 
-This is not an automated backlog. Codex handles exactly one concrete human
-request, validates it in proportion to risk, creates one focused commit, pushes
-it to the same Draft PR, reports the result, and stops at
-`WAITING_FOR_HUMAN_REVIEW`. Observations outside the request may be recorded but
-must not be implemented without a new human instruction. PR #24 is now
-feature-frozen: its limited closure does not mark human-directed or pre-launch
-product polish complete, and a merge would not constitute final template
-visual approval.
+PR #25 has subsequently completed `HR25-009` through `HR25-013` under explicit
+human direction. The manga storyboard now keeps photographs in color and uses
+a contact/request/platform-card hierarchy with copyable email and vertically
+stacked cards. Admin now exposes one fixed, persistent “保存修改” action without
+a redundant global draft preview. The orbital portal follows the active
+photo's natural landscape or portrait direction. The first five high-priority
+paged templates also keep one page-level canvas tone and localize inverse color
+to cards, forms, and presentation panels. These results remain
+`READY_FOR_HUMAN_RECHECK`; they do not imply template approval.
+
+This is not an automated backlog. PR #24 is accepted and merged as the limited
+baseline. Before the feature freeze, PR #25 operated as a lightweight,
+human-request-only workspace: Codex handled exactly one concrete request,
+validated it in proportion to risk, pushed a focused commit to the same Draft
+PR, reported the result, and stopped for human input. The workspace then entered
+limited closure, and its HR25-001 through HR25-013 batch is now accepted as a
+stage baseline. It no longer accepts another request. Observations outside the
+accepted batch may be recorded but must not be implemented without later human
+authorization in a separate workspace. Neither PR establishes final template
+visual approval or completes pre-launch product polish.
 
 The formal project state remains:
 
@@ -64,7 +83,142 @@ The product-experience foundation and automated visual-QA baseline are
 accepted. `PRE_LAUNCH_PRODUCT_POLISH` remains in progress, and eleven-template
 human visual approval remains pending.
 
-## Request protocol
+## PR #25 — Lightweight Human-Directed Polish
+
+```text
+Base: main@dc471795139dc47649368bb37c0178fb77188fea
+Status: FEATURE_FROZEN
+Workspace: HUMAN_DIRECTED_PRODUCT_POLISH_WORKSPACE
+Mode: FINAL_HUMAN_ACCEPTANCE + MERGE
+Accepted batch: HR25-001..013 — ACCEPTED_AS_STAGE_BASELINE
+Next request: HR25-014 — NOT_STARTED
+PR25_FEATURE_FREEZE: TRUE
+PR25_HR25_001_TO_013: ACCEPTED_AS_STAGE_BASELINE
+PR25_LIMITED_BASELINE: ACCEPTED
+PR25_STAGE_REVIEW: ACCEPTED
+PR24_LIMITED_BASELINE: ACCEPTED
+PRE_LAUNCH_PRODUCT_POLISH: IN_PROGRESS
+ELEVEN_TEMPLATE_HUMAN_VISUAL_APPROVAL: PENDING
+HUMAN_APPROVED: 0 / 11
+ENGINEERING_LAUNCH_LINE: FROZEN_AT_REPO_SIDE_BOOTSTRAP_READY
+PLATFORM_CARD_LOCAL_ONLY: ACCEPTED_FOR_LOCAL_PRODUCT_EXPERIENCE
+PLATFORM_CARD_PUBLIC_RENDER_FAILSAFE: CLOSED
+PLATFORM_CARD_HOSTED_RESOLUTION_PENDING: P1_PRE_DEPLOYMENT
+CURRENT_HAND_OFF: READY_AND_SQUASH_MERGE_AUTHORIZED
+```
+
+The historical PR #25 workspace never selected or implemented a known follow-up
+automatically and now accepts no further requests. Its requests used
+`HR25-001`, `HR25-002`, and so on, following this bounded sequence:
+
+```text
+human request
+-> reproduce / inspect
+-> minimum scope
+-> implement
+-> focused validation
+-> browser check when applicable
+-> atomic commit
+-> push
+-> concise report
+-> stop for human input
+```
+
+### `KNOWN_FOLLOWUPS_NOT_AUTO_AUTHORIZED`
+
+- `NEXT_PR_P1`: `ONE_LEVEL_LAYOUT_UNDO`,
+  `CLEAR_TEMPLATE_CONFIRMATION_AND_UNDO`,
+  `IMPORT_FAILURE_IDENTIFICATION`, `DELETE_SEMANTICS_HUMAN_DECISION`, and
+  `CONTINUED_TEMPLATE_BY_TEMPLATE_VISUAL_POLISH`;
+- `NEXT_PR_P2`: `DRAG_DROP_IMPORT`, `AUTO_DETECT_DROP_SOURCE`,
+  `BULK_ASSET_MANAGEMENT`, `ASSET_DETAIL`, `TAGS_ALBUMS`, `TRUE_REROLL`, and
+  `PREVIEW_DEVICE_SWITCHER`;
+- `PRE_DEPLOYMENT_P1`: `PUBLIC_IDENTITY_SSR_MISMATCH`,
+  `PLATFORM_CARD_HOSTED_RESOLUTION_PENDING`, `/` and `/star` route identity,
+  and production `ASSET_RESOLVER`;
+- `LOCAL_ONLY_FUTURE`: `SOURCE_FOLDER_BINDING`, `RESCAN`, `WATCHER`, and
+  `AUTO_SYNC`;
+- `FUTURE_HOSTED`: `POSTGRESQL`, `AUTH`, `HOSTED_ASSETS`, `HOSTED_UPLOAD`, and
+  `ASSET_RESOLVER`.
+
+These are inventory only. They are not selected work and must not be
+implemented without a new, explicit human request.
+
+| ID | Human request | Area | Status | Commit | Validation | Human decision |
+| --- | --- | --- | --- | --- | --- | --- |
+| HR25-001 | Split the single-page `polaroid-field` presentation behind the three existing top tabs; enlarge the navigation and replace its English labels with Chinese. Approved scope: keep one route, expose one section at a time through URL hashes with history support, preserve visible sticky/mobile navigation and accessible active state, route internal calls to the matching section, and recalibrate the field canvas without discarding its view state. | `polaroid-field` section navigation and responsive presentation | READY_FOR_HUMAN_RECHECK | `fix: split polaroid content into views` | Focused test 9/9; TypeScript and ESLint pass; browser verified same-route three-view navigation, 14.1–14.7 px Chinese labels, 44 px targets, sticky behavior, 390 px no-overflow layout, direct hash/refresh/back behavior, admin preview URL isolation and toolbar clearance, and preserved field zoom across section switches. | PENDING |
+| HR25-002 | Remove the hard-coded `FIELD NOTE / 001—009` decoration from `polaroid-field` without adding an admin field. Preserve the shared `availability` field, but render its marker in this template only when the trimmed value is non-empty or the template is in preview mode. A local literal value of `空` is user data and must not be special-cased or filtered in code. | `polaroid-field` decorative metadata and availability rendering | READY_FOR_HUMAN_RECHECK | `fix: clean up polaroid header metadata` | Polaroid focused test 10/10; `test:polish` 18/18; TypeScript, ESLint, and diff check pass. Chrome verified `FIELD NOTE` absent on the public page, `TEMPLATE PREVIEW` visible in admin preview without changing the URL, and the saved literal `空` retained as user content that remains editable through the admin availability field, with no special sentinel handling. | PENDING |
+| HR25-003 | Continue polishing `polaroid-field`: reduce the excessive empty space above the work, enlarge the already localized top navigation, bring the first work into the initial desktop viewport, and move the booking key facts from the bottom of the Works view to the bottom of the Packages view. Approved minimum scope: template-only TSX/CSS; preserve the one-route three-view hash/history behavior, field geometry and view state, `SiteContent`, and every other template. First continuation: on desktop, move the hero title toward the upper left and the information card toward the upper right so the work area becomes the first viewport's visual center; keep the mobile flow readable and leave hash/history navigation and the field layout/interaction algorithm unchanged. Second continuation: fill the wide-screen middle void with a central Works entry and orbit connector lines, reusing the existing CTA without adding content fields or photos; keep only the introduction in the right information card, retain the normal single-column mobile flow, and again leave hash/history navigation and the field layout/interaction algorithm unchanged. | `polaroid-field` first-view hierarchy and key-fact placement | READY_FOR_HUMAN_RECHECK | `fix: bring polaroid work into the first view`; first continuation: `fix: frame polaroid work from the top corners`; second continuation: `fix: turn polaroid whitespace into a field gateway` | Original slice: focused test 12/12; `test:polish` 20/20; TypeScript, ESLint, and diff check pass. Chrome at 1440×900, 1280×720, 390 px, and 320 px verified navigation at 17.6/17.3/16/16 px with at least 44 px targets, respectively 5/4/1/1 works visible in the first viewport, no horizontal overflow, exactly three non-empty key facts on the Packages view, and zero key facts on the Works view. First continuation: P0/P1 audit 0/0; focused test 15/15; `test:polish` 23/23; full `npm test`, TypeScript, ESLint, and diff check pass. Chrome verified at 1920 px that the title begins near x=72/y=96, the copy card reaches the right edge near x=1835/y=91, the field starts at y=428, and the canvas at y=611; at 1440 px the field starts at y=384 and canvas near y=549 with five cards in the first viewport; at 1280 px the field starts at y=353 with four cards in the first viewport; and at 390/320 px the single-column layout shows one first-viewport card, keeps 16 px navigation with 44 px targets, has no horizontal overflow, and hides the seal and mobile CTA. Second continuation: P0/P1 audit 0/0; focused test 16/16; `test:polish` 24/24; full `npm test`, TypeScript, ESLint, and diff check pass. Standard Next build/bundle: app 231.9 KiB, bootstrap 638.0 KiB, CSS 280.6 KiB, largest chunk 25.2 KiB; legacy bundle: public 504.7 KiB, admin 106.9 KiB, CSS 247.6 KiB, largest chunk 50.3 KiB. Chrome at 1920, 1440, 1280, 1024, 801, 390, and 320 px found no overlap or horizontal overflow and measured the gateway near 48 px high; the 1920/1440/1280/1024 desktop first view showed 5/5/4/5 cards, while the first card intersected the viewport at 390/320 px. Public hash navigation, focus and Back behavior passed; Admin preview preserved URL isolation and focus behavior. | PENDING |
+| HR25-004 | Add QQ and scannable platform contact options without changing the content schema. Continue using `social[{ label, handle }]`; let Admin add and remove up to eight entries and explain that `handle` may be a plain account value or a complete HTTPS profile URL. In the `polaroid-field` contact view, replace the Email affordance with QQ sourced only from a non-empty social entry labelled `QQ`, omit that affordance when no such entry exists, never infer QQ from the email field, make valid credential-free HTTPS profile URLs clickable, and generate QR codes locally only on demand without persisting QR output or calling a third party. Superseding continuation: keep the shared Admin WeChat, email, and contact-note controls unchanged; make `polaroid-field` follow the shared email contact instead of recognizing QQ from `social`; and accept a pasted platform share message only when exactly one safe credential-free HTTPS URL can be extracted for its link and locally generated QR. Do not add a QQ convenience field, collapse compatibility controls, hide the contact note, repurpose email, or change the schema. User-supplied real links remain local validation inputs and must not enter the repository. Alignment continuation: make each Admin social item occupy one full row, align the Platform and Account / share-text fields as equal-top, equal-height desktop columns, keep the delete action after the fields, and stack the row vertically at 760 px and below without changing social data or behavior. | Shared contact consistency, Admin social-field alignment, and `polaroid-field` share-text link extraction | READY_FOR_HUMAN_RECHECK | `fix: add QQ and QR contact options`; superseding continuation: `fix: parse polaroid platform share links safely`; alignment continuation: `fix: align platform account fields` | Original slice: P0/P1/P2 audit 0/0/0; focused test 15/15; `test:polish` 23/23; full `npm test`, TypeScript, ESLint, `check:public`, and diff check pass. Standard Next build/bundle: app 231.6 KiB, bootstrap 638.0 KiB, CSS 279.0 KiB, largest chunk 24.9 KiB; legacy bundle: public 504.5 KiB, admin 106.9 KiB, CSS 246.3 KiB, largest chunk 48.8 KiB. Chrome verified no Email or QQ affordance without a QQ entry; draft QQ copy, credential-free HTTPS link, and locally generated data-PNG QR; 390 px no-overflow layout; Admin add/remove and eight-entry limit; and restoration of the test draft with Save disabled. Superseding continuation: P0/P1/P2 audit 0/0/0; focused test 16/16; `test:polish` 24/24; Node 24 full `npm test`, TypeScript, ESLint, `check:public`, and diff check pass. Legacy bundle: public 504.9 KiB, admin 107.3 KiB, CSS 247.6 KiB, largest chunk 49.9 KiB; Standard Next build/bundle: app 231.5 KiB, bootstrap 638.0 KiB, CSS 280.6 KiB, largest chunk 24.8 KiB. Chrome verified the Admin WeChat, email, and contact-note controls remain with no QQ control; supplied Xiaohongshu and Douyin share messages each normalize to one safe HTTPS URL; preview shows email and contact note with zero QQ-specific affordances; the Douyin link produces a locally generated data-PNG QR; the 390 px layout has no horizontal overflow and keeps a 44 px QR summary target; and temporary real links were not saved. Alignment continuation: focused test 16/16; `test:polish` 24/24; full `npm test`, TypeScript, ESLint, and diff check pass. Final legacy bundle: public 504.9 KiB, Admin dynamic 107.3 KiB, all routes 612.2 KiB, CSS 247.7 KiB, largest template 49.9 KiB; final Standard Next build/bundle: app 231.5 KiB, bootstrap 638.0 KiB, public CSS 280.6 KiB, largest template 24.8 KiB. Chrome verified one full row per social item; at desktop and 800 px the Platform and Account / share-text fields have zero top and height delta; at 760 px and below the row stacks vertically; at 390 px inputs are 286 px wide with no horizontal overflow and the 44×44 px delete control follows the fields. | PENDING |
+| HR25-005 | Paginate the existing top navigation in the eight formal templates that still use one-page anchors: `cinematic-light`, `neon-hud`, `film-rail`, `prism-liquid`, `orbital-portal`, `editorial-duet`, `character-select`, and `museum-depth`; keep `polaroid-field` as the regression baseline. Each template keeps its own visual header while exposing same-route Works, Packages, and Contact views through Chinese labels, at least 16 px text and 44 px targets, mobile-visible navigation, direct hash / refresh / Back / Forward behavior, deterministic focus transfer, and URL-isolated Admin preview behavior. Preserve template-specific secondary navigation and interaction state, internal CTA destinations, frozen photo slots and layout algorithms, routes, `SiteContent`, and save semantics. `manga-panels` and `archive-os` do not have the applicable top-bar pattern and remain unchanged. | Eight-template top-bar pagination and `polaroid-field` regression | READY_FOR_HUMAN_RECHECK | `fix: paginate top navigation across templates` | Final audit: P0=0, P1=0, P2=2 non-blocking; focused test 25/25; `test:polish` 49/49; final full `npm test`, TypeScript, ESLint, and diff check pass. Final legacy build: all 11 templates remain lazy, public JS 513.1 KiB, Admin 107.4 KiB, all routes 620.4 KiB, CSS 252.5 KiB, largest template 49.9 KiB; final Standard Next build/bundle: app 252.5 KiB, bootstrap 638.1 KiB, CSS 287.1 KiB, largest template 24.8 KiB. Chrome verified all eight scoped templates at 1280 and 390 px with three Chinese views, 16 px labels, 44–46.375 px targets, zero horizontal overflow, one matching section visible per view, and deterministic focus transfer; all eight remain unwrapped and overflow-free at 320 px. Public `cinematic-light` hash navigation, deep linking, Back, and brand return work correctly. Final-review fixes verified the fixed Admin header and lightbox during deep scrolling, lightbox and Back-button closure with focus restoration, canonical `character-select` navigation through `#select-top` with the roster alias retained, and secondary Works hashes across public history and preview URL isolation. The real-draft Admin dialog at desktop and 390 px keeps the parent URL unchanged, clears the toolbar from the navigation, and preserves focus and pagination behavior. `manga-panels` and `archive-os` remain unchanged; `polaroid-field` regression is covered by `test:polish`. | PENDING |
+| HR25-006 | Make the `neon-hud` main-work viewport respect the selected source orientation: landscape work remains a wide HUD target, while portrait work is presented as a portrait composition instead of being coerced into the same horizontal crop. Preserve the frozen nine-slot contract (slots 01–08 interactive and slot 09 manifesto), existing content/schema and work order, the selected work and its saved `object-position`, dock/arrow/keyboard selection, focusable open-work action and lightbox behavior, and the template's three-view navigation. Keep both desktop and mobile usable without image stretching or horizontal overflow. | `neon-hud` main-work stage orientation | READY_FOR_HUMAN_RECHECK | `fix: respect neon stage orientation` | Final independent audit: P0=0, P1=0, P2=0. Browser at a 1280 px page viewport verified FRAME 01 from a natural 972×648 landscape source: its stage button measured 955.64×637.09 (1.5) with `data-stage-ratio="3:2"`; FRAME 02 from a natural 972×1458 portrait source measured 424.72×637.09 (approximately 0.6667) with `data-stage-ratio="2:3"`. The outer HUD remained 1132.61×637.09 (16:9), horizontal overflow was zero, `object-fit: cover` remained active, and each rendered frame retained the natural source orientation. Dock `aria-pressed`, ArrowLeft keyboard selection, full-image lightbox opening, closing, and focus restoration passed. Mobile behavior is covered by the shared CSS and focused renderer contract; no 390/320 px Browser claim is made because the Browser's read-only evaluate boundary prevented the iframe viewport probe. Focused test 7/7; `test:layouts` 28/28; `test:polish` 49/49; Node 24 full `npm test`, TypeScript, targeted ESLint, and diff check pass. Final legacy build: public JS 513.2 KiB, Admin 107.4 KiB, all routes 620.6 KiB, CSS 252.8 KiB, largest template 49.9 KiB. Final Standard Next build/bundle: app 252.6 KiB, bootstrap 638.1 KiB, CSS 287.4 KiB, largest template 24.8 KiB. | PENDING |
+| HR25-007 | Add visible previous/next controls to the left and right edges of the existing `film-rail` horizontal work track so the eight-frame sequence is reachable without relying only on the scrollbar or drag gesture. Each control must identify and operate the same `film-rail` region, expose a Chinese accessible label, reflect its unavailable state at the start or end boundary without ejecting keyboard focus, and retain reduced-motion behavior. Preserve manual horizontal scrolling and dragging, overflow containment, frame snap, the existing frame-number timeline, frozen hero/eight-frame slot identities and order, lightbox actions, three-view navigation, content/schema, and mobile usability; edge controls remain at least 44 px targets. | `film-rail` horizontal track edge controls | READY_FOR_HUMAN_RECHECK | `fix: add film rail edge controls` | Final independent audit: P0=0, P1=0, P2=0. Focused film contract 5/5; `test:layouts` 30/30; `test:polish` 49/49; Node 24.19.0 full `npm test`, TypeScript, ESLint, and diff check pass. Final legacy bundle: public 514.2 KiB, Admin 107.4 KiB, all routes 621.6 KiB, CSS 253.4 KiB, largest template 49.9 KiB. Final Standard Next build/bundle: app 253.7 KiB, bootstrap 638.1 KiB, CSS 288.0 KiB, largest template 24.8 KiB. Browser at 1280×720 measured 56×56 px controls on the two edges of the 1265 px film stock, found no obsolete heading control and zero document horizontal overflow. The rail moved from 0 through repeated approximately 870–939 px steps to its 6914 px end; left/right `aria-disabled` states synchronized at both boundaries, a boundary activation did not move the rail or eject focus, the first timeline frame returned it to zero, and view switching restored the correct edge state. Work lightbox open/close and trigger-focus restoration passed. Mobile size is covered by the 3 rem plus 44 px minimum CSS contract; no narrow-screen Browser claim is made. | PENDING |
+| HR25-008 | Migration note: this item was provisionally renumbered through HR25-005, HR25-006, and HR25-007 before the human explicitly assigned HR25-008 to platform QR imagery; no implementation or commit was attached to the provisional numbers. Replace link-generated QR output with one optional uploaded sharing card per platform account and use the same result in all eleven templates. Render every uploaded card directly beneath its platform identity without a disclosure step; keep the whole card as a safe full-image link, preserve its natural ratio without cropping, and constrain only extreme height. Keep account text or a safe HTTPS profile link independently usable when no card is uploaded. Store only an opaque content-addressed `qrAssetId` on the matching legacy `SiteContent.social` item; keep normalized PNG bytes in the ignored local private state directory, outside the works Photo Library. Upload, replace, and “remove from homepage” update only the draft reference until the global Admin save succeeds; physical deletion is intentionally deferred so another draft cannot be broken. The formal `SiteDocumentV1` remains frozen, and the legacy adapter blocks conversion with an explicit unsupported-QR error instead of dropping the reference. Hosted upload, production persistence, and a formal AssetStorage / AssetResolver remain outside this local-only slice. User-supplied cards and account data stay uncommitted. | Shared Admin platform-card upload, local private asset persistence, and direct all-template contact rendering | READY_FOR_HUMAN_RECHECK | `fix: add uploaded platform cards across templates`; `fix: show platform cards inline` | Final audit: P0=0, P1=0; all reported P2 hardening, test-coverage, accessibility, responsive-bound, and style-isolation findings fixed. Focused platform-QR test 22/22; legacy SiteContent round-trip 8/8; Node 24.19.0 full `npm test`, TypeScript, full ESLint, Public Safety, and diff check pass. Legacy bundle: 11 lazy templates, 491.9 KiB public JS, 112.2 KiB Admin dynamic JS, 604.2 KiB all routes, 256.3 KiB CSS, largest template 46.7 KiB. Standard Next bundle: 280.5 KiB application JS, 638.6 KiB bootstrap JS, 289.0 KiB CSS, largest template 25.6 KiB. Browser previously verified the aligned Admin rows and both saved source cards; the final renderer contract now verifies that every template uses exactly one shared platform section, contains no `details` / `summary`, shows the uploaded image link directly, preserves natural ratio through `auto` / `contain`, constrains extreme height without cropping, and keeps template contact styles from overriding shared typography. The private files and opaque references survive a full local project restart. Mobile single-column and no-crop behavior are covered by the shared responsive CSS and renderer contract; final layout and scanability remain a human check with the supplied cards. | PENDING |
+| HR25-009 | Keep `manga-panels` photographs in color before pointer or keyboard interaction; retain only the restrained contrast, saturation, scale, and halftone feedback that supports the storyboard style. | `manga-panels` cover and storyboard color treatment | READY_FOR_HUMAN_RECHECK | `fix: polish manga contact chapter` | Manga layout regression verifies the default cover and panels no longer use grayscale while hover/focus feedback remains; full repository tests, ESLint, and both production builds pass. | PENDING |
+| HR25-010 | Rebuild the `manga-panels` contact chapter so contact details and the booking request stay in the left column, platform sharing cards occupy the right column, email is visible and copyable like WeChat, and multiple platform cards stack vertically before the responsive single-column fallback. | `manga-panels` contact, booking, and platform-card hierarchy | READY_FOR_HUMAN_RECHECK | `fix: polish manga contact chapter`; `fix: stack manga platform cards` | Shared platform renderer and manga contact regressions verify one platform region, copyable email without `mailto`, desktop grid ownership, vertical platform-card layout, and responsive ordering; full repository gates pass. | PENDING |
+| HR25-011 | Replace the confusing Admin save/preview pair with one global “保存修改” action and keep the complete top bar fixed above every Admin section. Preserve the shared draft PUT endpoint, keyboard save, dirty-state protection, failure recovery, and compact mobile affordance; make successful saves explain that refreshing the homepage displays the latest content. | Admin global persistence action and fixed top bar | READY_FOR_HUMAN_RECHECK | `fix: pin admin save controls (HR25-011)` | Admin state, rendered HTML, responsive CSS, route parity, and save-contract regressions pass; full `npm test`, ESLint, Legacy build, and Standard Next build pass; `/admin/template` and the public template route return HTTP 200 locally. | PENDING |
+| HR25-012 | Make the `orbital-portal` active work frame follow the selected source orientation instead of forcing every work into a horizontal crop. Keep all eight formal portrait slots, selection order, focus protection, lightbox behavior, navigation, and responsive portal sizing unchanged outside the active presentation. | `orbital-portal` active-work orientation and material guidance | READY_FOR_HUMAN_RECHECK | `fix: respect orbital portal orientation (HR25-012)` | Focus and renderer regressions verify the 3:2/2:3 active portal, unchanged portrait slot contract, responsive size variables, and variable secondary material target; full repository tests and both production builds pass. Browser recheck confirms the selected portrait remains portrait in the desktop portal. | PENDING |
+| HR25-013 | Resolve page-level light/dark discontinuity in the first five high-priority paged templates: `polaroid-field`, `film-rail`, `prism-liquid`, `editorial-duet`, and `orbital-portal`. Keep one canvas tone across each template's three views and confine inverse colors to contact panels, package cards, rate interactions, or mission cards without flattening each template's visual identity. | Five high-priority paged-template canvas systems | READY_FOR_HUMAN_RECHECK | `fix: unify paged template canvas tones (HR25-013)` | New cross-template style regression is included in `test:polish`; all five desktop pages and representative 390 px views were browser-checked with zero horizontal overflow; full `npm test`, ESLint, Legacy build, and Standard Next build pass. | PENDING |
+
+## PR #25 limited closure and stage review
+
+The PR #25 feature scope is frozen after HR25-013. HR25-014 has not started,
+and no later product issue is selected. The additive audit in
+[pr25-stage-review.md](pr25-stage-review.md) maps every pre-closure commit and
+production-code category to Bootstrap or HR25-001 through HR25-013. It found no
+unmapped product code, unknown commit, or unauthorized frozen-contract change.
+
+This closure does not rewrite the historical HR rows above. It records the
+final relationship between HR25-004 and HR25-008:
+
+- HR25-004 is `PARTIALLY_SUPERSEDED_BY_HR25-008`. Its retained behavior is safe
+  credential-free HTTPS recognition, extraction of exactly one safe link from
+  share text, platform-account editing, aligned Admin platform rows, and direct
+  opening of safe profile links. The temporary Polaroid QQ special case was
+  withdrawn during HR25-004 itself.
+- HR25-004's `LINK_GENERATED_QR` behavior is no longer current.
+- HR25-008 is `CURRENT_PLATFORM_CARD_IMPLEMENTATION`: one optional uploaded
+  platform sharing card per Legacy/local `SiteContent.social` row, referenced
+  by opaque `qrAssetId`, normalized into ignored private local state, and shared
+  across all eleven template renderers.
+
+The public renderer now performs one fail-closed HEAD capability probe and
+mounts a card only after a `200 image/png` result. Missing configuration, asset
+404, route/upstream unavailability, wrong content type, and later image-load
+failure omit the image and original-image action without altering account text,
+safe profile links, `qrAssetId`, the draft, or persistence. There is no polling.
+Production Caddy still denies unreviewed `/api/*`; no local companion or private
+PNG is exposed or copied into the production artifact.
+
+```text
+PR25_FEATURE_FREEZE = TRUE
+PR25_HR25_001_TO_013 = ACCEPTED_AS_STAGE_BASELINE
+PR25_LIMITED_BASELINE = ACCEPTED
+PR25_STAGE_REVIEW = ACCEPTED
+PRE_LAUNCH_PRODUCT_POLISH = IN_PROGRESS
+HUMAN_DIRECTED_PRODUCT_POLISH = IN_PROGRESS
+ELEVEN_TEMPLATE_HUMAN_VISUAL_APPROVAL = PENDING
+HUMAN_APPROVED = 0 / 11
+PLATFORM_CARD_LOCAL_ONLY = ACCEPTED_FOR_LOCAL_PRODUCT_EXPERIENCE
+PLATFORM_CARD_PUBLIC_RENDER_FAILSAFE = CLOSED
+PLATFORM_CARD_HOSTED_RESOLUTION_PENDING = P1_PRE_DEPLOYMENT
+ENGINEERING_LAUNCH_LINE = FROZEN_AT_REPO_SIDE_BOOTSTRAP_READY
+CURRENT_HAND_OFF = READY_AND_SQUASH_MERGE_AUTHORIZED
+HR25-014 = NOT_STARTED
+```
+
+### Final human acceptance
+
+The human reviewer accepted the exact pre-acceptance head
+`f8726a4994f72995257a897805049fac28863209` as the PR #25 stage baseline and
+authorized Ready plus squash merge after the final governance head passes all
+required checks. This acceptance covers HR25-001 through HR25-013 and the
+limited stage review. It does not complete `PRE_LAUNCH_PRODUCT_POLISH` or
+`HUMAN_DIRECTED_PRODUCT_POLISH`, does not complete the eleven-template visual
+review, and does not change `HUMAN_APPROVED = 0 / 11`. All eleven formal
+templates remain `READY_FOR_HUMAN_RECHECK`.
+
+## PR #24 request protocol
 
 Each human request follows this bounded sequence:
 
@@ -81,7 +235,7 @@ Each human request follows this bounded sequence:
 11. `REPORT`
 12. `WAITING_FOR_HUMAN_REVIEW`
 
-Requests receive sequential IDs beginning with `HR-001`. The request wording
+PR #24 requests received sequential IDs beginning with `HR-001`. The request wording
 must preserve the human intent without expanding it into a broader redesign.
 Each request should map to one focused commit whenever practical. No force push,
 stacked PR, per-issue PR, or opportunistic dependency/architecture cleanup is
@@ -267,13 +421,13 @@ Allowed states are `PENDING_HUMAN_REVIEW`, `HUMAN_REVIEW_IN_PROGRESS`,
 | --- | --- | --- |
 | `cinematic-light` | `READY_FOR_HUMAN_RECHECK` | HR-010 保持冻结九槽：01 为 hero、02–08 为七张独立画廊素材、09 为 statement；画廊按真实方向均衡为 3／2／2 张比例感知行，不再把结构图重复进画廊。 |
 | `neon-hud` | `READY_FOR_HUMAN_RECHECK` | HR-010 保持冻结九槽：01–08 为八张交互素材、09 为独立 manifesto；索引画廊按真实方向均衡为 3／3／2 张比例感知行，HUD 内的 stage／dock 投射仍是明确交互。 |
-| `film-rail` | `READY_FOR_HUMAN_RECHECK` | HR-010 保持冻结九槽：01 为独立开场 hero、02–09 为八帧轨道，开场图不再作为轨道首帧重复。 |
-| `manga-panels` | `READY_FOR_HUMAN_RECHECK` | HR-010 保持冻结九槽：01 为封面、02–09 为八格独立 storyboard；普通分镜按真实方向均衡为 3／3／2 张比例感知行。 |
-| `prism-liquid` | `READY_FOR_HUMAN_RECHECK` | HR-010 让两组三联画按真实横竖比例计算列宽，减少混合方向下的无效留白，并补齐所有可进入主视窗素材的 3:2 展示裁切说明。 |
-| `orbital-portal` | `READY_FOR_HUMAN_RECHECK` | HR-006 保持全竖向正式槽位与横向门户二次展示；需真实素材复检 desktop/mobile 裁切与层级。 |
+| `film-rail` | `READY_FOR_HUMAN_RECHECK` | HR-010 保持冻结九槽：01 为独立开场 hero、02–09 为八帧轨道，开场图不再作为轨道首帧重复；HR25-013 让联系页沿用纸张主画布并把深色限制在联系卡。 |
+| `manga-panels` | `READY_FOR_HUMAN_RECHECK` | HR-010 保持冻结九槽：01 为封面、02–09 为八格独立 storyboard；普通分镜按真实方向均衡为 3／3／2 张比例感知行。HR25-009/010 让照片默认彩色，并重排联系、申请和纵向平台分享卡。 |
+| `prism-liquid` | `READY_FOR_HUMAN_RECHECK` | HR-010 让两组三联画按真实横竖比例计算列宽，减少混合方向下的无效留白，并补齐所有可进入主视窗素材的 3:2 展示裁切说明；HR25-013 让套餐页沿用浅紫主画布并把深色限制在套餐卡。 |
+| `orbital-portal` | `READY_FOR_HUMAN_RECHECK` | 八个正式轨道槽继续保持 2:3；HR25-012 让激活主取景框按来源方向使用 3:2／2:3，HR25-013 让套餐页延续深色宇宙画布并把浅色限制在任务卡。 |
 | `archive-os` | `READY_FOR_HUMAN_RECHECK` | HR-006 保留结构性槽，普通 gallery 槽按来源方向使用 3:2／2:3；需真实素材复检高密度 desktop/mobile 表现。 |
-| `editorial-duet` | `READY_FOR_HUMAN_RECHECK` | HR-010 将桌面 2:3 章节限制为居中且不超过 30rem／64% 的画面，移动端仍恢复全宽阅读。 |
-| `polaroid-field` | `READY_FOR_HUMAN_RECHECK` | HR-010 按九张素材的真实比例、旋转后边界、安全边距与最小间距重新计算星图；七个自适应槽的 128 种方向组合均无碰撞或越界。 |
+| `editorial-duet` | `READY_FOR_HUMAN_RECHECK` | HR-010 将桌面 2:3 章节限制为居中且不超过 30rem／64% 的画面，移动端仍恢复全宽阅读；HR25-013 让费率页恢复纸张主画布，仅在费率交互中局部反相。 |
+| `polaroid-field` | `READY_FOR_HUMAN_RECHECK` | HR-010 按九张素材的真实比例、旋转后边界、安全边距与最小间距重新计算星图；七个自适应槽的 128 种方向组合均无碰撞或越界。HR25-013 让联系页延续米白主画布并把深色限制在联系面板。 |
 | `character-select` | `READY_FOR_HUMAN_RECHECK` | 人工拒绝固定 1:1 roster；HR-004/HR-006 保持全槽来源方向自适应的 3:2／2:3 三行 justified 候选，需真实横竖组合复检。 |
 | `museum-depth` | `READY_FOR_HUMAN_RECHECK` | HR-006 保留展厅 hero／结构槽方向，普通 gallery 槽按来源方向使用 3:2／2:3；需真实素材复检 desktop/mobile 裁切与层级。 |
 
@@ -332,11 +486,14 @@ gates run when the change risk or final review requires them. GitHub Quality,
 Public repository safety, Container, and Deployment Bootstrap gates remain
 enabled for every PR update.
 
-After the bootstrap and after every future micro-slice, the required state is:
+After final human acceptance and before the authorized squash merge, the
+required state is:
 
 ```text
-WAITING_FOR_HUMAN_REVIEW
+READY_AND_SQUASH_MERGE_AUTHORIZED
 ```
 
-The Draft PR is never marked Ready or merged without separate human approval.
-No next product issue is selected automatically.
+The separate human approval has now been recorded for the exact accepted batch.
+The PR may be marked Ready and squash-merged only after the final governance
+head passes all required checks. No next product issue is selected automatically,
+and HR25-014 remains not started.

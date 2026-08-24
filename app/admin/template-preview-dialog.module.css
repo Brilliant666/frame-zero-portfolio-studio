@@ -19,6 +19,7 @@
   z-index: 2147483647;
   top: 0;
   display: flex;
+  height: 4rem;
   min-height: 3.75rem;
   align-items: center;
   justify-content: space-between;
@@ -36,7 +37,7 @@
 
 .toolbar button {
   flex: 0 0 auto;
-  min-height: 2.5rem;
+  min-height: 2.75rem;
   padding: .55rem .75rem;
   border: 1px solid #fff;
   background: #fff;
@@ -51,9 +52,11 @@
   outline-offset: 3px;
 }
 
-.surface { min-height: calc(100dvh - 3.75rem); overflow: clip; }
+.surface { min-height: calc(100dvh - 4rem); overflow: clip; }
 
 @media (max-width: 480px) {
-  .toolbar { align-items: stretch; flex-direction: column; }
-  .toolbar button { width: 100%; }
+  .toolbar { gap: .6rem; padding: .4rem .65rem; }
+  .toolbar > div { min-width: 0; }
+  .toolbar strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .toolbar span { display: none; }
 }

@@ -124,6 +124,7 @@ test("production Caddy uses public ACME while isolated CI alone uses internal TL
   assert.match(proxy, /path \/api\/site-content/);
   assert.match(proxy, /header Allow "GET, HEAD"/);
   assert.match(proxy, /@unreviewed_api path \/api\/\*/);
+  assert.doesNotMatch(proxy, /path \/api\/platform-qr(?:\s|\/)/);
   assert.match(proxy, /header_up -Authorization/);
   assert.match(proxy, /header_up -Cookie/);
   assert.match(proxy, /header_up -oai-authenticated-user-\*/);

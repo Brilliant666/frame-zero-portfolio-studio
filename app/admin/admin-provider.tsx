@@ -143,7 +143,7 @@ export function AdminProvider({
 
     savingRef.current = true;
     setSaveState("saving");
-    setMessage("正在保存到数据库…");
+    setMessage("正在保存修改…");
 
     try {
       const response = await fetch("/api/site-content", {
@@ -165,8 +165,8 @@ export function AdminProvider({
       setUpdatedAt(result.updatedAt ?? null);
       setSaveState("success");
       setMessage(reconciled.changedWhileSaving
-        ? "提交版本已保存；保存期间的新修改仍在当前草稿中"
-        : "保存成功，主页刷新后会读取最新内容");
+        ? "提交版本已保存；保存期间产生的新修改仍未保存"
+        : "保存成功，主页刷新后即显示最新内容");
       return true;
     } catch (error) {
       setSaveState("error");
@@ -176,6 +176,12 @@ export function AdminProvider({
       savingRef.current = false;
     }
   }, [loadState, replaceContent, savedContent, saveState]);
+
+  useEffect(() => {
+    if (saveState !== "success") return;
+    const timeout = window.setTimeout(() => setSaveState("idle"), 2500);
+    return () => window.clearTimeout(timeout);
+  }, [saveState]);
 
   useEffect(() => {
     const handleKeyboardSave = (event: KeyboardEvent) => {

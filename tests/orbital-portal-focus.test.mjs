@@ -8,6 +8,7 @@ import ts from "typescript";
 
 const helperPath = new URL("../app/templates/orbital-portal/portal-focus.ts", import.meta.url);
 const templatePath = new URL("../app/templates/orbital-portal/template.tsx", import.meta.url);
+const cssPath = new URL("../app/templates/orbital-portal/template.module.css", import.meta.url);
 
 async function importPortalFocus(t) {
   const source = await fs.readFile(helperPath, "utf8");
@@ -25,7 +26,7 @@ async function importPortalFocus(t) {
   return import(`${pathToFileURL(modulePath).href}?test=${Date.now()}`);
 }
 
-test("default-centred portraits protect their upper subject in the wide portal crop", async (t) => {
+test("default-centred portraits protect their upper subject in the portrait portal", async (t) => {
   const { getOrbitalPortalObjectPosition } = await importPortalFocus(t);
 
   assert.equal(getOrbitalPortalObjectPosition({ position: "50% 50%", previewWidth: 800, previewHeight: 1200 }), "50% 32%");
@@ -39,10 +40,27 @@ test("the portal crop preserves explicit focus and non-portrait defaults", async
   assert.equal(getOrbitalPortalObjectPosition({ position: "50% 50%", previewWidth: 900, previewHeight: 900 }), "50% 50%");
 });
 
-test("the safety focus applies only to the active secondary portal crop", async () => {
+test("the safety focus applies only to the active portal presentation", async () => {
   const template = await fs.readFile(templatePath, "utf8");
 
   assert.match(template, /style=\{\{ objectPosition: activePortalObjectPosition \}\}/u);
   assert.match(template, /data-portal-focus=\{activePortalObjectPosition === activeWork\.position/u);
   assert.match(template, /loading="lazy" style=\{\{ objectPosition: slot\.work\.position \}\}/u);
+});
+
+test("the active portal follows the source orientation without changing the portrait orbit slots", async () => {
+  const [template, css] = await Promise.all([
+    fs.readFile(templatePath, "utf8"),
+    fs.readFile(cssPath, "utf8"),
+  ]);
+
+  assert.match(template, /import \{ primaryPhotoRatioForDimensions \} from "\.\.\/\.\.\/photo-ratio-policy"/u);
+  assert.match(
+    template,
+    /const activePortalRatio = activeWork\s*\? primaryPhotoRatioForDimensions\(activeWork\.previewWidth, activeWork\.previewHeight\) \?\? "3:2"\s*:\s*activeSlot\.ratio === "2:3" \? "2:3" : "3:2"/su,
+  );
+  assert.match(template, /className=\{styles\.portalStage\} data-portal-ratio=\{activePortalRatio\}/u);
+  assert.match(css, /\.portalImage\s*\{[^}]*width:\s*var\(--portal-media-size\);[^}]*aspect-ratio:\s*3 \/ 2;/su);
+  assert.match(css, /\.portalStage\[data-portal-ratio="2:3"\] \.portalImage\s*\{[^}]*width:\s*auto;[^}]*height:\s*var\(--portal-media-size\);[^}]*aspect-ratio:\s*2 \/ 3;/su);
+  assert.match(css, /@media \(max-width: 650px\)[\s\S]*\.portalStage\s*\{[^}]*--portal-media-size:\s*82vw;/u);
 });

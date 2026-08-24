@@ -10,6 +10,8 @@ const workerUrl = new URL("../dist/server/index.js", import.meta.url);
 workerUrl.searchParams.set("site-content-api-test", `${process.pid}-${Date.now()}`);
 const { default: worker } = await import(workerUrl.href);
 
+const SYNTHETIC_QR_ASSET_ID = "a".repeat(64);
+
 const executionContext = {
   waitUntil() {},
   passThroughOnException() {},
@@ -211,7 +213,12 @@ test("PUT preserves the complete legacy SiteContent shape at site_settings id 1"
       ignoredPackageField: "drop me",
     }],
     contact: { wechat: "FULL_WECHAT", email: "full@framezero.example", note: "FULL NOTE" },
-    social: [{ label: "FULL SOCIAL", handle: "FULL HANDLE", ignored: "drop me" }],
+    social: [{
+      label: "FULL SOCIAL",
+      handle: "FULL HANDLE",
+      qrAssetId: SYNTHETIC_QR_ASSET_ID,
+      ignored: "drop me",
+    }],
     bookingFields: ["FULL BOOKING FIELD"],
     statement: { eyebrow: "FULL STATEMENT", lineOne: "FULL LINE ONE", lineTwo: "FULL LINE TWO" },
     ignoredRootField: "drop me",
@@ -254,8 +261,52 @@ test("PUT preserves the complete legacy SiteContent shape at site_settings id 1"
     "assetId", "code", "enabled", "fullWidth", "image", "locked", "position", "preview",
     "previewHeight", "previewWidth", "slotIndex", "subtitle", "title",
   ]);
+  assert.deepEqual(Object.keys(persisted.social[0]).sort(), ["handle", "label", "qrAssetId"]);
+  assert.equal(persisted.social[0].qrAssetId, SYNTHETIC_QR_ASSET_ID);
   assert.deepEqual(Object.keys(persisted.templateWorks), ["film-rail"]);
   assert.deepEqual(payload.content, persisted);
+});
+
+test("PUT round-trips valid legacy platform QR IDs and strips non-opaque values", async () => {
+  const database = new MemoryD1();
+  const response = await requestSiteContent(
+    "http://127.0.0.1:3001/api/site-content",
+    {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        content: {
+          social: [
+            { label: "VALID", handle: "@valid", qrAssetId: SYNTHETIC_QR_ASSET_ID.toUpperCase() },
+            { label: "SHORT", handle: "@short", qrAssetId: "b".repeat(63) },
+            { label: "DATA", handle: "@data", qrAssetId: ["data", "image/png;base64,c3ludGhldGlj"].join(":") },
+            { label: "POSIX PATH", handle: "@path", qrAssetId: ["", "private", "not-an-id.png"].join("/") },
+            { label: "WINDOWS PATH", handle: "@path", qrAssetId: ["C", "\\private\\not-an-id.png"].join(":") },
+          ],
+        },
+      }),
+    },
+    database,
+  );
+  const payload = await response.json();
+  const persisted = JSON.parse(database.row.content);
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.content.social[0].qrAssetId, SYNTHETIC_QR_ASSET_ID);
+  assert.equal(persisted.social[0].qrAssetId, SYNTHETIC_QR_ASSET_ID);
+  for (const entry of payload.content.social.slice(1)) {
+    assert.equal("qrAssetId" in entry, false);
+  }
+  assert.deepEqual(persisted.social, payload.content.social);
+
+  const getResponse = await requestSiteContent(
+    "http://127.0.0.1:3001/api/site-content",
+    undefined,
+    database,
+  );
+  const getPayload = await getResponse.json();
+  assert.equal(getResponse.status, 200);
+  assert.deepEqual(getPayload.content.social, persisted.social);
 });
 
 test("PUT rejects an unauthenticated remote request", async () => {

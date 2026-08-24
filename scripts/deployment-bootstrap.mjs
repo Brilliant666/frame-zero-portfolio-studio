@@ -135,6 +135,7 @@ async function assertPublicBoundary(config) {
     "/login",
     "/api/auth/session",
     "/api/upload",
+    `/api/platform-qr/${"d".repeat(64)}`,
     "/api/unreviewed",
   ]) assert.equal((await request(origin, pathname)).status, 404, pathname);
 }

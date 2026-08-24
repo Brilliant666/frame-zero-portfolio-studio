@@ -172,10 +172,10 @@ const profileMetadata = {
     visualPriority: [
       { slotIndex: 0, level: "critical", role: "hero", note: "首次激活的门户主视觉。" },
     ],
-    cropPressure: { level: "high", note: "2:3 槽位素材还会进入 3:2 门户主视图，必须关注 focus。" },
+    cropPressure: { level: "medium", note: "门户主视图随素材横竖方向切换，仍需通过 focus 校准人物位置。" },
     mobileBehavior: { mode: "stack", note: "门户与轨道卡在手机端转为单列/四列可选布局。" },
     secondaryPresentations: [
-      { slotIndexes: allSlots(8), target: "3:2", critical: true, note: "被激活的任意竖图会再次进入横向门户。" },
+      { slotIndexes: allSlots(8), target: "variable", critical: true, note: "被激活的作品会按素材自然方向进入 3:2 或 2:3 门户。" },
     ],
     optionalNotes: ["优先使用环境留白足够的全身或半身竖图，并校准焦点。"],
   },

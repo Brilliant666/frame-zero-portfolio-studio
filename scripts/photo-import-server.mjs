@@ -13,6 +13,12 @@ import {
   photoImportContract,
   setLocalPhotoAssetsArchived,
 } from "./lib/photo-import.mjs";
+import {
+  createPlatformQrTemporaryName,
+  importPlatformQrAsset,
+  platformQrAssetContract,
+  readPlatformQrAsset,
+} from "./lib/platform-qr-assets.mjs";
 
 export const LOCAL_PHOTO_IMPORT_HOST = "127.0.0.1";
 export const LOCAL_PHOTO_IMPORT_PORT = 3002;
@@ -168,6 +174,15 @@ function writeEmpty(response, status, origin) {
   response.end();
 }
 
+function writePlatformQrImage(response, data, includeBody) {
+  response.statusCode = 200;
+  response.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  response.setHeader("Content-Type", "image/png");
+  response.setHeader("Content-Length", String(data.byteLength));
+  response.setHeader("X-Content-Type-Options", "nosniff");
+  response.end(includeBody ? data : undefined);
+}
+
 function parseRequestPath(request) {
   try {
     return new URL(request.url ?? "/", "http://127.0.0.1").pathname;
@@ -197,6 +212,8 @@ function validatePreflight(request, response, pathname) {
         BATCH_SIZE_HEADER,
         SOURCE_HEADER,
       ]
+    : pathname === "/platform-qr/import"
+      ? ["content-type", IMPORT_HEADER, EXTENSION_HEADER]
     : ["content-type", IMPORT_HEADER];
   if (normalizedHeaders.some((value) => !ALLOWED_PREFLIGHT_HEADERS.has(value))
     || requiredHeaders.some((value) => !normalizedHeaders.includes(value))) {
@@ -265,6 +282,21 @@ function validateImportHeaders(request, supportedExtensions, maximumAssets) {
     throw new SafeHttpError(400, "invalid-batch-metadata", "The local import batch metadata is invalid.");
   }
   return { extension, batchId, batchPosition, batchSize, sourceKind };
+}
+
+function validatePlatformQrImportHeaders(request) {
+  if (oneHeader(request.headers[IMPORT_HEADER]) !== "1") {
+    throw new SafeHttpError(403, "missing-import-header", "The required local import header is missing.");
+  }
+  const contentType = oneHeader(request.headers["content-type"]);
+  if (!contentType || contentType.split(";", 1)[0].trim().toLowerCase() !== "application/octet-stream") {
+    throw new SafeHttpError(415, "unsupported-media-type", "Platform QR imports require a binary request body.");
+  }
+  const extension = oneHeader(request.headers[EXTENSION_HEADER])?.toLowerCase();
+  if (!extension || !platformQrAssetContract.supportedExtensions.includes(extension)) {
+    throw new SafeHttpError(415, "unsupported-extension", "This platform QR image extension is not supported.");
+  }
+  return { extension };
 }
 
 function validateManagementHeaders(request) {
@@ -402,6 +434,17 @@ function classifyLibraryError(error) {
   }
 }
 
+function classifyPlatformQrError(error) {
+  const message = String(error?.message ?? "");
+  if (/size limit/i.test(message)) {
+    return new SafeHttpError(413, "payload-too-large", "This platform QR image exceeds 10 MiB.");
+  }
+  if (/too small|decode|format|pixel|image/i.test(message)) {
+    return new SafeHttpError(422, "invalid-image", "This platform QR image could not be processed safely.");
+  }
+  return new SafeHttpError(500, "platform-qr-failed", "The local platform QR operation failed.");
+}
+
 function normalizeImportResult(result) {
   if (
     !Array.isArray(result?.assetOutcomes)
@@ -435,6 +478,8 @@ export function createPhotoImportService({
   maximumBytes = LOCAL_PHOTO_IMPORT_MAX_BYTES,
   temporaryDirectoryCleanup = removeTemporaryDirectory,
   deferredTemporaryDirectoryCleanup = removeTemporaryDirectoryEventually,
+  platformQrImporter = importPlatformQrAsset,
+  platformQrReader = readPlatformQrAsset,
 } = {}) {
   if (typeof projectRoot !== "string" || projectRoot.trim() === "") {
     throw new TypeError("projectRoot is required");
@@ -519,6 +564,41 @@ export function createPhotoImportService({
     return result;
   }
 
+  async function importPlatformQr(request) {
+    const { extension } = validatePlatformQrImportHeaders(request);
+    validateDeclaredBodySize(request, platformQrAssetContract.maximumInputBytes);
+    await fs.mkdir(resolvedTempRoot, { recursive: true });
+    const temporaryDirectory = await fs.mkdtemp(path.join(resolvedTempRoot, TEMP_DIRECTORY_PREFIX));
+    const temporaryFile = path.join(temporaryDirectory, createPlatformQrTemporaryName(extension));
+    let result;
+    let operationError;
+    try {
+      await streamRequestToFile(request, temporaryFile, platformQrAssetContract.maximumInputBytes);
+      try {
+        result = await platformQrImporter({ projectRoot: resolvedProjectRoot, sourcePath: temporaryFile });
+      } catch (error) {
+        throw classifyPlatformQrError(error);
+      }
+    } catch (error) {
+      operationError = error;
+    }
+    try {
+      await temporaryDirectoryCleanup(temporaryDirectory);
+    } catch {
+      scheduleDeferredCleanup(temporaryDirectory);
+    }
+    if (operationError) throw operationError;
+    return { ok: true, ...result };
+  }
+
+  async function readPlatformQr(assetId) {
+    try {
+      return await platformQrReader({ projectRoot: resolvedProjectRoot, assetId });
+    } catch (error) {
+      throw classifyPlatformQrError(error);
+    }
+  }
+
   async function readLibrary() {
     try {
       return { ok: true, ...await libraryReader({ projectRoot: resolvedProjectRoot }) };
@@ -563,8 +643,23 @@ export function createPhotoImportService({
         return;
       }
 
+      const platformQrMatch = /^\/platform-qr\/([a-f0-9]{64})$/.exec(pathname);
+      if (platformQrMatch && ["GET", "HEAD"].includes(request.method)) {
+        originForRequest(request, { required: false });
+        if (closing) throw new SafeHttpError(503, "service-stopping", "The local import service is stopping.");
+        const asset = await enqueueRequest(() => readPlatformQr(platformQrMatch[1]));
+        if (!asset) throw new SafeHttpError(404, "asset-not-found", "This platform QR asset does not exist.");
+        writePlatformQrImage(response, asset.data, request.method === "GET");
+        return;
+      }
+
       if (
-        ["/import", "/library/archive", "/library/restore"].includes(pathname)
+        [
+          "/import",
+          "/library/archive",
+          "/library/restore",
+          "/platform-qr/import",
+        ].includes(pathname)
         && request.method === "OPTIONS"
       ) {
         validatePreflight(request, response, pathname);
@@ -577,6 +672,13 @@ export function createPhotoImportService({
           throw new SafeHttpError(503, "service-stopping", "The local import service is stopping.");
         }
         writeJson(response, 200, await enqueueRequest(() => importOne(request)), responseOrigin);
+        return;
+      }
+
+      if (pathname === "/platform-qr/import" && request.method === "POST") {
+        responseOrigin = originForRequest(request, { required: true });
+        if (closing) throw new SafeHttpError(503, "service-stopping", "The local import service is stopping.");
+        writeJson(response, 200, await enqueueRequest(() => importPlatformQr(request)), responseOrigin);
         return;
       }
 
@@ -595,7 +697,14 @@ export function createPhotoImportService({
         return;
       }
 
-      if (["/health", "/import", "/library", "/library/archive", "/library/restore"].includes(pathname)) {
+      if ([
+        "/health",
+        "/import",
+        "/library",
+        "/library/archive",
+        "/library/restore",
+        "/platform-qr/import",
+      ].includes(pathname) || pathname.startsWith("/platform-qr/")) {
         throw new SafeHttpError(405, "method-not-allowed", "This request method is not allowed.");
       }
       throw new SafeHttpError(404, "not-found", "This local service endpoint does not exist.");

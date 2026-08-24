@@ -1,7 +1,7 @@
 # Portfolio Platform Current Status
 
-> - Updated: 2026-08-18
-> - Baseline: `main@ced247e5baf19510329c4c3a084a69e6b1ab0c2c`
+> - Updated: 2026-08-24
+> - Baseline: `main@dc471795139dc47649368bb37c0178fb77188fea`
 
 ```text
 Current phase: SELF_HOSTED_V1
@@ -18,13 +18,25 @@ Product experience foundation: ACCEPTED
 Automated visual QA baseline: ACCEPTED
 Pre-launch product polish: IN_PROGRESS
 Human-directed product polish: IN_PROGRESS
+PR #25 workspace: HUMAN_DIRECTED_PRODUCT_POLISH_WORKSPACE
 Eleven-template human visual approval: PENDING
 Human-approved templates: 0 / 11
 PR #24 closure mode: FINAL_HUMAN_ACCEPTANCE + MERGE
 PR #24 feature freeze: TRUE
 PR #24 product baseline: ACCEPTED
 PR #24 limited baseline acceptance: ACCEPTED
-PR #24 hand-off: WAITING_FOR_NEXT_HUMAN_DIRECTED_PRODUCT_POLISH_AUTHORIZATION
+PR #25 workspace status: FEATURE_FROZEN
+PR #25 mode: FINAL_HUMAN_ACCEPTANCE + MERGE
+PR #25 accepted batch: HR25-001..013 — ACCEPTED_AS_STAGE_BASELINE
+PR #25 next request: HR25-014 — NOT_STARTED
+PR #25 feature freeze: TRUE
+PR #25 HR25-001..013: ACCEPTED_AS_STAGE_BASELINE
+PR #25 limited baseline: ACCEPTED
+PR #25 stage review: ACCEPTED
+PR #25 hand-off: READY_AND_SQUASH_MERGE_AUTHORIZED
+Platform card local-only: ACCEPTED_FOR_LOCAL_PRODUCT_EXPERIENCE
+Platform card public render fail-safe: CLOSED
+Platform card hosted resolution pending: P1_PRE_DEPLOYMENT
 External operations: NOT_AUTHORIZED
 Completed milestone: STANDARD_NEXT_NODE_PARITY
 Next milestone: DEPLOYMENT_BOOTSTRAP_READY
@@ -138,7 +150,23 @@ close
 `PRE_LAUNCH_PRODUCT_POLISH`, complete the eleven-template visual review, or
 claim V1 product-experience completion. No formal template has
 `HUMAN_APPROVED` status (`0 / 11`); all eleven remain ready for human recheck or
-later template-by-template polish in a new human-directed product-polish PR.
+continued template-by-template polish in a later explicitly authorized
+workspace.
+
+PR #25 is feature-frozen after HR25-013. Human review has accepted HR25-001
+through HR25-013 and the limited stage review as the second human-directed
+product-polish stage baseline. Ready and squash merge are authorized for the
+exact accepted head after its final CI succeeds. This stage acceptance does not
+complete pre-launch or human-directed product polish and does not mark any
+formal template `HUMAN_APPROVED`; all eleven remain ready for human recheck.
+The closure audit mapped every pre-closure commit and production change to
+Bootstrap or an explicit HR request. Its only product-code closure change makes
+uploaded local platform cards fail visually safe when their loopback companion,
+asset, or route is unavailable; account text and safe HTTPS links remain usable.
+The feature is still a Legacy/local SiteContent extension, while hosted platform
+card resolution remains `P1_PRE_DEPLOYMENT`. See
+[pr25-stage-review.md](pr25-stage-review.md) for the audit matrices and frozen
+architecture boundaries.
 
 See [stage-a2-deployment-bootstrap.md](stage-a2-deployment-bootstrap.md) for
 the current Definition of Done matrix and explicit external-operation boundary.

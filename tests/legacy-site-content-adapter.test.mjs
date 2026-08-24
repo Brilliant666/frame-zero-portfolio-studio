@@ -375,6 +375,23 @@ test("converts complete raw legacy content and preserves every root content fiel
   assert.equal("templateWorks" in document, false);
 });
 
+test("blocks legacy platform QR assets at the exact path instead of silently converting them", async (t) => {
+  const { adaptLegacySiteContentToSiteDocumentV1 } = await importAdapter(t);
+  const raw = makeLegacy({
+    social: [{ label: "Example", handle: "@legacy", qrAssetId: "d".repeat(64) }],
+  });
+  const result = assertInvalid(
+    adaptLegacySiteContentToSiteDocumentV1(raw, makeSnapshot(raw)),
+    "unsupported_social_qr_asset",
+  );
+
+  assert.ok(result.errors.some((error) => (
+    error.code === "unsupported_social_qr_asset"
+      && error.path === "$.social[0].qrAssetId"
+  )));
+  assert.equal(result.document, null);
+});
+
 test("maps all eleven legacy templates one-to-one at templateVersion 1", async (t) => {
   const {
     adaptLegacySiteContentToSiteDocumentV1,

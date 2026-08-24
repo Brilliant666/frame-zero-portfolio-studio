@@ -157,6 +157,13 @@ test("Standard Next.js standalone starts over HTTP with current route parity", a
   assert.equal((await fetch(`${origin}${stylesheet}`)).status, 200);
   assert.equal((await fetch(`${origin}/favicon.svg`)).status, 200);
 
+  const unavailablePlatformCardPath = `/api/platform-qr/${"d".repeat(64)}`;
+  for (const method of ["GET", "HEAD"]) {
+    const response = await fetch(`${origin}${unavailablePlatformCardPath}`, { method });
+    assert.equal(response.status, 404, `${method} ${unavailablePlatformCardPath}`);
+    assert.equal(await response.text(), "");
+  }
+
   const adminRedirect = await fetch(`${origin}/admin`, { redirect: "manual" });
   assert.ok([307, 308].includes(adminRedirect.status));
   assert.equal(new URL(adminRedirect.headers.get("location"), origin).pathname, "/admin/template");
@@ -167,7 +174,7 @@ test("Standard Next.js standalone starts over HTTP with current route parity", a
     const html = await response.text();
     assert.match(html, /<title>内容管理后台<\/title>/);
     assert.match(html, new RegExp(`data-admin-section="${section}"`));
-    assert.match(html, /aria-label="保存全部修改"/);
+    assert.match(html, /aria-label="保存修改"/);
   }
 
   for (const templateId of templateIds) {
