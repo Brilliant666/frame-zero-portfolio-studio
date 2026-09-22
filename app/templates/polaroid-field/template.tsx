@@ -18,6 +18,7 @@ import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import PlatformAccounts from "../shared/platform-accounts";
 import { buildPolaroidFieldLayout } from "./field-layout";
+import { selectPolaroidHero } from "./hero-selection";
 import { getPolaroidViewFromHash, POLAROID_VIEW_HASHES, type PolaroidView } from "./navigation";
 import {
   constrainView,
@@ -45,6 +46,81 @@ const stars = [
   [14, 31], [33, 18], [55, 27], [82, 31], [11, 61], [39, 57], [68, 61], [91, 67], [24, 86], [56, 89], [79, 85],
 ] as const;
 
+function HeroPolaroid({
+  slot,
+  primary = false,
+  positionClass = "",
+  onOpenWork,
+}: {
+  slot: ReturnType<typeof buildPhotoSlots>[number];
+  primary?: boolean;
+  positionClass?: string;
+  onOpenWork: TemplateProps["onOpenWork"];
+}) {
+  const work = slot.work;
+  const className = [
+    styles.heroPolaroid,
+    primary ? styles.heroPrimary : styles.heroSupport,
+    !work ? styles.heroPolaroidPlaceholder : "",
+    positionClass,
+  ].filter(Boolean).join(" ");
+  const contents = (
+    <>
+      <span className={styles.heroTape} aria-hidden="true" />
+      <span className={styles.heroPhoto} style={getPhotoSlotStyle(slot)}>
+        {work ? (
+          <img
+            src={work.preview}
+            srcSet={`${work.preview} ${work.previewWidth}w, ${work.image} ${work.fullWidth}w`}
+            sizes={primary ? "(max-width: 800px) 74vw, 26rem" : "(max-width: 800px) 34vw, 13rem"}
+            width={work.previewWidth}
+            height={work.previewHeight}
+            alt={work.subtitle || work.title}
+            loading={primary ? "eager" : "lazy"}
+            decoding="async"
+            fetchPriority={primary ? "high" : "auto"}
+            style={{ objectPosition: work.position }}
+          />
+        ) : (
+          <PhotoPlaceholder slot={slot} tone="light" compact label="MEMORY PENDING" />
+        )}
+      </span>
+      <span className={styles.heroCaption}>
+        <small>{primary ? "CURRENT FEATURE" : "ORBIT PREVIEW"} / FRAME {String(slot.index + 1).padStart(2, "0")}</small>
+        <strong>{work?.title ?? "等待下一段记忆"}</strong>
+        <em>{slot.ratio}</em>
+      </span>
+    </>
+  );
+
+  if (!work) {
+    return (
+      <article
+        className={className}
+        data-hero-polaroid={primary ? "primary" : "support"}
+        data-hero-slot={slot.index + 1}
+        data-ratio={slot.ratio}
+      >
+        {contents}
+      </article>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={className}
+      data-hero-polaroid={primary ? "primary" : "support"}
+      data-hero-slot={slot.index + 1}
+      data-ratio={slot.ratio}
+      onClick={() => onOpenWork(work)}
+      aria-label={`${primary ? "打开本期主推作品" : "打开精选预告作品"} ${work.title}`}
+    >
+      {contents}
+    </button>
+  );
+}
+
 export default function PolaroidFieldTemplate({
   templateId,
   content,
@@ -65,6 +141,7 @@ export default function PolaroidFieldTemplate({
     () => buildPolaroidFieldLayout(fieldSlots.map((slot) => slot.ratio)),
     [fieldSlots],
   );
+  const heroSelection = useMemo(() => selectPolaroidHero(fieldSlots), [fieldSlots]);
   const headerStatus = isPreview ? "TEMPLATE PREVIEW" : content.profile.availability.trim();
   const trustItems = content.trustItems.filter(({ label, value }) => label.trim() || value.trim());
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -450,23 +527,46 @@ export default function PolaroidFieldTemplate({
         tabIndex={-1}
       >
         <div className={styles.heroTitle}>
-          <p>{content.hero.eyebrow}</p>
-          <h1>漂浮<br /><span>拍立得星图</span></h1>
+          <p><span>CURATED COVER / 01</span>{content.hero.eyebrow}</p>
+          <h1>漂浮<span>拍立得星图</span></h1>
+          <p className={styles.heroSubtitle}>{content.profile.intro}</p>
+          <div className={styles.heroByline}>
+            <strong>{content.profile.photographer} · {content.profile.role}</strong>
+            <span>{content.hero.services}</span>
+          </div>
         </div>
-        <div className={styles.heroCopy}>
-          <p>{content.profile.intro}</p>
-          <strong>{content.profile.photographer} · {content.profile.role}</strong>
-          <span>{content.hero.services}</span>
-        </div>
-        <span className={styles.heroOrbitTrack} aria-hidden="true" />
-        <a
-          className={styles.heroGateway}
-          href="#polaroid-field"
-          onClick={(event) => handleViewLink(event, "field", "#polaroid-field", true)}
-        >进入影像星野 <b aria-hidden="true">↓</b></a>
-        <div className={styles.heroSeal} aria-hidden="true">
-          <span>{String(fieldSlots.length).padStart(2, "0")}</span>
-          <small>MEMORIES<br />IN ORBIT</small>
+
+        <div className={styles.heroStage} aria-label="本期精选作品与作品星图预告">
+          <span className={styles.heroOrbitTrack} aria-hidden="true" />
+          {heroSelection.supportSlots.map((slot, index) => (
+            <HeroPolaroid
+              slot={slot}
+              positionClass={styles[`heroSupport${index + 1}`]}
+              onOpenWork={onOpenWork}
+              key={`hero-support-${slot.index}`}
+            />
+          ))}
+          {heroSelection.heroSlot ? (
+            <HeroPolaroid slot={heroSelection.heroSlot} primary onOpenWork={onOpenWork} />
+          ) : null}
+
+          <a
+            className={styles.heroGateway}
+            href="#polaroid-field"
+            onClick={(event) => handleViewLink(event, "field", "#polaroid-field", true)}
+          >
+            <span>
+              <small>OPEN THE FIELD / {String(fieldSlots.length).padStart(2, "0")} MEMORIES</small>
+              <strong>进入作品星图</strong>
+              <em>拖动探索 · 点击拍立得展开完整影像</em>
+            </span>
+            <b aria-hidden="true">↘</b>
+          </a>
+
+          <div className={styles.heroSeal} aria-hidden="true">
+            <span>{String(fieldSlots.length).padStart(2, "0")}</span>
+            <small>MEMORIES<br />IN ORBIT</small>
+          </div>
         </div>
       </section>
 

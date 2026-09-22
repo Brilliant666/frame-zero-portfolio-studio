@@ -39,6 +39,14 @@ function importFieldLayoutModule(t) {
   );
 }
 
+function importHeroSelectionModule(t) {
+  return importTypescriptModule(
+    t,
+    "../app/templates/polaroid-field/hero-selection.ts",
+    "hero-selection.ts",
+  );
+}
+
 function importNavigationModule(t) {
   return importTypescriptModule(
     t,
@@ -101,22 +109,6 @@ function maximumClampRem(value) {
   const values = value.slice("clamp(".length, -1).split(",");
   assert.equal(values.length, 3, `expected three clamp values, received ${value}`);
   return remValue(values[2].trim());
-}
-
-function splitCssValues(value) {
-  const values = [];
-  let depth = 0;
-  let start = 0;
-  for (let index = 0; index < value.length; index += 1) {
-    if (value[index] === "(") depth += 1;
-    if (value[index] === ")") depth -= 1;
-    if (/\s/.test(value[index]) && depth === 0) {
-      if (start < index) values.push(value.slice(start, index));
-      start = index + 1;
-    }
-  }
-  if (start < value.length) values.push(value.slice(start));
-  return values;
 }
 
 function extractCssRule(source, selector, occurrence = 0) {
@@ -315,6 +307,40 @@ test("field layout is ratio-aware, deterministic, and rejects a non-nine-slot co
   assert.equal(portrait.placements[0].height, landscape.placements[0].height);
   assert.deepEqual(buildPolaroidFieldLayout(DEFAULT_RATIOS), landscape);
   assert.throws(() => buildPolaroidFieldLayout(DEFAULT_RATIOS.slice(0, 8)), /exactly 9 ratios/);
+});
+
+test("polaroid hero selection keeps the centre feature, uses curated support, and falls back deterministically", async (t) => {
+  const {
+    POLAROID_HERO_SLOT_PRIORITY,
+    POLAROID_HERO_SUPPORT_COUNT,
+    selectPolaroidHero,
+  } = await importHeroSelectionModule(t);
+  const makeSlots = (populatedIndexes) => Array.from({ length: 9 }, (_, index) => ({
+    index,
+    ratio: index === 4 ? "2:3" : "3:2",
+    work: populatedIndexes.includes(index) ? { id: `work-${index}` } : null,
+  }));
+  const selectIndexes = (slots) => {
+    const selection = selectPolaroidHero(slots);
+    return {
+      hero: selection.heroSlot?.index ?? null,
+      supports: selection.supportSlots.map(({ index }) => index),
+    };
+  };
+
+  assert.deepEqual(POLAROID_HERO_SLOT_PRIORITY, [4, 8, 0, 2, 7, 6, 1, 3, 5]);
+  assert.equal(POLAROID_HERO_SUPPORT_COUNT, 3);
+
+  const fullSlots = makeSlots([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+  const fullSnapshot = structuredClone(fullSlots);
+  assert.deepEqual(selectIndexes(fullSlots), { hero: 4, supports: [8, 0, 2] });
+  assert.deepEqual(selectIndexes(fullSlots), { hero: 4, supports: [8, 0, 2] });
+  assert.deepEqual(fullSlots, fullSnapshot, "selection remains read-only");
+
+  assert.deepEqual(selectIndexes(makeSlots([0, 2, 7, 8])), { hero: 8, supports: [0, 2, 7] });
+  assert.deepEqual(selectIndexes(makeSlots([3])), { hero: 3, supports: [4, 8, 0] });
+  assert.deepEqual(selectIndexes(makeSlots([])), { hero: 4, supports: [8, 0, 2] });
+  assert.deepEqual(selectIndexes([]), { hero: null, supports: [] });
 });
 
 test("polaroid navigation maps stable hashes to the three same-route views", async (t) => {
@@ -534,7 +560,7 @@ test("polaroid template exposes accessible Chinese view navigation on desktop an
   );
 });
 
-test("polaroid gateway leaves the profile card and becomes a responsive central field entrance", async () => {
+test("polaroid cover hero leads with one curated work, three previews, and a field CTA", async () => {
   const [template, css] = await Promise.all([
     fs.readFile(new URL("../app/templates/polaroid-field/template.tsx", import.meta.url), "utf8"),
     fs.readFile(new URL("../app/templates/polaroid-field/polaroid-field.module.css", import.meta.url), "utf8"),
@@ -561,13 +587,6 @@ test("polaroid gateway leaves the profile card and becomes a responsive central 
     return item.initializer.getText(sourceFile);
   };
   const tagName = (node) => openingElement(node).tagName.getText(sourceFile);
-  const directVisibleText = (node) => node.children
-    .filter(ts.isJsxText)
-    .map((child) => child.text)
-    .join(" ")
-    .replaceAll(/\s+/g, " ")
-    .trim();
-
   let hero;
   const matchingGateways = [];
   function visit(node) {
@@ -579,32 +598,36 @@ test("polaroid gateway leaves the profile card and becomes a responsive central 
     if (
       ts.isJsxElement(node)
       && tagName(node) === "a"
-      && directVisibleText(node) === "进入影像星野"
+      && attributeValue(node, "className") === "styles.heroGateway"
     ) matchingGateways.push(node);
     ts.forEachChild(node, visit);
   }
   visit(sourceFile);
 
   assert.ok(hero, "expected the field hero section");
-  assert.equal(matchingGateways.length, 1, "the field entrance has one visible gateway label");
+  assert.equal(matchingGateways.length, 1, "the cover has one field entrance");
   const heroChildren = hero.children.filter((node) => ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node));
   assert.deepEqual(
     heroChildren.map((node) => attributeValue(node, "className")),
-    ["styles.heroTitle", "styles.heroCopy", "styles.heroOrbitTrack", "styles.heroGateway", "styles.heroSeal"],
-    "mobile source order reads title, profile context, then the field entrance",
+    ["styles.heroTitle", "styles.heroStage"],
+    "the cover separates concise project context from the work-led stage",
   );
 
-  const heroCopy = heroChildren[1];
-  let heroCopyLinks = 0;
-  function countHeroCopyLinks(node) {
-    if (ts.isJsxElement(node) && tagName(node) === "a") heroCopyLinks += 1;
-    ts.forEachChild(node, countHeroCopyLinks);
-  }
-  countHeroCopyLinks(heroCopy);
-  assert.equal(heroCopyLinks, 0, "the profile card contains context rather than the field action");
+  const heroStage = heroChildren[1];
+  const heroStageSource = heroStage.getText(sourceFile);
+  assert.ok(heroStageSource.includes("heroSelection.supportSlots.map"), "support cards come from the stable selection");
+  assert.ok(heroStageSource.includes("heroSelection.heroSlot"), "the selected cover card is rendered once");
+  assert.ok(heroStageSource.includes("primary onOpenWork"), "the selected cover is explicitly dominant");
+  assert.ok(heroStageSource.includes("进入作品星图"), "the action clearly names the complete field");
 
-  const orbitTrack = heroChildren[2];
-  assert.equal(attributeValue(orbitTrack, "aria-hidden"), "true", "the orbit rail stays decorative");
+  const heroComponentStart = template.indexOf("function HeroPolaroid");
+  const heroComponentEnd = template.indexOf("export default function PolaroidFieldTemplate");
+  const heroComponent = template.slice(heroComponentStart, heroComponentEnd);
+  assert.ok(heroComponent.includes('data-hero-polaroid={primary ? "primary" : "support"}'));
+  assert.ok(!heroComponent.includes("data-polaroid="), "cover cards never enter the draggable field geometry query");
+  assert.ok(heroComponent.includes('loading={primary ? "eager" : "lazy"}'));
+  assert.ok(heroComponent.includes('fetchPriority={primary ? "high" : "auto"}'));
+  assert.ok(heroComponent.includes('primary ? "打开本期主推作品" : "打开精选预告作品"'));
 
   const gateway = matchingGateways[0];
   assert.equal(attributeValue(gateway, "className"), "styles.heroGateway");
@@ -625,75 +648,71 @@ test("polaroid gateway leaves the profile card and becomes a responsive central 
   assert.equal(attributeValue(gatewayMarker, "aria-hidden"), "true", "the arrow does not duplicate the link name");
 
   const desktopTrack = parseDeclarations(extractCssRule(css, ".heroOrbitTrack"));
-  const desktopGuide = parseDeclarations(extractCssRule(css, ".heroOrbitTrack::after"));
+  const primaryCard = parseDeclarations(extractCssRule(css, ".heroPrimary"));
+  const supportCard = parseDeclarations(extractCssRule(css, ".heroSupport"));
   const desktopGateway = parseDeclarations(extractCssRule(css, ".heroGateway"));
   const gatewayFocus = parseDeclarations(extractCssRule(css, ".heroGateway:focus-visible"));
   assert.equal(desktopTrack.position, "absolute");
   assert.equal(desktopTrack["pointer-events"], "none");
-  assert.ok(desktopTrack["border-top"], "desktop orbit rail has a visible connection line");
-  assert.equal(desktopGuide.position, "absolute");
-  assert.ok(desktopGuide.height && desktopGuide.background, "orbit rail includes a vertical guide toward the work");
+  assert.ok(desktopTrack.border, "the cover stage previews the constellation relationship");
+  assert.ok(maximumClampRem(primaryCard.width) > maximumClampRem(supportCard.width), "the feature card dominates support cards");
+  assert.ok(Number(primaryCard["z-index"]) > Number(supportCard["z-index"]), "the feature card sits above preview fragments");
   assert.equal(desktopGateway.position, "absolute");
-  assert.notEqual(desktopGateway.top, "auto");
-  assert.equal(desktopGateway.left, "50%", "desktop gateway uses the hero's horizontal center line");
-  assert.match(desktopGateway.transform, /translate\(\s*-50%\s*,/u);
-  assert.ok(remValue(desktopGateway["min-height"]) >= 2.75, "gateway preserves a 44px pointer target");
+  assert.equal(desktopGateway.bottom, "3%", "the CTA belongs to the curated work stage");
+  assert.ok(remValue(desktopGateway["min-height"]) >= 4.9, "gateway is a deliberate cover action rather than a small floating button");
   assert.ok(gatewayFocus.outline && gatewayFocus.outline !== "none", "gateway keeps a visible keyboard focus style");
 
   const mobileCss = extractBraceBlock(css, "@media (max-width: 800px)");
-  const mobileTrack = parseDeclarations(extractCssRule(mobileCss, ".heroOrbitTrack"));
+  const mobileStage = parseDeclarations(extractCssRule(mobileCss, ".heroStage"));
+  const mobilePrimary = parseDeclarations(extractCssRule(mobileCss, ".heroPrimary"));
   const mobileGateway = parseDeclarations(extractCssRule(mobileCss, ".heroGateway"));
-  assert.equal(mobileTrack.display, "none", "mobile removes the decorative desktop rail");
-  assert.equal(mobileGateway.position, "relative");
+  assert.equal(mobileStage.width, "100%", "mobile keeps the cover collage inside its single column");
+  assert.ok(minimumClampRem(mobileStage["min-height"]) >= 28, "mobile reserves stable space for the absolute collage");
+  assert.equal(mobilePrimary.left, "50%", "mobile keeps the feature centred");
   assert.equal(mobileGateway.top, "auto");
-  assert.equal(mobileGateway.left, "auto");
+  assert.equal(mobileGateway.left, "0");
   assert.equal(mobileGateway.width, "100%");
-  assert.equal(mobileGateway.transform, "none", "mobile gateway returns to normal single-column flow");
+  assert.equal(mobileGateway.transform, "none", "mobile CTA stays within the bounded cover stage");
 });
 
-test("polaroid field view anchors desktop context above the centered work and keeps a mobile fallback", async () => {
-  const css = await fs.readFile(
-    new URL("../app/templates/polaroid-field/polaroid-field.module.css", import.meta.url),
-    "utf8",
-  );
+test("polaroid cover reduces title dominance while preserving the full field below", async () => {
+  const [template, css] = await Promise.all([
+    fs.readFile(new URL("../app/templates/polaroid-field/template.tsx", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/templates/polaroid-field/polaroid-field.module.css", import.meta.url), "utf8"),
+  ]);
   const hero = parseDeclarations(extractCssRule(css, ".hero"));
-  const heroPadding = splitCssValues(hero.padding);
-  const heroTitle = parseDeclarations(extractCssRule(css, ".heroTitle"));
-  const heroCopy = parseDeclarations(extractCssRule(css, ".heroCopy"));
-  assert.equal(hero.width, "100%", "desktop hero uses the full content width for opposing anchors");
-  assert.equal(hero["align-items"], "start", "desktop hero context stays above the work");
-  assert.equal(heroTitle["align-self"], "start");
-  assert.equal(heroTitle["justify-self"], "start", "title anchors to the upper inline start");
-  assert.equal(heroCopy["align-self"], "start");
-  assert.equal(heroCopy["justify-self"], "end", "information card anchors to the upper inline end");
-  assert.ok(maximumClampRem(hero["min-height"]) <= 28, "hero no longer occupies a full desktop viewport");
-  assert.ok(maximumClampRem(heroPadding[0]) <= 2.5, "hero vertical padding stays compact");
+  const heroTitle = parseDeclarations(extractCssRule(css, ".heroTitle h1"));
+  const heroStage = parseDeclarations(extractCssRule(css, ".heroStage"));
+  const heroSubtitle = parseDeclarations(extractCssRule(css, ".heroSubtitle"));
+  assert.equal(hero.width, "min(100%, 1680px)", "the cover aligns with the template canvas");
+  assert.equal(hero["align-items"], "center", "copy and curated works share the cover centre");
+  assert.ok(maximumClampRem(heroTitle["font-size"]) <= 6, "the title no longer dominates at eleven rem");
+  assert.ok(maximumClampRem(heroStage["min-height"]) >= 40, "the work stage receives the majority of cover height");
+  assert.ok(heroSubtitle["font-size"], "the existing profile introduction becomes a concise subtitle");
 
-  const field = parseDeclarations(extractCssRule(css, ".fieldSection"));
-  const fieldPadding = splitCssValues(field["padding-block"]);
-  assert.ok(maximumClampRem(fieldPadding[0]) <= 1.75, "field begins close to the hero");
-  assert.ok(maximumClampRem(fieldPadding[1]) <= 5, "field keeps a bounded closing rhythm");
-
-  const fieldHeading = parseDeclarations(extractCssRule(css, ".fieldSection .sectionHeading"));
-  assert.ok(maximumClampRem(fieldHeading["margin-bottom"]) <= 1.1, "field heading stays close to the canvas");
-
-  const heroSeal = parseDeclarations(extractCssRule(css, ".heroSeal", 1));
-  assert.ok(maximumClampRem(heroSeal.width) <= 7, "desktop seal stays clear of the hero copy");
-  assert.notEqual(heroSeal.top, "auto", "desktop seal uses the upper edge as its vertical anchor");
-  assert.notEqual(heroSeal.right, "auto", "desktop seal remains anchored to the inline end");
-  assert.equal(heroSeal.bottom, "auto");
-  assert.equal(heroSeal["pointer-events"], "none");
+  const heroStart = template.indexOf('id="polaroid-top"');
+  const fieldStart = template.indexOf('id="polaroid-field"');
+  const packageStart = template.indexOf('id="polaroid-packages"');
+  assert.ok(heroStart >= 0 && fieldStart > heroStart && packageStart > fieldStart);
+  const heroMarkup = template.slice(heroStart, fieldStart);
+  const fieldMarkup = template.slice(fieldStart, packageStart);
+  assert.ok(heroMarkup.includes("CURATED COVER / 01"));
+  assert.ok(heroMarkup.includes("content.profile.intro"));
+  assert.ok(heroMarkup.includes("content.profile.photographer"));
+  assert.ok(heroMarkup.includes("content.hero.services"));
+  assert.ok(!heroMarkup.includes("styles.fieldControls"), "the cover has no zoom or FIT controls");
+  assert.ok(!heroMarkup.includes("styles.dragHint"), "the cover keeps only the lightweight CTA hint");
+  assert.ok(fieldMarkup.includes("styles.fieldToolbar"));
+  assert.ok(fieldMarkup.includes("styles.fieldControls"));
+  assert.ok(fieldMarkup.includes("styles.dragHint"), "complete interaction help remains with the field");
 
   const mobileCss = extractBraceBlock(css, "@media (max-width: 800px)");
   const mobileHero = parseDeclarations(extractCssRule(mobileCss, ".hero"));
-  const mobileHeroPadding = splitCssValues(mobileHero.padding).map(remValue);
-  assert.equal(mobileHero["grid-template-columns"], "1fr", "mobile restores a readable single-column flow");
-  assert.ok(mobileHeroPadding[0] <= 3 && mobileHeroPadding[2] <= 3.5);
+  const mobileTitle = parseDeclarations(extractCssRule(mobileCss, ".heroTitle h1"));
   const mobileHeroSeal = parseDeclarations(extractCssRule(mobileCss, ".heroSeal"));
-  assert.equal(mobileHeroSeal.display, "none", "mobile hero removes the overlapping seal");
-  const mobileField = parseDeclarations(extractCssRule(mobileCss, ".fieldSection"));
-  const mobileFieldPadding = splitCssValues(mobileField["padding-block"]).map(remValue);
-  assert.ok(mobileFieldPadding[0] <= 2.5 && mobileFieldPadding[1] <= 3.5);
+  assert.equal(mobileHero["grid-template-columns"], "1fr", "mobile returns to one readable column");
+  assert.ok(maximumClampRem(mobileTitle["font-size"]) <= 4.2, "mobile title leaves room for the photograph");
+  assert.equal(mobileHeroSeal.display, "none", "mobile removes the overlapping seal");
 
   const mobileCta = parseDeclarations(extractCssRule(mobileCss, ".mobileCta"));
   const fieldMobileCta = parseDeclarations(extractCssRule(
@@ -701,7 +720,10 @@ test("polaroid field view anchors desktop context above the centered work and ke
     '.shell[data-polaroid-active-view="field"] .mobileCta',
   ));
   assert.equal(mobileCta.display, "grid", "mobile CTA remains available in the contact flows");
-  assert.equal(fieldMobileCta.display, "none", "field view does not cover the gallery with the mobile CTA");
+  assert.equal(fieldMobileCta.display, "none", "field view does not cover the cover or gallery with the fixed CTA");
+
+  const reducedMotion = extractBraceBlock(css, "@media (prefers-reduced-motion: reduce)");
+  assert.match(reducedMotion, /\.shell \*[\s\S]*animation-duration:\s*\.01ms !important/);
 });
 
 test("polaroid package facts use only non-empty trust items and stay out of the field view", async () => {
