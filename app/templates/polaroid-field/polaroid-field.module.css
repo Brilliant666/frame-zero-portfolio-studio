@@ -150,495 +150,6 @@
   text-align: right;
 }
 
-.hero,
-.fieldSection,
-.packageSection,
-.bookingSection {
-  scroll-margin-top: 5rem;
-}
-
-.hero {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(16rem, .72fr) minmax(0, 1.28fr);
-  gap: clamp(1.5rem, 4vw, 5rem);
-  align-items: center;
-  width: min(100%, 1680px);
-  min-height: clamp(34rem, calc(100svh - 5rem), 47rem);
-  margin: 0 auto;
-  padding: clamp(2rem, 4vw, 4.5rem) clamp(1rem, 4vw, 4.5rem);
-  isolation: isolate;
-}
-
-.hero::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  top: 50%;
-  right: clamp(1rem, 6vw, 7rem);
-  width: clamp(25rem, 48vw, 48rem);
-  aspect-ratio: 1;
-  border: 1px dashed rgba(24,34,39,.26);
-  border-radius: 50%;
-  box-shadow: 0 0 0 2.5rem rgba(255,255,255,.16), 0 0 0 2.6rem rgba(24,34,39,.08);
-  transform: translateY(-50%);
-}
-
-.hero::after {
-  content: "✦";
-  position: absolute;
-  z-index: -1;
-  top: 12%;
-  right: 44%;
-  color: var(--coral);
-  font-size: clamp(2.5rem, 5vw, 5.5rem);
-  opacity: .78;
-  transform: rotate(12deg);
-}
-
-.heroTitle,
-.heroStage,
-.heroSeal {
-  position: relative;
-  z-index: 2;
-}
-
-.heroTitle {
-  display: grid;
-  align-self: center;
-  justify-self: start;
-  max-width: 34rem;
-}
-
-.heroTitle > p:first-child,
-.sectionHeading small,
-.bookingIntro > small {
-  margin: 0 0 1.2rem;
-  color: var(--coral);
-  font: 800 .62rem ui-monospace, SFMono-Regular, Consolas, monospace;
-  letter-spacing: .13em;
-  text-transform: uppercase;
-}
-
-.heroTitle > p:first-child {
-  display: grid;
-  gap: .45rem;
-  margin-bottom: 1rem;
-}
-
-.heroTitle > p:first-child span {
-  color: var(--ink-soft);
-  font-size: .55rem;
-  letter-spacing: .18em;
-}
-
-.heroTitle h1 {
-  margin: 0;
-  font-family: Georgia, "Songti SC", serif;
-  font-size: clamp(3.2rem, 5.8vw, 6rem);
-  font-weight: 400;
-  line-height: .9;
-  letter-spacing: -.085em;
-}
-
-.heroTitle h1 span {
-  display: block;
-  width: max-content;
-  max-width: 100%;
-  margin-top: .18em;
-  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
-  font-size: .64em;
-  font-weight: 900;
-  letter-spacing: -.06em;
-  transform: rotate(-1.25deg);
-}
-
-.heroTitle h1 span::after {
-  content: "";
-  display: block;
-  height: .15em;
-  margin-top: .08em;
-  background: var(--coral);
-  clip-path: polygon(1% 10%, 100% 0, 97% 100%, 0 78%);
-}
-
-.heroSubtitle {
-  max-width: 28rem;
-  margin: clamp(1.25rem, 2.4vw, 2rem) 0 0;
-  color: var(--ink-soft);
-  font-family: Georgia, "Songti SC", serif;
-  font-size: clamp(1rem, 1.3vw, 1.25rem);
-  line-height: 1.65;
-}
-
-.heroByline {
-  display: grid;
-  gap: .35rem;
-  margin-top: 1.35rem;
-  padding-left: 1rem;
-  border-left: 2px solid var(--coral);
-}
-
-.heroByline strong {
-  font-size: .76rem;
-}
-
-.heroByline span {
-  color: var(--ink-soft);
-  font-size: .68rem;
-  line-height: 1.45;
-}
-
-.heroStage {
-  min-width: 0;
-  min-height: clamp(31rem, calc(100svh - 8rem), 42rem);
-}
-
-.heroStage::before,
-.heroStage::after {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.heroStage::before {
-  inset: 11% 6% 14% 3%;
-  border: 1px dashed rgba(24,34,39,.28);
-  border-radius: 50%;
-  transform: rotate(-7deg);
-}
-
-.heroStage::after {
-  top: 49%;
-  right: 8%;
-  left: 5%;
-  height: 1px;
-  background: repeating-linear-gradient(
-    to right,
-    rgba(239, 94, 73, .7) 0 3px,
-    transparent 3px 8px
-  );
-  transform: rotate(7deg);
-}
-
-.heroOrbitTrack {
-  position: absolute;
-  z-index: 1;
-  top: 14%;
-  right: 10%;
-  bottom: 15%;
-  left: 7%;
-  border: 1px solid rgba(135,182,199,.3);
-  border-radius: 48% 52% 55% 45%;
-  transform: rotate(13deg);
-  pointer-events: none;
-}
-
-.heroOrbitTrack::before,
-.heroOrbitTrack::after {
-  content: "";
-  position: absolute;
-  width: .55rem;
-  aspect-ratio: 1;
-  border: 1px solid var(--ink);
-  border-radius: 50%;
-  background: var(--sun);
-  box-shadow: 0 0 0 .3rem rgba(255,253,247,.82);
-}
-
-.heroOrbitTrack::before {
-  top: 18%;
-  left: -2px;
-}
-
-.heroOrbitTrack::after {
-  right: 8%;
-  bottom: -3px;
-}
-
-.heroPolaroid {
-  position: absolute;
-  display: block;
-  margin: 0;
-  padding: .7rem .7rem .85rem;
-  border: 0;
-  background: var(--paper);
-  color: var(--ink);
-  box-shadow: 0 1.5rem 3rem rgba(24,34,39,.2), 0 3px 6px rgba(24,34,39,.22);
-  cursor: zoom-in;
-  text-align: left;
-  transform-origin: center;
-  transition: box-shadow .28s ease, scale .28s ease;
-}
-
-.heroPolaroid::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset: .28rem;
-  border: 1px solid rgba(24,34,39,.12);
-  pointer-events: none;
-}
-
-.heroPolaroid:not(.heroPolaroidPlaceholder):hover,
-.heroPolaroid:not(.heroPolaroidPlaceholder):focus-visible {
-  z-index: 9;
-  outline: 3px solid var(--coral);
-  outline-offset: 4px;
-  box-shadow: 0 2rem 4rem rgba(24,34,39,.28), 0 6px 9px rgba(24,34,39,.2);
-  scale: 1.025;
-}
-
-.heroPolaroidPlaceholder {
-  cursor: default;
-}
-
-.heroPrimary {
-  z-index: 5;
-  top: 48%;
-  left: 60%;
-  width: clamp(17rem, 22vw, 22rem);
-  transform: translate(-50%, -50%) rotate(-2deg);
-}
-
-.heroPrimary[data-ratio="3:2"] {
-  width: clamp(22rem, 31vw, 30rem);
-}
-
-.heroSupport {
-  z-index: 2;
-  width: clamp(8rem, 11vw, 12.5rem);
-  padding: .48rem .48rem .6rem;
-}
-
-.heroSupport1 {
-  top: 5%;
-  left: 1%;
-  transform: rotate(-8deg);
-}
-
-.heroSupport2 {
-  top: 3%;
-  right: 0;
-  transform: rotate(7deg);
-}
-
-.heroSupport3 {
-  right: 1%;
-  bottom: 4%;
-  transform: rotate(-5deg);
-}
-
-.heroTape {
-  position: absolute;
-  z-index: 3;
-  top: -.55rem;
-  left: 50%;
-  width: 4.2rem;
-  height: 1.25rem;
-  background: rgba(232,100,79,.66);
-  clip-path: polygon(3% 8%, 97% 0, 94% 92%, 0 100%);
-  transform: translateX(-50%) rotate(-2deg);
-}
-
-.heroSupport2 .heroTape {
-  background: rgba(135,182,199,.8);
-}
-
-.heroSupport3 .heroTape {
-  background: rgba(233,199,114,.9);
-}
-
-.heroPhoto {
-  position: relative;
-  display: block;
-  width: 100%;
-  overflow: hidden;
-  background: #d9d2c5;
-}
-
-.heroPhoto::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  box-shadow: inset 0 0 2.2rem rgba(24,34,39,.16);
-  pointer-events: none;
-}
-
-.heroPhoto img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: saturate(.95) contrast(1.03);
-  transition: filter .35s ease, transform .55s cubic-bezier(.2,.8,.2,1);
-}
-
-.heroPolaroid:not(.heroPolaroidPlaceholder):hover img,
-.heroPolaroid:not(.heroPolaroidPlaceholder):focus-visible img {
-  filter: saturate(1.08) contrast(1.02);
-  transform: scale(1.035);
-}
-
-.heroCaption {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: .25rem .6rem;
-  min-height: 4.15rem;
-  padding: .7rem .2rem 0;
-}
-
-.heroCaption small {
-  grid-column: 1 / -1;
-  overflow: hidden;
-  color: var(--coral);
-  font: 750 .49rem ui-monospace, SFMono-Regular, Consolas, monospace;
-  letter-spacing: .08em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.heroCaption strong {
-  overflow: hidden;
-  align-self: end;
-  font-family: "Segoe Print", "KaiTi", cursive;
-  font-size: clamp(.82rem, 1vw, 1.08rem);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.heroCaption em {
-  align-self: end;
-  color: var(--ink-soft);
-  font: 700 .48rem ui-monospace, SFMono-Regular, Consolas, monospace;
-}
-
-.heroSupport .heroCaption {
-  min-height: 2.8rem;
-  padding-top: .5rem;
-}
-
-.heroSupport .heroCaption small {
-  font-size: .4rem;
-}
-
-.heroSupport .heroCaption strong {
-  font-size: .7rem;
-}
-
-.heroSupport .heroCaption em {
-  font-size: .4rem;
-}
-
-.heroGateway {
-  position: absolute;
-  z-index: 8;
-  bottom: 3%;
-  left: 0;
-  display: grid;
-  width: clamp(15rem, 22vw, 20rem);
-  min-height: 4.9rem;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 1rem;
-  padding: .8rem 1rem;
-  border: 1px solid var(--ink);
-  background: var(--ink);
-  color: #fff;
-  box-shadow: 7px 7px 0 var(--coral), 0 1rem 2rem rgba(24,34,39,.18);
-  transform: rotate(-1deg);
-}
-
-.shell .heroGateway {
-  color: #fff;
-}
-
-.heroGateway > span {
-  display: grid;
-  gap: .2rem;
-}
-
-.heroGateway small {
-  color: var(--sun);
-  font: 750 .46rem ui-monospace, SFMono-Regular, Consolas, monospace;
-  letter-spacing: .08em;
-}
-
-.heroGateway strong {
-  font-size: .9rem;
-}
-
-.heroGateway em {
-  color: rgba(255,255,255,.64);
-  font-size: .56rem;
-  font-style: normal;
-  line-height: 1.45;
-}
-
-.heroGateway b {
-  color: var(--coral);
-  font-size: 1.75rem;
-  line-height: 1;
-}
-
-.heroGateway:hover {
-  background: var(--paper);
-  color: var(--ink);
-}
-
-.heroGateway:hover em {
-  color: var(--ink-soft);
-}
-
-.heroGateway:focus-visible {
-  outline: 3px solid var(--coral);
-  outline-offset: 4px;
-}
-
-.heroSeal {
-  position: absolute;
-  z-index: 7;
-  top: 36%;
-  right: 5%;
-  display: grid;
-  width: clamp(4.6rem, 6vw, 6rem);
-  aspect-ratio: 1;
-  place-items: center;
-  padding: .75rem;
-  border: 2px solid var(--ink);
-  border-radius: 50%;
-  background: var(--sun);
-  text-align: center;
-  transform: rotate(8deg);
-  pointer-events: none;
-}
-
-.heroSeal span {
-  font: 400 clamp(1.9rem, 3vw, 3rem)/.75 Georgia, serif;
-}
-
-.heroSeal small {
-  font: 800 .48rem/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
-  letter-spacing: .08em;
-}
-
-.ready .heroPrimary {
-  animation: heroFloat 7s ease-in-out infinite;
-}
-
-.ready .heroSupport1 {
-  animation: heroFloat 8s -2s ease-in-out infinite;
-}
-
-.ready .heroSupport2 {
-  animation: heroFloat 9s -5s ease-in-out infinite reverse;
-}
-
-.ready .heroSupport3 {
-  animation: heroFloat 8.5s -3s ease-in-out infinite;
-}
-
 .fieldSection,
 .packageSection,
 .bookingSection {
@@ -831,10 +342,6 @@
   transform: rotate(var(--rotation)) translateY(1.4rem);
   transform-origin: center;
   transition: transform .3s cubic-bezier(.2,.8,.2,1), box-shadow .3s ease;
-}
-
-.ready .polaroid {
-  animation: polaroidIn .52s var(--delay) both;
 }
 
 .polaroid::after {
@@ -1423,22 +930,6 @@
   display: none;
 }
 
-@keyframes polaroidIn {
-  from {
-    opacity: .01;
-    transform: rotate(var(--rotation)) translateY(1.4rem) scale(.97);
-  }
-  to {
-    opacity: 1;
-    transform: rotate(var(--rotation)) translateY(0) scale(1);
-  }
-}
-
-@keyframes heroFloat {
-  0%, 100% { translate: 0 0; }
-  50% { translate: 0 -.35rem; }
-}
-
 @media (max-width: 1050px) {
   .packageGrid {
     grid-template-columns: 1fr;
@@ -1493,128 +984,6 @@
   }
 
   .topbar > p {
-    display: none;
-  }
-
-  .hero {
-    grid-template-columns: 1fr;
-    gap: .65rem;
-    min-height: auto;
-    padding: 1.75rem 1rem 2.25rem;
-  }
-
-  .hero::before {
-    top: auto;
-    right: -5rem;
-    bottom: 3rem;
-    width: clamp(15rem, 72vw, 20rem);
-    transform: none;
-  }
-
-  .hero::after {
-    top: 10rem;
-    right: .75rem;
-    font-size: 3rem;
-  }
-
-  .heroTitle h1 {
-    font-size: clamp(2.9rem, 14vw, 4.2rem);
-  }
-
-  .heroTitle > p:first-child {
-    margin-bottom: .65rem;
-  }
-
-  .heroSubtitle {
-    margin-top: .9rem;
-    font-size: .92rem;
-    line-height: 1.55;
-  }
-
-  .heroByline {
-    margin-top: .8rem;
-  }
-
-  .heroStage {
-    width: 100%;
-    min-height: clamp(28.5rem, 124vw, 31rem);
-  }
-
-  .heroStage::before {
-    inset: 10% 4% 18%;
-  }
-
-  .heroStage::after {
-    right: 2%;
-    left: 2%;
-  }
-
-  .heroOrbitTrack {
-    top: 12%;
-    right: 5%;
-    bottom: 20%;
-    left: 5%;
-  }
-
-  .heroPrimary {
-    top: 43%;
-    left: 50%;
-    width: clamp(10.5rem, 58vw, 13rem);
-  }
-
-  .heroPrimary[data-ratio="3:2"] {
-    width: min(74vw, 17rem);
-  }
-
-  .heroSupport {
-    width: clamp(5.5rem, 27vw, 7rem);
-    padding: .3rem .3rem .42rem;
-  }
-
-  .heroSupport1 {
-    top: 4%;
-    left: 0;
-  }
-
-  .heroSupport2 {
-    top: 5%;
-    right: 0;
-  }
-
-  .heroSupport3 {
-    right: 0;
-    bottom: 6.5rem;
-  }
-
-  .heroSupport .heroCaption {
-    min-height: 2.15rem;
-    padding-top: .35rem;
-  }
-
-  .heroSupport .heroCaption small {
-    font-size: .34rem;
-  }
-
-  .heroSupport .heroCaption strong {
-    font-size: .58rem;
-  }
-
-  .heroSupport .heroCaption em {
-    font-size: .34rem;
-  }
-
-  .heroGateway {
-    top: auto;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    min-width: 0;
-    min-height: 4.6rem;
-    transform: none;
-  }
-
-  .heroSeal {
     display: none;
   }
 
@@ -1766,37 +1135,6 @@
   }
 }
 
-@media (max-width: 340px) {
-  .hero {
-    padding-top: 1.25rem;
-  }
-
-  .heroByline {
-    display: none;
-  }
-
-  .heroStage {
-    min-height: 26rem;
-  }
-
-  .heroPrimary {
-    width: min(56vw, 11.5rem);
-  }
-
-  .heroPrimary[data-ratio="3:2"] {
-    width: min(76vw, 15rem);
-  }
-
-  .heroSupport {
-    width: min(25vw, 5rem);
-  }
-
-  .heroGateway {
-    min-height: 4.25rem;
-    padding-block: .65rem;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .shell {
     scroll-behavior: auto;
@@ -1822,5 +1160,280 @@
   .polaroid,
   .ready .polaroid {
     transform: none;
+  }
+}
+
+/* One constellation, two camera views. The same nine cards serve both states. */
+.fieldSection {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.fieldViewport {
+  height: calc(100svh - 5rem);
+  min-height: 38rem;
+  border: 0;
+  box-shadow: none;
+  scroll-margin-top: 5rem;
+}
+
+.sceneIdentity {
+  position: absolute;
+  z-index: 15;
+  top: clamp(2.5rem, 11vh, 7rem);
+  left: clamp(1.4rem, 5vw, 6rem);
+  width: min(32vw, 25rem);
+  pointer-events: none;
+}
+
+.sceneIdentity small {
+  color: var(--coral);
+  font: 800 .65rem ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .14em;
+}
+
+.sceneIdentity h1 {
+  margin: 1.2rem 0 1.4rem;
+  font-family: Georgia, "Songti SC", serif;
+  font-size: clamp(3rem, 5.3vw, 6.5rem);
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -.08em;
+}
+
+.sceneIdentity h1 span {
+  display: block;
+  margin-top: .35em;
+  color: var(--ink-soft);
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: .5em;
+  font-weight: 750;
+  letter-spacing: -.06em;
+  white-space: nowrap;
+}
+
+.sceneIdentity p {
+  margin: .35rem 0;
+  color: var(--ink-soft);
+  font-size: .82rem;
+  line-height: 1.6;
+}
+
+.sceneActions {
+  position: absolute;
+  z-index: 16;
+  bottom: clamp(2rem, 7vh, 5rem);
+  left: clamp(1.4rem, 5vw, 6rem);
+  display: grid;
+  gap: .7rem;
+}
+
+.sceneActions button {
+  display: flex;
+  min-width: 13rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: .95rem 1.1rem;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: white;
+  font-family: inherit;
+  font-size: .9rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sceneActions button:hover,
+.sceneActions button:focus-visible {
+  background: var(--coral);
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.sceneActions p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: .72rem;
+}
+
+.fieldViewport > .fieldControls {
+  position: absolute;
+  z-index: 16;
+  right: clamp(1.4rem, 5vw, 6rem);
+  bottom: clamp(2rem, 7vh, 5rem);
+}
+
+.fieldCanvas {
+  transition: transform .55s cubic-bezier(.2,.8,.2,1);
+}
+
+.polaroid,
+.ready .polaroid {
+  opacity: 1;
+  transform: rotate(var(--rotation));
+  animation: none;
+}
+
+.fieldSection[data-scene-mode="focus"] .polaroid[data-scene-role="other"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Keep the work dialog above the public template-preview ribbon. */
+.shell ~ :global(.lightbox) {
+  z-index: 190;
+}
+
+.fieldSection[data-scene-mode="overview"] .sceneIdentity {
+  top: 1.25rem;
+  width: auto;
+  padding: .45rem .7rem;
+  background: rgba(255,253,247,.9);
+}
+
+.fieldSection[data-scene-mode="overview"] .sceneIdentity h1,
+.fieldSection[data-scene-mode="overview"] .sceneIdentity p,
+.fieldSection[data-scene-mode="overview"] .sceneActions p {
+  display: none;
+}
+
+.fieldSection[data-scene-mode="overview"] .sceneActions {
+  top: 1.15rem;
+  bottom: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.fieldSection[data-scene-mode="overview"] .fieldViewport > .fieldControls {
+  top: 1.2rem;
+  bottom: auto;
+}
+
+@media (max-width: 800px) {
+  .fieldViewport {
+    min-height: 0;
+    height: auto;
+    padding: 1.25rem 1rem 3rem;
+  }
+
+  .sceneIdentity,
+  .sceneActions {
+    position: relative;
+    top: auto;
+    bottom: auto;
+    left: auto;
+    width: 100%;
+  }
+
+  .fieldSection[data-scene-mode="overview"] .sceneIdentity,
+  .fieldSection[data-scene-mode="overview"] .sceneActions {
+    top: auto;
+    left: auto;
+    width: 100%;
+    padding: 0;
+    background: transparent;
+    transform: none;
+  }
+
+  .fieldSection[data-scene-mode="overview"] .sceneIdentity h1,
+  .fieldSection[data-scene-mode="overview"] .sceneIdentity p {
+    display: block;
+  }
+
+  .sceneIdentity h1 {
+    margin: .5rem 0 .8rem;
+    font-size: clamp(2.6rem, 11vw, 4rem);
+  }
+
+  .sceneIdentity p {
+    font-size: .73rem;
+  }
+
+  .sceneActions {
+    position: absolute;
+    top: 1.2rem;
+    right: 1rem;
+    bottom: auto;
+    left: auto;
+    width: auto;
+    margin: 0;
+  }
+
+  .sceneActions button {
+    min-width: 0;
+    width: auto;
+    gap: .65rem;
+    padding: .55rem .65rem;
+    font-size: .72rem;
+  }
+
+  .sceneActions p {
+    display: none;
+  }
+
+  .fieldCanvas {
+    order: 1;
+    gap: .8rem;
+    padding: .5rem 0;
+  }
+
+  .sceneActions { order: 2; }
+
+  .fieldViewport {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sceneIdentity {
+    order: 0;
+  }
+
+  .fieldSection[data-scene-mode="focus"] .fieldCanvas {
+    display: flex;
+    min-height: 24rem;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .fieldSection[data-scene-mode="focus"] .polaroid[data-scene-role="other"] {
+    display: none;
+  }
+
+  .fieldSection[data-scene-mode="focus"] .polaroid[data-scene-role="focus"] {
+    flex: 0 0 72%;
+    order: 1;
+    z-index: 5 !important;
+  }
+
+  .fieldSection[data-scene-mode="focus"] .polaroid[data-scene-role="near"] {
+    flex: 0 0 30%;
+    order: 0;
+    opacity: .85;
+  }
+
+  .fieldSection[data-scene-mode="focus"] .polaroid[data-polaroid="7"] {
+    order: 2;
+  }
+
+  .fieldSection[data-scene-mode="overview"] .fieldCanvas {
+    display: grid;
+  }
+
+  .fieldViewport > .fieldControls {
+    display: none;
+  }
+
+  .fieldSection[data-scene-mode="overview"] .sceneActions {
+    position: absolute;
+    top: 1.2rem;
+    right: 1rem;
+    bottom: auto;
+    left: auto;
+    width: auto;
   }
 }

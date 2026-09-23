@@ -18,11 +18,12 @@ import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import PlatformAccounts from "../shared/platform-accounts";
 import { buildPolaroidFieldLayout } from "./field-layout";
-import { selectPolaroidHero } from "./hero-selection";
+import { selectPolaroidFocus } from "./hero-selection";
 import { getPolaroidViewFromHash, POLAROID_VIEW_HASHES, type PolaroidView } from "./navigation";
 import {
   constrainView,
   fitRectsToViewport,
+  focusRectInViewport,
   getMinimumScale,
   type ViewportFit,
   type ViewState,
@@ -30,7 +31,7 @@ import {
 import styles from "./polaroid-field.module.css";
 
 type DragState = { pointerId: number; startX: number; startY: number; originX: number; originY: number };
-type PolaroidStyle = CSSProperties & { "--rotation": string; "--delay": string };
+type PolaroidStyle = CSSProperties & { "--rotation": string };
 type FieldCanvasStyle = CSSProperties & {
   "--field-canvas-width": string;
   "--field-canvas-height": string;
@@ -45,81 +46,6 @@ const POLAROID_RATIOS = getTemplateSlotRatios("polaroid-field");
 const stars = [
   [14, 31], [33, 18], [55, 27], [82, 31], [11, 61], [39, 57], [68, 61], [91, 67], [24, 86], [56, 89], [79, 85],
 ] as const;
-
-function HeroPolaroid({
-  slot,
-  primary = false,
-  positionClass = "",
-  onOpenWork,
-}: {
-  slot: ReturnType<typeof buildPhotoSlots>[number];
-  primary?: boolean;
-  positionClass?: string;
-  onOpenWork: TemplateProps["onOpenWork"];
-}) {
-  const work = slot.work;
-  const className = [
-    styles.heroPolaroid,
-    primary ? styles.heroPrimary : styles.heroSupport,
-    !work ? styles.heroPolaroidPlaceholder : "",
-    positionClass,
-  ].filter(Boolean).join(" ");
-  const contents = (
-    <>
-      <span className={styles.heroTape} aria-hidden="true" />
-      <span className={styles.heroPhoto} style={getPhotoSlotStyle(slot)}>
-        {work ? (
-          <img
-            src={work.preview}
-            srcSet={`${work.preview} ${work.previewWidth}w, ${work.image} ${work.fullWidth}w`}
-            sizes={primary ? "(max-width: 800px) 74vw, 26rem" : "(max-width: 800px) 34vw, 13rem"}
-            width={work.previewWidth}
-            height={work.previewHeight}
-            alt={work.subtitle || work.title}
-            loading={primary ? "eager" : "lazy"}
-            decoding="async"
-            fetchPriority={primary ? "high" : "auto"}
-            style={{ objectPosition: work.position }}
-          />
-        ) : (
-          <PhotoPlaceholder slot={slot} tone="light" compact label="MEMORY PENDING" />
-        )}
-      </span>
-      <span className={styles.heroCaption}>
-        <small>{primary ? "CURRENT FEATURE" : "ORBIT PREVIEW"} / FRAME {String(slot.index + 1).padStart(2, "0")}</small>
-        <strong>{work?.title ?? "等待下一段记忆"}</strong>
-        <em>{slot.ratio}</em>
-      </span>
-    </>
-  );
-
-  if (!work) {
-    return (
-      <article
-        className={className}
-        data-hero-polaroid={primary ? "primary" : "support"}
-        data-hero-slot={slot.index + 1}
-        data-ratio={slot.ratio}
-      >
-        {contents}
-      </article>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      className={className}
-      data-hero-polaroid={primary ? "primary" : "support"}
-      data-hero-slot={slot.index + 1}
-      data-ratio={slot.ratio}
-      onClick={() => onOpenWork(work)}
-      aria-label={`${primary ? "打开本期主推作品" : "打开精选预告作品"} ${work.title}`}
-    >
-      {contents}
-    </button>
-  );
-}
 
 export default function PolaroidFieldTemplate({
   templateId,
@@ -141,7 +67,7 @@ export default function PolaroidFieldTemplate({
     () => buildPolaroidFieldLayout(fieldSlots.map((slot) => slot.ratio)),
     [fieldSlots],
   );
-  const heroSelection = useMemo(() => selectPolaroidHero(fieldSlots), [fieldSlots]);
+  const { focusSlot } = useMemo(() => selectPolaroidFocus(fieldSlots), [fieldSlots]);
   const headerStatus = isPreview ? "TEMPLATE PREVIEW" : content.profile.availability.trim();
   const trustItems = content.trustItems.filter(({ label, value }) => label.trim() || value.trim());
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -149,7 +75,7 @@ export default function PolaroidFieldTemplate({
   const dragRef = useRef<DragState | null>(null);
   const viewRef = useRef<ViewState>(INITIAL_VIEW);
   const fitRef = useRef<ViewportFit | null>(null);
-  const viewModeRef = useRef<"fit" | "manual">("fit");
+  const viewModeRef = useRef<"focus" | "overview" | "manual">("focus");
   const minimumScaleRef = useRef(PREFERRED_MIN_SCALE);
   const frameRef = useRef<number | null>(null);
   const navigationFrameRef = useRef<number | null>(null);
@@ -158,6 +84,7 @@ export default function PolaroidFieldTemplate({
   const [dragging, setDragging] = useState(false);
   const [desktopFieldEnabled, setDesktopFieldEnabled] = useState(false);
   const [activeView, setActiveView] = useState<PolaroidView>("field");
+  const [sceneMode, setSceneMode] = useState<"focus" | "overview">("focus");
 
   const scrollToViewTarget = useCallback((targetId: string, focusTarget: boolean) => {
     if (navigationFrameRef.current !== null) {
@@ -259,23 +186,26 @@ export default function PolaroidFieldTemplate({
       rotation: Number.parseFloat(card.dataset.rotation ?? "0"),
     }));
 
-    return fitRectsToViewport(
+    const fit = fitRectsToViewport(
       { width: viewport.clientWidth, height: viewport.clientHeight },
       { width: canvas.offsetWidth, height: canvas.offsetHeight },
       cards,
       FIT_INSET,
     );
-  }, []);
+    const focus = cards[focusSlot?.index ?? 4] ?? cards[4];
+    return fit && focus ? { fit, focus } : null;
+  }, [focusSlot]);
 
   const updateFitGeometry = useCallback(() => {
-    const fit = measureFit();
-    if (!fit) return null;
+    const geometry = measureFit();
+    if (!geometry) return null;
+    const { fit } = geometry;
 
     fitRef.current = fit;
     const nextMinimum = getMinimumScale(fit.view.scale, PREFERRED_MIN_SCALE);
     minimumScaleRef.current = nextMinimum;
     setMinimumScale((current) => Math.abs(current - nextMinimum) < .0001 ? current : nextMinimum);
-    return fit;
+    return geometry;
   }, [measureFit]);
 
   const constrainCurrentView = useCallback((next: ViewState) => {
@@ -284,11 +214,20 @@ export default function PolaroidFieldTemplate({
     return constrainView(next, fit, minimumScaleRef.current, MAX_SCALE);
   }, []);
 
-  const fitToContent = useCallback(() => {
-    const fit = updateFitGeometry();
-    if (!fit) return;
-    viewModeRef.current = "fit";
-    commitView(fit.view);
+  const showOverview = useCallback(() => {
+    const geometry = updateFitGeometry();
+    viewModeRef.current = "overview";
+    setSceneMode("overview");
+    if (geometry) commitView(geometry.fit.view);
+  }, [commitView, updateFitGeometry]);
+
+  const showFocus = useCallback(() => {
+    const geometry = updateFitGeometry();
+    viewModeRef.current = "focus";
+    setSceneMode("focus");
+    if (geometry) commitView(focusRectInViewport(
+      geometry.fit, geometry.focus, minimumScaleRef.current, MAX_SCALE,
+    ));
   }, [commitView, updateFitGeometry]);
 
   useLayoutEffect(() => {
@@ -303,11 +242,15 @@ export default function PolaroidFieldTemplate({
       resizeFrame = null;
       if (!desktopQuery.matches) return;
 
-      const fit = updateFitGeometry();
-      if (!fit) return;
+      const geometry = updateFitGeometry();
+      if (!geometry) return;
 
-      if (viewModeRef.current === "fit") {
-        commitView(fit.view);
+      if (viewModeRef.current === "focus") {
+        commitView(focusRectInViewport(
+          geometry.fit, geometry.focus, minimumScaleRef.current, MAX_SCALE,
+        ));
+      } else if (viewModeRef.current === "overview") {
+        commitView(geometry.fit.view);
       } else {
         commitView(constrainCurrentView(viewRef.current));
       }
@@ -472,7 +415,7 @@ export default function PolaroidFieldTemplate({
       case "0":
       case "Home":
         event.preventDefault();
-        fitToContent();
+        showOverview();
         break;
     }
   };
@@ -521,102 +464,15 @@ export default function PolaroidFieldTemplate({
 
       <section
         id="polaroid-top"
-        className={styles.hero}
-        data-polaroid-view="field"
-        hidden={activeView !== "field"}
-        tabIndex={-1}
-      >
-        <div className={styles.heroTitle}>
-          <p><span>CURATED COVER / 01</span>{content.hero.eyebrow}</p>
-          <h1>漂浮<span>拍立得星图</span></h1>
-          <p className={styles.heroSubtitle}>{content.profile.intro}</p>
-          <div className={styles.heroByline}>
-            <strong>{content.profile.photographer} · {content.profile.role}</strong>
-            <span>{content.hero.services}</span>
-          </div>
-        </div>
-
-        <div className={styles.heroStage} aria-label="本期精选作品与作品星图预告">
-          <span className={styles.heroOrbitTrack} aria-hidden="true" />
-          {heroSelection.supportSlots.map((slot, index) => (
-            <HeroPolaroid
-              slot={slot}
-              positionClass={styles[`heroSupport${index + 1}`]}
-              onOpenWork={onOpenWork}
-              key={`hero-support-${slot.index}`}
-            />
-          ))}
-          {heroSelection.heroSlot ? (
-            <HeroPolaroid slot={heroSelection.heroSlot} primary onOpenWork={onOpenWork} />
-          ) : null}
-
-          <a
-            className={styles.heroGateway}
-            href="#polaroid-field"
-            onClick={(event) => handleViewLink(event, "field", "#polaroid-field", true)}
-          >
-            <span>
-              <small>OPEN THE FIELD / {String(fieldSlots.length).padStart(2, "0")} MEMORIES</small>
-              <strong>进入作品星图</strong>
-              <em>拖动探索 · 点击拍立得展开完整影像</em>
-            </span>
-            <b aria-hidden="true">↘</b>
-          </a>
-
-          <div className={styles.heroSeal} aria-hidden="true">
-            <span>{String(fieldSlots.length).padStart(2, "0")}</span>
-            <small>MEMORIES<br />IN ORBIT</small>
-          </div>
-        </div>
-      </section>
-
-      <section
-        id="polaroid-field"
         className={styles.fieldSection}
-        aria-labelledby="field-title"
+        aria-labelledby="scene-title"
         data-polaroid-view="field"
+        data-scene-mode={sceneMode}
         hidden={activeView !== "field"}
         tabIndex={-1}
       >
-        <div className={styles.sectionHeading}>
-          <div>
-            <small>01 / CONSTELLATION OF CHARACTERS</small>
-            <h2 id="field-title">作品星座</h2>
-          </div>
-          <p>拖动画布寻找散落的角色记忆；点击任意拍立得，可展开完整影像。</p>
-        </div>
-
-        <div className={styles.fieldToolbar}>
-          <p className={styles.dragHint} aria-hidden="true">
-            <span>↔</span> DRAG THE EMPTY FIELD · ARROWS TO PAN · + / − TO ZOOM · HOME / 0 TO FIT
-          </p>
-          <div className={styles.fieldControls} data-field-controls aria-label="画布控制">
-            <button
-              type="button"
-              onClick={() => zoomBy(-.08)}
-              disabled={view.scale <= minimumScale + .0001}
-              aria-label="缩小作品星图"
-              aria-controls="polaroid-field-canvas"
-            >−</button>
-            <span aria-hidden="true">{Math.round(view.scale * 100)}%</span>
-            <button
-              type="button"
-              onClick={() => zoomBy(.08)}
-              disabled={view.scale >= MAX_SCALE - .0001}
-              aria-label="放大作品星图"
-              aria-controls="polaroid-field-canvas"
-            >+</button>
-            <button
-              type="button"
-              onClick={fitToContent}
-              aria-label="完整显示全部作品"
-              aria-controls="polaroid-field-canvas"
-              title="完整显示全部作品"
-            >FIT</button>
-          </div>
-        </div>
-
         <div
+          id="polaroid-field"
           ref={viewportRef}
           className={`${styles.fieldViewport} ${dragging ? styles.dragging : ""}`}
           tabIndex={desktopFieldEnabled ? 0 : undefined}
@@ -626,6 +482,12 @@ export default function PolaroidFieldTemplate({
             : "九张拍立得作品画廊。"}
           onKeyDown={desktopFieldEnabled ? handleFieldKeyDown : undefined}
         >
+          <div className={styles.sceneIdentity}>
+            <small>{content.profile.photographer} · 摄影作品</small>
+            <h1 id="scene-title">{content.profile.photographer}<span>漂浮拍立得星图</span></h1>
+            <p>{content.profile.intro}</p>
+            <p>{content.profile.role} · {content.hero.services}</p>
+          </div>
           <div
             ref={canvasRef}
             id="polaroid-field-canvas"
@@ -668,13 +530,13 @@ export default function PolaroidFieldTemplate({
             {fieldSlots.map((slot, index) => {
               const placement = fieldLayout.placements[index];
               const work = slot.work;
+              const sceneRole = index === focusSlot?.index ? "focus" : (index === 2 || index === 6 ? "near" : "other");
               const placementStyle = {
                 left: `${placement.left}rem`,
                 top: `${placement.top}rem`,
                 width: `${placement.width}rem`,
                 zIndex: placement.zIndex,
                 "--rotation": `${placement.rotation}deg`,
-                "--delay": `${index * 65}ms`,
               } as PolaroidStyle;
 
               if (!work) {
@@ -682,6 +544,8 @@ export default function PolaroidFieldTemplate({
                   <article
                     className={`${styles.polaroid} ${styles.polaroidPlaceholder}`}
                     data-polaroid={String(index + 1)}
+                    data-scene-role={sceneRole}
+                    inert={sceneMode === "focus" && sceneRole === "other"}
                     data-rotation={placement.rotation}
                     data-layout-band={placement.band}
                     data-tone={placement.tone}
@@ -709,6 +573,8 @@ export default function PolaroidFieldTemplate({
                   type="button"
                   className={styles.polaroid}
                   data-polaroid={String(index + 1)}
+                  data-scene-role={sceneRole}
+                  inert={sceneMode === "focus" && sceneRole === "other"}
                   data-rotation={placement.rotation}
                   data-layout-band={placement.band}
                   data-tone={placement.tone}
@@ -729,8 +595,9 @@ export default function PolaroidFieldTemplate({
                       width={work.previewWidth}
                       height={work.previewHeight}
                       alt={work.subtitle || work.title}
-                      loading={index < 2 ? "eager" : "lazy"}
+                      loading={index === focusSlot?.index ? "eager" : "lazy"}
                       decoding="async"
+                      fetchPriority={index === focusSlot?.index ? "high" : "auto"}
                       style={{ objectPosition: work.position }}
                     />
                     <span className={styles.exposure} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
@@ -744,9 +611,19 @@ export default function PolaroidFieldTemplate({
               );
             })}
           </div>
-
+          <div className={styles.sceneActions} data-field-controls>
+            <button type="button" onClick={sceneMode === "focus" ? showOverview : showFocus} aria-controls="polaroid-field-canvas">
+              {sceneMode === "focus" ? "查看全部作品" : "返回主图"} <span aria-hidden="true">↗</span>
+            </button>
+            <p>{sceneMode === "focus" ? "点击照片，展开完整影像" : "拖动画布探索，点击照片查看"}</p>
+          </div>
+          <div className={styles.fieldControls} data-field-controls aria-label="画布控制">
+            <button type="button" onClick={() => zoomBy(-.08)} disabled={view.scale <= minimumScale + .0001} aria-label="缩小作品星图">−</button>
+            <span aria-hidden="true">{Math.round(view.scale * 100)}%</span>
+            <button type="button" onClick={() => zoomBy(.08)} disabled={view.scale >= MAX_SCALE - .0001} aria-label="放大作品星图">+</button>
+            <button type="button" onClick={showOverview} aria-label="完整显示全部作品" title="完整显示全部作品">FIT</button>
+          </div>
         </div>
-
       </section>
 
       <section
