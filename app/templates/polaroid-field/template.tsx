@@ -18,6 +18,8 @@ import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import PlatformAccounts from "../shared/platform-accounts";
 import { buildPolaroidFieldLayout } from "./field-layout";
+import CollectionExperience from "./collection-experience";
+import { canOpenCollectionProof } from "./collection-proof-gate";
 import { selectPolaroidFocus } from "./hero-selection";
 import { getPolaroidViewFromHash, POLAROID_VIEW_HASHES, type PolaroidView } from "./navigation";
 import {
@@ -57,6 +59,7 @@ export default function PolaroidFieldTemplate({
   copiedKey,
   isPreview,
   onCopy,
+  onBeforeViewChange,
   onOpenWork,
 }: TemplateProps) {
   const fieldSlots = useMemo(
@@ -85,6 +88,14 @@ export default function PolaroidFieldTemplate({
   const [desktopFieldEnabled, setDesktopFieldEnabled] = useState(false);
   const [activeView, setActiveView] = useState<PolaroidView>("field");
   const [sceneMode, setSceneMode] = useState<"focus" | "overview">("focus");
+  const [collectionProof, setCollectionProof] = useState(false);
+  const [homeRequest, setHomeRequest] = useState(0);
+
+  useEffect(() => {
+    const enabled = canOpenCollectionProof(process.env.NODE_ENV, window.location.hostname, window.location.search);
+    const frame = window.requestAnimationFrame(() => setCollectionProof(enabled));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   const scrollToViewTarget = useCallback((targetId: string, focusTarget: boolean) => {
     if (navigationFrameRef.current !== null) {
@@ -121,6 +132,7 @@ export default function PolaroidFieldTemplate({
     focusTarget = false,
   ) => {
     event.preventDefault();
+    if (view === "field") setHomeRequest((current) => current + 1);
     activateView(view, hash, focusTarget);
   }, [activateView]);
 
@@ -130,7 +142,9 @@ export default function PolaroidFieldTemplate({
     const syncViewFromLocation = (focusTarget: boolean) => {
       const hash = window.location.hash;
       const view = getPolaroidViewFromHash(hash);
-      const targetHash = hash === "#polaroid-field" || Object.values(POLAROID_VIEW_HASHES).includes(hash)
+      const targetHash = hash.startsWith("#polaroid-collection-")
+        ? "#polaroid-top"
+        : hash === "#polaroid-field" || Object.values(POLAROID_VIEW_HASHES).includes(hash)
         ? hash
         : POLAROID_VIEW_HASHES[view];
       setActiveView(view);
@@ -424,11 +438,12 @@ export default function PolaroidFieldTemplate({
     <main
       className={`${styles.shell} ${booted ? styles.ready : ""}`}
       data-template={templateId}
+      data-collection-proof={collectionProof ? (isPreview ? "preview" : "public") : undefined}
       data-polaroid-active-view={activeView}
     >
       <a
         className={styles.skipLink}
-        href="#polaroid-field"
+        href={collectionProof ? "#polaroid-top" : "#polaroid-field"}
         onClick={(event) => handleViewLink(event, "field", "#polaroid-field", true)}
       >跳到作品星图</a>
 
@@ -465,12 +480,14 @@ export default function PolaroidFieldTemplate({
       <section
         id="polaroid-top"
         className={styles.fieldSection}
-        aria-labelledby="scene-title"
+        aria-labelledby={collectionProof ? undefined : "scene-title"}
+        aria-label={collectionProof ? "作品栏目" : undefined}
         data-polaroid-view="field"
         data-scene-mode={sceneMode}
         hidden={activeView !== "field"}
         tabIndex={-1}
       >
+        {collectionProof ? <CollectionExperience isPreview={isPreview} homeRequest={homeRequest} onOpenWork={onOpenWork} onBeforeViewChange={onBeforeViewChange} /> :
         <div
           id="polaroid-field"
           ref={viewportRef}
@@ -623,7 +640,7 @@ export default function PolaroidFieldTemplate({
             <button type="button" onClick={() => zoomBy(.08)} disabled={view.scale >= MAX_SCALE - .0001} aria-label="放大作品星图">+</button>
             <button type="button" onClick={showOverview} aria-label="完整显示全部作品" title="完整显示全部作品">FIT</button>
           </div>
-        </div>
+        </div>}
       </section>
 
       <section

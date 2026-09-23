@@ -1087,6 +1087,15 @@ footer p { margin: 0; }
   font-size: .58rem;
 }
 
+.lightbox-light .lightbox-backdrop { background: rgba(239, 232, 219, .96); }
+.lightbox-light .lightbox-frame { border-color: #bfb6a8; background: #fffdf7; box-shadow: 0 20px 80px #18222735; }
+.lightbox-light .lightbox-stage { background: #f8f4eb; }
+.lightbox-light .lightbox-nav { border-color: #bfb6a8; background: #fffdf7e8; color: #182227; }
+.lightbox-light .lightbox-info { border-top-color: #d9d0c2; color: #182227; }
+.lightbox-light .lightbox-info > span { color: #b2493b; }
+.lightbox-light .lightbox-controls { color: #536066; }
+.lightbox-light .lightbox-info button { border-color: #bfb6a8; color: #182227; }
+
 @keyframes boot-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes boot-spin { from { opacity: 0; transform: translate(-50%,-50%) rotate(0) scale(.5); } to { opacity: 1; transform: translate(-50%,-50%) rotate(135deg) scale(1); } }
 @keyframes title-in { from { opacity: 0; transform: translateY(3rem); clip-path: inset(100% 0 0); } to { opacity: 1; transform: none; clip-path: inset(0); } }

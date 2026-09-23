@@ -20,7 +20,9 @@ export default function Home() {
     copiedKey,
     copyText,
     lightboxRef,
+    lightboxWorks,
     moveActiveWork,
+    openWork,
     setActiveWork,
   } = useTemplateInteractions(works);
   const closeActiveWork = useCallback(() => setActiveWork(null), [setActiveWork]);
@@ -103,12 +105,13 @@ export default function Home() {
         isPreview={previewTemplate !== null}
         onCopy={copyText}
         onBeforeViewChange={closeActiveWork}
-        onOpenWork={(work) => setActiveWork(work)}
+        onOpenWork={openWork}
       />
       {activeWork && (
         <Lightbox
           work={activeWork}
-          works={works}
+          works={[...lightboxWorks]}
+          theme={templateId === "polaroid-field" ? "light" : "dark"}
           frameRef={lightboxRef}
           closeButtonRef={closeButtonRef}
           onMove={moveActiveWork}

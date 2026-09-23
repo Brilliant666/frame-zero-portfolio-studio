@@ -1135,6 +1135,32 @@
   }
 }
 
+.shell[data-collection-proof="public"] {
+  overflow: visible;
+  padding-top: 5rem;
+}
+
+.shell[data-collection-proof="public"] .topbar {
+  position: fixed;
+  right: auto;
+  left: 50%;
+  width: min(100%, 1680px);
+  transform: translateX(-50%);
+}
+
+.shell[data-collection-proof="public"] .fieldSection,
+.shell[data-collection-proof="public"] .packageSection,
+.shell[data-collection-proof="public"] .bookingSection {
+  scroll-margin-top: 5rem;
+}
+
+@media (max-width: 800px) {
+  .shell[data-collection-proof="public"] { padding-top: 7.25rem; }
+  .shell[data-collection-proof="public"] .fieldSection,
+  .shell[data-collection-proof="public"] .packageSection,
+  .shell[data-collection-proof="public"] .bookingSection { scroll-margin-top: 7.25rem; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .shell {
     scroll-behavior: auto;
