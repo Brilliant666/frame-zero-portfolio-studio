@@ -319,10 +319,10 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(layout, /最早记录/);
   assert.match(layout, /导入批次/);
   assert.match(layout, /既有素材（时间未知）/);
-  assert.match(layout, /当前草稿 \{references\.draft\.length\} 处 · 已保存 \{references\.saved\.length\} 处/);
+  assert.match(layout, /原站草稿 \{references\.draft\.length\} 处 · 原站已保存 \{references\.saved\.length\} 处/);
   assert.match(layout, /移入回收站/);
   assert.match(layout, /恢复素材/);
-  assert.match(layout, /现有排版引用保持可用/);
+  assert.match(layout, /原文件与新旧引用保留/);
   assert.match(layout, /archivedAssetCount === 0/);
   assert.match(layout, /没有符合筛选条件的回收站素材/);
   assert.match(layout, /archiveConfirmRef/);
