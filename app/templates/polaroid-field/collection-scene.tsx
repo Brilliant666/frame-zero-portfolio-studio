@@ -5,10 +5,11 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import type { PhotoAsset } from "../../photo-library";
 import type { TemplateProps } from "../types";
 import { buildCollectionLayout } from "./collection-layout";
+import { buildCollectionPhotoComposition } from "./collection-photo-composition";
 import { useConstellationViewport } from "./use-constellation-viewport";
 import type { ViewState } from "./viewport-fit";
 import field from "./polaroid-field.module.css";
-import styles from "./collection-experience.module.css";
+import styles from "./collection.module.css";
 
 export type SceneCard = {
   id: string; asset: PhotoAsset | null; title: string; subtitle: string;
@@ -20,13 +21,15 @@ type Props = {
   initialView?: ViewState; onViewChange: (view: ViewState) => void;
   onOpen: (id: string) => void; onBack?: () => void; restoreFocusId?: string | null;
   readOnly?: boolean; onAssetUnavailable?: (id: string) => void;
+  composedPhotos?: boolean;
 };
 
-export default function CollectionScene({ cards, sceneId, title, description, content, focusId, initialView, onViewChange, onOpen, onBack, restoreFocusId, readOnly, onAssetUnavailable }: Props) {
+export default function CollectionScene({ cards, sceneId, title, description, content, focusId, initialView, onViewChange, onOpen, onBack, restoreFocusId, readOnly, onAssetUnavailable, composedPhotos = false }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(() => typeof window === "undefined" ? 1280 : window.innerWidth);
   const isHome = !onBack;
+  const composed = composedPhotos && !isHome;
   const compact = width < 600;
   const previousCompact = useRef(compact);
   useEffect(() => {
@@ -36,14 +39,15 @@ export default function CollectionScene({ cards, sceneId, title, description, co
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
-  const layout = useMemo(() => buildCollectionLayout(cards.map((card) => ({
+  const layout = useMemo(() => (composed ? buildCollectionPhotoComposition : buildCollectionLayout)(cards.map((card) => ({
     id: card.id, aspectRatio: card.fit === "fill" ? 4 / 3 : card.asset?.aspectRatio ?? 4 / 3,
-  })), { kind: isHome ? "covers" : "photos", focusId, viewportWidth: width }), [cards, focusId, isHome, width]);
+  })), { kind: isHome ? "covers" : "photos", focusId, viewportWidth: width }), [cards, focusId, isHome, width, composed]);
   const getFocusIndex = useCallback(() => Math.max(0, cards.findIndex((card) => card.id === layout.focusId)), [cards, layout.focusId]);
   const camera = useConstellationViewport({
     viewportRef, canvasRef, layoutKey: layout, getFocusIndex,
     initialMode: compact ? "overview" : isHome ? "focus" : cards.length <= 9 ? "overview" : "readable",
     mobileEnabled: true, reserveLeft: isHome && width > 800 ? 360 : 0, initialView, onViewChange,
+    readableGroupSize: composed ? 7 : undefined,
   });
   const { showOverview } = camera;
   useEffect(() => {
@@ -60,28 +64,38 @@ export default function CollectionScene({ cards, sceneId, title, description, co
     return () => cancelAnimationFrame(frame);
   }, [restoreFocusId]);
 
-  return <div className={`${field.fieldViewport} ${styles.viewport} ${camera.dragging ? field.dragging : ""}`} ref={viewportRef}
+  const photoHeading = <><button type="button" onClick={onBack}>← 返回图集首页</button>
+    <div><strong>{title}</strong><span>{cards.length} 张照片{description ? ` · ${description}` : ""}</span>{composed && <span>点击照片查看大图 · {cards.length > 9 ? "画布向外延展，可拖动浏览" : "拖动浏览"} · FIT 查看全部</span>}</div></>;
+  const controls = <div className={`${field.fieldControls} ${styles.controls}`} data-field-controls aria-label="星图浏览控制">
+    <button type="button" onClick={() => camera.panBy(120, 0)} aria-label="向左浏览">←</button>
+    <button type="button" onClick={() => camera.panBy(-120, 0)} aria-label="向右浏览">→</button>
+    <button type="button" onClick={() => camera.panBy(0, 120)} aria-label="向上浏览">↑</button>
+    <button type="button" onClick={() => camera.panBy(0, -120)} aria-label="向下浏览">↓</button>
+    <button type="button" onClick={() => camera.zoomBy(-.12)} aria-label="缩小星图">−</button>
+    <span>{Math.round(camera.view.scale * 100)}%</span>
+    <button type="button" onClick={() => camera.zoomBy(.12)} aria-label="放大星图">+</button>
+    <button type="button" onClick={camera.showOverview} aria-label="完整显示星图">FIT</button>
+  </div>;
+  const scene = <div className={`${field.fieldViewport} ${styles.viewport} ${camera.dragging ? field.dragging : ""}`} ref={viewportRef}
+    data-composition={composed ? "asymmetric" : undefined} data-compact={compact}
     data-collection-scene={sceneId} data-home={isHome} tabIndex={0} role="region"
-    style={compact ? { height: Math.max(680, layout.canvasHeight * Math.min(1, (width - 24) / layout.canvasWidth) + (isHome ? 300 : 130)) } : undefined}
+    style={compact ? { height: Math.max(680, layout.canvasHeight * Math.min(1, (width - 24) / layout.canvasWidth) + (isHome ? 300 : composed ? 60 : 130)) } : undefined}
     aria-label={isHome ? "图集封面星图" : `${title}作品星图`} onKeyDown={camera.handleFieldKeyDown}>
     {isHome ? <div className={`${field.sceneIdentity} ${styles.identity}`}>
       <small>{readOnly ? content.hero.eyebrow : `${content.profile.photographer} · 摄影作品`}</small>
       <h1>{content.profile.photographer}<span>{readOnly ? content.hero.title : "漂浮拍立得星图"}</span></h1>
       <p>{content.profile.intro}</p><p>{content.profile.role} · {content.hero.services}</p>
       {readOnly && content.profile.city && <p>{content.profile.city}</p>}
-    </div> : <div className={styles.sceneHeading} data-field-controls>
-      <button type="button" onClick={onBack}>← 返回图集首页</button>
-      <div><strong>{title}</strong><span>{cards.length} 张照片{description ? ` · ${description}` : ""}</span></div>
-    </div>}
+    </div> : !composed && <div className={styles.sceneHeading} data-field-controls>{photoHeading}</div>}
     <div className={`${field.fieldCanvas} ${styles.canvas}`} ref={canvasRef} style={{
       width: layout.canvasWidth, height: layout.canvasHeight,
       transform: `translate3d(calc(-50% + ${camera.view.x}px), calc(-50% + ${camera.view.y}px), 0) scale(${camera.view.scale})`,
       "--scene-transform": `translate3d(calc(-50% + ${camera.view.x}px), calc(-50% + ${camera.view.y}px), 0) scale(${camera.view.scale})`,
     } as CSSProperties}>
-      <div className={field.canvasTitle} aria-hidden="true"><span>FRAME</span><strong>FIELD</strong></div>
+      {!composed && <div className={field.canvasTitle} aria-hidden="true"><span>FRAME</span><strong>FIELD</strong></div>}
       {layout.threads.map((thread, index) => <i key={index} className={`${field.thread} ${styles.thread}`} aria-hidden="true" style={{ left: thread.left, top: thread.top, width: thread.width, transform: `rotate(${thread.rotation}deg)` }} />)}
       {layout.placements.map((placement, index) => {
-        const card = cards[index];
+        const card = cards.find((item) => item.id === placement.id)!;
         return <button key={card.id} type="button" className={`${field.polaroid} ${styles.card}`} data-polaroid={index + 1} data-card-id={card.id}
           data-tone={placement.tone} data-rotation={placement.rotation} onClick={() => onOpen(card.id)}
           aria-label={isHome ? `进入图集 ${card.title}，${card.subtitle}` : `查看第 ${index + 1} 张照片`}
@@ -93,7 +107,7 @@ export default function CollectionScene({ cards, sceneId, title, description, co
               alt={isHome ? `${card.title}封面` : `图集照片 ${index + 1}`} loading={index < 3 ? "eager" : "lazy"} decoding="async" draggable={false}
               style={{ objectFit: card.fit === "fill" ? "cover" : "contain", objectPosition: `${card.focusX ?? 50}% ${card.focusY ?? 50}%` }} /> : <span className={styles.emptyPhoto}>{readOnly ? "暂无可用封面" : "选择一张封面"}</span>}
           </span>
-          <span className={styles.caption}><strong>{card.title}</strong><small>{card.subtitle}</small><em aria-hidden="true">↗</em></span>
+          <span className={styles.caption}>{!composed && <strong>{card.title}</strong>}<small>{composed ? String(index + 1).padStart(2, "0") : card.subtitle}</small><em aria-hidden="true">↗</em></span>
         </button>;
       })}
     </div>
@@ -102,15 +116,7 @@ export default function CollectionScene({ cards, sceneId, title, description, co
       <button type="button" onClick={camera.sceneMode === "overview" ? camera.showFocus : camera.showOverview}>{camera.sceneMode === "overview" ? "返回首页构图" : "查看全部图集"}<span>↗</span></button>
       <p>{cards.length} 个图集 · 点击封面，走进作品星图</p>
     </div>}
-    <div className={`${field.fieldControls} ${styles.controls}`} data-field-controls aria-label="星图浏览控制">
-      <button type="button" onClick={() => camera.panBy(120, 0)} aria-label="向左浏览">←</button>
-      <button type="button" onClick={() => camera.panBy(-120, 0)} aria-label="向右浏览">→</button>
-      <button type="button" onClick={() => camera.panBy(0, 120)} aria-label="向上浏览">↑</button>
-      <button type="button" onClick={() => camera.panBy(0, -120)} aria-label="向下浏览">↓</button>
-      <button type="button" onClick={() => camera.zoomBy(-.12)} aria-label="缩小星图">−</button>
-      <span>{Math.round(camera.view.scale * 100)}%</span>
-      <button type="button" onClick={() => camera.zoomBy(.12)} aria-label="放大星图">+</button>
-      <button type="button" onClick={camera.showOverview} aria-label="完整显示星图">FIT</button>
-    </div>
+    {!composed && controls}
   </div>;
+  return composed ? <div data-pc><div className={styles.sceneHeading} data-ph data-field-controls>{photoHeading}</div>{scene}<div data-pf>{controls}</div></div> : scene;
 }

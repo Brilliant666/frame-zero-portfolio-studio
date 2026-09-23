@@ -7,7 +7,7 @@ import type { TemplateProps } from "../types";
 import { collectionCover, initialCollections, moveItem, uniqueAvailableAssetIds, type Collection } from "./collection-model";
 import CollectionScene, { type SceneCard } from "./collection-scene";
 import type { ViewState } from "./viewport-fit";
-import styles from "./collection-experience.module.css";
+import styles from "./collection.module.css";
 
 type Props = Pick<TemplateProps, "content" | "onOpenWork" | "onBeforeViewChange" | "isPreview"> & {
   homeRequest: number; isActive: boolean; savedCollections?: readonly Collection[]; initialCollectionId?: string;
@@ -121,12 +121,13 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
 
   return <div className={styles.experience} data-collection-proof={savedCollections ? undefined : "local-only"}>
     {libraryError && <p role="alert">{libraryState}</p>}
-    <CollectionScene key={sceneId} cards={cards} sceneId={sceneId} content={content} title={selected?.name} description={selected?.description}
+    <CollectionScene key={`${sceneId}${savedCollections && selected ? cards.length ? ":photos" : ":empty" : ""}`} cards={cards} sceneId={sceneId} content={content} title={selected?.name} description={selected?.description}
+      composedPhotos={!!savedCollections && !!selected}
       readOnly={!!savedCollections} onAssetUnavailable={(id) => setAssets((current) => current.filter((asset) => asset.id !== id))}
       focusId={selected?.focusAssetId} initialView={restoredView} onViewChange={rememberCamera} onOpen={openCard}
       onBack={selected ? () => returnHome() : undefined} restoreFocusId={selected ? null : lastSelected} />
-    {!savedCollections && <button type="button" className={styles.configure} aria-expanded={panelOpen} onClick={() => setPanelOpen((value) => !value)}>临时配置 {panelOpen ? "×" : "⚙"}</button>}
-    {!savedCollections && panelOpen && <section className={styles.panel} aria-label="图集临时配置">
+    {process.env.NODE_ENV === "development" && !savedCollections && <button type="button" className={styles.configure} aria-expanded={panelOpen} onClick={() => setPanelOpen((value) => !value)}>临时配置 {panelOpen ? "×" : "⚙"}</button>}
+    {process.env.NODE_ENV === "development" && !savedCollections && panelOpen && <section className={styles.panel} aria-label="图集临时配置">
       <div className={styles.panelHeader}><strong>图集临时配置</strong><button type="button" onClick={() => setPanelOpen(false)}>关闭配置 ×</button></div>
       <p>设计验证配置，仅当前预览有效，刷新后不保留。</p><p>{libraryState}</p>
       <div className={styles.panelActions}>

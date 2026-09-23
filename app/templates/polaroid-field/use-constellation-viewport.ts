@@ -21,10 +21,12 @@ export type ConstellationViewportOptions = {
   reserveLeft?: number;
   initialView?: ViewState;
   onViewChange?: (view: ViewState) => void;
+  /** Optional local first-look group for large saved photo compositions. */
+  readableGroupSize?: number;
 };
 
 /** Shared camera for the original nine-photo field and temporary collection scenes. */
-export function useConstellationViewport({ viewportRef, canvasRef, layoutKey, getFocusIndex, initialMode = "focus", enabled = true, mobileEnabled = false, reserveLeft = 0, initialView, onViewChange }: ConstellationViewportOptions) {
+export function useConstellationViewport({ viewportRef, canvasRef, layoutKey, getFocusIndex, initialMode = "focus", enabled = true, mobileEnabled = false, reserveLeft = 0, initialView, onViewChange, readableGroupSize }: ConstellationViewportOptions) {
   const callbacks = useRef({ getFocusIndex, onViewChange });
   useLayoutEffect(() => { callbacks.current = { getFocusIndex, onViewChange }; });
   const viewRef = useRef<ViewState>(initialView ?? INITIAL_VIEW);
@@ -79,8 +81,13 @@ export function useConstellationViewport({ viewportRef, canvasRef, layoutKey, ge
     fitRef.current = fit;
     minimumRef.current = getMinimumScale(fit.view.scale, PREFERRED_MIN_SCALE);
     setMinimumScale((current) => Math.abs(current - minimumRef.current) < .0001 ? current : minimumRef.current);
-    return { fit, focus };
-  }, [canvasRef, enabled, mobileEnabled, reserveLeft, viewportRef]);
+    const group = readableGroupSize ? [...cards].sort((a, b) => {
+      const distance = (card: typeof focus) => Math.hypot(card.left + card.width / 2 - focus.left - focus.width / 2, card.top + card.height / 2 - focus.top - focus.height / 2);
+      return distance(a) - distance(b);
+    }).slice(0, readableGroupSize) : [];
+    const readableFit = group.length ? fitRectsToViewport(fit.viewport, fit.canvas, group, 40) : null;
+    return { fit, focus, readableFit };
+  }, [canvasRef, enabled, mobileEnabled, reserveLeft, viewportRef, readableGroupSize]);
   const constrain = useCallback((next: ViewState) => fitRef.current ? constrainView(next, fitRef.current, minimumRef.current, MAX_SCALE) : next, []);
   const showOverview = useCallback(() => {
     const geometry = updateFitGeometry();
@@ -108,6 +115,7 @@ export function useConstellationViewport({ viewportRef, canvasRef, layoutKey, ge
       if (modeRef.current === "focus") commitView(focusRectInViewport(geometry.fit, geometry.focus, minimumRef.current, MAX_SCALE));
       else if (modeRef.current === "overview") commitView(geometry.fit.view);
       else if (modeRef.current === "readable") {
+        if (geometry.readableFit) { commitView(constrain(geometry.readableFit.view)); return; }
         const scale = Math.max(geometry.fit.view.scale, .8);
         const ratio = scale / geometry.fit.view.scale;
         commitView(constrain({ x: geometry.fit.view.x * ratio, y: geometry.fit.view.y * ratio, scale }));
