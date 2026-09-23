@@ -17,6 +17,7 @@ import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/
 import PlatformAccounts from "../shared/platform-accounts";
 import { buildPolaroidFieldLayout } from "./field-layout";
 import CollectionExperience from "./collection-experience";
+import type { Collection } from "./collection-model";
 import { canOpenCollectionProof } from "./collection-proof-gate";
 import { selectPolaroidFocus } from "./hero-selection";
 import { getPolaroidViewFromHash, POLAROID_VIEW_HASHES, type PolaroidView } from "./navigation";
@@ -48,7 +49,8 @@ export default function PolaroidFieldTemplate({
   onCopy,
   onBeforeViewChange,
   onOpenWork,
-}: TemplateProps) {
+  collectionWorkspace,
+}: TemplateProps & { collectionWorkspace?: { collections: readonly Collection[]; initialCollectionId?: string } }) {
   const fieldSlots = useMemo(
     () => buildPhotoSlots(works, POLAROID_RATIOS, { templateId: "polaroid-field" }),
     [works],
@@ -64,7 +66,8 @@ export default function PolaroidFieldTemplate({
   const canvasRef = useRef<HTMLDivElement>(null);
   const navigationFrameRef = useRef<number | null>(null);
   const [activeView, setActiveView] = useState<PolaroidView>("field");
-  const [collectionProof, setCollectionProof] = useState(false);
+  const [localCollectionProof, setCollectionProof] = useState(false);
+  const collectionProof = !!collectionWorkspace || localCollectionProof;
   const [homeRequest, setHomeRequest] = useState(0);
 
   const { view, minimumScale, dragging, desktopFieldEnabled, sceneMode, showOverview, showFocus, zoomBy, handleFieldKeyDown } = useConstellationViewport({
@@ -203,7 +206,7 @@ export default function PolaroidFieldTemplate({
         hidden={activeView !== "field"}
         tabIndex={-1}
       >
-        {collectionProof ? <CollectionExperience content={content} isPreview={isPreview} isActive={activeView === "field"} homeRequest={homeRequest} onOpenWork={onOpenWork} onBeforeViewChange={onBeforeViewChange} /> :
+        {collectionProof ? <CollectionExperience key={collectionWorkspace ? JSON.stringify(collectionWorkspace.collections) : undefined} savedCollections={collectionWorkspace?.collections} initialCollectionId={collectionWorkspace?.initialCollectionId} content={content} isPreview={isPreview} isActive={activeView === "field"} homeRequest={homeRequest} onOpenWork={onOpenWork} onBeforeViewChange={onBeforeViewChange} /> :
         <div
           id="polaroid-field"
           ref={viewportRef}
@@ -379,7 +382,7 @@ export default function PolaroidFieldTemplate({
           {packages.map((item, index) => (
             <article className={styles.packageCard} key={`${item.number}-${item.english}`}>
               <span className={styles.packageTape} aria-hidden="true" />
-              <div className={styles.packageNumber}>{String(index + 1).padStart(2, "0")}</div>
+              <div className={styles.packageNumber}>{collectionWorkspace ? item.number : String(index + 1).padStart(2, "0")}</div>
               <div className={styles.packageTitle}>
                 <small>{item.english} / {item.duration}</small>
                 <h3>{item.name}</h3>
@@ -420,8 +423,8 @@ export default function PolaroidFieldTemplate({
         tabIndex={-1}
       >
         <div className={styles.bookingIntro}>
-          <small>03 / SEND A FIELD NOTE</small>
-          <h2 id="booking-title">把下一颗星<br /><span>钉在这里</span></h2>
+          <small>{collectionWorkspace ? content.statement.eyebrow : "03 / SEND A FIELD NOTE"}</small>
+          <h2 id="booking-title">{collectionWorkspace ? content.statement.lineOne : "把下一颗星"}<br /><span>{collectionWorkspace ? content.statement.lineTwo : "钉在这里"}</span></h2>
           <p>
             告诉我角色、日期与想要留下的情绪。复制清单后，
             通过微信或邮箱发送，就可以开始一起搭建画面。

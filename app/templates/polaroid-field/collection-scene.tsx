@@ -19,9 +19,10 @@ type Props = {
   content: TemplateProps["content"]; focusId?: string | null;
   initialView?: ViewState; onViewChange: (view: ViewState) => void;
   onOpen: (id: string) => void; onBack?: () => void; restoreFocusId?: string | null;
+  readOnly?: boolean; onAssetUnavailable?: (id: string) => void;
 };
 
-export default function CollectionScene({ cards, sceneId, title, description, content, focusId, initialView, onViewChange, onOpen, onBack, restoreFocusId }: Props) {
+export default function CollectionScene({ cards, sceneId, title, description, content, focusId, initialView, onViewChange, onOpen, onBack, restoreFocusId, readOnly, onAssetUnavailable }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(() => typeof window === "undefined" ? 1280 : window.innerWidth);
@@ -64,9 +65,10 @@ export default function CollectionScene({ cards, sceneId, title, description, co
     style={compact ? { height: Math.max(680, layout.canvasHeight * Math.min(1, (width - 24) / layout.canvasWidth) + (isHome ? 300 : 130)) } : undefined}
     aria-label={isHome ? "图集封面星图" : `${title}作品星图`} onKeyDown={camera.handleFieldKeyDown}>
     {isHome ? <div className={`${field.sceneIdentity} ${styles.identity}`}>
-      <small>{content.profile.photographer} · 摄影作品</small>
-      <h1>{content.profile.photographer}<span>漂浮拍立得星图</span></h1>
+      <small>{readOnly ? content.hero.eyebrow : `${content.profile.photographer} · 摄影作品`}</small>
+      <h1>{content.profile.photographer}<span>{readOnly ? content.hero.title : "漂浮拍立得星图"}</span></h1>
       <p>{content.profile.intro}</p><p>{content.profile.role} · {content.hero.services}</p>
+      {readOnly && content.profile.city && <p>{content.profile.city}</p>}
     </div> : <div className={styles.sceneHeading} data-field-controls>
       <button type="button" onClick={onBack}>← 返回图集首页</button>
       <div><strong>{title}</strong><span>{cards.length} 张照片{description ? ` · ${description}` : ""}</span></div>
@@ -87,14 +89,15 @@ export default function CollectionScene({ cards, sceneId, title, description, co
           <span className={field.tape} aria-hidden="true" />
           <span className={`${field.photoFrame} ${styles.photo}`} style={{ height: placement.photoHeight }}>
             {card.asset ? <img src={card.asset.variants.card.src} width={card.asset.variants.card.width} height={card.asset.variants.card.height}
+              onError={() => { if (card.asset) onAssetUnavailable?.(card.asset.id); }}
               alt={isHome ? `${card.title}封面` : `图集照片 ${index + 1}`} loading={index < 3 ? "eager" : "lazy"} decoding="async" draggable={false}
-              style={{ objectFit: card.fit === "fill" ? "cover" : "contain", objectPosition: `${card.focusX ?? 50}% ${card.focusY ?? 50}%` }} /> : <span className={styles.emptyPhoto}>选择一张封面</span>}
+              style={{ objectFit: card.fit === "fill" ? "cover" : "contain", objectPosition: `${card.focusX ?? 50}% ${card.focusY ?? 50}%` }} /> : <span className={styles.emptyPhoto}>{readOnly ? "暂无可用封面" : "选择一张封面"}</span>}
           </span>
           <span className={styles.caption}><strong>{card.title}</strong><small>{card.subtitle}</small><em aria-hidden="true">↗</em></span>
         </button>;
       })}
     </div>
-    {!cards.length && <p className={styles.empty}>这个图集还没有照片。可在临时配置中选择素材。</p>}
+    {!cards.length && <p className={styles.empty}>{readOnly ? "暂无可展示照片。素材可能尚未添加、已回收或暂时不可用。" : "这个图集还没有照片。可在临时配置中选择素材。"}</p>}
     {isHome && <div className={`${field.sceneActions} ${styles.actions}`} data-field-controls>
       <button type="button" onClick={camera.sceneMode === "overview" ? camera.showFocus : camera.showOverview}>{camera.sceneMode === "overview" ? "返回首页构图" : "查看全部图集"}<span>↗</span></button>
       <p>{cards.length} 个图集 · 点击封面，走进作品星图</p>

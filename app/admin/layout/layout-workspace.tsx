@@ -38,6 +38,7 @@ import { useAdmin } from "../admin-provider";
 import styles from "../admin-v2.module.css";
 import { LayoutCompositionPreview } from "../template/template-composition-preview";
 import PhotoImportPanel, { type PhotoLibraryStats } from "./photo-import-panel";
+import { loadPreviewPhotoReferences, type PreviewPhotoReferences } from "./preview-photo-references";
 import {
   loadLocalPhotoLibrary,
   setLocalPhotoLibraryArchived,
@@ -111,6 +112,7 @@ export default function LayoutWorkspace() {
   const [archiveCandidate, setArchiveCandidate] = useState<string | null>(null);
   const [mutatingAssetId, setMutatingAssetId] = useState<string | null>(null);
   const [managementMessage, setManagementMessage] = useState<string | null>(null);
+  const [previewReferences, setPreviewReferences] = useState<PreviewPhotoReferences | null>(null);
   const libraryRequestRef = useRef(0);
   const activeLibraryViewRef = useRef<HTMLButtonElement | null>(null);
   const archivedLibraryViewRef = useRef<HTMLButtonElement | null>(null);
@@ -289,6 +291,18 @@ export default function LayoutWorkspace() {
     };
   }, [loadLibrary]);
 
+  useEffect(() => {
+    if (localPhotoImportState !== "configured") return;
+    let active = true;
+    const reload = () => void loadPreviewPhotoReferences().then(
+      (references) => { if (active) setPreviewReferences(references); },
+      () => { if (active) setPreviewReferences(null); },
+    );
+    reload();
+    window.addEventListener("focus", reload);
+    return () => { active = false; window.removeEventListener("focus", reload); };
+  }, [localPhotoImportState]);
+
   const refreshLibrary = useCallback(() => {
     setLibraryState("loading");
     setLibraryMessage("正在刷新素材列表…");
@@ -314,6 +328,16 @@ export default function LayoutWorkspace() {
     setMutatingAssetId(assetId);
     setManagementMessage(null);
     try {
+      // Recheck at the point of action: another tab may have saved a collection.
+      // Archiving keeps files and references, but unknown use must never look unused.
+      if (archived) {
+        setPreviewReferences(null);
+        const references = await loadPreviewPhotoReferences();
+        setPreviewReferences(references);
+        if ((references.get(assetId) ?? 0) > 0 && !window.confirm(
+          `此素材被新版图集引用 ${references.get(assetId)} 处（包括封面、重点和成员）。回收后引用不会删除，但新版可能显示素材不可用，恢复素材后重新显示。仍要回收？`,
+        )) return;
+      }
       const snapshot = await setLocalPhotoLibraryArchived(
         localPhotoImportOrigin,
         [assetId],
@@ -322,7 +346,7 @@ export default function LayoutWorkspace() {
       );
       applyLocalSnapshot(snapshot);
       setArchiveCandidate(null);
-      setManagementMessage(archived ? "素材已移入回收站；现有排版引用保持可用。" : "素材已恢复到素材库。");
+      setManagementMessage(archived ? "素材已移入回收站；原文件与新旧引用保留，新版图集可能暂不展示该素材，恢复后可重新解析。" : "素材已恢复到素材库。");
       window.requestAnimationFrame(() => {
         (archived ? activeLibraryViewRef : archivedLibraryViewRef).current?.focus();
       });
@@ -629,7 +653,8 @@ export default function LayoutWorkspace() {
                       </button>
                       {localPhotoImportState === "configured" ? (
                         <div className={styles.assetManagement}>
-                          <small>当前草稿 {references.draft.length} 处 · 已保存 {references.saved.length} 处</small>
+                          <small>原站草稿 {references.draft.length} 处 · 原站已保存 {references.saved.length} 处</small>
+                          <small>{previewReferences === null ? "新版图集引用未核验；回收前必须检查" : `新版已保存图集 ${previewReferences.get(asset.id) ?? 0} 处（不含其他标签页未保存草稿）`}</small>
                           {archiveCandidate === asset.id && item.status === "active" ? (
                             <div role="group" aria-label="确认移入回收站">
                               <span>移入回收站？</span>

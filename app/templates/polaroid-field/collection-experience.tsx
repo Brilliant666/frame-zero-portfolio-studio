@@ -9,16 +9,19 @@ import CollectionScene, { type SceneCard } from "./collection-scene";
 import type { ViewState } from "./viewport-fit";
 import styles from "./collection-experience.module.css";
 
-type Props = Pick<TemplateProps, "content" | "onOpenWork" | "onBeforeViewChange" | "isPreview"> & { homeRequest: number; isActive: boolean };
+type Props = Pick<TemplateProps, "content" | "onOpenWork" | "onBeforeViewChange" | "isPreview"> & {
+  homeRequest: number; isActive: boolean; savedCollections?: readonly Collection[]; initialCollectionId?: string;
+};
 const hashPrefix = "#polaroid-collection-";
 const cameraKey = (id: string) => `${id}:${window.innerWidth < 600 ? "mobile" : "desktop"}`;
 const assetLabel = (asset: PhotoAsset, index: number) => `素材 ${String(index + 1).padStart(2, "0")} · ${asset.aspectRatio > 1.05 ? "横幅" : asset.aspectRatio < .95 ? "竖幅" : "方幅"}`;
 
-export default function CollectionExperience({ content, isPreview, homeRequest, isActive, onOpenWork, onBeforeViewChange }: Props) {
-  const [collections, setCollections] = useState<Collection[]>(() => initialCollections.map((item) => ({ ...item, assetIds: [] })));
+export default function CollectionExperience({ content, isPreview, homeRequest, isActive, savedCollections, initialCollectionId, onOpenWork, onBeforeViewChange }: Props) {
+  const [collections, setCollections] = useState<Collection[]>(() => savedCollections ? structuredClone([...savedCollections]) : initialCollections.map((item) => ({ ...item, assetIds: [] })));
   const [assets, setAssets] = useState<PhotoAsset[]>([]);
   const [libraryState, setLibraryState] = useState("读取本地素材库…");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [libraryError, setLibraryError] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(initialCollectionId ?? null);
   const [panelOpen, setPanelOpen] = useState(false);
   const cameras = useRef(new Map<string, ViewState>());
   const [lastSelected, setLastSelected] = useState<string | null>(null);
@@ -54,9 +57,9 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
       .then((response) => response.ok ? response.json() : null)
       .then((value: unknown) => {
         const parsed = parsePhotoLibraryManifest(value);
-        if (!parsed) { setLibraryState("本地素材库不可用；仍可检查空图集。"); return; }
+        if (!parsed) { setLibraryState("本地素材库暂时不可用。已保存的图集引用仍保留，请稍后刷新重试。"); setLibraryError(true); return; }
         setAssets(parsed.assets); setLibraryState(`可选素材 ${parsed.assets.length} 张；引用同一素材不会复制文件。`);
-      }).catch(() => { if (!controller.signal.aborted) setLibraryState("本地素材库不可用；仍可检查空图集。"); });
+      }).catch(() => { if (!controller.signal.aborted) { setLibraryState("本地素材库暂时不可用。已保存的图集引用仍保留，请稍后刷新重试。"); setLibraryError(true); } });
     return () => controller.abort();
   }, []);
 
@@ -92,13 +95,13 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
   }, [selected, selectedId, returnHome]);
   useEffect(() => {
     const escape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || document.querySelector(".lightbox")) return;
+      if (!isActive || event.key !== "Escape" || document.querySelector(".lightbox")) return;
       if (panelOpen) { event.preventDefault(); setPanelOpen(false); }
       else if (selected) { event.preventDefault(); returnHome(); }
     };
     addEventListener("keydown", escape);
     return () => removeEventListener("keydown", escape);
-  }, [panelOpen, selected, returnHome]);
+  }, [isActive, panelOpen, selected, returnHome]);
   const update = (id: string, patch: Partial<Collection>) => {
     onBeforeViewChange?.();
     setCollections((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
@@ -116,15 +119,24 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
     }
   };
 
-  return <div className={styles.experience} data-collection-proof="local-only">
+  return <div className={styles.experience} data-collection-proof={savedCollections ? undefined : "local-only"}>
+    {libraryError && <p role="alert">{libraryState}</p>}
     <CollectionScene key={sceneId} cards={cards} sceneId={sceneId} content={content} title={selected?.name} description={selected?.description}
+      readOnly={!!savedCollections} onAssetUnavailable={(id) => setAssets((current) => current.filter((asset) => asset.id !== id))}
       focusId={selected?.focusAssetId} initialView={restoredView} onViewChange={rememberCamera} onOpen={openCard}
       onBack={selected ? () => returnHome() : undefined} restoreFocusId={selected ? null : lastSelected} />
-    <button type="button" className={styles.configure} aria-expanded={panelOpen} onClick={() => setPanelOpen((value) => !value)}>临时配置 {panelOpen ? "×" : "⚙"}</button>
-    {panelOpen && <section className={styles.panel} aria-label="图集临时配置">
+    {!savedCollections && <button type="button" className={styles.configure} aria-expanded={panelOpen} onClick={() => setPanelOpen((value) => !value)}>临时配置 {panelOpen ? "×" : "⚙"}</button>}
+    {!savedCollections && panelOpen && <section className={styles.panel} aria-label="图集临时配置">
       <div className={styles.panelHeader}><strong>图集临时配置</strong><button type="button" onClick={() => setPanelOpen(false)}>关闭配置 ×</button></div>
       <p>设计验证配置，仅当前预览有效，刷新后不保留。</p><p>{libraryState}</p>
       <div className={styles.panelActions}>
+        <button type="button" onClick={() => {
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(new Blob([JSON.stringify({ collections }, null, 2)], { type: "application/json" }));
+          link.download = "polaroid-collections-recovery.json";
+          link.click();
+          setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        }}>导出当前临时图集（供新版导入）</button>
         <button type="button" onClick={() => setCollections((current) => [...current, { ...initialCollections[0], id: `preview-${crypto.randomUUID()}`, name: "新图集", assetIds: [] }])}>＋ 添加图集</button>
         <button type="button" disabled={!assets.length} onClick={() => setCollections((current) => current.map((item, index) => ({ ...item,
           assetIds: assets.filter((_, assetIndex) => assetIndex % 3 === index).map((asset) => asset.id), coverAssetId: assets[index]?.id ?? null,
