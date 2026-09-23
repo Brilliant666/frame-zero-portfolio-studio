@@ -548,9 +548,10 @@ test("polaroid template exposes accessible Chinese view navigation on desktop an
 });
 
 test("polaroid first screen and overview share one card collection", async () => {
-  const [template, css] = await Promise.all([
+  const [template, css, camera] = await Promise.all([
     fs.readFile(new URL("../app/templates/polaroid-field/template.tsx", import.meta.url), "utf8"),
     fs.readFile(new URL("../app/templates/polaroid-field/polaroid-field.module.css", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/templates/polaroid-field/use-constellation-viewport.ts", import.meta.url), "utf8"),
   ]);
   assert.equal((template.match(/fieldSlots\.map\(\(slot, index\) => \{/g) ?? []).length, 1, "one set of work cards");
   assert.ok(!template.includes("HeroPolaroid"), "no duplicated cover cards");
@@ -559,7 +560,8 @@ test("polaroid first screen and overview share one card collection", async () =>
   assert.match(template, /data-scene-mode=\{sceneMode\}/);
   assert.match(template, /sceneMode === "focus" \? showOverview : showFocus/);
   assert.match(template, /查看全部作品[\s\S]*返回主图/);
-  assert.match(template, /focusRectInViewport/);
+  assert.match(template, /useConstellationViewport/);
+  assert.match(camera, /focusRectInViewport/);
   assert.match(template, /inert=\{sceneMode === "focus" && sceneRole === "other"\}/);
   assert.match(css, /\.fieldViewport \{[\s\S]*height: calc\(100svh - 5rem\)/);
   assert.match(css, /\.fieldSection\[data-scene-mode="focus"\] \.polaroid\[data-scene-role="other"\]/);
@@ -696,20 +698,21 @@ test("polaroid header removes the fixed field note and suppresses blank availabi
 });
 
 test("template wiring preserves nine slots, keyboard access, FIT reset, mobile layout, and reduced motion", async () => {
-  const [template, css, catalog] = await Promise.all([
+  const [template, css, catalog, camera] = await Promise.all([
     fs.readFile(new URL("../app/templates/polaroid-field/template.tsx", import.meta.url), "utf8"),
     fs.readFile(new URL("../app/templates/polaroid-field/polaroid-field.module.css", import.meta.url), "utf8"),
     fs.readFile(new URL("../app/templates/catalog.ts", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/templates/polaroid-field/use-constellation-viewport.ts", import.meta.url), "utf8"),
   ]);
   assert.match(catalog, /id: "polaroid-field"[\s\S]*photoSlots: 9/);
   assert.match(template, /buildPolaroidFieldLayout\(fieldSlots\.map/);
   assert.match(template, /data-field-layout="ratio-aware-v1"/);
   assert.match(template, /data-rotation=\{placement\.rotation\}/);
   assert.match(template, /data-layout-band=\{placement\.band\}/);
-  assert.match(template, /new ResizeObserver\(scheduleRecompute\)/);
+  assert.match(camera, /new ResizeObserver\(schedule\)/);
   assert.match(template, /tabIndex=\{desktopFieldEnabled \? 0 : undefined\}/);
   assert.match(template, /desktopFieldEnabled[\s\S]*九张拍立得作品画廊/);
-  assert.match(template, /case "0":[\s\S]*case "Home":[\s\S]*showOverview\(\)/);
+  assert.match(camera, /case "0":[\s\S]*case "Home":[\s\S]*showOverview\(\)/);
   assert.match(template, /onClick=\{showOverview\}[\s\S]*>FIT<\/button>/);
   assert.doesNotMatch(template, /resetView/);
   assert.match(css, /\.fieldCanvas \{[\s\S]*width: var\(--field-canvas-width[\s\S]*height: var\(--field-canvas-height/);

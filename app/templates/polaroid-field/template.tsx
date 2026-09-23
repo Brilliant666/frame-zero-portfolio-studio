@@ -5,12 +5,10 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
-  type KeyboardEvent,
   type MouseEvent as ReactMouseEvent,
 } from "react";
 import type { TemplateProps } from "../types";
@@ -22,27 +20,16 @@ import CollectionExperience from "./collection-experience";
 import { canOpenCollectionProof } from "./collection-proof-gate";
 import { selectPolaroidFocus } from "./hero-selection";
 import { getPolaroidViewFromHash, POLAROID_VIEW_HASHES, type PolaroidView } from "./navigation";
-import {
-  constrainView,
-  fitRectsToViewport,
-  focusRectInViewport,
-  getMinimumScale,
-  type ViewportFit,
-  type ViewState,
-} from "./viewport-fit";
+import { useConstellationViewport } from "./use-constellation-viewport";
 import styles from "./polaroid-field.module.css";
 
-type DragState = { pointerId: number; startX: number; startY: number; originX: number; originY: number };
 type PolaroidStyle = CSSProperties & { "--rotation": string };
 type FieldCanvasStyle = CSSProperties & {
   "--field-canvas-width": string;
   "--field-canvas-height": string;
 };
 
-const INITIAL_VIEW: ViewState = { x: 0, y: 0, scale: 1 };
-const PREFERRED_MIN_SCALE = 0.72;
 const MAX_SCALE = 1.28;
-const FIT_INSET = 32;
 const POLAROID_RATIOS = getTemplateSlotRatios("polaroid-field");
 
 const stars = [
@@ -75,21 +62,14 @@ export default function PolaroidFieldTemplate({
   const trustItems = content.trustItems.filter(({ label, value }) => label.trim() || value.trim());
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<DragState | null>(null);
-  const viewRef = useRef<ViewState>(INITIAL_VIEW);
-  const fitRef = useRef<ViewportFit | null>(null);
-  const viewModeRef = useRef<"focus" | "overview" | "manual">("focus");
-  const minimumScaleRef = useRef(PREFERRED_MIN_SCALE);
-  const frameRef = useRef<number | null>(null);
   const navigationFrameRef = useRef<number | null>(null);
-  const [view, setView] = useState<ViewState>(INITIAL_VIEW);
-  const [minimumScale, setMinimumScale] = useState(PREFERRED_MIN_SCALE);
-  const [dragging, setDragging] = useState(false);
-  const [desktopFieldEnabled, setDesktopFieldEnabled] = useState(false);
   const [activeView, setActiveView] = useState<PolaroidView>("field");
-  const [sceneMode, setSceneMode] = useState<"focus" | "overview">("focus");
   const [collectionProof, setCollectionProof] = useState(false);
   const [homeRequest, setHomeRequest] = useState(0);
+
+  const { view, minimumScale, dragging, desktopFieldEnabled, sceneMode, showOverview, showFocus, zoomBy, handleFieldKeyDown } = useConstellationViewport({
+    viewportRef, canvasRef, layoutKey: fieldSlots, getFocusIndex: () => focusSlot?.index ?? 4, enabled: !collectionProof,
+  });
 
   useEffect(() => {
     const enabled = canOpenCollectionProof(process.env.NODE_ENV, window.location.hostname, window.location.search);
@@ -118,12 +98,13 @@ export default function PolaroidFieldTemplate({
     hash = POLAROID_VIEW_HASHES[view],
     focusTarget = false,
   ) => {
+    onBeforeViewChange?.();
     setActiveView(view);
     if (!isPreview && window.location.hash !== hash) {
       window.history.pushState(null, "", hash);
     }
     scrollToViewTarget(hash.slice(1), focusTarget);
-  }, [isPreview, scrollToViewTarget]);
+  }, [isPreview, scrollToViewTarget, onBeforeViewChange]);
 
   const handleViewLink = useCallback((
     event: ReactMouseEvent<HTMLAnchorElement>,
@@ -148,7 +129,7 @@ export default function PolaroidFieldTemplate({
         ? hash
         : POLAROID_VIEW_HASHES[view];
       setActiveView(view);
-      if (hash) scrollToViewTarget(targetHash.slice(1), focusTarget);
+      if (hash && !(collectionProof && view === "field")) scrollToViewTarget(targetHash.slice(1), focusTarget);
     };
 
     syncViewFromLocation(false);
@@ -160,7 +141,7 @@ export default function PolaroidFieldTemplate({
       window.removeEventListener("hashchange", handleHistoryNavigation);
       window.removeEventListener("popstate", handleHistoryNavigation);
     };
-  }, [isPreview, scrollToViewTarget]);
+  }, [isPreview, scrollToViewTarget, collectionProof]);
 
   useEffect(() => () => {
     if (navigationFrameRef.current !== null) {
@@ -168,271 +149,6 @@ export default function PolaroidFieldTemplate({
     }
   }, []);
 
-  const commitView = useCallback((next: ViewState) => {
-    if (frameRef.current !== null) {
-      window.cancelAnimationFrame(frameRef.current);
-      frameRef.current = null;
-    }
-    viewRef.current = next;
-    setView(next);
-  }, []);
-
-  const scheduleView = useCallback((next: ViewState) => {
-    viewRef.current = next;
-    if (frameRef.current !== null) return;
-
-    frameRef.current = window.requestAnimationFrame(() => {
-      frameRef.current = null;
-      setView(viewRef.current);
-    });
-  }, []);
-
-  const measureFit = useCallback(() => {
-    const viewport = viewportRef.current;
-    const canvas = canvasRef.current;
-    if (!viewport || !canvas || !window.matchMedia("(min-width: 801px)").matches) return null;
-
-    const cards = Array.from(canvas.querySelectorAll<HTMLElement>("[data-polaroid]"), (card) => ({
-      left: card.offsetLeft,
-      top: card.offsetTop,
-      width: card.offsetWidth,
-      height: card.offsetHeight,
-      rotation: Number.parseFloat(card.dataset.rotation ?? "0"),
-    }));
-
-    const fit = fitRectsToViewport(
-      { width: viewport.clientWidth, height: viewport.clientHeight },
-      { width: canvas.offsetWidth, height: canvas.offsetHeight },
-      cards,
-      FIT_INSET,
-    );
-    const focus = cards[focusSlot?.index ?? 4] ?? cards[4];
-    return fit && focus ? { fit, focus } : null;
-  }, [focusSlot]);
-
-  const updateFitGeometry = useCallback(() => {
-    const geometry = measureFit();
-    if (!geometry) return null;
-    const { fit } = geometry;
-
-    fitRef.current = fit;
-    const nextMinimum = getMinimumScale(fit.view.scale, PREFERRED_MIN_SCALE);
-    minimumScaleRef.current = nextMinimum;
-    setMinimumScale((current) => Math.abs(current - nextMinimum) < .0001 ? current : nextMinimum);
-    return geometry;
-  }, [measureFit]);
-
-  const constrainCurrentView = useCallback((next: ViewState) => {
-    const fit = fitRef.current;
-    if (!fit) return next;
-    return constrainView(next, fit, minimumScaleRef.current, MAX_SCALE);
-  }, []);
-
-  const showOverview = useCallback(() => {
-    const geometry = updateFitGeometry();
-    viewModeRef.current = "overview";
-    setSceneMode("overview");
-    if (geometry) commitView(geometry.fit.view);
-  }, [commitView, updateFitGeometry]);
-
-  const showFocus = useCallback(() => {
-    const geometry = updateFitGeometry();
-    viewModeRef.current = "focus";
-    setSceneMode("focus");
-    if (geometry) commitView(focusRectInViewport(
-      geometry.fit, geometry.focus, minimumScaleRef.current, MAX_SCALE,
-    ));
-  }, [commitView, updateFitGeometry]);
-
-  useLayoutEffect(() => {
-    const viewport = viewportRef.current;
-    const canvas = canvasRef.current;
-    if (!viewport || !canvas) return;
-
-    const desktopQuery = window.matchMedia("(min-width: 801px)");
-    let resizeFrame: number | null = null;
-
-    const recompute = () => {
-      resizeFrame = null;
-      if (!desktopQuery.matches) return;
-
-      const geometry = updateFitGeometry();
-      if (!geometry) return;
-
-      if (viewModeRef.current === "focus") {
-        commitView(focusRectInViewport(
-          geometry.fit, geometry.focus, minimumScaleRef.current, MAX_SCALE,
-        ));
-      } else if (viewModeRef.current === "overview") {
-        commitView(geometry.fit.view);
-      } else {
-        commitView(constrainCurrentView(viewRef.current));
-      }
-    };
-
-    const scheduleRecompute = () => {
-      if (resizeFrame !== null) return;
-      resizeFrame = window.requestAnimationFrame(recompute);
-    };
-
-    const handleDesktopChange = () => {
-      setDesktopFieldEnabled(desktopQuery.matches);
-      scheduleRecompute();
-    };
-
-    setDesktopFieldEnabled(desktopQuery.matches);
-    recompute();
-
-    const resizeObserver = typeof ResizeObserver === "undefined"
-      ? null
-      : new ResizeObserver(scheduleRecompute);
-    resizeObserver?.observe(viewport);
-    resizeObserver?.observe(canvas);
-    if (!resizeObserver) window.addEventListener("resize", scheduleRecompute);
-    desktopQuery.addEventListener("change", handleDesktopChange);
-
-    return () => {
-      resizeObserver?.disconnect();
-      if (!resizeObserver) window.removeEventListener("resize", scheduleRecompute);
-      desktopQuery.removeEventListener("change", handleDesktopChange);
-      if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
-    };
-  }, [commitView, constrainCurrentView, fieldSlots, updateFitGeometry]);
-
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-
-    const desktopQuery = window.matchMedia("(min-width: 801px)");
-
-    const finishDrag = () => {
-      const active = dragRef.current;
-      dragRef.current = null;
-      setDragging(false);
-
-      if (active && viewport.hasPointerCapture(active.pointerId)) {
-        viewport.releasePointerCapture(active.pointerId);
-      }
-    };
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!desktopQuery.matches || event.button !== 0) return;
-      if (event.target instanceof Element && event.target.closest("button, a, [data-field-controls]")) return;
-
-      dragRef.current = {
-        pointerId: event.pointerId,
-        startX: event.clientX,
-        startY: event.clientY,
-        originX: viewRef.current.x,
-        originY: viewRef.current.y,
-      };
-      viewport.setPointerCapture(event.pointerId);
-      viewport.focus({ preventScroll: true });
-      setDragging(true);
-    };
-
-    const handlePointerMove = (event: PointerEvent) => {
-      const active = dragRef.current;
-      if (!active || active.pointerId !== event.pointerId) return;
-
-      event.preventDefault();
-      viewModeRef.current = "manual";
-      scheduleView(constrainCurrentView({
-        ...viewRef.current,
-        x: active.originX + event.clientX - active.startX,
-        y: active.originY + event.clientY - active.startY,
-      }));
-    };
-
-    const handlePointerEnd = (event: PointerEvent) => {
-      if (dragRef.current?.pointerId !== event.pointerId) return;
-      finishDrag();
-    };
-
-    const handleLostCapture = () => {
-      dragRef.current = null;
-      setDragging(false);
-    };
-
-    viewport.addEventListener("pointerdown", handlePointerDown);
-    viewport.addEventListener("pointermove", handlePointerMove);
-    viewport.addEventListener("pointerup", handlePointerEnd);
-    viewport.addEventListener("pointercancel", handlePointerEnd);
-    viewport.addEventListener("lostpointercapture", handleLostCapture);
-
-    return () => {
-      viewport.removeEventListener("pointerdown", handlePointerDown);
-      viewport.removeEventListener("pointermove", handlePointerMove);
-      viewport.removeEventListener("pointerup", handlePointerEnd);
-      viewport.removeEventListener("pointercancel", handlePointerEnd);
-      viewport.removeEventListener("lostpointercapture", handleLostCapture);
-
-      const active = dragRef.current;
-      if (active && viewport.hasPointerCapture(active.pointerId)) {
-        viewport.releasePointerCapture(active.pointerId);
-      }
-      dragRef.current = null;
-
-      if (frameRef.current !== null) {
-        window.cancelAnimationFrame(frameRef.current);
-        frameRef.current = null;
-      }
-    };
-  }, [constrainCurrentView, scheduleView]);
-
-  const zoomBy = useCallback((amount: number) => {
-    const current = viewRef.current;
-    viewModeRef.current = "manual";
-    commitView(constrainCurrentView({ ...current, scale: current.scale + amount }));
-  }, [commitView, constrainCurrentView]);
-
-  const panBy = useCallback((x: number, y: number) => {
-    const current = viewRef.current;
-    viewModeRef.current = "manual";
-    commitView(constrainCurrentView({
-      ...current,
-      x: current.x + x,
-      y: current.y + y,
-    }));
-  }, [commitView, constrainCurrentView]);
-
-  const handleFieldKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.target !== event.currentTarget || !window.matchMedia("(min-width: 801px)").matches) return;
-    const distance = event.shiftKey ? 100 : 42;
-
-    switch (event.key) {
-      case "ArrowLeft":
-        event.preventDefault();
-        panBy(distance, 0);
-        break;
-      case "ArrowRight":
-        event.preventDefault();
-        panBy(-distance, 0);
-        break;
-      case "ArrowUp":
-        event.preventDefault();
-        panBy(0, distance);
-        break;
-      case "ArrowDown":
-        event.preventDefault();
-        panBy(0, -distance);
-        break;
-      case "+":
-      case "=":
-        event.preventDefault();
-        zoomBy(.08);
-        break;
-      case "-":
-        event.preventDefault();
-        zoomBy(-.08);
-        break;
-      case "0":
-      case "Home":
-        event.preventDefault();
-        showOverview();
-        break;
-    }
-  };
 
   return (
     <main
@@ -487,7 +203,7 @@ export default function PolaroidFieldTemplate({
         hidden={activeView !== "field"}
         tabIndex={-1}
       >
-        {collectionProof ? <CollectionExperience isPreview={isPreview} homeRequest={homeRequest} onOpenWork={onOpenWork} onBeforeViewChange={onBeforeViewChange} /> :
+        {collectionProof ? <CollectionExperience content={content} isPreview={isPreview} isActive={activeView === "field"} homeRequest={homeRequest} onOpenWork={onOpenWork} onBeforeViewChange={onBeforeViewChange} /> :
         <div
           id="polaroid-field"
           ref={viewportRef}

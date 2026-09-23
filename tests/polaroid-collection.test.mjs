@@ -42,15 +42,21 @@ test("default collections are editable preview identities, not photo mappings", 
   }
 });
 
-test("photo counts and all natural ratios survive adaptive rows, including final row", async (t) => {
-  const { albumRows } = await loadModel(t);
-  const ratios = [16 / 9, 3 / 2, 4 / 3, 1, 3 / 4, 2 / 3];
-  for (const count of [0, 1, 4, 12, 40]) {
-    const photos = Array.from({ length: count }, (_, index) => asset(index, ratios[index % ratios.length]));
-    const rows = albumRows(photos);
-    assert.deepEqual(rows.flat().map((item) => item.id), photos.map((item) => item.id));
-    assert.ok(rows.every((row) => row.length > 0 && row.length <= 4));
-  }
+test("cover and focus choices do not add outside photos to ordered membership", async (t) => {
+  const { collectionCover, uniqueAvailableAssetIds, initialCollections, moveItem } = await loadModel(t);
+  const photos = new Map(Array.from({ length: 5 }, (_, i) => [`asset-${i}`, asset(i, 3 / 2)]));
+  const first = { ...initialCollections[0], coverAssetId: "asset-4", focusAssetId: "asset-2", assetIds: ["asset-2", "asset-0"] };
+  const second = { ...initialCollections[1], coverAssetId: "asset-0", focusAssetId: "asset-1", assetIds: ["asset-1", "asset-3"] };
+  const original = structuredClone([first, second]);
+  assert.equal(collectionCover(first, photos)?.id, "asset-4");
+  assert.deepEqual(uniqueAvailableAssetIds(first, new Set(photos.keys())), ["asset-2", "asset-0"]);
+  assert.deepEqual(uniqueAvailableAssetIds(second, new Set(photos.keys())), ["asset-1", "asset-3"]);
+  const reordered = { ...first, assetIds: moveItem(first.assetIds, 0, 1) };
+  assert.deepEqual(uniqueAvailableAssetIds(reordered, new Set(photos.keys())), ["asset-0", "asset-2"]);
+  assert.equal(reordered.focusAssetId, "asset-2");
+  assert.equal(reordered.coverAssetId, "asset-4");
+  assert.deepEqual([first, second], original);
+  assert.equal(collectionCover({ ...first, coverAssetId: null, assetIds: [] }, photos), null);
 });
 
 test("missing references do not inflate counts; cover falls back without mutating members", async (t) => {

@@ -1,25 +1,31 @@
-# Polaroid collection experience — local design proof
+# 拍立得图集星图：本地设计验证
 
-Status: `COLLECTION_DESIGN_PROOF_READY_FOR_HUMAN_REVIEW` once PR #26 checks pass.
-Persistence: `COLLECTION_PERSISTENCE_NOT_IMPLEMENTED`.
-Visual sign-off: `HUMAN_VISUAL_APPROVAL_PENDING`.
+状态：`HUMAN_VISUAL_APPROVAL_PENDING`；保存能力：`COLLECTION_PERSISTENCE_NOT_IMPLEMENTED`。浏览器验收结果以本轮实际检查记录为准。
 
-## Open the proof
+本轮纠偏保留拍立得星图，把首页单图入口升级为图集封面入口。首页与图集内部均使用可拖动、缩放的拍立得星图；点作品进入固定浅色大图，切换范围限于当前图集。取消上一轮画册／纵向写真两种排版及样式选择器，不增加新的封面展示层。
 
-Run `npm run dev`, then open `http://127.0.0.1:3001/?template=polaroid-field&collections=preview`. The `collections=preview` switch works only in a development build on a loopback hostname. The collapsed “栏目验证配置” panel holds all edits in React memory. Refreshing discards them. The explicit “填入测试分组（非真实分类）” action splits the current local Photo Library solely for interaction testing; it does **not** classify the photographer's real work. The three initial names are editable examples with no photo assignment. Without this switch, the existing nine-slot Polaroid experience remains unchanged.
+运行 `npm run dev` 后访问 `http://127.0.0.1:3001/?template=polaroid-field&collections=preview`。该入口仅在开发构建及 loopback 主机生效；未开启时保留原九图体验。右下角“临时配置”打开浮层，只修改 React 内存，刷新即丢失，不触发保存请求。三个初始名称是可编辑示例，未预先分配照片；显式测试分组只用于验证交互，不代表真实分类。
 
-The proof reads the existing local `/photos/library-manifest.json`, reuses its validated Asset IDs and variants, and makes no PUT/POST request. No real-photo manifest, photo, Asset ID, local file path, or generated image is committed with this record. Homepage cards are Collections, gallery items are Assets, and cover choice is an independent reference to an Asset. The lightbox is scoped to the entered Collection.
+首页卡片代表 Collection，图集中的卡片代表 Asset。封面、成员顺序与重点照片分别配置；重点照片默认取当前图集第一张可用照片，可临时指定另一张，失效时回退第一张。封面可独立选片与裁切，内部作品及大图保持自然比例和完整画面。增加照片时扩展星图，初始视角保留可读尺寸，用户可主动查看全图。
 
-## Formal persistence questions for a later decision
+原型只读现有 `/photos/library-manifest.json` 与 Asset 变体；真实照片、素材清单、Asset ID、个人路径及截图不随此文档提交。技术测试覆盖数量、比例、边界及成员隔离，不替代人工视觉验收。
 
-1. **Minimum fields.** A future Collection needs a stable Collection ID, Site ID, title, optional introduction, visibility/order, ordered Asset ID references, gallery style, and independent cover Asset ID plus cover fit/focal position. Asset bytes and paths do not belong in these fields.
-2. **Ownership/location.** Collections would be Site-owned domain data participating in the eventual Draft/Revision/Publish lifecycle, not template-local state. This proof does not choose a database table or serialized shape.
-3. **Legacy compatibility.** Current nine slots and all eleven template IDs continue to render as before unless the local proof is explicitly enabled. A future adapter must not silently reinterpret the nine slots as the photographer's real categories.
-4. **Frozen document.** `SiteDocumentV1` is unchanged. The collection shape requires a later versioned product/architecture decision; this PR adds no field, variant ID, migration, or save API.
-5. **References and reuse.** Collection membership and the cover reference point to stable Asset IDs. One Asset may belong to multiple Collections without copying files. Order belongs to each Collection, not the Asset.
-6. **Delete/missing behavior.** A future Admin flow must show references before removing an Asset or Collection. Hidden Collections disappear from public navigation; missing/removed assets must be skipped safely, and a missing cover falls back to the first available member or an empty state. The proof demonstrates only this fail-safe display behavior.
-7. **Cover versus body.** Cover fit/focal position is Collection presentation state. Gallery and lightbox use the natural source ratio and full image. Future Admin should edit cover and membership separately with a clear preview; this local panel is not that Admin design.
-8. **Hosted IDs.** The hosted Asset resolver should keep the existing stable Asset ID contract. Collections reference IDs, never local `/photos/` URLs, import positions, filenames, or hashes as the official persisted shape.
-9. **Adapter/migration cost.** Adopting Collections will require an explicit versioned adapter, public and Admin rendering, revision validation, reference-aware deletion, and a human-approved migration choice for legacy slots (for example an unnamed/“旧作品” collection). No automatic classification or migration is authorized here.
+桌面复用原星图纸张、胶带、卡片、连线与画布控制。动态布局计算完整白边、标题和旋转边界，按明确的首图／指定重点形成视觉重心；几何位置不重写看图顺序。手机在同一星图中纵向错落排列，保留原比例、胶带、旋转和连线，随页面自然滚动；FIT 适应宽度，方向与缩放控件保持可达。桌面与手机分别记住每个图集的画布视野。
 
-The next gate is human review of the collection-cover scene, two gallery styles, lightbox and local configuration ergonomics. Approval of this design proof does not authorize implementing persistence or deploying it.
+本地真实浏览器验证使用 1440×900、1280×720、390×844、320×720 CSS viewport，包含同照片参考对照、9 张混排、13 张及竖图较多图集、浅色大图与连续返回。另以 40 张匿名合成图片实际验证画布、FIT 完整边界、末张大图、循环计数、焦点与位置恢复；未将数组测试等同于视觉验收。真实照片及匿名浏览器截图均留在仓库外的本机证据目录。
+
+补查确认手机首页与图集独立恢复页面滚动位置，公开原型浏览器后退保持恢复；切换套餐再回作品不会因隐藏画布的零宽度测量重置视野。浏览器检查未发现写入请求或页面异常。首页聚焦构图允许卫星封面部分延伸至边缘，可用“查看全部图集”完整查看；多图 FIT 是总览，不承诺缩成一屏后仍清晰。手机长场景保留错落节奏，但长图集需要页面滚动，这些取舍仍待人工视觉批准。
+
+## 后续正式保存仍需回答的九个问题
+
+1. **最小字段。** 需要稳定 Collection ID、Site ID、标题、可选介绍、可见性／排序、有序 Asset ID、独立封面引用和封面裁切／焦点。重点照片是否持久化待决定；本轮没有展示样式字段，素材字节和路径不进入这些字段。
+2. **归属与位置。** 图集应是 Site 所有的领域数据，参与未来 Draft／Revision／Publish 生命周期；本原型不选定数据库表或序列化结构。
+3. **旧数据兼容。** 原九槽及现有十一模板契约保留。后续适配器不得自动把旧槽位解释为摄影师真实分类。
+4. **冻结文档。** `SiteDocumentV1` 不变；图集需要之后的版本化产品及架构决定，本轮不增加字段、变体 ID、迁移或保存 API。
+5. **引用与复用。** 成员与封面使用稳定 Asset ID；同一照片可进入多个图集而不复制文件。顺序归属图集，不归属素材。
+6. **删除和缺失。** 正式后台删除前应展示引用影响。隐藏图集退出公开导航；缺失素材跳过，失效封面回退首个可用成员或空状态。本轮仅演示安全显示。
+7. **封面与正文。** 封面裁切是图集展示状态，正文及大图保留自然比例。正式后台应分别编辑封面与成员；当前验证面板不代表后台最终设计。
+8. **托管 ID。** 托管解析器沿用稳定 Asset ID。正式图集引用不能使用本地 `/photos/` URL、导入位置、文件名或哈希替代领域 ID。
+9. **适配和迁移成本。** 正式接入需要版本化适配器、前后台渲染、修订验证、引用感知删除及人工认可的旧槽迁移选择。本轮不进行自动分类或迁移。
+
+下一步是人工验收首页星图、图集星图、浅色看图与返回位置。设计认可不等于授权保存系统或部署。

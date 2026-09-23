@@ -1,60 +1,62 @@
-.experience { --ink: #182227; --paper: #fffdf7; --coral: #e8644f; width: min(100%, 1680px); margin: auto; padding: clamp(1rem, 2.5vw, 2.5rem) clamp(1rem, 4vw, 4.5rem) 6rem; color: var(--ink); }
-.experience * { box-sizing: border-box; }
-.identity { display: grid; grid-template-columns: minmax(0, 1fr) minmax(12rem, 30rem); align-items: end; gap: .2rem 2rem; padding: .25rem 0 .7rem; }
-.identity span { grid-column: 1 / -1; color: #b2493b; font: 800 .7rem ui-monospace, monospace; letter-spacing: .18em; }
-.identity h1 { margin: 0; font: 500 clamp(2.5rem, 4vw, 4rem)/1.02 Georgia, "Songti SC", serif; letter-spacing: -.06em; }
-.identity p { margin: 0 0 .3rem; color: #536066; line-height: 1.7; }
-.proofPanel { margin: 0 0 1rem; border: 1px solid #c8c0b3; background: #fffdf7; }
-.panelToggle { display: flex; width: 100%; justify-content: space-between; gap: 1rem; padding: .85rem 1.1rem; border: 0; background: #f4eee2; color: var(--ink); text-align: left; cursor: pointer; font-weight: 800; }
-.panelBody { padding: 1rem; }
-.panelBody > p { color: #536066; }
-.panelActions { display: flex; flex-wrap: wrap; gap: .5rem; margin: .8rem 0; }
-.panelActions button, .assetChoice button { padding: .5rem; border: 1px solid #9e978c; background: #fff; cursor: pointer; }
-.editor { margin: .5rem 0; border: 1px solid #d6cec0; }
-.editorBody { display: grid; gap: .75rem; padding: 1rem; }
-.editorBody > label { display: grid; gap: .35rem; }
-.editorBody input:not([type="checkbox"]):not([type="range"]), .editorBody select { width: 100%; min-height: 2.5rem; border: 1px solid #bbb1a4; }
-.focusControls { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
-.focusControls label { display: grid; }
-.assetPicker { display: grid; max-height: 18rem; overflow: auto; }
-.assetChoice { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .3rem; }
-.assetChoice label { display: flex; align-items: center; gap: .5rem; }
-.assetChoice img { width: 3rem; height: 3rem; object-fit: cover; }
-.heading { display: flex; align-items: end; gap: 1rem; padding: .4rem 0 .8rem; border-bottom: 1px solid #bdb3a5; }
-.heading span { color: #b2493b; font: 700 .67rem ui-monospace, monospace; white-space: nowrap; }
-.heading h2 { margin: 0 auto 0 0; font: 500 clamp(1.4rem, 2vw, 2rem) Georgia, "Songti SC", serif; }
-.heading p { margin: 0; font-size: .8rem; white-space: nowrap; }
-.constellation { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: clamp(1.5rem, 3vw, 3.8rem); min-height: 34rem; padding: 2rem 1rem; background: radial-gradient(circle at 50% 50%, #f9f3e6, #eee7d8); }
-.constellation[data-count="3"] .cover:nth-child(2) { width: clamp(15rem, 23vw, 21rem); margin-top: -3rem; }
-.cover { display: flex; flex-direction: column; width: clamp(14rem, 21vw, 19rem); max-width: 100%; padding: .6rem .6rem 1rem; border: 1px solid #d2c8b8; background: var(--paper); color: var(--ink); box-shadow: 5px 9px 18px #18222724; text-align: left; cursor: pointer; transform: rotate(var(--angle, 0deg)) translateY(var(--lift, 0)); transition: transform .2s, box-shadow .2s; }
-.cover:hover, .cover:focus-visible { transform: rotate(0) translateY(-.6rem); box-shadow: 8px 18px 24px #18222736; z-index: 2; }
-.cover[data-index="0"] { --angle: -5deg; --lift: 1.4rem; }
-.cover[data-index="1"] { --angle: 3deg; --lift: -1.2rem; }
-.cover[data-index="2"] { --angle: -3deg; --lift: 1.8rem; }
-.coverPhoto { display: grid; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; place-items: center; background: #ddd4c6; }
-.coverPhoto img { display: block; width: 100%; height: 100%; object-fit: contain; }
-.coverPhoto[data-fit="fill"] img { object-fit: cover; }
-.coverEmpty { padding: 1rem; color: #766f66; text-align: center; }
-.coverCaption { display: grid; gap: .3rem; padding: .85rem .4rem .1rem; }
-.coverCaption small { color: #a84a3d; letter-spacing: .12em; }
-.coverCaption strong { font: 500 clamp(1.35rem, 2vw, 2rem) Georgia, "Songti SC", serif; }
-.coverCaption span { color: #536066; font-size: .78rem; }
-.coverCaption em { justify-self: end; color: #b2493b; }
-.gallery { min-height: 40rem; padding: 1rem 0 5rem; outline: none; }
-.galleryHeading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; border-top: 1px solid #bdb3a5; padding-top: 1rem; }
-.galleryHeading button { border: 0; background: transparent; color: #b2493b; cursor: pointer; font-size: 1rem; font-weight: 800; }
-.galleryHeading span { color: #536066; font-size: .8rem; }
-.gallery h2 { margin: 1.2rem 0 .3rem; font: 500 clamp(2.7rem, 5vw, 5rem) Georgia, "Songti SC", serif; }
-.gallery > p { margin: 0 0 2rem; color: #536066; }
-.album { display: grid; gap: .75rem; }
-.albumRow { display: flex; align-items: stretch; justify-content: flex-start; gap: .75rem; height: min(24rem, calc((min(100vw, 1680px) - 9rem) / var(--row-ratio))); }
-.galleryPhoto { position: relative; display: block; min-width: 0; max-width: 100%; flex: 0 0 auto; overflow: hidden; padding: 0; border: 0; background: #e2dacd; cursor: zoom-in; }
-.albumRow .galleryPhoto { height: 100%; width: auto; }
-.galleryPhoto img { display: block; width: 100%; height: 100%; object-fit: contain; }
-.galleryPhoto span { position: absolute; right: .55rem; bottom: .55rem; padding: .25rem .45rem; background: #fffdf7e8; color: var(--ink); font: 700 .65rem ui-monospace, monospace; }
-.portraitList { display: grid; gap: 2.5rem; justify-items: center; }
-.portraitList .galleryPhoto { width: min(100%, 48rem); height: auto; max-height: 85svh; box-shadow: 0 8px 24px #18222718; }
-.portraitList .galleryPhoto img { height: auto; max-height: 85svh; }
-.more { display: block; margin: 2rem auto 0; padding: .8rem 1.5rem; border: 1px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; }
-.empty { padding: 3rem 1rem; background: #fffdf7; color: #536066; text-align: center; }
-@media (max-width: 700px) { .identity { grid-template-columns: 1fr; gap: .7rem; } .identity p { font-size: .85rem; } .heading { flex-wrap: wrap; } .heading h2 { order: 2; flex-basis: 100%; } .constellation { gap: 2rem; padding: 2rem .5rem; } .cover { width: min(82vw, 22rem); --angle: 0deg !important; --lift: 0 !important; } .albumRow { display: grid; height: auto; gap: .8rem; } .albumRow .galleryPhoto { width: 100%; height: auto; aspect-ratio: auto !important; } .albumRow .galleryPhoto img { width: 100%; height: auto; } .focusControls { grid-template-columns: 1fr; } }
+.experience { position: relative; }
+:global(body):has(.experience) :global(.template-preview-ribbon) { display: none; }
+.viewport { min-height: 620px; height: calc(100svh - 5rem); }
+.canvas { display: block; padding: 0; }
+.canvas .card { max-width: none; padding: 12px; opacity: 1; }
+.card .photo img { filter: none; transform: none; }
+.photo::after { display: none; }
+.caption { position: relative; display: grid; height: 44px; padding-top: 8px; gap: 2px; overflow: hidden; }
+.caption strong { padding-right: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; line-height: 19px; }
+.caption small { color: var(--ink-soft); font-size: 10px; line-height: 12px; }
+.caption em { position: absolute; right: 0; bottom: 4px; color: var(--coral); }
+.sceneHeading { position: absolute; z-index: 24; top: 18px; left: 4%; right: 4%; display: flex; align-items: center; gap: 24px; pointer-events: none; }
+.sceneHeading button { pointer-events: auto; padding: 12px 18px; border: 1px solid var(--ink); background: var(--paper); cursor: pointer; }
+.sceneHeading div { display: grid; gap: 4px; padding: 8px 12px; background: #fffdf7e8; }
+.sceneHeading strong { font-size: 20px; }
+.sceneHeading span { font-size: 12px; color: var(--ink-soft); }
+.viewport > .controls { display: flex; z-index: 24; bottom: 24px; right: 4%; top: auto; }
+.controls button:nth-child(-n+4) { display: none; }
+.configure { position: fixed; z-index: 45; right: 12px; bottom: 8px; padding: 4px 8px; border: 1px solid #bdb3a5; background: var(--paper); color: var(--ink-soft); font-size: 11px; cursor: pointer; }
+.panel { position: fixed; z-index: 80; top: 5.5rem; right: 12px; bottom: 38px; width: min(560px, calc(100% - 24px)); overflow: auto; padding: 20px; border: 1px solid #bdb3a5; background: var(--paper); box-shadow: 0 12px 50px #18222730; }
+.panelHeader { display: flex; justify-content: space-between; align-items: center; }
+.panel p { font-size: 12px; color: var(--ink-soft); }
+.panel button { padding: 6px 10px; border: 1px solid #bdb3a5; background: white; cursor: pointer; }
+.panel button:disabled { opacity: .4; }
+.panelActions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.editor { margin-top: 10px; border: 1px solid #d6cec0; }
+.editor summary { padding: 12px; cursor: pointer; }
+.editorBody { display: grid; gap: 12px; padding: 12px; }
+.editorBody > label { display: grid; gap: 5px; font-size: 13px; }
+.editorBody input:not([type="checkbox"]):not([type="range"]), .editorBody select { width: 100%; min-height: 36px; border: 1px solid #bdb3a5; background: white; }
+.focusControls { display: grid; gap: 10px; }
+.assetPicker { max-height: 280px; overflow: auto; }
+.assetChoice, .assetChoice label { display: flex; align-items: center; gap: 6px; }
+.assetChoice { justify-content: space-between; margin: 5px 0; font-size: 12px; }
+.assetChoice img { object-fit: cover; }
+.empty { position: absolute; top: 45%; width: 100%; text-align: center; color: var(--ink-soft); }
+.emptyPhoto { display: grid; height: 100%; place-items: center; color: var(--ink-soft); }
+@media (max-width: 800px) {
+  .viewport { display: block; height: 680px; min-height: 0; padding: 0; overflow: clip; touch-action: pan-y pinch-zoom; }
+  .viewport .canvas { position: absolute; top: 50%; left: 50%; display: block; transform: var(--scene-transform) !important; }
+  .canvas .card { position: absolute; left: var(--card-left) !important; top: var(--card-top) !important; width: var(--card-width) !important; max-width: none; transform: rotate(var(--rotation)); }
+  .canvas .card:hover, .canvas .card:focus-visible { transform: rotate(var(--rotation)); }
+  .canvas .thread { display: block; }
+  .viewport .identity { position: absolute; top: 20px; left: 20px; width: calc(100% - 40px); pointer-events: none; }
+  .identity h1 { font-size: 42px; }
+  .identity h1 span { font-size: 21px; }
+  .identity p { font-size: 12px; }
+  .viewport .actions { top: auto; bottom: 55px; left: 18px; right: auto; }
+  .viewport > .controls { display: flex !important; position: fixed; left: 12px; right: 12px; bottom: 38px; justify-content: center; }
+  .controls button:nth-child(-n+4) { display: block; }
+  .controls button { min-width: 30px; padding: 8px; }
+  .controls span { min-width: 38px; }
+  .sceneHeading { top: 12px; left: 12px; right: 12px; gap: 8px; flex-wrap: wrap; }
+  .sceneHeading div { padding: 5px 8px; }
+  .sceneHeading strong { font-size: 16px; }
+  .sceneHeading button { padding: 8px; }
+  .panel { top: 8rem; }
+}
+@media (max-width: 599px) {
+  .viewport[data-home="true"] .canvas { top: calc(50% + 65px); }
+  .sceneHeading { position: sticky; top: 8px; padding-top: 12px; margin-inline: 12px; }
+}
