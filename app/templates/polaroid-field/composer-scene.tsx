@@ -5,6 +5,8 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProper
 import type { SceneCard } from "./collection-scene";
 import { buildComposerLayout } from "./composer-layout";
 import { resolveComposerHero } from "./composer-selection";
+import {composerReleaseVelocity,zoomComposerAt,type MotionSample} from "./composer-motion";
+import {useComposerMotion} from "./use-composer-motion";
 import { COMPOSER_MODES, composerSeed, composerView, parseComposerPreference, type ComposerBounds, type ComposerPreference, type ComposerView } from "./composer-view";
 import styles from "./composer.module.css";
 
@@ -28,7 +30,7 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
   const viewRef = useRef<ComposerView>({ x: 0, y: 0, scale: 1 });
   const [view, setView] = useState<ComposerView>({ x: 0, y: 0, scale: 1 });
   const cameraMode = useRef<"hero" | "fit" | "manual">("hero");
-  const drag = useRef<{ id: number; x: number; y: number; view: ComposerView; moved: boolean } | null>(null);
+  const drag = useRef<{ id: number; x: number; y: number; view: ComposerView; moved: boolean; samples:MotionSample[] } | null>(null);
   const suppressClickUntil = useRef(0);
   const compact = size.width < 768;
   const layout = useMemo(() => buildComposerLayout(cards.map(card => ({ id: card.id, aspectRatio: card.asset?.aspectRatio ?? 1 })), {
@@ -36,7 +38,9 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
     viewportWidth: size.width, viewportHeight: size.height, viewportTop: size.top,
   }), [cards, hero.id, preference, sceneId, size.width, size.height, size.top]);
   const commit = useCallback((next: ComposerView) => { viewRef.current = next; setView(next); }, []);
-  const show = (mode: "hero" | "fit") => { cameraMode.current = mode; commit(composerView(layout, size.width, size.height, size.top, mode, cameraOptions)); };
+  const motion=useComposerMotion(viewRef,commit,!compact);
+  const positioned=useRef(false);
+  const show = (mode: "hero" | "fit") => { cameraMode.current = mode; motion.move(composerView(layout, size.width, size.height, size.top, mode, cameraOptions)); };
   useLayoutEffect(() => {
     const stage = stageRef.current, header = headerRef.current;
     if (!stage || !header) return;
@@ -67,9 +71,15 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
   }, [cards, hero.id, preference, sceneId]);
   useLayoutEffect(() => {
     if (compact || cameraMode.current === "manual") return;
-    const frame = requestAnimationFrame(() => commit(composerView(layout, size.width, size.height, size.top, cameraMode.current === "fit" ? "fit" : "hero", cameraOptions)));
+    const frame = requestAnimationFrame(() => {
+      // A wheel/drag can start after the effect schedules this frame. Recheck
+      // at execution time so an old automatic fit cannot steal manual control.
+      if(cameraMode.current==="manual" || drag.current || document.hidden)return;
+      const next=composerView(layout, size.width, size.height, size.top, cameraMode.current === "fit" ? "fit" : "hero", cameraOptions);
+      if(positioned.current)motion.move(next,420);else{motion.stop();commit(next);positioned.current=true;}
+    });
     return () => cancelAnimationFrame(frame);
-  }, [layout, size, compact, commit, cameraOptions]);
+  }, [layout, size, compact, commit, cameraOptions,motion]);
   const updatePreference = (next: ComposerPreference) => {
     const valid = parseComposerPreference(next); setPreference(valid);
     try { localStorage.setItem(preferenceKey(sceneId), JSON.stringify(valid)); } catch { /* Private/disabled storage: this visit still works. */ }
@@ -80,25 +90,25 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
     const wheel = (event: WheelEvent) => {
       if ((event.target as Element).closest("button,select,input,a,summary,details") && !(event.target as Element).closest("[data-card-id]")) return;
       event.preventDefault();
-      const old = viewRef.current, fit = composerView(layout, size.width, size.height, size.top, "fit", cameraOptions);
+      const old = motion.target(), fit = composerView(layout, size.width, size.height, size.top, "fit", cameraOptions);
       const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? size.height : 1);
       const scale = Math.max(Math.min(.1, fit.scale), Math.min(2.4, old.scale * Math.exp(-Math.max(-200, Math.min(200, delta)) * .002)));
-      const rect = stage.getBoundingClientRect(), x = event.clientX - rect.left, y = event.clientY - rect.top, k = scale / old.scale;
+      const rect = stage.getBoundingClientRect(), x = event.clientX - rect.left, y = event.clientY - rect.top;
       cameraMode.current = "manual";
-      commit({ x: x - (x - old.x) * k, y: y - (y - old.y) * k, scale });
+      motion.zoom(zoomComposerAt(old,x,y,scale));
     };
     stage.addEventListener("wheel", wheel, { passive: false });
     return () => stage.removeEventListener("wheel", wheel);
-  }, [compact, layout, size, commit, cameraOptions]);
+  }, [compact, layout, size, cameraOptions,motion]);
   const zoom = (factor: number) => {
-    const old = viewRef.current, fit = composerView(layout, size.width, size.height, size.top, "fit", cameraOptions);
-    const scale = Math.max(Math.min(.1, fit.scale), Math.min(2.4, old.scale * factor)), k = scale / old.scale;
+    const old = motion.target(), fit = composerView(layout, size.width, size.height, size.top, "fit", cameraOptions);
+    const scale = Math.max(Math.min(.1, fit.scale), Math.min(2.4, old.scale * factor));
     cameraMode.current = "manual";
-    commit({ x: size.width / 2 - (size.width / 2 - old.x) * k, y: size.height / 2 - (size.height / 2 - old.y) * k, scale });
+    motion.zoom(zoomComposerAt(old,size.width/2,size.height/2,scale));
   };
-  const finishDrag = (id: number) => {
+  const finishDrag = (id: number,cancelled=false) => {
     if (drag.current?.id !== id) return;
-    if (drag.current.moved) suppressClickUntil.current = Date.now() + 250;
+    if (drag.current.moved) {suppressClickUntil.current = Date.now() + 250;if(!cancelled)motion.release(composerReleaseVelocity(drag.current.samples,performance.now()));}
     drag.current = null;
     if (stageRef.current?.hasPointerCapture(id)) stageRef.current.releasePointerCapture(id);
   };
@@ -110,17 +120,19 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
       const target = event.target as Element;
       if (compact || event.button !== 0 || (target.closest("button,select,input,a,summary,details") && !target.closest("[data-card-id]"))) return;
       event.preventDefault();
+      motion.stop();
       suppressClickUntil.current = 0;
-      drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY, view: viewRef.current, moved: false };
+      drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY, view: viewRef.current, moved: false,samples:[{x:event.clientX,y:event.clientY,t:performance.now()}] };
     }}
     onPointerMove={event => {
       const active = drag.current; if (!active || active.id !== event.pointerId) return;
       if (!active.moved && Math.hypot(event.clientX - active.x, event.clientY - active.y) < 6) return;
       active.moved = true;
+      const now=performance.now();active.samples.push({x:event.clientX,y:event.clientY,t:now});active.samples=active.samples.filter(sample=>sample.t>=now-100).slice(-12);
       if (!event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.setPointerCapture(event.pointerId);
       cameraMode.current = "manual";
       commit({ ...active.view, x: active.view.x + event.clientX - active.x, y: active.view.y + event.clientY - active.y });
-    }} onPointerUp={event => finishDrag(event.pointerId)} onPointerCancel={event => finishDrag(event.pointerId)} onLostPointerCapture={() => { drag.current = null; }}
+    }} onPointerUp={event => finishDrag(event.pointerId)} onPointerCancel={event => finishDrag(event.pointerId,true)} onLostPointerCapture={() => { drag.current = null; }}
     onDragStart={event => event.preventDefault()}
     onClickCapture={event => { if (Date.now() < suppressClickUntil.current) { event.preventDefault(); event.stopPropagation(); } }}
     onKeyDown={event => {
@@ -131,8 +143,8 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
       else if (event.key === "-") { event.preventDefault(); zoom(1 / 1.2); }
       else if (event.key.startsWith("Arrow")) {
         event.preventDefault(); cameraMode.current = "manual";
-        commit({ ...viewRef.current, x: viewRef.current.x + (event.key === "ArrowLeft" ? 80 : event.key === "ArrowRight" ? -80 : 0),
-          y: viewRef.current.y + (event.key === "ArrowUp" ? 80 : event.key === "ArrowDown" ? -80 : 0) });
+        motion.move({ ...viewRef.current, x: viewRef.current.x + (event.key === "ArrowLeft" ? 80 : event.key === "ArrowRight" ? -80 : 0),
+          y: viewRef.current.y + (event.key === "ArrowUp" ? 80 : event.key === "ArrowDown" ? -80 : 0) },240);
       }
     }}>
     <div className={styles.header} ref={headerRef}>
@@ -153,16 +165,24 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
       {layout.cards.map(card => {
         const source = cards[card.i], star = card.role === "hero" ? 16 : card.role === "lead" ? 11 : 8.5;
         return <button type="button" className={styles.card} data-card-id={card.id} data-role={card.role} data-rotation={card.rot} key={card.id}
-          aria-label={`查看第 ${card.i + 1} 张照片${card.role === "hero" ? "（主角）" : ""}`} onClick={() => onOpen(card.id)}
+          aria-label={`查看第 ${card.i + 1} 张照片${card.role === "hero" ? "（主角）" : ""}`} onClick={() => {motion.stop();onOpen(card.id);}}
+          onPointerMove={event => {
+            if (event.pointerType !== "mouse" || event.buttons || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+            const box = event.currentTarget.getBoundingClientRect(), x = (event.clientX-box.left)/box.width-.5, y = (event.clientY-box.top)/box.height-.5;
+            event.currentTarget.style.setProperty("--rx", `${-y*7}deg`); event.currentTarget.style.setProperty("--ry", `${x*8}deg`);
+            event.currentTarget.style.setProperty("--gx", `${(x+.5)*100}%`); event.currentTarget.style.setProperty("--gy", `${(y+.5)*100}%`);
+          }}
+          onPointerLeave={event => { event.currentTarget.style.setProperty("--rx", "0deg"); event.currentTarget.style.setProperty("--ry", "0deg"); }}
           onFocus={event => {
             if (compact || !event.currentTarget.matches(":focus-visible")) return;
+            motion.stop();
             const box = event.currentTarget.getBoundingClientRect(), stage = stageRef.current!.getBoundingClientRect();
             if (box.left < stage.left + 24 || box.right > stage.right - 24 || box.top < stage.top + size.top || box.bottom > stage.bottom - 72) {
               cameraMode.current = "manual";
               commit(composerView({ ...layout, note: null, heroIdx: [card.i], heroOnly: [card.i], heroPad: 0 }, size.width, size.height, size.top, "hero"));
             }
           }}
-          style={{ left: card.x - card.w / 2, top: card.y - card.h / 2, width: card.w, height: card.h, zIndex: card.z, "--angle": `${card.rot}deg` } as CSSProperties}>
+          style={{ left: card.x - card.w / 2, top: card.y - card.h / 2, width: card.w, height: card.h, zIndex: card.z, "--angle": `${card.rot}deg`, "--enter-delay": `${Math.min(card.i,12)*35}ms` } as CSSProperties}>
           <span className={styles.sheet}>
             <span className={styles.photo} style={{ left: card.f.side, top: card.f.top, width: card.pw, height: card.ph }}>{source.asset ? <img src={source.asset.variants.card.src} alt={`图集照片 ${card.i + 1}`} width={source.asset.variants.card.width} height={source.asset.variants.card.height} loading={card.i < 3 || card.role === "hero" ? "eager" : "lazy"} draggable={false} onError={() => onAssetUnavailable(card.id)} /> : "照片暂不可用"}</span>
             <span className={styles.caption} style={{ height: card.f.bottom, paddingInline: card.f.side, justifyContent: card.cap === "right" ? "flex-end" : undefined, fontSize: Math.max(15, Math.min(34, card.f.bottom * .5)) }}>{card.role === "hero" ? "✦ " : ""}No.{String(card.i + 1).padStart(2, "0")}</span>
