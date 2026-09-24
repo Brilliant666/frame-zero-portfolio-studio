@@ -1,6 +1,15 @@
 import type { ComposerView, ComposerBounds } from "./composer-view";
 
 export type MotionSample = {x:number;y:number;t:number};
+/** Soft limits use actual rotated paper, not FIT's extra shadow allowance. */
+export function composerPaperBounds(cards:readonly {x:number;y:number;w:number;h:number;rot:number}[]):ComposerBounds {
+  if(!cards.length)return {left:0,top:0,right:1,bottom:1};
+  const boxes=cards.map(card=>{
+    const angle=card.rot*Math.PI/180,w=Math.abs(card.w*Math.cos(angle))+Math.abs(card.h*Math.sin(angle)),h=Math.abs(card.w*Math.sin(angle))+Math.abs(card.h*Math.cos(angle));
+    return {left:card.x-w/2,right:card.x+w/2,top:card.y-h/2,bottom:card.y+h/2};
+  });
+  return {left:Math.min(...boxes.map(b=>b.left)),right:Math.max(...boxes.map(b=>b.right)),top:Math.min(...boxes.map(b=>b.top)),bottom:Math.max(...boxes.map(b=>b.bottom))};
+}
 export type ComposerScreenCard={x:number;y:number;width:number;angle:number};
 export function composerFlip(from:ComposerScreenCard,to:ComposerScreenCard,worldScale:number,index:number,night:boolean){
   return {keyframes:[{translate:`${(from.x-to.x)/worldScale}px ${(from.y-to.y)/worldScale}px`,rotate:`${from.angle-to.angle}deg`,scale:String(from.width/to.width)},{translate:"0 0",rotate:"0deg",scale:"1"}],

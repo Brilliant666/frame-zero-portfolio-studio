@@ -5,9 +5,9 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProper
 import type { SceneCard } from "./collection-scene";
 import { buildComposerLayout } from "./composer-layout";
 import { resolveComposerHero } from "./composer-selection";
-import {composerReleaseVelocity,composerZoomLimit,composerWheelKind,composerFlip,constrainComposer,zoomComposerAt,type MotionSample} from "./composer-motion";
+import {composerReleaseVelocity,composerZoomLimit,composerWheelKind,composerFlip,composerPaperBounds,constrainComposer,zoomComposerAt,type MotionSample} from "./composer-motion";
 import {useComposerMotion} from "./use-composer-motion";
-import { COMPOSER_MODES, composerBounds, composerSeed, composerView, parseComposerPreference, type ComposerBounds, type ComposerPreference, type ComposerView } from "./composer-view";
+import { COMPOSER_MODES, composerSeed, composerView, parseComposerPreference, type ComposerBounds, type ComposerPreference, type ComposerView } from "./composer-view";
 import styles from "./composer.module.css";
 import "./motion-fonts.css";
 
@@ -49,7 +49,7 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
     viewportWidth: size.width, viewportHeight: size.height, viewportTop: size.top,
   }), [cards, hero.id, preference, sceneId, size.width, size.height, size.top]);
   const constraintRef=useRef({bounds:{left:0,top:0,right:1,bottom:1},width:1280,height:800,fitScale:1});
-  useLayoutEffect(()=>{constraintRef.current={bounds:composerBounds(layout),width:size.width,height:size.height,fitScale:composerView(layout,size.width,size.height,size.top,"fit",cameraOptions).scale};},[layout,size,cameraOptions]);
+  useLayoutEffect(()=>{constraintRef.current={bounds:composerPaperBounds(layout.cards),width:size.width,height:size.height,fitScale:composerView(layout,size.width,size.height,size.top,"fit",cameraOptions).scale};},[layout,size,cameraOptions]);
   const constrain=useCallback((next:ComposerView)=>{
     const c=constraintRef.current,scale=composerZoomLimit(next.scale,c.fitScale);
     // Pointer-driven zoom is already clamped at its own anchor. This fallback
@@ -272,7 +272,7 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
             <span className={styles.photo} style={{ left: card.f.side, top: card.f.top, width: card.pw, height: card.ph }}>{source.asset ? <img src={source.asset.variants.card.src} alt={`图集照片 ${card.i + 1}`} width={source.asset.variants.card.width} height={source.asset.variants.card.height} loading={card.i < 3 || card.role === "hero" ? "eager" : "lazy"} draggable={false} onError={() => onAssetUnavailable(card.id)} /> : "照片暂不可用"}</span>
             <span className={styles.caption} style={{ height: card.f.bottom, paddingInline: card.f.side, justifyContent: card.cap === "right" ? "flex-end" : undefined, fontSize: Math.max(15, Math.min(34, card.f.bottom * .5)) }}>{card.role === "hero" ? "✦ " : ""}No.{String(card.i + 1).padStart(2, "0")}</span>
           </span>
-          {[card.tape, card.tape2].map((tape, index) => tape && <i className={styles.tape} key={index} aria-hidden="true" style={{ left: tape.x * card.w - tape.w / 2, width: tape.w, background: tape.color, transform: `rotate(${tape.rot}deg)` }} />)}
+          {[card.tape, card.tape2].map((tape, index) => tape && <i className={styles.tape} key={index} aria-hidden="true" style={{ left: tape.x * card.w - tape.w / 2, width: tape.w, background: `var(--star-tape, ${tape.color})`, transform: `rotate(${tape.rot}deg)` }} />)}
           {card.pin && <svg className={styles.pin} viewBox="-12 -12 24 24" aria-hidden="true" style={{ width: star * 2, height: star * 2, left: card.w / 2 - star, top: card.f.top * .55 - star }}><path d="M0-11L2.8-2.8 11 0 2.8 2.8 0 11-2.8 2.8-11 0-2.8-2.8Z" /></svg>}
         </button>;
       })}

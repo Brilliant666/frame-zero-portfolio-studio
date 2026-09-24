@@ -11,7 +11,7 @@
   color:var(--star-ink);
   background:radial-gradient(55% 45% at 88% 8%,rgba(150,205,255,.28),rgba(150,205,255,0) 62%),radial-gradient(50% 42% at 4% 96%,rgba(185,190,255,.20),rgba(185,190,255,0) 62%),radial-gradient(38% 30% at 42% 58%,rgba(255,225,150,.08),rgba(255,225,150,0) 70%),linear-gradient(rgba(40,70,110,.05) 1px,transparent 1px) 0 0/64px 64px,linear-gradient(90deg,rgba(40,70,110,.05) 1px,transparent 1px) 0 0/64px 64px,radial-gradient(circle,rgba(40,70,110,.11) 0 .7px,transparent .8px) 0 0/10px 10px,#f3f6f9;
 }
-.shell[data-star-theme="paper"] { --star-caption-muted:var(--star-muted); --star-caption-accent:var(--star-accent-2); }
+.shell[data-star-theme="paper"] { --star-caption-muted:var(--star-muted); --star-caption-accent:var(--star-accent-2); --star-tape:color-mix(in srgb,var(--star-accent) 35%,var(--star-paper)); }
 .shell[data-star-theme="night"] { --star-focus:#f1c86a; --star-accent-2:#b98a2e; }
 .shell[data-star-theme="night"] { color-scheme:dark; --star-ink:#eef1f8; --star-muted:#aab4c9; --star-accent:#f1c86a; --star-paper:#f6f1e7; --star-glass:#172139eb; --star-line:#ffffff26; --star-grad:linear-gradient(180deg,#f8dc97,#d7aa4a); --star-on-accent:#1d1604; --star-shadow:0 22px 44px -16px #000b,0 2px 4px #0007; background:radial-gradient(ellipse at 78% 0,#1d2c5a,transparent 58%),radial-gradient(ellipse at 0 100%,#f3a6bd24,transparent 60%),linear-gradient(#0b1122,#06080f); }
 .shell > main { background:transparent; color:var(--star-ink); --ink:var(--star-ink); --ink-soft:var(--star-muted); --coral:var(--star-accent); --paper:var(--star-paper); --cream:var(--star-glass); }

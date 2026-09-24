@@ -4,7 +4,7 @@ import test from "node:test";
 import ts from "typescript";
 const text=await fs.readFile(new URL("../app/templates/polaroid-field/composer-motion.ts",import.meta.url),"utf8");
 const js=ts.transpileModule(text,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
-const {zoomComposerAt,interpolateComposer,composerReleaseVelocity,composerInertiaStep,composerZoomLimit,composerWheelKind,constrainComposer,composerSpringStep,composerFlip}=await import("data:text/javascript;base64,"+Buffer.from(js).toString("base64"));
+const {zoomComposerAt,interpolateComposer,composerReleaseVelocity,composerInertiaStep,composerZoomLimit,composerWheelKind,constrainComposer,composerSpringStep,composerFlip,composerPaperBounds}=await import("data:text/javascript;base64,"+Buffer.from(js).toString("base64"));
 
 test("wheel/button zoom keeps the chosen world point under its screen anchor",()=>{
   const from={x:-120,y:36,scale:.7},point={x:456,y:234};
@@ -64,6 +64,20 @@ test("soft bounds retain both axes, apply .35 resistance and settle with 120ms s
   assert.ok(Math.abs((one.x-target.x)/(rubber.x-target.x)-Math.exp(-16/120))<1e-9);
   const small=constrainComposer({x:9999,y:-9999,scale:.2},{left:0,right:100,top:0,bottom:100},1000,800);
   assert.ok(small.x<1000 && small.y+20>0,"tiny content still has a valid visible interval");
+});
+test("soft limits preserve 30 percent of real rotated paper projections without FIT padding",()=>{
+  const cards=[{x:180,y:200,w:300,h:440,rot:13},{x:890,y:640,w:480,h:320,rot:-9}];
+  const bounds=composerPaperBounds(cards);
+  const angle=13*Math.PI/180;
+  assert.ok(Math.abs(bounds.left-(180-(300*Math.cos(angle)+440*Math.sin(angle))/2))<1e-9);
+  assert.deepEqual(composerPaperBounds([{x:100,y:80,w:100,h:60,rot:0}]),{left:50,right:150,top:50,bottom:110});
+  for(const scale of [.2,1,2.4])for(const [x,y] of [[-1e5,-1e5],[1e5,1e5],[-1e5,1e5],[1e5,-1e5]]){
+    const view=constrainComposer({x,y,scale},bounds,1440,820);
+    const visibleX=Math.min(1440,bounds.right*scale+view.x)-Math.max(0,bounds.left*scale+view.x);
+    const visibleY=Math.min(820,bounds.bottom*scale+view.y)-Math.max(0,bounds.top*scale+view.y);
+    assert.ok(visibleX>=Math.min(1440,(bounds.right-bounds.left)*scale)*.3-1e-7);
+    assert.ok(visibleY>=Math.min(820,(bounds.bottom-bounds.top)*scale)*.3-1e-7);
+  }
 });
 test("FLIP preserves old screen pose and uses bounded stagger with theme-specific curve",()=>{
   const old={x:80,y:90,width:150,angle:-3},next={x:300,y:240,width:300,angle:5};
