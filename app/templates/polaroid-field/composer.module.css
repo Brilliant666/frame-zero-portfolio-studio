@@ -60,3 +60,38 @@
 .stage[data-compact="true"] .settings { left: 0; right: auto; }
 .stage[data-compact="true"] .world { position: relative; }
 @media (prefers-reduced-motion: reduce) { .sheet { transition: none; } }
+
+/* Star-motion branch: the saved preview owns this theme, never the legacy templates. */
+:global([data-star-theme]) .stage { background:transparent; box-shadow:none; color:var(--star-ink); }
+:global([data-star-theme]) .identity > div,
+:global([data-star-theme]) .modes,
+:global([data-star-theme]) .settings,
+:global([data-star-theme]) .camera { background:var(--star-glass); border:1px solid var(--star-line); border-radius:18px; box-shadow:0 20px 50px -26px #1c243373; backdrop-filter:blur(16px); color:var(--star-ink); }
+:global([data-star-theme]) .identity > div::before { display:none; }
+:global([data-star-theme]) .identity strong { font-size:22px; }
+:global([data-star-theme]) .identity span,
+:global([data-star-theme]) .options,
+:global([data-star-theme]) .modes button { color:var(--star-muted); }
+:global([data-star-theme]) .identity > button,
+:global([data-star-theme]) .header select,
+:global([data-star-theme]) .settings button,
+:global([data-star-theme]) .camera button { color:var(--star-ink); }
+:global([data-star-theme]) .identity > button { padding:10px 14px; border:1px solid var(--star-line); border-radius:999px; background:var(--star-glass); }
+:global([data-star-theme]) .modes { transform:none; padding:5px; gap:3px; border-radius:999px; }
+:global([data-star-theme]) .modes button { border-radius:999px; padding-inline:15px; transition:background .35s,color .35s; }
+:global([data-star-theme]) .modes button[aria-pressed="true"] { background:var(--star-grad); color:var(--star-on-accent); }
+:global([data-star-theme]) .modes button[aria-pressed="true"]::after { display:none; }
+:global([data-star-theme]) .camera { border-radius:999px; }
+:global([data-star-theme]) .camera button:hover { border-radius:999px; background:var(--star-grad); color:var(--star-on-accent); }
+:global([data-star-theme]) .sheet { background:var(--star-paper); box-shadow:var(--star-shadow); transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)); }
+:global([data-star-theme]) .sheet::after { content:""; position:absolute; inset:0; pointer-events:none; opacity:0; background:radial-gradient(circle at var(--gx,50%) var(--gy,0%),#fff5,transparent 55%); transition:opacity .3s; }
+:global([data-star-theme]) .card:hover .sheet::after { opacity:1; }
+:global([data-star-theme]) .card:hover .sheet { transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-6px); }
+:global([data-star-theme]) .card { animation:pinIn .7s cubic-bezier(.22,1,.36,1) both; animation-delay:var(--enter-delay,0ms); transition:left .65s cubic-bezier(.22,1,.36,1),top .65s cubic-bezier(.22,1,.36,1),transform .65s; }
+:global([data-star-theme]) .lines path { stroke:var(--star-muted); opacity:.55; stroke-dasharray:1; animation:threadIn 1s ease both; }
+:global([data-star-theme="paper"]) .pin path { fill:#74c0ff; stroke:#3c8fd6; }
+:global([data-star-theme="night"]) .pin { filter:drop-shadow(0 0 6px #f1c86a99); }
+:global([data-star-theme="night"]) .pin path { fill:#f1c86a; stroke:#b98a2e; }
+@keyframes pinIn { from { opacity:0; translate:0 -28px; } to { opacity:1; translate:0 0; } }
+@keyframes threadIn { from { stroke-dashoffset:1; opacity:0; } to { stroke-dashoffset:0; opacity:.55; } }
+@media(prefers-reduced-motion:reduce) { :global([data-star-theme]) .card,:global([data-star-theme]) .lines path { animation:none; transition:none; } :global([data-star-theme]) .sheet,:global([data-star-theme]) .modes button { transition:none; } }

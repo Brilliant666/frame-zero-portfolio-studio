@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element -- local portfolio assets already provide responsive derivatives. */
 
-import { useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import type { Work } from "../../site-config";
 
 type LightboxProps = {
@@ -15,10 +15,20 @@ type LightboxProps = {
   theme?: "light" | "dark";
   safeMissingImage?: boolean;
   separateControls?: boolean;
+  motionOrigin?: { left: number; top: number; width: number; height: number } | null;
 };
 
-export default function Lightbox({ work, works, frameRef, closeButtonRef, onMove, onClose, theme = "dark", safeMissingImage = false, separateControls = false }: LightboxProps) {
+export default function Lightbox({ work, works, frameRef, closeButtonRef, onMove, onClose, theme = "dark", safeMissingImage = false, separateControls = false, motionOrigin }: LightboxProps) {
   const [unavailable, setUnavailable] = useState<string[]>([]);
+  const photoRef = useRef<HTMLDivElement>(null), entered = useRef(false);
+  useEffect(() => {
+    if (!motionOrigin || !photoRef.current || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const element = photoRef.current, box = element.getBoundingClientRect();
+    const from = entered.current ? "translateY(18px) scale(.98)" : `translate(${motionOrigin.left+motionOrigin.width/2-box.left-box.width/2}px,${motionOrigin.top+motionOrigin.height/2-box.top-box.height/2}px) scale(${motionOrigin.width/Math.max(1,box.width)},${motionOrigin.height/Math.max(1,box.height)})`;
+    entered.current = true;
+    const animation = element.animate([{transform:from,opacity:.3},{transform:"none",opacity:1}],{duration:520,easing:"cubic-bezier(.22,1,.36,1)"});
+    return () => animation.cancel();
+  }, [motionOrigin, work.image]);
   const index = works.findIndex((item) => item.assetId === work.assetId && item.code === work.code);
   return (
     <div
@@ -31,7 +41,7 @@ export default function Lightbox({ work, works, frameRef, closeButtonRef, onMove
     >
       <button className="lightbox-backdrop" onClick={onClose} aria-label="关闭作品预览" />
       <div className="lightbox-frame">
-        <div className="lightbox-stage">
+        <div className="lightbox-stage" ref={photoRef}>
           {!separateControls && (theme !== "light" || works.length > 1) && <button className="lightbox-nav lightbox-prev" onClick={() => onMove(-1)} aria-label="上一张作品">←</button>}
           {safeMissingImage && unavailable.includes(work.image) ? <p role="status">照片暂时不可用。已保存的图集引用仍保留，可关闭或查看其他照片。</p> : <img
             src={work.image}

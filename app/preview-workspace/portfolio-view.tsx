@@ -1,11 +1,12 @@
 "use client";
 
-import { lazy, Suspense, useCallback, useEffect, useMemo } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import type { PreviewPortfolioDocumentV1 } from "./document";
-import type { SiteContent } from "../site-config";
+import type { SiteContent, Work } from "../site-config";
 import { getClientVisiblePortfolioTitle } from "../client-visible-title";
 import Lightbox from "../templates/shared/lightbox";
 import { useTemplateInteractions } from "../templates/shared/use-template-interactions";
+import StarMotionShell, { StarThemeToggle } from "./star-motion-shell";
 
 const PolaroidFieldTemplate = lazy(() => import("../templates/polaroid-field/template"));
 
@@ -20,17 +21,24 @@ export function PreviewPortfolioView({ document, embedded = false, initialCollec
   const content = useMemo(() => previewDisplayContent(document), [document]);
   const interactions = useTemplateInteractions(content.works);
   const { setActiveWork } = interactions;
+  const [origin, setOrigin] = useState<{left:number;top:number;width:number;height:number}|null>(null);
+  const openWork = (work: Work, works?: readonly Work[]) => {
+    const source = work.assetId ? window.document.querySelector(`[data-card-id="${CSS.escape(work.assetId)}"]`) : null;
+    const box = source?.getBoundingClientRect();
+    setOrigin(box ? {left:box.left,top:box.top,width:box.width,height:box.height} : null);
+    interactions.openWork(work, works);
+  };
   const close = useCallback(() => setActiveWork(null), [setActiveWork]);
   useEffect(() => {
     if (!embedded) window.document.title = getClientVisiblePortfolioTitle(document.profile);
   }, [document.profile, embedded]);
-  return <>
+  return <StarMotionShell>
     <Suspense fallback={<p>正在载入拍立得作品集…</p>}><PolaroidFieldTemplate templateId="polaroid-field" content={content} works={content.works}
       packages={content.packages.filter(p => p.enabled)} bookingTemplate={["【约拍任务申请】", ...content.bookingFields].join("\n")}
       booted copiedKey={interactions.copiedKey} isPreview={embedded} onCopy={interactions.copyText}
-      onOpenWork={interactions.openWork} onBeforeViewChange={close}
-      collectionWorkspace={{ collections: document.collections, initialCollectionId }} /></Suspense>
-    {interactions.activeWork && <Lightbox theme="light" safeMissingImage separateControls work={interactions.activeWork} works={[...interactions.lightboxWorks]}
+      onOpenWork={openWork} onBeforeViewChange={close}
+      collectionWorkspace={{ collections: document.collections, initialCollectionId, headerAccessory: <StarThemeToggle /> }} /></Suspense>
+    {interactions.activeWork && <Lightbox theme="light" safeMissingImage separateControls motionOrigin={origin} work={interactions.activeWork} works={[...interactions.lightboxWorks]}
       frameRef={interactions.lightboxRef} closeButtonRef={interactions.closeButtonRef} onMove={interactions.moveActiveWork} onClose={close} />}
-  </>;
+  </StarMotionShell>;
 }

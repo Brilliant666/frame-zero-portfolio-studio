@@ -10,6 +10,7 @@ import {
   useState,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
+  type ReactNode,
 } from "react";
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
@@ -50,7 +51,7 @@ export default function PolaroidFieldTemplate({
   onBeforeViewChange,
   onOpenWork,
   collectionWorkspace,
-}: TemplateProps & { collectionWorkspace?: { collections: readonly Collection[]; initialCollectionId?: string } }) {
+}: TemplateProps & { collectionWorkspace?: { collections: readonly Collection[]; initialCollectionId?: string; headerAccessory?: ReactNode } }) {
   const fieldSlots = useMemo(
     () => buildPhotoSlots(works, POLAROID_RATIOS, { templateId: "polaroid-field" }),
     [works],
@@ -193,7 +194,7 @@ export default function PolaroidFieldTemplate({
             onClick={(event) => handleViewLink(event, "booking")}
           >联系约拍</a>
         </nav>
-        {headerStatus ? <p>{headerStatus}</p> : null}
+        {collectionWorkspace?.headerAccessory ?? (headerStatus ? <p>{headerStatus}</p> : null)}
       </header>
 
       <section
@@ -380,7 +381,7 @@ export default function PolaroidFieldTemplate({
 
         <div className={styles.packageGrid}>
           {packages.map((item, index) => (
-            <article className={styles.packageCard} key={`${item.number}-${item.english}`}>
+            <article data-star-paper className={styles.packageCard} key={`${item.number}-${item.english}`}>
               <span className={styles.packageTape} aria-hidden="true" />
               <div className={styles.packageNumber}>{collectionWorkspace ? item.number : String(index + 1).padStart(2, "0")}</div>
               <div className={styles.packageTitle}>
@@ -422,7 +423,7 @@ export default function PolaroidFieldTemplate({
         hidden={activeView !== "booking"}
         tabIndex={-1}
       >
-        <div className={styles.bookingIntro}>
+        <div data-star-dark className={styles.bookingIntro}>
           <small>{collectionWorkspace ? content.statement.eyebrow : "03 / SEND A FIELD NOTE"}</small>
           <h2 id="booking-title">{collectionWorkspace ? content.statement.lineOne : "把下一颗星"}<br /><span>{collectionWorkspace ? content.statement.lineTwo : "钉在这里"}</span></h2>
           <p>
@@ -443,7 +444,7 @@ export default function PolaroidFieldTemplate({
           <p className={styles.contactNote}>{content.contact.note}</p>
         </div>
 
-        <div className={styles.noteCard}>
+        <div data-star-paper className={styles.noteCard}>
           <span className={styles.notePin} aria-hidden="true" />
           <div className={styles.noteHeader}>
             <span>FIELD_NOTE.txt</span>
@@ -458,7 +459,7 @@ export default function PolaroidFieldTemplate({
           </button>
         </div>
 
-        <footer className={styles.footer}>
+        <footer data-star-dark className={styles.footer}>
           <div>
             <strong>{content.profile.brand}</strong>
             <span>{content.profile.photographer} · {content.profile.role}</span>
