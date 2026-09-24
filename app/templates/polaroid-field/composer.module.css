@@ -63,10 +63,12 @@
 
 /* Star-motion branch: the saved preview owns this theme, never the legacy templates. */
 :global([data-star-theme]) .stage { background:transparent; box-shadow:none; color:var(--star-ink); }
-:global([data-star-theme]) .identity > div,
+:global([data-star-theme]) .identity,
 :global([data-star-theme]) .modes,
 :global([data-star-theme]) .settings,
 :global([data-star-theme]) .camera { background:var(--star-glass); border:1px solid var(--star-line); border-radius:18px; box-shadow:0 20px 50px -26px #1c243373; backdrop-filter:blur(16px); color:var(--star-ink); }
+:global([data-star-theme]) .identity { display:grid; justify-items:start; gap:4px; padding:10px 18px 14px; width:max-content; max-width:min(58%,520px); box-sizing:border-box; }
+:global([data-star-theme]) .identity > div { padding:0; background:none; box-shadow:none; border-radius:0; max-width:100%; }
 :global([data-star-theme]) .identity > div::before { display:none; }
 :global([data-star-theme]) .identity strong { font-family:var(--star-serif,"Noto Serif SC",serif); font-size:22px; font-weight:900; }
 :global([data-star-theme]) .identity span,
@@ -76,7 +78,10 @@
 :global([data-star-theme]) .header select,
 :global([data-star-theme]) .settings button,
 :global([data-star-theme]) .camera button { color:var(--star-ink); }
-:global([data-star-theme]) .identity > button { padding:10px 14px; border:1px solid var(--star-line); border-radius:999px; background:var(--star-glass); }
+:global([data-star-theme]) .identity > button { padding:6px 9px; margin-left:-9px; min-height:38px; border:0; border-radius:999px; background:transparent; font-size:12px; color:var(--star-muted); }
+:global([data-star-theme]) .identity > button:hover { background:var(--star-grad); color:var(--star-on-accent); }
+:global([data-star-theme]) .stage[data-compact="true"] .identity { width:100%; max-width:100%; padding:8px 14px 12px; gap:2px; }
+:global([data-star-theme]) .stage[data-compact="true"] .identity strong { font-size:19px; }
 :global([data-star-theme]) .modes { transform:none; padding:5px; gap:3px; border-radius:999px; }
 :global([data-star-theme]) .modes button { border-radius:999px; padding-inline:15px; transition:background .35s,color .35s; }
 :global([data-star-theme]) .modes button[aria-pressed="true"] { background:var(--star-grad); color:var(--star-on-accent); }
@@ -87,13 +92,10 @@
 :global([data-star-theme]) .sheet::after { content:""; position:absolute; inset:0; pointer-events:none; opacity:0; background:radial-gradient(circle at var(--gx,50%) var(--gy,0%),#fff5,transparent 55%); transition:opacity .3s; }
 :global([data-star-theme]) .card:hover .sheet::after { opacity:1; }
 :global([data-star-theme]) .card:hover .sheet { transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-6px); }
-:global([data-star-theme]) .card { animation:pinIn .7s cubic-bezier(.22,1,.36,1) both; animation-delay:var(--enter-delay,0ms); }
-:global([data-star-theme]) .lines path { stroke:var(--star-muted); opacity:.55; stroke-dasharray:1; animation:threadIn 1s ease both; }
+:global([data-star-theme]) .lines path { stroke:var(--star-muted); opacity:.55; stroke-dasharray:1; }
 :global([data-star-theme="paper"]) .pin { filter:none; }
 :global([data-star-theme="paper"]) .pin path { fill:var(--star-accent); stroke:var(--star-accent-2); }
 :global([data-star-theme="paper"]) .lines path { stroke:var(--star-thread); opacity:1; }
 :global([data-star-theme="night"]) .pin { filter:drop-shadow(0 0 6px #f1c86a99); }
 :global([data-star-theme="night"]) .pin path { fill:#f1c86a; stroke:#b98a2e; }
-@keyframes pinIn { from { opacity:0; translate:0 -28px; } to { opacity:1; translate:0 0; } }
-@keyframes threadIn { from { stroke-dashoffset:1; opacity:0; } to { stroke-dashoffset:0; opacity:.55; } }
 @media(prefers-reduced-motion:reduce) { :global([data-star-theme]) .card,:global([data-star-theme]) .lines path { animation:none; transition:none; } :global([data-star-theme]) .sheet,:global([data-star-theme]) .modes button { transition:none; } }

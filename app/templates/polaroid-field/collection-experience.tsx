@@ -7,6 +7,7 @@ import type { TemplateProps } from "../types";
 import { collectionCover, initialCollections, moveItem, uniqueAvailableAssetIds, type Collection } from "./collection-model";
 import CollectionScene, { type SceneCard } from "./collection-scene";
 import type { ViewState } from "./viewport-fit";
+import type { CollectionEntranceSource } from "./collection-entrance";
 import styles from "./scene.module.css";
 
 type Props = Pick<TemplateProps, "content" | "onOpenWork" | "onBeforeViewChange" | "isPreview"> & {
@@ -26,6 +27,7 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
   const [libraryError, setLibraryError] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(initialCollectionId ?? null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [entranceSource, setEntranceSource] = useState<CollectionEntranceSource>();
   const cameras = useRef(new Map<string, ViewState>());
   const [lastSelected, setLastSelected] = useState<string | null>(null);
   const [restoredView, setRestoredView] = useState<ViewState | undefined>();
@@ -67,6 +69,7 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
   }, []);
 
   const returnHome = useCallback((push = true) => {
+    setEntranceSource(undefined);
     const scrollTop = scrollPositions.current.get(cameraKey("home")) ?? 0;
     onBeforeViewChange?.(); setRestoredView(cameras.current.get(cameraKey("home"))); setSelectedId(null);
     if (push && !isPreview) window.history.pushState(null, "", "#polaroid-top");
@@ -81,6 +84,7 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
   useEffect(() => {
     if (isPreview) return;
     const sync = () => {
+      setEntranceSource(undefined);
       const id = location.hash.startsWith(hashPrefix) ? location.hash.slice(hashPrefix.length) : null;
       const next = visible.some((item) => item.id === id) ? id : null;
       const scrollTop = scrollPositions.current.get(cameraKey(next ?? "home")) ?? 0;
@@ -114,6 +118,11 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
       const index = selectedAssets.findIndex((asset) => asset.id === id);
       if (index >= 0) onOpenWork(works[index], works);
     } else {
+      if (process.env.NODE_ENV === "development" && savedCollections) {
+        const element = [...document.querySelectorAll<HTMLElement>("[data-motion-cover]")].find(item => item.dataset.motionCover === id);
+        const image = element?.querySelector("img"), box = element?.getBoundingClientRect();
+        setEntranceSource(box && image ? { x: box.left, y: box.top, width: box.width, height: box.height, src: image.currentSrc || image.src } : undefined);
+      }
       const scrollTop = scrollPositions.current.get(cameraKey(id)) ?? 0;
       scrollPositions.current.set(cameraKey("home"), window.scrollY); setLastSelected(id); setRestoredView(cameras.current.get(cameraKey(id)));
       setSelectedId(id);
@@ -125,7 +134,7 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
   return <div className={styles.experience} data-collection-proof={savedCollections ? undefined : "local-only"}>
     {libraryError && <p role="alert">{libraryState}</p>}
     {savedCollections && !selected && MotionHome ? <Suspense fallback={<p role="status">正在准备图集封面…</p>}><MotionHome cards={cards} content={content} onOpen={openCard} restoreFocusId={lastSelected} /></Suspense> : savedCollections && selected && ComposerScene ? <Suspense fallback={<p role="status">正在准备构图画布…</p>}><ComposerScene key={sceneId} cards={cards} sceneId={sceneId} title={selected.name} description={selected.description}
-      focusId={selected.focusAssetId} coverId={selected.coverAssetId} onBack={() => returnHome()} onOpen={openCard} onAssetUnavailable={(id) => setAssets(current => current.filter(asset => asset.id !== id))} /></Suspense> : <CollectionScene key={`${sceneId}${savedCollections && selected ? cards.length ? ":photos" : ":empty" : ""}`} cards={cards} sceneId={sceneId} content={content} title={selected?.name} description={selected?.description}
+      focusId={selected.focusAssetId} coverId={selected.coverAssetId} entranceSource={entranceSource} onBack={() => returnHome()} onOpen={openCard} onAssetUnavailable={(id) => setAssets(current => current.filter(asset => asset.id !== id))} /></Suspense> : <CollectionScene key={`${sceneId}${savedCollections && selected ? cards.length ? ":photos" : ":empty" : ""}`} cards={cards} sceneId={sceneId} content={content} title={selected?.name} description={selected?.description}
       composedPhotos={!!savedCollections && !!selected}
       readOnly={!!savedCollections} onAssetUnavailable={(id) => setAssets((current) => current.filter((asset) => asset.id !== id))}
       focusId={selected?.focusAssetId} initialView={restoredView} onViewChange={rememberCamera} onOpen={openCard}

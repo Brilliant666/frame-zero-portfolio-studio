@@ -7,12 +7,13 @@ import { buildComposerLayout } from "./composer-layout";
 import { resolveComposerHero } from "./composer-selection";
 import {composerReleaseVelocity,composerZoomLimit,composerWheelKind,composerFlip,composerPaperBounds,constrainComposer,zoomComposerAt,type MotionSample} from "./composer-motion";
 import {useComposerMotion} from "./use-composer-motion";
+import {playCollectionEntrance,type CollectionEntranceSource} from "./collection-entrance";
 import { COMPOSER_MODES, composerSeed, composerView, parseComposerPreference, type ComposerBounds, type ComposerPreference, type ComposerView } from "./composer-view";
 import styles from "./composer.module.css";
 import "./motion-fonts.css";
 
 type Props = { cards: readonly SceneCard[]; sceneId: string; title?: string; description?: string;
-  focusId?: string | null; coverId?: string | null; onBack: () => void; onOpen: (id: string) => void; onAssetUnavailable: (id: string) => void };
+  focusId?: string | null; coverId?: string | null; entranceSource?: CollectionEntranceSource; onBack: () => void; onOpen: (id: string) => void; onAssetUnavailable: (id: string) => void };
 const labels = { constellation: "星座", scatter: "散落", editorial: "跨页" };
 const preferenceKey = (id: string) => `frame-zero:preview-composer:v1:${id}`;
 function readPreference(id: string) {
@@ -20,7 +21,7 @@ function readPreference(id: string) {
   catch { return parseComposerPreference(null); }
 }
 
-export default function ComposerScene({ cards, sceneId, title, description, focusId, coverId, onBack, onOpen, onAssetUnavailable }: Props) {
+export default function ComposerScene({ cards, sceneId, title, description, focusId, coverId, entranceSource, onBack, onOpen, onAssetUnavailable }: Props) {
   const [preference, setPreference] = useState(() => readPreference(sceneId));
   const hero = resolveComposerHero(cards.map(card => card.id), preference.heroId, focusId, coverId);
   const [lines, setLines] = useState(true);
@@ -37,6 +38,16 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
   const pinch=useRef<{distance:number;x:number;y:number;view:ComposerView}|null>(null);
   const flip=useRef<Map<string,{x:number;y:number;width:number;angle:number}>|null>(null);
   const animations=useRef(new Set<Animation>());
+  const entrance=useRef<(()=>void)|null>(null),entranceStarted=useRef(false);
+  const cancelEntrance=useCallback(()=>{entrance.current?.();entrance.current=null;if(worldRef.current)worldRef.current.style.visibility="visible";},[]);
+  const interruptEntrance=useCallback(()=>{entranceStarted.current=true;cancelEntrance();},[cancelEntrance]);
+  const beginEntrance=useCallback((mobile=false)=>{
+    if(entranceStarted.current || !worldRef.current)return;
+    if(!worldRef.current.querySelector("[data-card-id]")){worldRef.current.style.visibility="visible";return;}
+    entranceStarted.current=true;
+    entrance.current=playCollectionEntrance(worldRef.current,entranceSource,{pin:`.${styles.pin}`,tape:`.${styles.tape}`,lines:`.${styles.lines}`},mobile);
+  },[entranceSource]);
+  useLayoutEffect(()=>()=>{cancelEntrance();entranceStarted.current=false;},[cancelEntrance]);
   const cancelAnimations=useCallback(()=>{animations.current.forEach(animation=>animation.cancel());animations.current.clear();},[]);
   useLayoutEffect(()=>{
     const media=matchMedia("(prefers-reduced-motion: reduce)"),change=()=>{if(media.matches)cancelAnimations();};
@@ -99,7 +110,11 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
     cameraMode.current = preference.mode === "scatter" ? "fit" : "hero";
   }, [cards, hero.id, preference, sceneId]);
   useLayoutEffect(() => {
-    if (compact || cameraMode.current === "manual") return;
+    if (compact) {
+      const frame=requestAnimationFrame(()=>beginEntrance(true));
+      return ()=>cancelAnimationFrame(frame);
+    }
+    if (cameraMode.current === "manual") return;
     if(flip.current){
       const before=flip.current;flip.current=null;motion.stop();
       const next=composerView(layout,size.width,size.height,size.top,preference.mode==="scatter"?"fit":"hero",cameraOptions);
@@ -120,15 +135,20 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
       }
       return;
     }
+    let entranceFrame=0;
     const frame = requestAnimationFrame(() => {
       // A wheel/drag can start after the effect schedules this frame. Recheck
       // at execution time so an old automatic fit cannot steal manual control.
       if(cameraMode.current==="manual" || drag.current || document.hidden)return;
       const next=composerView(layout, size.width, size.height, size.top, cameraMode.current === "fit" ? "fit" : "hero", cameraOptions);
-      if(positioned.current)motion.move(next,850);else{motion.stop();commit(next);positioned.current=true;}
+      if(positioned.current && entranceStarted.current){cancelEntrance();motion.move(next,850);}else{
+        motion.stop();commit(next);positioned.current=true;
+        // Let the header ResizeObserver settle before sampling the hero's destination.
+        entranceFrame=requestAnimationFrame(()=>beginEntrance());
+      }
     });
-    return () => cancelAnimationFrame(frame);
-  }, [layout, size, compact, commit, cameraOptions,motion,preference.mode,cancelAnimations]);
+    return () => {cancelAnimationFrame(frame);cancelAnimationFrame(entranceFrame);};
+  }, [layout, size, compact, commit, cameraOptions,motion,preference.mode,cancelAnimations,beginEntrance,cancelEntrance]);
   const updatePreference = (next: ComposerPreference) => {
     const valid = parseComposerPreference(next);
     if(!compact && (valid.mode!==preference.mode || valid.seed!==preference.seed)){
@@ -186,6 +206,7 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
   return <section ref={stageRef} className={styles.stage} data-composer={preference.mode} data-collection-scene={sceneId} data-compact={compact} data-hero-source={hero.source}
     data-layout-rows={layout.meta?.selectedRows} data-layout-available={layout.meta ? `${layout.meta.availableW},${layout.meta.availableH}` : undefined}
     aria-label={`${title ?? "图集"}构图画布`} tabIndex={compact ? undefined : 0}
+    onPointerDownCapture={interruptEntrance} onWheelCapture={interruptEntrance} onKeyDownCapture={interruptEntrance}
     style={{ "--nav": `${size.nav}px`,touchAction:compact?"pan-y pinch-zoom":"none" } as CSSProperties}
     onPointerDown={event => {
       const target = event.target as Element;
@@ -247,7 +268,7 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
         </div></details>
       </div>
     </div>
-    <div ref={worldRef} className={styles.world} data-composer-world style={{ width: layout.world.w, height: layout.world.h }}>
+    <div ref={worldRef} className={styles.world} data-composer-world style={{ width: layout.world.w, height: layout.world.h, visibility:"hidden" }}>
       {preference.mode === "constellation" && lines && !compact && <svg className={styles.lines} width={layout.world.w} height={layout.world.h} aria-hidden="true">{layout.lines.map(([x1, y1, x2, y2, sign], i) => <path key={i} pathLength={1} d={`M${x1},${y1} Q${(x1 + x2) / 2 - (y2 - y1) * .08 * sign},${(y1 + y2) / 2 + (x2 - x1) * .08 * sign} ${x2},${y2}`} />)}</svg>}
       {layout.note && <div className={styles.note} data-composer-note style={{ left: layout.note.cx - 125, top: layout.note.cy - 80, transform: `rotate(${layout.note.rot}deg)` }}><i>✦</i><strong>{title || "我的图集"}</strong><span>{cards.length} 张照片</span></div>}
       {layout.cards.map(card => {

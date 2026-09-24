@@ -38,7 +38,7 @@
 @media (max-width: 800px) {
   .viewport { display: block; height: 680px; min-height: 0; padding: 0; overflow: clip; touch-action: pan-y pinch-zoom; }
   .viewport .canvas { position: absolute; top: 50%; left: 50%; display: block; transform: var(--scene-transform) !important; }
-  .canvas .card { position: absolute; left: var(--card-left) !important; top: var(--card-top) !important; width: var(--card-width) !important; max-width: none; transform: rotate(var(--rotation)); }
+  .canvas .card { position: absolute; left: var(--card-left) !important; top: var(--card-top) !important; width: var(--card-width) !important; transform: rotate(var(--rotation)); }
   .canvas .card:hover, .canvas .card:focus-visible { transform: rotate(var(--rotation)); }
   .canvas .thread { display: block; }
   .viewport .identity { position: absolute; top: 20px; left: 20px; width: calc(100% - 40px); pointer-events: none; }
