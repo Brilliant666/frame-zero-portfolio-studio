@@ -5,6 +5,7 @@ import { useEffect, useRef, type CSSProperties, type PointerEvent } from "react"
 import type { SiteContent } from "../../site-config";
 import type { SceneCard } from "./collection-scene";
 import styles from "./motion-home.module.css";
+import "./motion-fonts.css";
 
 export type MotionHomeProps = {
   cards: readonly SceneCard[];

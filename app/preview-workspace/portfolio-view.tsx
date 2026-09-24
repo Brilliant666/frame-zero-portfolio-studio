@@ -1,12 +1,15 @@
 "use client";
 
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import type { PreviewPortfolioDocumentV1 } from "./document";
 import type { SiteContent, Work } from "../site-config";
 import { getClientVisiblePortfolioTitle } from "../client-visible-title";
 import Lightbox from "../templates/shared/lightbox";
 import { useTemplateInteractions } from "../templates/shared/use-template-interactions";
-import StarMotionShell, { StarThemeToggle } from "./star-motion-shell";
+
+// Keep local-only design assets out of both production runtime artifacts.
+const StarMotionShell = process.env.NODE_ENV === "development" ? lazy(() => import("./star-motion-shell")) : Fragment;
+const StarThemeToggle = process.env.NODE_ENV === "development" ? lazy(() => import("./star-motion-shell").then(module => ({ default: module.StarThemeToggle }))) : () => null;
 
 const PolaroidFieldTemplate = lazy(() => import("../templates/polaroid-field/template"));
 
@@ -17,7 +20,9 @@ export function previewDisplayContent(document: PreviewPortfolioDocumentV1): Sit
     activeTemplate: "polaroid-field", works: [], templateWorks: {} };
 }
 
-export function PreviewPortfolioView({ document, embedded = false, initialCollectionId }: { document: PreviewPortfolioDocumentV1; embedded?: boolean; initialCollectionId?: string }) {
+export const PreviewPortfolioView = process.env.NODE_ENV === "development" ? PreviewPortfolioExperience : () => null;
+
+function PreviewPortfolioExperience({ document, embedded = false, initialCollectionId }: { document: PreviewPortfolioDocumentV1; embedded?: boolean; initialCollectionId?: string }) {
   const content = useMemo(() => previewDisplayContent(document), [document]);
   const interactions = useTemplateInteractions(content.works);
   const { setActiveWork } = interactions;
@@ -32,7 +37,7 @@ export function PreviewPortfolioView({ document, embedded = false, initialCollec
   useEffect(() => {
     if (!embedded) window.document.title = getClientVisiblePortfolioTitle(document.profile);
   }, [document.profile, embedded]);
-  return <StarMotionShell>
+  return <Suspense fallback={<p>正在载入拍立得作品集…</p>}><StarMotionShell>
     <Suspense fallback={<p>正在载入拍立得作品集…</p>}><PolaroidFieldTemplate templateId="polaroid-field" content={content} works={content.works}
       packages={content.packages.filter(p => p.enabled)} bookingTemplate={["【约拍任务申请】", ...content.bookingFields].join("\n")}
       booted copiedKey={interactions.copiedKey} isPreview={embedded} onCopy={interactions.copyText}
@@ -40,5 +45,5 @@ export function PreviewPortfolioView({ document, embedded = false, initialCollec
       collectionWorkspace={{ collections: document.collections, initialCollectionId, headerAccessory: <StarThemeToggle /> }} /></Suspense>
     {interactions.activeWork && <Lightbox theme="light" safeMissingImage separateControls motionOrigin={origin} work={interactions.activeWork} works={[...interactions.lightboxWorks]}
       frameRef={interactions.lightboxRef} closeButtonRef={interactions.closeButtonRef} onMove={interactions.moveActiveWork} onClose={close} />}
-  </StarMotionShell>;
+  </StarMotionShell></Suspense>;
 }

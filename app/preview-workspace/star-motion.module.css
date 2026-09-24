@@ -1,15 +1,29 @@
-.shell { position: relative; isolation: isolate; min-height: 100svh; --star-ink:#1c2433; --star-muted:#5b6576; --star-accent:#2a78b8; --star-paper:#fffefb; --star-glass:#ffffffb0; --star-line:#1c243324; --star-grad:linear-gradient(180deg,#d6eeff,#8fcbff); --star-on-accent:#0e2a47; --star-shadow:0 16px 32px -14px #1c243361,0 2px 3px #1c243324; color:var(--star-ink); background:radial-gradient(ellipse at 88% 8%,#40d8d042,transparent 45%),radial-gradient(ellipse at 4% 96%,#7dbeff42,transparent 45%),radial-gradient(ellipse at 42% 58%,#ffd66b1a,transparent 45%),linear-gradient(#1c24330b 1px,transparent 1px) 0 0/64px 64px,linear-gradient(90deg,#1c24330b 1px,transparent 1px) 0 0/64px 64px,radial-gradient(circle,#1c24331f 0 .7px,transparent .8px) 0 0/10px 10px,#f6f2ea; }
+.shell {
+  position: relative; isolation: isolate; min-height: 100svh; overflow:hidden; overflow:clip; color-scheme:light; --star-serif:"Noto Serif SC",serif;
+  --star-ink:#1c2433; --star-muted:#5b6576; --star-line:rgba(28,36,51,.14); --star-line-2:rgba(28,36,51,.3);
+  --star-glass:rgba(255,255,255,.66); --star-glass-2:rgba(255,255,255,.94);
+  --star-accent:#4a9be0; --star-accent-2:#2f76b8; --star-on-accent:#0f2a46; --star-accent-soft:rgba(74,155,224,.16);
+  --star-grad:linear-gradient(180deg,#e6f3ff,#b3dafc); --star-glow:rgba(74,155,224,.40); --star-focus:#2f76b8;
+  --star-gold:#f1c86a; --star-gold-2:#b98a2e;
+  --star-paper:#ffffff; --star-paper-ink:#1c2433; --star-thread:rgba(28,36,51,.34); --star-intro-bg:#f5f8fb;
+  --star-shadow:0 16px 32px -14px rgba(28,36,51,.38),0 2px 3px rgba(28,36,51,.14);
+  --star-shadow-up:0 34px 60px -22px rgba(28,36,51,.48),0 4px 8px rgba(28,36,51,.16);
+  color:var(--star-ink);
+  background:radial-gradient(55% 45% at 88% 8%,rgba(150,205,255,.28),rgba(150,205,255,0) 62%),radial-gradient(50% 42% at 4% 96%,rgba(185,190,255,.20),rgba(185,190,255,0) 62%),radial-gradient(38% 30% at 42% 58%,rgba(255,225,150,.08),rgba(255,225,150,0) 70%),linear-gradient(rgba(40,70,110,.05) 1px,transparent 1px) 0 0/64px 64px,linear-gradient(90deg,rgba(40,70,110,.05) 1px,transparent 1px) 0 0/64px 64px,radial-gradient(circle,rgba(40,70,110,.11) 0 .7px,transparent .8px) 0 0/10px 10px,#f3f6f9;
+}
+.shell[data-star-theme="paper"] { --star-caption-muted:var(--star-muted); --star-caption-accent:var(--star-accent-2); }
+.shell[data-star-theme="night"] { --star-focus:#f1c86a; --star-accent-2:#b98a2e; }
 .shell[data-star-theme="night"] { color-scheme:dark; --star-ink:#eef1f8; --star-muted:#aab4c9; --star-accent:#f1c86a; --star-paper:#f6f1e7; --star-glass:#172139eb; --star-line:#ffffff26; --star-grad:linear-gradient(180deg,#f8dc97,#d7aa4a); --star-on-accent:#1d1604; --star-shadow:0 22px 44px -16px #000b,0 2px 4px #0007; background:radial-gradient(ellipse at 78% 0,#1d2c5a,transparent 58%),radial-gradient(ellipse at 0 100%,#f3a6bd24,transparent 60%),linear-gradient(#0b1122,#06080f); }
 .shell > main { background:transparent; color:var(--star-ink); --ink:var(--star-ink); --ink-soft:var(--star-muted); --coral:var(--star-accent); --paper:var(--star-paper); --cream:var(--star-glass); }
 .shell[data-star-theme="night"] [data-star-paper] { --ink:#1c2433; --ink-soft:#5b6576; --coral:#2a78b8; color:var(--ink); }
 .shell[data-star-theme="night"] [data-star-dark] { --ink:#1c2433; }
-.shell > main > header { width:100%; background:var(--star-glass); border-color:var(--star-line); backdrop-filter:blur(14px); gap:12px; padding-inline:clamp(16px,3vw,48px); }
-.shell > main > header > a span { background:var(--star-grad); box-shadow:none; color:var(--star-on-accent); border-color:var(--star-line); }
+.shell[data-star-theme] > main[data-collection-proof] > header { width:100%; max-width:none; left:0; right:0; transform:none; box-sizing:border-box; background:var(--star-glass); border-color:var(--star-line); backdrop-filter:blur(14px); gap:12px; padding-inline:max(clamp(16px,3vw,48px),calc((100% - 1680px)/2)); }
+.shell > main > header > a span { width:auto; aspect-ratio:auto; background:none; box-shadow:none; color:var(--star-accent); border:0; border-radius:0; font-size:24px; transform:none; }
 .shell > main > header > a strong { display:block; font-size:17px; }
 .toggle { justify-self:end; display:flex; width:max-content; padding:4px; border:1px solid var(--star-line); border-radius:999px; background:var(--star-glass); gap:2px; }
 .toggle button { cursor:pointer; border:0; border-radius:999px; padding:9px 13px; background:transparent; color:var(--star-muted); font-family:inherit; font-size:13px; font-weight:600; line-height:1.2; transition:background .3s,color .3s; }
 .toggle button[aria-pressed="true"] { color:var(--star-on-accent); background:var(--star-grad); box-shadow:0 5px 16px -8px var(--star-accent); }
-.toggle button:focus-visible { outline:2px solid var(--star-accent); outline-offset:3px; }
+.toggle button:focus-visible { outline:2px solid var(--star-focus,var(--star-accent)); outline-offset:3px; }
 .stars { position:absolute; z-index:-1; inset:0; overflow:hidden; pointer-events:none; display:none; }
 .shell[data-star-theme="night"] .stars { display:block; }
 .stars i { position:absolute; border-radius:50%; background:#f6e6b8; box-shadow:0 0 7px #e7d39299; animation:twinkle 5s ease-in-out infinite alternate; }

@@ -174,8 +174,8 @@ export default function PolaroidFieldTemplate({
           aria-label="返回作品首页"
           onClick={(event) => handleViewLink(event, "field", "#polaroid-top")}
         >
-          <span>{content.profile.mark}</span>
-          <strong>{content.profile.brand}</strong>
+          <span aria-hidden={collectionWorkspace ? true : undefined}>{collectionWorkspace ? "✦" : content.profile.mark}</span>
+          <strong>{collectionWorkspace ? content.profile.photographer : content.profile.brand}</strong>
         </a>
         <nav aria-label="作品集页面导航">
           <a
