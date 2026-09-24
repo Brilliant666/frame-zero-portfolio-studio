@@ -18,6 +18,17 @@ export function composerSeed(id: string, preference: ComposerPreference) {
 }
 export type ComposerView = { x: number; y: number; scale: number };
 export type ComposerBounds = { left: number; top: number; right: number; bottom: number };
+export function composerNoteBounds(layout: ComposerLayout): ComposerBounds | null {
+  if (!layout.note) return null;
+  const note = layout.note, a = note.rot * Math.PI / 180;
+  // The paper is 250 x 160; include its shadow and rotation, just as FIT does.
+  const w = Math.abs(286 * Math.cos(a)) + Math.abs(196 * Math.sin(a));
+  const h = Math.abs(286 * Math.sin(a)) + Math.abs(196 * Math.cos(a));
+  return { left: note.cx - w / 2, right: note.cx + w / 2, top: note.cy - h / 2, bottom: note.cy + h / 2 };
+}
+function unionBounds(a: ComposerBounds, b: ComposerBounds): ComposerBounds {
+  return { left: Math.min(a.left, b.left), right: Math.max(a.right, b.right), top: Math.min(a.top, b.top), bottom: Math.max(a.bottom, b.bottom) };
+}
 export function composerBounds(layout: ComposerLayout, indices?: readonly number[]): ComposerBounds {
   const cards = indices ? indices.map(index => layout.cards[index]).filter(Boolean) : layout.cards;
   const boxes = cards.map(card => {
@@ -26,12 +37,8 @@ export function composerBounds(layout: ComposerLayout, indices?: readonly number
     const rh = Math.abs(w * Math.sin(angle)) + Math.abs(h * Math.cos(angle));
     return { left: card.x - rw / 2, right: card.x + rw / 2, top: card.y - rh / 2, bottom: card.y + rh / 2 };
   });
-  if (!indices && layout.note) {
-    const note = layout.note, a = note.rot * Math.PI / 180;
-    const w = Math.abs(286 * Math.cos(a)) + Math.abs(196 * Math.sin(a));
-    const h = Math.abs(286 * Math.sin(a)) + Math.abs(196 * Math.cos(a));
-    boxes.push({ left: note.cx - w / 2, right: note.cx + w / 2, top: note.cy - h / 2, bottom: note.cy + h / 2 });
-  }
+  const note = composerNoteBounds(layout);
+  if (!indices && note) boxes.push(note);
   return boxes.length ? { left: Math.min(...boxes.map(b => b.left)), top: Math.min(...boxes.map(b => b.top)),
     right: Math.max(...boxes.map(b => b.right)), bottom: Math.max(...boxes.map(b => b.bottom)) } : { left: 0, top: 0, right: 1, bottom: 1 };
 }
@@ -43,8 +50,42 @@ export function composerView(layout: ComposerLayout, width: number, height: numb
   };
   const all = fit(composerBounds(layout), 1);
   if (mode === "fit" || !layout.cards.length) return all;
-  const box = composerBounds(layout, width < 700 ? layout.heroOnly : layout.heroIdx);
-  if (layout.heroPad) { const extra = (box.right - box.left) * layout.heroPad; box.left -= extra; box.right += extra; }
+  const note = composerNoteBounds(layout);
+  const opening = new Set(layout.openingCluster ?? []);
+  const noteWithHero = layout.heroStartsOpeningCluster ?? layout.heroOnly.includes(0);
+  const indices = width < 700 ? layout.heroOnly : layout.heroIdx;
+  let box = composerBounds(layout, note && !noteWithHero ? indices.filter(i => !opening.has(i)) : indices);
+  if (note && noteWithHero) box = unionBounds(box, note);
   const hero = fit(box, 1.05);
-  return all.scale > hero.scale * .82 ? all : hero;
+  if (!note || noteWithHero) return all.scale > hero.scale * .82 ? all : hero;
+
+  // Automatic views must not cut a distant title paper into a stray fragment.
+  // Pan only inside the range that still contains the local composition. Manual
+  // drag/zoom never calls this correction.
+  const excludeNote = (view: ComposerView, bounds: ComposerBounds): ComposerView | null => {
+    const s = view.scale;
+    if (note.right * s + view.x <= -8 || note.left * s + view.x >= width + 8 ||
+        note.bottom * s + view.y <= -8 || note.top * s + view.y >= height + 8) return view;
+    const minX = 40 - bounds.left * s, maxX = width - 40 - bounds.right * s;
+    const minY = top - bounds.top * s, maxY = height - 72 - bounds.bottom * s;
+    const candidates = [
+      { ...view, x: Math.min(view.x, -8 - note.right * s) },
+      { ...view, x: Math.max(view.x, width + 8 - note.left * s) },
+      { ...view, y: Math.min(view.y, -8 - note.bottom * s) },
+      { ...view, y: Math.max(view.y, height + 8 - note.top * s) },
+    ].filter(v => v.x >= minX - 1e-7 && v.x <= maxX + 1e-7 && v.y >= minY - 1e-7 && v.y <= maxY + 1e-7);
+    candidates.sort((a,b) => Math.hypot(a.x-view.x,a.y-view.y) - Math.hypot(b.x-view.x,b.y-view.y));
+    return candidates[0] ?? null;
+  };
+  const local = excludeNote(hero, box);
+  if (local) return local;
+  const group = composerBounds(layout, layout.heroOnly);
+  const groupView = fit(group, 1.05);
+  const framedGroup = excludeNote(groupView, group);
+  if (framedGroup) return framedGroup;
+  const principal = composerBounds(layout, layout.cards.flatMap((card, i) => card.role === "hero" ? [i] : []));
+  // A small extra zoom can clear a paper above the hero without clipping it;
+  // the actual available rectangle, not the decorative 105% cap, is the limit.
+  const principalView = fit(principal, Number.POSITIVE_INFINITY);
+  return excludeNote(principalView, principal) ?? principalView;
 }

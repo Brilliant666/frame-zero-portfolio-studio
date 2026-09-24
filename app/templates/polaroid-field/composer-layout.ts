@@ -15,6 +15,8 @@ export type ComposerLayout = {
   cards: ComposerCard[]; lines: [number, number, number, number, number][];
   note: { cx: number; cy: number; rot: number } | null;
   heroIdx: number[]; heroOnly: number[]; heroPad?: number; world: { w: number; h: number };
+  openingCluster?: number[]; heroStartsOpeningCluster?: boolean;
+  meta?: { selectedRows: number; availableW: number; availableH: number; candidates: { rows: number; width: number; height: number; fitScale: number }[] };
 };
 type RawLayout = Omit<ComposerLayout, "world" | "heroOnly"> & {
   heroOnly?: number[]; wm: boolean; defaultView: string;
@@ -39,6 +41,37 @@ export function composerCardBounds(c: Pick<ComposerCard, "x" | "y" | "w" | "h" |
 }
 const aabb = (c: Pick<ComposerCard, "x" | "y" | "w" | "h" | "rot">, margin = 0) => composerCardBounds(c, margin);
 const union = (boxes: Box[]): Box => boxes.reduce((u,b) => ({l:Math.min(u.l,b.l), t:Math.min(u.t,b.t), r:Math.max(u.r,b.r), b:Math.max(u.b,b.b)}), {l:Infinity,t:Infinity,r:-Infinity,b:-Infinity});
+/** Actual rotated photo and paper polygons, not their axis-aligned envelopes. */
+function polygon(c: ComposerCard, photo: boolean): Point[] {
+  const left = photo ? -c.w/2+c.f.side : -c.w/2;
+  const top = photo ? -c.h/2+c.f.top : -c.h/2;
+  const w = photo ? c.pw : c.w, h = photo ? c.ph : c.h;
+  const a = c.rot*Math.PI/180, cs = Math.cos(a), sn = Math.sin(a);
+  return [[left,top],[left+w,top],[left+w,top+h],[left,top+h]]
+    .map(([x,y]) => ({x:c.x+x*cs-y*sn,y:c.y+x*sn+y*cs}));
+}
+function separation(a: Point[], b: Point[]): Point | null {
+  let shortest = Infinity, move: Point | null = null;
+  for (const points of [a,b]) for (let i=0;i<4;i++) {
+    const p=points[i], q=points[(i+1)%4], len=Math.hypot(q.x-p.x,q.y-p.y);
+    const axis={x:-(q.y-p.y)/len,y:(q.x-p.x)/len};
+    const aa=a.map(p=>p.x*axis.x+p.y*axis.y), bb=b.map(p=>p.x*axis.x+p.y*axis.y);
+    const amin=Math.min(...aa),amax=Math.max(...aa),bmin=Math.min(...bb),bmax=Math.max(...bb);
+    if (amax<=bmin+.001 || bmax<=amin+.001) return null;
+    const negative=bmin-amax,positive=bmax-amin;
+    const d=Math.abs(negative)<positive?negative:positive;
+    if(Math.abs(d)<shortest){shortest=Math.abs(d);move={x:axis.x*(d+Math.sign(d)*1.5),y:axis.y*(d+Math.sign(d)*1.5)};}
+  }
+  return move;
+}
+export function composerPhotoIsOccluded(back: ComposerCard, front: ComposerCard): boolean {
+  const A=aabb(back),B=aabb(front);
+  if(A.r<=B.l || B.r<=A.l || A.b<=B.t || B.b<=A.t) return false;
+  return separation(polygon(back,true),polygon(front,false))!==null;
+}
+export function composerSheetsOverlap(a: ComposerCard, b: ComposerCard): boolean {
+  return separation(polygon(a,false),polygon(b,false))!==null;
+}
 function frameFor(pw: number, ph: number, style: string){
   if (style === 'current') return { side:12, top:12, bottom:56 };
   if (style === 'editorial'){ const s = Math.round(clamp(Math.min(pw,ph)*.035 + 4, 7, 13)); return { side:s, top:s, bottom:Math.round(s*2.4 + 12) }; }
@@ -54,10 +87,10 @@ function makeCard(i: number, m: Member, role: ComposerCard['role'], area: number
 }
 
 /* ---------- styles 1 & 2: clusters strung along a path ---------- */
-const P_CONST: Parameters = { id:'constellation', base:38000, heroK:2.6, leadK:1.6, jitter:.1, tuck:.13, downA:-.04, upB:.06, fanGap:16, satOverlap:.03,
+const P_CONST: Parameters = { id:'constellation', base:38000, heroK:3.4, leadK:1.4, jitter:.1, tuck:.13, downA:-.04, upB:.06, fanGap:16, satOverlap:.03,
   maxCluster:3, heroCluster:3, sizes:[2,3,3,2], tpl2:['fan','chainD','chainU'], tpl3:['fanChain','zig'], gap:[170,260], heroGapK:1.3,
   wave:.18, aspect:2.4, rowGapK:.35, rot:{hero:[0,1],lead:[1.2,3],sat:[2.6,6]}, serpentine:true, pins:true, tapeP:0, margin:12 };
-const P_SCATTER: Parameters = { id:'scatter', base:36000, heroK:2.3, leadK:1.45, jitter:.14, tuck:.22, downA:-.12, upB:.14, fanGap:-46, satOverlap:.2,
+const P_SCATTER: Parameters = { id:'scatter', base:36000, heroK:2.3, leadK:1.45, jitter:.14, tuck:.15, downA:-.12, upB:.14, fanGap:-18, satOverlap:.2,
   maxCluster:5, heroCluster:3, sizes:[3,4,3,5,4], tpl2:['fan','chainD','chainU','sideBelow'], tpl3:['fanChain','zig'], gap:[40,90], heroGapK:1.25,
   wave:.1, aspect:1.8, rowGapK:.2, rot:{hero:[1,2.4],lead:[2,4.5],sat:[4,9]}, serpentine:false, pins:false, tapeP:.9, margin:8, note:true };
 
@@ -125,11 +158,29 @@ function buildCluster(cl: Cluster, cards: ComposerCard[], dir: number, P: Parame
     }
     if (!moved) break;
   }
+  if (P.id === 'scatter') {
+    // Resolve each rear photo against all already-fixed foreground sheets.
+    // Zero photo/paper intersections also avoids cumulative multi-card occlusion;
+    // paper/paper overlap is deliberately not forbidden.
+    S.forEach((i,k) => {
+      const foreground=idx.slice(0,k+1);
+      for(let pass=0;pass<24;pass++) {
+        let moved=false;
+        for(const front of foreground) {
+          const correction=separation(polygon(get(i),true),polygon(get(front),false));
+          if(correction){const p=pos.get(i)!;p.x+=correction.x;p.y+=correction.y;moved=true;}
+        }
+        if(!moved) break;
+      }
+      // A bounded escape for rare mutually-constraining corners; group only.
+      for(let pass=0;pass<240 && foreground.some(front=>composerPhotoIsOccluded(get(i),get(front)));pass++) pos.get(i)!.x+=dir*12;
+    });
+  }
   const box = union(idx.map(i => aabb(get(i), P.margin)));
   return { idx, pos, z, cap, box, w: box.r - box.l, h: box.b - box.t };
 }
 
-function layoutClusters(members: Member[], h: number, P: Parameters, seed: number): RawLayout{
+function layoutClusters(members: Member[], h: number, P: Parameters, seed: number, availableW: number, availableH: number): RawLayout{
   const n = members.length, rng = mulberry32(seed);
   const cl = makeClusters(n, h, P, rng), cards = new Array<ComposerCard>(n);
   cl.forEach(c => { for (let k = 0; k < c.size; k++){
@@ -159,10 +210,25 @@ function layoutClusters(members: Member[], h: number, P: Parameters, seed: numbe
   const noteW = P.note ? 270 : 0;
   const total = pre.reduce((a, g) => a + g.w, 0) + avgGap*(cl.length - 1) + noteW;
   const rowH = Math.max(...pre.map(g => g.h)) * (1 + P.wave);
-  let rows = clamp(Math.round(Math.sqrt(total / (P.aspect*rowH))), 1, cl.length);
-  const target = total / rows, rowOf: number[] = []; let acc = noteW;
-  cl.forEach((c, ci) => { rowOf[ci] = Math.min(rows - 1, Math.floor((acc + pre[ci].w/2) / target)); acc += pre[ci].w + avgGap; });
-  rows = Math.max(...rowOf) + 1;
+  const estimate = Math.max(1,Math.round(Math.sqrt(total/((availableW/availableH)*rowH))));
+  const rowCounts = n<=13 ? Array.from({length:Math.min(3,cl.length)},(_,i)=>i+1)
+    : [...new Set([1,estimate-2,estimate-1,estimate,estimate+1,estimate+2].map(v=>clamp(v,1,cl.length)))];
+  const templates=cards;
+  function arrange(rows: number): RawLayout {
+  const cards=templates.map(c=>({...c}));
+  const rng=mulberry32(seed ^ 0x5bd1e995);
+  const rowOf: number[]=[];
+  let ci=0, remaining=total;
+  for(let row=0;row<rows;row++){
+    const target=remaining/(rows-row); let weight=row===0?noteW:0;
+    const first=ci, last=cl.length-(rows-row-1);
+    while(ci<last){
+      const next=pre[ci].w+avgGap;
+      if(row<rows-1 && ci>first && weight+next/2>target) break;
+      rowOf[ci++]=row;weight+=next;
+    }
+    remaining-=weight;
+  }
   const smallH = median(cards.filter(c => c.role === 'small').map(c => c.h)) || 240;
   const placed = []; let note: ComposerLayout['note'] = null;
   for (let r = 0; r < rows; r++){
@@ -213,13 +279,34 @@ function layoutClusters(members: Member[], h: number, P: Parameters, seed: numbe
     }
     if (!moved) break;
   }
+  if(note && heroCi>0){
+    const principal=aabb(cards[h],36),paper=aabb({x:note.cx,y:note.cy,w:250,h:160,rot:note.rot},30);
+    if(paper.r>principal.l && paper.l<principal.r){
+      // A title directly above a later hero can be impossible to frame out.
+      // Move only that conflicting paper to the outer opening margin; the
+      // gap corresponds to the camera's 40px safe edge plus 8px clearance.
+      const scale=Math.min(1.05,availableW/(principal.r-principal.l),availableH/(principal.b-principal.t));
+      note.cx=Math.min(note.cx,Math.min(...cards.map(c=>aabb(c,36).l))-48/scale-(paper.r-paper.l)/2);
+    }
+  }
   const lines: ComposerLayout['lines'] = [];
   if (P.pins) for (let i = 0; i < n; i++){ const c = cards[i]; const a = c.rot*Math.PI/180, py = -c.h/2 + c.f.top*.55; c.px = c.x - Math.sin(a)*py; c.py = c.y + Math.cos(a)*py; }
   if (P.pins) for (let i = 1; i < n; i++) lines.push([cards[i-1].px!, cards[i-1].py!, cards[i].px!, cards[i].py!, i % 2 ? 1 : -1]);
   const hc = cl[heroCi] ? heroCi : 0, nb = cl[hc + 1] ? hc + 1 : hc - 1;
   const focusIdx = cards.map((c, i) => i).filter(i => clusterOf[i] === hc || clusterOf[i] === nb);
   const heroOnly = cards.map((c, i) => i).filter(i => clusterOf[i] === hc);
-  return { cards, lines, heroIdx: focusIdx, heroOnly, note, wm:false, defaultView:'hero' };
+  return { cards, lines, heroIdx: focusIdx, heroOnly, note, openingCluster:pre[0].idx,
+    heroStartsOpeningCluster:heroCi===0, wm:false, defaultView:'hero' };
+  }
+  const trials=rowCounts.map(rows=>{
+    const layout=arrange(rows), boxes=layout.cards.map(c=>aabb(c,36));
+    if(layout.note) boxes.push(aabb({x:layout.note.cx,y:layout.note.cy,w:250,h:160,rot:layout.note.rot},30));
+    const b=union(boxes),width=b.r-b.l,height=b.b-b.t;
+    return {layout,rows,width,height,fitScale:Math.min(availableW/width,availableH/height)};
+  });
+  const best=trials.reduce((a,b)=>b.fitScale>a.fitScale?b:a);
+  return {...best.layout,meta:{selectedRows:best.rows,availableW,availableH,
+    candidates:trials.map(({rows,width,height,fitScale})=>({rows,width,height,fitScale}))}};
 }
 function median(a: number[]){ if (!a.length) return 0; const s = [...a].sort((x,y)=>x-y); return s[Math.floor(s.length/2)]; }
 
@@ -228,11 +315,12 @@ function layoutEditorial(members: Member[], h: number, seed: number): RawLayout{
   const rng = mulberry32(seed), n = members.length, H = 980, gap = 34, cards = new Array<ComposerCard>(n);
   const hm = members[h];
   let hph = H - 70, hpw = hph*hm.r;
-  if (hpw > 1250){ hpw = 1250; hph = hpw / hm.r; }
+  const maxHeroWidth = n>1 && hm.r>=1 ? 820 : 1250;
+  if (hpw > maxHeroWidth){ hpw = maxHeroWidth; hph = hpw / hm.r; }
   cards[h] = makeCard(h, hm, 'hero', hpw*hph, 'editorial');
   function block(list: number[], x0: number){
     if (!list.length) return x0;
-    const rows = list.length <= 3 ? 1 : list.length <= 8 ? 2 : list.length <= 18 ? 3 : 4;
+    const rows = list.length <= 3 ? 1 : list.length <= 13 ? 2 : Math.max(3,Math.round(Math.sqrt(list.length/1.8)));
     const rowH = (H - gap*(rows - 1)) / rows, per = Math.ceil(list.length / rows);
     let maxX = x0;
     for (let r = 0; r < rows; r++){
@@ -240,7 +328,10 @@ function layoutEditorial(members: Member[], h: number, seed: number): RawLayout{
       seg.forEach(i => {
         const m = members[i], fr = frameFor(rowH*.8*m.r, rowH*.8, 'editorial');
         const ph = rowH - fr.top - fr.bottom, pw = Math.min(ph*m.r, ph*2.2);
-        const c = makeCard(i, m, 'small', pw*ph, 'editorial');
+        // A short prefix/suffix must not turn one auxiliary into a second hero.
+        // This editorial-only ceiling balances the one-row and two-row blocks.
+        const area=Math.min(pw*ph,cards[h].pw*cards[h].ph*.55);
+        const c = makeCard(i, m, 'small', area, 'editorial');
         c.x = x + c.w/2; c.y = r*(rowH + gap) + rowH/2 + (H - (rows*rowH + (rows - 1)*gap))/2;
         c.rot = (rng() - .5)*1.4; c.z = 20 + i;
         cards[i] = c; x += c.w + gap*(.8 + rng()*.5);
@@ -253,36 +344,43 @@ function layoutEditorial(members: Member[], h: number, seed: number): RawLayout{
   const hero = cards[h];
   hero.x = (h ? preEnd + gap*2 : 0) + hero.w/2; hero.y = H/2; hero.rot = 0; hero.z = 400;
   block(Array.from({length: n - h - 1}, (_, k) => h + 1 + k), hero.x + hero.w/2 + gap*2);
-  return { cards, lines:[], heroIdx:[h], note:null, wm:false, defaultView:'hero', heroPad: .45 };
+  const nearest = (side: ComposerCard[]) => side.sort((a,b)=>Math.hypot(a.x-hero.x,a.y-hero.y)-Math.hypot(b.x-hero.x,b.y-hero.y))[0]?.i;
+  const neighbors=[nearest(cards.slice(0,h)),nearest(cards.slice(h+1))].filter((i): i is number=>i!==undefined);
+  return { cards, lines:[], heroIdx:[h,...neighbors], heroOnly:[h], note:null, wm:false, defaultView:'hero' };
 }
 
 
 
 export function buildComposerLayout(
   input: readonly { id: string; aspectRatio: number }[],
-  options: { mode: ComposerMode; focusId?: string | null; seed: number; viewportWidth?: number },
+  options: { mode: ComposerMode; focusId?: string | null; seed: number; viewportWidth?: number; viewportHeight?: number; viewportTop?: number },
 ): ComposerLayout {
   if (input.length > 500) throw new RangeError("Composer supports at most 500 photos");
   if (new Set(input.map(m => m.id)).size !== input.length) throw new RangeError("Composer photo IDs must be unique");
   const members = input.map(m => ({id:m.id, r:Number.isFinite(m.aspectRatio) && m.aspectRatio > 0 ? m.aspectRatio : 1}));
   if (!members.length) return {cards:[], lines:[], note:null, heroIdx:[], heroOnly:[], world:{w:1,h:1}};
   const h = Math.max(0, members.findIndex(m => m.id === options.focusId));
+  const mobile=options.viewportWidth!==undefined && options.viewportWidth<768;
+  const availableW=Math.max(80,(mobile?1440:options.viewportWidth ?? 1440)-80);
+  const availableH=mobile?608:Math.max(80,(options.viewportHeight ?? 820)-(options.viewportTop ?? 140)-72);
   const L = options.mode === "editorial" ? layoutEditorial(members,h,options.seed)
-    : layoutClusters(members,h,options.mode === "scatter" ? P_SCATTER : P_CONST,options.seed);
+    : layoutClusters(members,h,options.mode === "scatter" ? P_SCATTER : P_CONST,options.seed,availableW,availableH);
   const width = options.viewportWidth;
   if (width !== undefined && width < 768) {
-    const available = Math.max(80,width), inset = 16;
+    const available = Math.max(80,width), inset = 8;
     let top = inset;
     for (const c of L.cards) {
       c.rot = options.mode === "editorial" ? 0 : c.rot*.12;
-      const b = aabb(c), angle = Math.abs(c.rot)*Math.PI/180;
-      const scale = Math.min(1,(available-inset*2-60*(Math.cos(angle)+Math.sin(angle)))/(b.r-b.l));
-      c.pw *= scale; c.ph *= scale;
-      c.f = {side:c.f.side*scale,top:c.f.top*scale,bottom:c.f.bottom*scale};
-      c.w = c.pw+c.f.side*2; c.h = c.ph+c.f.top+c.f.bottom;
-      if(c.tape) c.tape.w *= scale;
-      if(c.tape2) c.tape2.w *= scale;
-      const bounds = aabb(c,30);
+      // Phone sizes derive from its content width, not a desktop thumbnail cap.
+      // Keep actual paper dimensions; natural ratio may make a long photo tall.
+      const angle=Math.abs(c.rot)*Math.PI/180,cs=Math.cos(angle),sn=Math.sin(angle);
+      const side=options.mode === 'editorial'?9:11, bottom=options.mode === 'editorial'?34:43;
+      const budget=available-inset*2-48*(cs+sn);
+      c.pw=Math.max(1,(budget-2*side*cs-(side+bottom)*sn)/(cs+sn/c.r));c.ph=c.pw/c.r;
+      c.f={side,top:side,bottom};c.w=c.pw+2*side;c.h=c.ph+side+bottom;
+      if(c.tape)c.tape.w=clamp(c.w*.3,46,96);
+      if(c.tape2)c.tape2.w=clamp(c.w*.24,46,80);
+      const bounds = aabb(c,24);
       c.x = available/2; c.y = top+(bounds.b-bounds.t)/2;
       top += bounds.b-bounds.t+24;
     }

@@ -124,7 +124,7 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
   return <div className={styles.experience} data-collection-proof={savedCollections ? undefined : "local-only"}>
     {libraryError && <p role="alert">{libraryState}</p>}
     {savedCollections && selected && ComposerScene ? <Suspense fallback={<p role="status">正在准备构图画布…</p>}><ComposerScene key={sceneId} cards={cards} sceneId={sceneId} title={selected.name} description={selected.description}
-      focusId={selected.focusAssetId} onBack={() => returnHome()} onOpen={openCard} onAssetUnavailable={(id) => setAssets(current => current.filter(asset => asset.id !== id))} /></Suspense> : <CollectionScene key={`${sceneId}${savedCollections && selected ? cards.length ? ":photos" : ":empty" : ""}`} cards={cards} sceneId={sceneId} content={content} title={selected?.name} description={selected?.description}
+      focusId={selected.focusAssetId} coverId={selected.coverAssetId} onBack={() => returnHome()} onOpen={openCard} onAssetUnavailable={(id) => setAssets(current => current.filter(asset => asset.id !== id))} /></Suspense> : <CollectionScene key={`${sceneId}${savedCollections && selected ? cards.length ? ":photos" : ":empty" : ""}`} cards={cards} sceneId={sceneId} content={content} title={selected?.name} description={selected?.description}
       composedPhotos={!!savedCollections && !!selected}
       readOnly={!!savedCollections} onAssetUnavailable={(id) => setAssets((current) => current.filter((asset) => asset.id !== id))}
       focusId={selected?.focusAssetId} initialView={restoredView} onViewChange={rememberCamera} onOpen={openCard}

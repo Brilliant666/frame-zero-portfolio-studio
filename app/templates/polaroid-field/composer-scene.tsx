@@ -4,11 +4,12 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { SceneCard } from "./collection-scene";
 import { buildComposerLayout } from "./composer-layout";
+import { resolveComposerHero } from "./composer-selection";
 import { COMPOSER_MODES, composerSeed, composerView, parseComposerPreference, type ComposerPreference, type ComposerView } from "./composer-view";
 import styles from "./composer.module.css";
 
 type Props = { cards: readonly SceneCard[]; sceneId: string; title?: string; description?: string;
-  focusId?: string | null; onBack: () => void; onOpen: (id: string) => void; onAssetUnavailable: (id: string) => void };
+  focusId?: string | null; coverId?: string | null; onBack: () => void; onOpen: (id: string) => void; onAssetUnavailable: (id: string) => void };
 const labels = { constellation: "星座", scatter: "散落", editorial: "跨页" };
 const preferenceKey = (id: string) => `frame-zero:preview-composer:v1:${id}`;
 function readPreference(id: string) {
@@ -16,9 +17,9 @@ function readPreference(id: string) {
   catch { return parseComposerPreference(null); }
 }
 
-export default function ComposerScene({ cards, sceneId, title, description, focusId, onBack, onOpen, onAssetUnavailable }: Props) {
+export default function ComposerScene({ cards, sceneId, title, description, focusId, coverId, onBack, onOpen, onAssetUnavailable }: Props) {
   const [preference, setPreference] = useState(() => readPreference(sceneId));
-  const [heroId, setHeroId] = useState(() => preference.heroId ?? focusId ?? cards[0]?.id ?? null);
+  const hero = resolveComposerHero(cards.map(card => card.id), preference.heroId, focusId, coverId);
   const [lines, setLines] = useState(true);
   const [size, setSize] = useState({ width: 1280, height: 800, top: 110, nav: 80 });
   const stageRef = useRef<HTMLDivElement>(null), headerRef = useRef<HTMLDivElement>(null);
@@ -28,8 +29,9 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
   const drag = useRef<{ id: number; x: number; y: number; view: ComposerView } | null>(null);
   const compact = size.width < 768;
   const layout = useMemo(() => buildComposerLayout(cards.map(card => ({ id: card.id, aspectRatio: card.asset?.aspectRatio ?? 1 })), {
-    mode: preference.mode, seed: composerSeed(sceneId, preference), focusId: cards.some(card => card.id === heroId) ? heroId : focusId, viewportWidth: size.width,
-  }), [cards, heroId, focusId, preference, sceneId, size.width]);
+    mode: preference.mode, seed: composerSeed(sceneId, preference), focusId: hero.id,
+    viewportWidth: size.width, viewportHeight: size.height, viewportTop: size.top,
+  }), [cards, hero.id, preference, sceneId, size.width, size.height, size.top]);
   const commit = useCallback((next: ComposerView) => { viewRef.current = next; setView(next); }, []);
   const show = (mode: "hero" | "fit") => { cameraMode.current = mode; commit(composerView(layout, size.width, size.height, size.top, mode)); };
   useLayoutEffect(() => {
@@ -48,7 +50,7 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
   }, []);
   useLayoutEffect(() => {
     cameraMode.current = "hero";
-  }, [cards, heroId, focusId, preference, sceneId]);
+  }, [cards, hero.id, preference, sceneId]);
   useLayoutEffect(() => {
     if (compact || cameraMode.current === "manual") return;
     const frame = requestAnimationFrame(() => commit(composerView(layout, size.width, size.height, size.top, cameraMode.current === "fit" ? "fit" : "hero")));
@@ -69,7 +71,8 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
     drag.current = null;
     if (stageRef.current?.hasPointerCapture(id)) stageRef.current.releasePointerCapture(id);
   };
-  return <section ref={stageRef} className={styles.stage} data-composer={preference.mode} data-collection-scene={sceneId} data-compact={compact}
+  return <section ref={stageRef} className={styles.stage} data-composer={preference.mode} data-collection-scene={sceneId} data-compact={compact} data-hero-source={hero.source}
+    data-layout-rows={layout.meta?.selectedRows} data-layout-available={layout.meta ? `${layout.meta.availableW},${layout.meta.availableH}` : undefined}
     aria-label={`${title ?? "图集"}构图画布`} tabIndex={compact ? undefined : 0}
     style={{ "--nav": `${size.nav}px` } as CSSProperties}
     onPointerDown={event => {
@@ -99,7 +102,7 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
       <div className={styles.options}>
         <div className={styles.modes} role="group" aria-label="构图"><span>构图</span>{COMPOSER_MODES.map(mode => <button type="button" key={mode} aria-pressed={mode === preference.mode} onClick={() => updatePreference({ ...preference, mode })}>{labels[mode]}</button>)}</div>
         <details><summary>构图选项</summary><div className={styles.settings}>
-          <label>主角照片<select aria-label="主角照片" value={layout.cards.find(card => card.role === "hero")?.id ?? ""} disabled={!cards.length} onChange={event => { setHeroId(event.target.value); updatePreference({ ...preference, heroId: event.target.value }); }}>{cards.map((card, index) => <option key={card.id} value={card.id}>第 {index + 1} 张</option>)}</select></label>
+          <label>主角照片<select aria-label="主角照片" value={hero.id ?? ""} disabled={!cards.length} onChange={event => updatePreference({ ...preference, heroId: event.target.value })}>{cards.map((card, index) => <option key={card.id} value={card.id}>第 {index + 1} 张</option>)}</select></label>
           <button type="button" disabled={cards.length < 2} onClick={() => updatePreference({ ...preference, seed: (preference.seed + 1) >>> 0 })}>换一种摆法</button>
           <label><input type="checkbox" checked={lines} disabled={preference.mode !== "constellation"} onChange={event => setLines(event.target.checked)} />星座连线</label>
         </div></details>
@@ -118,7 +121,7 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
             const box = event.currentTarget.getBoundingClientRect(), stage = stageRef.current!.getBoundingClientRect();
             if (box.left < stage.left + 24 || box.right > stage.right - 24 || box.top < stage.top + size.top || box.bottom > stage.bottom - 72) {
               cameraMode.current = "manual";
-              commit(composerView({ ...layout, heroIdx: [card.i], heroOnly: [card.i], heroPad: 0 }, size.width, size.height, size.top, "hero"));
+              commit(composerView({ ...layout, note: null, heroIdx: [card.i], heroOnly: [card.i], heroPad: 0 }, size.width, size.height, size.top, "hero"));
             }
           }}
           style={{ left: card.x - card.w / 2, top: card.y - card.h / 2, width: card.w, height: card.h, zIndex: card.z, "--angle": `${card.rot}deg` } as CSSProperties}>
