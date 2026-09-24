@@ -5,7 +5,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProper
 import type { SceneCard } from "./collection-scene";
 import { buildComposerLayout } from "./composer-layout";
 import { resolveComposerHero } from "./composer-selection";
-import { COMPOSER_MODES, composerSeed, composerView, parseComposerPreference, type ComposerPreference, type ComposerView } from "./composer-view";
+import { COMPOSER_MODES, composerSeed, composerView, parseComposerPreference, type ComposerBounds, type ComposerPreference, type ComposerView } from "./composer-view";
 import styles from "./composer.module.css";
 
 type Props = { cards: readonly SceneCard[]; sceneId: string; title?: string; description?: string;
@@ -22,25 +22,39 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
   const hero = resolveComposerHero(cards.map(card => card.id), preference.heroId, focusId, coverId);
   const [lines, setLines] = useState(true);
   const [size, setSize] = useState({ width: 1280, height: 800, top: 110, nav: 80 });
+  const [overlays, setOverlays] = useState<ComposerBounds[]>([]);
+  const cameraOptions = useMemo(() => ({mode:preference.mode,overlays}),[preference.mode,overlays]);
   const stageRef = useRef<HTMLDivElement>(null), headerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<ComposerView>({ x: 0, y: 0, scale: 1 });
   const [view, setView] = useState<ComposerView>({ x: 0, y: 0, scale: 1 });
   const cameraMode = useRef<"hero" | "fit" | "manual">("hero");
-  const drag = useRef<{ id: number; x: number; y: number; view: ComposerView } | null>(null);
+  const drag = useRef<{ id: number; x: number; y: number; view: ComposerView; moved: boolean } | null>(null);
+  const suppressClickUntil = useRef(0);
   const compact = size.width < 768;
   const layout = useMemo(() => buildComposerLayout(cards.map(card => ({ id: card.id, aspectRatio: card.asset?.aspectRatio ?? 1 })), {
     mode: preference.mode, seed: composerSeed(sceneId, preference), focusId: hero.id,
     viewportWidth: size.width, viewportHeight: size.height, viewportTop: size.top,
   }), [cards, hero.id, preference, sceneId, size.width, size.height, size.top]);
   const commit = useCallback((next: ComposerView) => { viewRef.current = next; setView(next); }, []);
-  const show = (mode: "hero" | "fit") => { cameraMode.current = mode; commit(composerView(layout, size.width, size.height, size.top, mode)); };
+  const show = (mode: "hero" | "fit") => { cameraMode.current = mode; commit(composerView(layout, size.width, size.height, size.top, mode, cameraOptions)); };
   useLayoutEffect(() => {
     const stage = stageRef.current, header = headerRef.current;
     if (!stage || !header) return;
     const nav = stage.closest("main")?.querySelector("header") ?? document.querySelector("header");
     const measure = () => {
       if (!stage.clientWidth) return;
-      const next = { width: stage.clientWidth, height: stage.clientHeight, top: header.offsetHeight + 24,
+      const stageBox=stage.getBoundingClientRect();
+      // Only persistent chrome counts: opening the options popover must not
+      // refit the scene underneath the visitor's pointer.
+      const parts=[header.querySelector(`.${styles.identity}`),header.querySelector(`.${styles.modes}`),header.querySelector("summary")];
+      const measured=parts.filter((element): element is Element=>Boolean(element)).map(element=>{
+        const range=element.tagName==="SUMMARY"?document.createRange():null;
+        if(range) range.selectNodeContents(element);
+        const box=range?range.getBoundingClientRect():element.getBoundingClientRect();
+        return {left:box.left-stageBox.left-(range?24:0),right:box.right-stageBox.left+(range?10:0),top:box.top-stageBox.top-(range?7:0),bottom:box.bottom-stageBox.top+(range?7:0)};
+      });
+      setOverlays(old=>JSON.stringify(old)===JSON.stringify(measured)?old:measured);
+      const next = { width: stage.clientWidth, height: stage.clientHeight, top: Math.max(0,...measured.map(box=>box.bottom))+8,
         nav: nav instanceof HTMLElement ? nav.offsetHeight : 80 };
       setSize(old => Object.keys(next).every(key => old[key as keyof typeof old] === next[key as keyof typeof next]) ? old : next);
     };
@@ -49,25 +63,42 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
     measure(); return () => observer.disconnect();
   }, []);
   useLayoutEffect(() => {
-    cameraMode.current = "hero";
+    cameraMode.current = preference.mode === "scatter" ? "fit" : "hero";
   }, [cards, hero.id, preference, sceneId]);
   useLayoutEffect(() => {
     if (compact || cameraMode.current === "manual") return;
-    const frame = requestAnimationFrame(() => commit(composerView(layout, size.width, size.height, size.top, cameraMode.current === "fit" ? "fit" : "hero")));
+    const frame = requestAnimationFrame(() => commit(composerView(layout, size.width, size.height, size.top, cameraMode.current === "fit" ? "fit" : "hero", cameraOptions)));
     return () => cancelAnimationFrame(frame);
-  }, [layout, size, compact, commit]);
+  }, [layout, size, compact, commit, cameraOptions]);
   const updatePreference = (next: ComposerPreference) => {
     const valid = parseComposerPreference(next); setPreference(valid);
     try { localStorage.setItem(preferenceKey(sceneId), JSON.stringify(valid)); } catch { /* Private/disabled storage: this visit still works. */ }
   };
+  useLayoutEffect(() => {
+    const stage = stageRef.current;
+    if (!stage || compact) return;
+    const wheel = (event: WheelEvent) => {
+      if ((event.target as Element).closest("button,select,input,a,summary,details") && !(event.target as Element).closest("[data-card-id]")) return;
+      event.preventDefault();
+      const old = viewRef.current, fit = composerView(layout, size.width, size.height, size.top, "fit", cameraOptions);
+      const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? size.height : 1);
+      const scale = Math.max(Math.min(.1, fit.scale), Math.min(2.4, old.scale * Math.exp(-Math.max(-200, Math.min(200, delta)) * .002)));
+      const rect = stage.getBoundingClientRect(), x = event.clientX - rect.left, y = event.clientY - rect.top, k = scale / old.scale;
+      cameraMode.current = "manual";
+      commit({ x: x - (x - old.x) * k, y: y - (y - old.y) * k, scale });
+    };
+    stage.addEventListener("wheel", wheel, { passive: false });
+    return () => stage.removeEventListener("wheel", wheel);
+  }, [compact, layout, size, commit, cameraOptions]);
   const zoom = (factor: number) => {
-    const old = viewRef.current, fit = composerView(layout, size.width, size.height, size.top, "fit");
+    const old = viewRef.current, fit = composerView(layout, size.width, size.height, size.top, "fit", cameraOptions);
     const scale = Math.max(Math.min(.1, fit.scale), Math.min(2.4, old.scale * factor)), k = scale / old.scale;
     cameraMode.current = "manual";
     commit({ x: size.width / 2 - (size.width / 2 - old.x) * k, y: size.height / 2 - (size.height / 2 - old.y) * k, scale });
   };
   const finishDrag = (id: number) => {
     if (drag.current?.id !== id) return;
+    if (drag.current.moved) suppressClickUntil.current = Date.now() + 250;
     drag.current = null;
     if (stageRef.current?.hasPointerCapture(id)) stageRef.current.releasePointerCapture(id);
   };
@@ -76,15 +107,22 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
     aria-label={`${title ?? "图集"}构图画布`} tabIndex={compact ? undefined : 0}
     style={{ "--nav": `${size.nav}px` } as CSSProperties}
     onPointerDown={event => {
-      if (compact || event.button !== 0 || (event.target as Element).closest("button,select,input,a,summary,details")) return;
-      drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY, view: viewRef.current };
-      event.currentTarget.setPointerCapture(event.pointerId);
+      const target = event.target as Element;
+      if (compact || event.button !== 0 || (target.closest("button,select,input,a,summary,details") && !target.closest("[data-card-id]"))) return;
+      event.preventDefault();
+      suppressClickUntil.current = 0;
+      drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY, view: viewRef.current, moved: false };
     }}
     onPointerMove={event => {
       const active = drag.current; if (!active || active.id !== event.pointerId) return;
+      if (!active.moved && Math.hypot(event.clientX - active.x, event.clientY - active.y) < 6) return;
+      active.moved = true;
+      if (!event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.setPointerCapture(event.pointerId);
       cameraMode.current = "manual";
       commit({ ...active.view, x: active.view.x + event.clientX - active.x, y: active.view.y + event.clientY - active.y });
     }} onPointerUp={event => finishDrag(event.pointerId)} onPointerCancel={event => finishDrag(event.pointerId)} onLostPointerCapture={() => { drag.current = null; }}
+    onDragStart={event => event.preventDefault()}
+    onClickCapture={event => { if (Date.now() < suppressClickUntil.current) { event.preventDefault(); event.stopPropagation(); } }}
     onKeyDown={event => {
       if (compact || event.target !== event.currentTarget) return;
       if (event.key === "0" || event.key === "Home") { event.preventDefault(); show("fit"); }
@@ -100,8 +138,8 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
     <div className={styles.header} ref={headerRef}>
       <div className={styles.identity}><button type="button" onClick={onBack}>← 返回图集首页</button><div><strong>{title || "未命名图集"}</strong><span>{cards.length} 张照片{description ? ` · ${description}` : ""}</span></div></div>
       <div className={styles.options}>
-        <div className={styles.modes} role="group" aria-label="构图"><span>构图</span>{COMPOSER_MODES.map(mode => <button type="button" key={mode} aria-pressed={mode === preference.mode} onClick={() => updatePreference({ ...preference, mode })}>{labels[mode]}</button>)}</div>
-        <details><summary>构图选项</summary><div className={styles.settings}>
+        <div className={styles.modes} role="group" aria-label="构图">{COMPOSER_MODES.map(mode => <button type="button" key={mode} aria-pressed={mode === preference.mode} onClick={() => updatePreference({ ...preference, mode })}>{labels[mode]}</button>)}</div>
+        <details><summary>调整摆放</summary><div className={styles.settings}>
           <label>主角照片<select aria-label="主角照片" value={hero.id ?? ""} disabled={!cards.length} onChange={event => updatePreference({ ...preference, heroId: event.target.value })}>{cards.map((card, index) => <option key={card.id} value={card.id}>第 {index + 1} 张</option>)}</select></label>
           <button type="button" disabled={cards.length < 2} onClick={() => updatePreference({ ...preference, seed: (preference.seed + 1) >>> 0 })}>换一种摆法</button>
           <label><input type="checkbox" checked={lines} disabled={preference.mode !== "constellation"} onChange={event => setLines(event.target.checked)} />星座连线</label>
@@ -117,7 +155,7 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
         return <button type="button" className={styles.card} data-card-id={card.id} data-role={card.role} data-rotation={card.rot} key={card.id}
           aria-label={`查看第 ${card.i + 1} 张照片${card.role === "hero" ? "（主角）" : ""}`} onClick={() => onOpen(card.id)}
           onFocus={event => {
-            if (compact) return;
+            if (compact || !event.currentTarget.matches(":focus-visible")) return;
             const box = event.currentTarget.getBoundingClientRect(), stage = stageRef.current!.getBoundingClientRect();
             if (box.left < stage.left + 24 || box.right > stage.right - 24 || box.top < stage.top + size.top || box.bottom > stage.bottom - 72) {
               cameraMode.current = "manual";

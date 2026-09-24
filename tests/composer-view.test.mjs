@@ -23,11 +23,21 @@ test("preferences accept only supported modes, unsigned integer seeds and safe I
   assert.notEqual(composerSeed("collection",valid),composerSeed("collection",{...valid,seed:17}));
   assert.notEqual(composerSeed("collection",valid),composerSeed("collection",{...valid,mode:"editorial"}));
 });
-test("automatic scatter view contains opening paper or completely excludes it for later heroes",()=>{
+// Explicit synthetic note: live scatter intentionally no longer creates one.
+// Keep the reusable camera's complete-note and exclusion boundary coverage.
+function withNoteFixture(layout,w,h,top){
+  if(!layout.cards.length)return {...layout,note:{cx:-240,cy:100,rot:-3.5}};
+  const b=composerBounds(layout),principal=composerBounds(layout,layout.heroOnly);
+  const scale=Math.min(1.05,(w-80)/(principal.right-principal.left),(h-top-72)/(principal.bottom-principal.top));
+  return {...layout,note:{cx:b.left-160-48/scale,cy:b.top+100,rot:-3.5}};
+}
+test("automatic camera contains an explicit opening-note fixture or completely excludes it for later heroes",()=>{
   for(const n of [2,11,13,40,200]) for(const ratios of (n===11 || n===13 ? [[1.5,2/3,1],[1.5],[2/3],[.12,6]] : [[1.5,2/3,1]])) for(const seed of [0,6,17,233]) for(const focus of [0,Math.floor(n/2),n-1]){
     const input=Array.from({length:n},(_,i)=>({id:"p"+i,aspectRatio:ratios[i%ratios.length]}));
     for(const [w,h,top] of [[1440,820,146],[1024,680,180]]){
-      const layout=build(input,{mode:"scatter",seed,focusId:input[focus].id,viewportWidth:w,viewportHeight:h,viewportTop:top});
+      const scene=build(input,{mode:"scatter",seed,focusId:input[focus].id,viewportWidth:w,viewportHeight:h,viewportTop:top});
+      assert.equal(scene.note,null);
+      const layout=withNoteFixture(scene,w,h,top);
       const note=composerNoteBounds(layout);
       assert.ok(note);
       const view=composerView(layout,w,h,top,"hero");
@@ -47,7 +57,8 @@ test("automatic scatter view contains opening paper or completely excludes it fo
 test("FIT includes whole decorated cards and rotated note for 0, 1 and 500 photos",()=>{
   for(const mode of ["constellation","scatter","editorial"]) for(const n of [0,1,11,13,500]){
     const input=Array.from({length:n},(_,i)=>({id:"p"+i,aspectRatio:[2/3,1.5,1][i%3]}));
-    const layout=build(input,{mode,seed:233,focusId:input[4]?.id});
+    const scene=build(input,{mode,seed:233,focusId:input[4]?.id});
+    const layout=mode==="scatter"?withNoteFixture(scene,1440,820,146):scene;
     const bounds=composerBounds(layout);
     for(const [w,h,top] of [[1440,820,146],[1024,680,180],[390,650,180]]){
       const v=composerView(layout,w,h,top,"fit");
@@ -103,4 +114,26 @@ test("constellation hero camera does not turn a cross-row neighbour into a dista
   const group=composerBounds(layout,layout.heroOnly);
   assert.ok(group.top*view.scale+view.y>=110-1e-6 && group.bottom*view.scale+view.y<=748+1e-6);
   assert.deepEqual(layout.cards.map(card=>card.id),input.map(card=>card.id));
+});
+test("scatter corner-aware FIT uses empty top space without covering controls or clipping cards",()=>{
+  for(const n of [1,11,13,40,200]) for(const [w,h] of [[1920,900],[1440,820],[1024,688]]){
+    const layout=build(Array.from({length:n},(_,i)=>({id:"p"+i,aspectRatio:[1.5,2/3,1][i%3]})),{mode:"scatter",seed:23,viewportWidth:w,viewportHeight:h,viewportTop:110});
+    const overlays=[{left:24,right:Math.min(460,w*.45),top:18,bottom:88},{left:w-260,right:w-24,top:18,bottom:98}];
+    const options={mode:"scatter",overlays};
+    const legacy=composerView(layout,w,h,110,"fit"),view=composerView(layout,w,h,110,"fit",options);
+    assert.ok(view.scale>=legacy.scale);
+    const b=composerBounds(layout);
+    assert.ok(b.left*view.scale+view.x>=40-1e-6 && b.right*view.scale+view.x<=w-40+1e-6);
+    assert.ok(b.top*view.scale+view.y>=24-1e-6 && b.bottom*view.scale+view.y<=h-72+1e-6);
+    for(let i=0;i<n;i++){
+      const box=composerBounds(layout,[i]);
+      for(const o of overlays) assert.ok(box.right*view.scale+view.x<=o.left-8+1e-6 || box.left*view.scale+view.x>=o.right+8-1e-6 || box.bottom*view.scale+view.y<=o.top-8+1e-6 || box.top*view.scale+view.y>=o.bottom+8-1e-6);
+    }
+    assert.deepEqual(composerView(layout,w,h,110,"fit",options),view);
+    for(const mode of ["constellation","editorial"]) assert.deepEqual(composerView(layout,w,h,110,"fit",{...options,mode}),legacy,"explicit mode prevents cross-template camera changes");
+    assert.deepEqual(composerView(layout,w,h,110,"hero",options),composerView(layout,w,h,110,"hero"));
+  }
+  const layout=build([{id:"portrait",aspectRatio:2/3}],{mode:"scatter",seed:0});
+  const overlays=[{left:24,right:400,top:18,bottom:98},{left:1660,right:1896,top:18,bottom:98}];
+  assert.ok(composerView(layout,1920,520,110,"fit",{mode:"scatter",overlays}).scale>composerView(layout,1920,520,110,"fit").scale,"central photo can reclaim vacant header space");
 });

@@ -4,7 +4,7 @@ import test from "node:test";
 import ts from "typescript";
 const source = await fs.readFile(new URL("../app/templates/polaroid-field/composer-layout.ts",import.meta.url),"utf8");
 const js = ts.transpileModule(source+"\nexport {frameFor,makeCard};",{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
-const {buildComposerLayout:build,composerCardBounds:bounds,composerPhotoIsOccluded,composerSheetsOverlap,frameFor,makeCard} = await import("data:text/javascript;base64,"+Buffer.from(js).toString("base64"));
+const {buildComposerLayout:build,composerCardBounds:bounds,composerPhotoIsOccluded,composerCaptionIsOccluded,composerSheetsOverlap,frameFor,makeCard} = await import("data:text/javascript;base64,"+Buffer.from(js).toString("base64"));
 const modes = ["constellation","scatter","editorial"];
 const members = n => Array.from({length:n},(_,i)=>({id:"member-"+i,aspectRatio:[1.5,2/3,1,2.1,.5][i%5]}));
 test("unchanged prototype sizing primitives preserve their exact formulas",()=>{
@@ -69,7 +69,7 @@ test("prototype roles and decoration remain mode-specific and seed changes posit
     assert.equal(a.cards[8].role,"hero");
     assert.notDeepEqual(a.cards.map(c=>[c.x,c.y,c.rot]),b.cards.map(c=>[c.x,c.y,c.rot]));
     if(mode==="constellation"){assert.equal(a.lines.length,12);assert.ok(a.cards.every(c=>c.pin));}
-    if(mode==="scatter"){assert.ok(a.note);assert.ok(a.cards.some(c=>c.tape));}
+    if(mode==="scatter"){assert.equal(a.note,null);assert.ok(a.cards.some(c=>c.tape));}
     if(mode==="editorial"){assert.equal(a.heroPad,undefined);assert.ok(a.heroIdx.length>1);assert.equal(a.lines.length,0);assert.equal(a.note,null);}
   }
 });
@@ -81,6 +81,7 @@ test("scatter protects actual rotated photo polygons while retaining paper overl
   for(let a=0;a<n;a++)for(let b=a+1;b<n;b++){
    const x=result.cards[a],y=result.cards[b], back=x.z<y.z?x:y, front=x.z<y.z?y:x;
    assert.equal(composerPhotoIsOccluded(back,front),false,JSON.stringify({n,seed,a,b,ratios}));
+   assert.equal(composerCaptionIsOccluded(back,front),false,"numbering remains readable: "+JSON.stringify({n,seed,a,b,ratios}));
    if(composerSheetsOverlap(x,y)) paperOverlap++;
   }
  }
@@ -151,4 +152,25 @@ test("editorial evaluates bounded row choices against projected real photo areas
   }
  }
  assert.ok(selectedThree,"two auxiliary rows are a candidate rather than a permanent limit");
+});
+test("scatter is a whole two-dimensional desk rather than a row path",()=>{
+ for(const n of [11,13,40])for(const seed of [0,183,7919]){
+  const input=Array.from({length:n},(_,i)=>({id:"desk-"+i,aspectRatio:1.5}));
+  const layout=build(input,{mode:"scatter",seed,focusId:input[4].id,viewportWidth:1440,viewportHeight:820,viewportTop:150});
+  assert.equal(layout.meta.selectedRows,0);
+  assert.ok(new Set(layout.cards.map(c=>Math.round((c.y-layout.cards[0].y)*1000))).size>=n*.9,"translation-invariant coordinates do not share row baselines");
+  const area=layout.cards.map(c=>c.pw*c.ph);
+  assert.ok(Math.max(...area)/Math.min(...area)<2,"scatter hierarchy is restrained relative to constellation");
+  assert.equal(layout.note,null,"the scene header supplies the collection identity without a duplicate desk note");
+  const boxes=layout.cards.map(c=>bounds(c,30));
+  assert.ok(Math.abs(layout.world.w-(Math.max(...boxes.map(b=>b.r))-Math.min(...boxes.map(b=>b.l))+160))<1e-7,"world width contains only the decorated photographs and existing padding");
+  assert.deepEqual(layout.cards.map(c=>c.id),input.map(c=>c.id));
+ }
+});
+test("caption protection includes foreground tape outside its paper without expanding photo protection",()=>{
+ const base=makeCard(0,{id:"caption",r:1},"small",36000,"scatter");
+ const back={...base,x:0,y:0,rot:0,w:200,h:200,pw:180,ph:150,f:{side:10,top:10,bottom:40},cap:"left"};
+ const front={...base,id:"tape",x:-40,y:150,rot:0,w:80,h:100,pw:60,ph:50,tape:{x:.5,w:75,rot:0,color:"#c3d2f2"}};
+ assert.equal(composerPhotoIsOccluded(back,front),false);
+ assert.equal(composerCaptionIsOccluded(back,front),true,"tape can extend above the foreground paper into a number");
 });

@@ -69,6 +69,33 @@ export function composerPhotoIsOccluded(back: ComposerCard, front: ComposerCard)
   if(A.r<=B.l || B.r<=A.l || A.b<=B.t || B.b<=A.t) return false;
   return separation(polygon(back,true),polygon(front,false))!==null;
 }
+function captionPolygon(c: ComposerCard): Point[] {
+  const font=Math.max(15,Math.min(34,c.f.bottom*.5));
+  const letters=3+Math.max(2,String(c.i+1).length)+(c.role==="hero"?2:0);
+  const width=Math.min(c.w-c.f.side*2,font*.85*letters+8);
+  const height=Math.min(c.f.bottom,font*1.2+4);
+  const left=c.cap==="right"?c.w/2-c.f.side-width:-c.w/2+c.f.side;
+  const top=c.h/2-c.f.bottom/2-height/2;
+  const a=c.rot*Math.PI/180,cs=Math.cos(a),sn=Math.sin(a);
+  return [[left,top],[left+width,top],[left+width,top+height],[left,top+height]]
+    .map(([x,y])=>({x:c.x+x*cs-y*sn,y:c.y+x*sn+y*cs}));
+}
+export function composerCaptionIsOccluded(back: ComposerCard, front: ComposerCard): boolean {
+  const A=aabb(back),B=aabb(front,24);
+  if(A.r<=B.l || B.r<=A.l || A.b<=B.t || B.b<=A.t)return false;
+  return separation(captionPolygon(back),captionObstacle(front))!==null;
+}
+// Caption-only conservative obstacle includes tape outside the foreground sheet.
+// Photo protection intentionally still tests the actual paper polygon.
+function captionObstacle(front: ComposerCard): Point[] {
+  const b=aabb(front,24);
+  return [{x:b.l,y:b.t},{x:b.r,y:b.t},{x:b.r,y:b.b},{x:b.l,y:b.b}];
+}
+function scatterCorrection(back: ComposerCard, front: ComposerCard): Point | null {
+  if(composerPhotoIsOccluded(back,front))return separation(polygon(back,true),polygon(front,false));
+  if(composerCaptionIsOccluded(back,front))return separation(captionPolygon(back),captionObstacle(front));
+  return null;
+}
 export function composerSheetsOverlap(a: ComposerCard, b: ComposerCard): boolean {
   return separation(polygon(a,false),polygon(b,false))!==null;
 }
@@ -90,9 +117,9 @@ function makeCard(i: number, m: Member, role: ComposerCard['role'], area: number
 const P_CONST: Parameters = { id:'constellation', base:38000, heroK:3.4, leadK:1.4, jitter:.1, tuck:.13, downA:-.04, upB:.06, fanGap:16, satOverlap:.03,
   maxCluster:3, heroCluster:3, sizes:[2,3,3,2], tpl2:['fan','chainD','chainU'], tpl3:['fanChain','zig'], gap:[170,260], heroGapK:1.3,
   wave:.18, aspect:2.4, rowGapK:.35, rot:{hero:[0,1],lead:[1.2,3],sat:[2.6,6]}, serpentine:true, pins:true, tapeP:0, margin:12 };
-const P_SCATTER: Parameters = { id:'scatter', base:36000, heroK:2.3, leadK:1.45, jitter:.14, tuck:.15, downA:-.12, upB:.14, fanGap:-18, satOverlap:.2,
+const P_SCATTER: Parameters = { id:'scatter', base:36000, heroK:1.45, leadK:1.08, jitter:.14, tuck:.15, downA:-.12, upB:.14, fanGap:-18, satOverlap:.2,
   maxCluster:5, heroCluster:3, sizes:[3,4,3,5,4], tpl2:['fan','chainD','chainU','sideBelow'], tpl3:['fanChain','zig'], gap:[40,90], heroGapK:1.25,
-  wave:.1, aspect:1.8, rowGapK:.2, rot:{hero:[1,2.4],lead:[2,4.5],sat:[4,9]}, serpentine:false, pins:false, tapeP:.9, margin:8, note:true };
+  wave:.1, aspect:1.8, rowGapK:.2, rot:{hero:[1,2.4],lead:[2,4.5],sat:[4,9]}, serpentine:false, pins:false, tapeP:.9, margin:8 };
 
 function makeClusters(n: number, h: number, P: Parameters, rng: () => number){
   const segs = h > 0 ? [[0,h],[h,n]] : [[0,n]], out = [];
@@ -180,6 +207,45 @@ function buildCluster(cl: Cluster, cards: ComposerCard[], dir: number, P: Parame
   return { idx, pos, z, cap, box, w: box.r - box.l, h: box.b - box.t };
 }
 
+/** A loose two-dimensional desk, not the constellation's group-by-row path. */
+function layoutScatteredDesk(cards: ComposerCard[], h: number, seed: number, availableW: number, availableH: number): RawLayout {
+  const rng=mulberry32(seed ^ 0x6a09e667),phase=rng()*Math.PI*2;
+  const aspect=clamp(availableW/availableH,1.2,2.6),stretch=Math.sqrt(aspect);
+  const step=Math.sqrt(median(cards.map(c=>c.w*c.h)))*.72;
+  cards.forEach((c,i)=>{
+    // Golden-angle disk sampling has neither common row baselines nor rings.
+    const angle=phase+i*Math.PI*(3-Math.sqrt(5))+(rng()-.5)*.2;
+    const radius=step*Math.sqrt(i+.5)*(1+(rng()-.5)*.14);
+    c.x=Math.cos(angle)*radius*stretch;c.y=Math.sin(angle)*radius/stretch;
+    c.z=i===h?cards.length+30:cards.length+10-i;
+    c.cap=i%2?"right":"left";
+  });
+  const frontToBack=[...cards].sort((a,b)=>b.z-a.z),placed: ComposerCard[]=[];
+  for(const c of frontToBack){
+    for(let pass=0;pass<32;pass++){
+      let moved=false;
+      for(const front of placed){
+        const move=scatterCorrection(c,front);
+        if(move){c.x+=move.x;c.y+=move.y;moved=true;}
+      }
+      if(!moved)break;
+    }
+    // Bounded radial escape if several foreground sheets constrain one corner.
+    const distance=Math.hypot(c.x,c.y)||1,dx=c.x/distance||1,dy=c.y/distance;
+    for(let pass=0;pass<600 && placed.some(front=>scatterCorrection(c,front));pass++){
+      c.x+=dx*16;c.y+=dy*16;
+    }
+    placed.push(c);
+  }
+  const photoBounds=union(cards.map(c=>aabb(c,36)));
+  // The scene header already identifies the collection: no duplicate desk note.
+  const width=photoBounds.r-photoBounds.l,height=photoBounds.b-photoBounds.t;
+  const fitScale=Math.min(availableW/width,availableH/height);
+  const nearest=cards.filter(c=>c.i!==h).sort((a,b)=>Math.hypot(a.x-cards[h].x,a.y-cards[h].y)-Math.hypot(b.x-cards[h].x,b.y-cards[h].y)).slice(0,2).map(c=>c.i);
+  return {cards,lines:[],note:null,heroIdx:[h,...nearest],heroOnly:[h],openingCluster:[0],
+    heroStartsOpeningCluster:h===0,wm:false,defaultView:"fit",
+    meta:{selectedRows:0,availableW,availableH,candidates:[{rows:0,width,height,fitScale}]}};
+}
 function layoutClusters(members: Member[], h: number, P: Parameters, seed: number, availableW: number, availableH: number): RawLayout{
   const n = members.length, rng = mulberry32(seed);
   const cl = makeClusters(n, h, P, rng), cards = new Array<ComposerCard>(n);
@@ -203,6 +269,7 @@ function layoutClusters(members: Member[], h: number, P: Parameters, seed: numbe
       if (c.role === 'hero') c.tape2 = { color: washiFor(rng), x:.88, w: clamp(c.w*.24, 46, 96), rot: 36 };
     }
   });
+  if(P.id==='scatter') return layoutScatteredDesk(cards,h,seed,availableW,availableH);
   const clusterSeed = (ci: number) => (seed ^ Math.imul(ci + 1, 2654435761)) >>> 0;
   const pre = cl.map((c, ci) => buildCluster(c, cards, 1, P, mulberry32(clusterSeed(ci))));
   const heroCi = cl.findIndex(c => c.start === h);

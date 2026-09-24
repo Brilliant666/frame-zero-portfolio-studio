@@ -18,6 +18,7 @@ export function composerSeed(id: string, preference: ComposerPreference) {
 }
 export type ComposerView = { x: number; y: number; scale: number };
 export type ComposerBounds = { left: number; top: number; right: number; bottom: number };
+export type ComposerFitOptions = { mode: ComposerMode; overlays: readonly ComposerBounds[] };
 export function composerNoteBounds(layout: ComposerLayout): ComposerBounds | null {
   if (!layout.note) return null;
   const note = layout.note, a = note.rot * Math.PI / 180;
@@ -43,12 +44,40 @@ export function composerBounds(layout: ComposerLayout, indices?: readonly number
     right: Math.max(...boxes.map(b => b.right)), bottom: Math.max(...boxes.map(b => b.bottom)) } : { left: 0, top: 0, right: 1, bottom: 1 };
 }
 /** Prototype fitBox/showHero, with measured overlays and no fixed minimum scale. */
-export function composerView(layout: ComposerLayout, width: number, height: number, top: number, mode: "hero" | "fit"): ComposerView {
+export function composerView(layout: ComposerLayout, width: number, height: number, top: number, mode: "hero" | "fit", options?: ComposerFitOptions): ComposerView {
   const fit = (box: ComposerBounds, maximum: number): ComposerView => {
     const scale = Math.min(maximum, Math.max(1, width - 80) / Math.max(1, box.right - box.left), Math.max(1, height - top - 72) / Math.max(1, box.bottom - box.top));
     return { x: width / 2 - (box.left + box.right) * scale / 2, y: (top + height - 72) / 2 - (box.top + box.bottom) * scale / 2, scale };
   };
   const all = fit(composerBounds(layout), 1);
+  if (mode === "fit" && options?.mode === "scatter" && options.overlays.length && layout.cards.length) {
+    const bounds = composerBounds(layout), boxes = layout.cards.map((_,i) => composerBounds(layout,[i]));
+    const noteBounds = composerNoteBounds(layout); if (noteBounds) boxes.push(noteBounds);
+    const obstacles = options.overlays.map(b => ({left:b.left-8,right:b.right+8,top:b.top-8,bottom:b.bottom+8}));
+    const upper = Math.min(1, Math.max(1,width-80)/(bounds.right-bounds.left), Math.max(1,height-24-72)/(bounds.bottom-bounds.top));
+    // Bounded search, with the original full-header fit as a guaranteed fallback.
+    // Try larger safe views first; card geometry/order never changes here.
+    for (let step=0;step<12;step++) {
+      const scale = upper + (all.scale-upper)*step/12;
+      if (scale<=all.scale) break;
+      const minX=40-bounds.left*scale,maxX=width-40-bounds.right*scale;
+      const minY=24-bounds.top*scale,maxY=height-72-bounds.bottom*scale;
+      const centerX=(minX+maxX)/2,centerY=(minY+maxY)/2;
+      for (const x of [centerX,minX,maxX]) {
+        const candidates=[centerY,minY,maxY];
+        for(const box of boxes) for(const obstacle of obstacles) {
+          if(box.right*scale+x<=obstacle.left || box.left*scale+x>=obstacle.right) continue;
+          candidates.push(obstacle.top-box.bottom*scale,obstacle.bottom-box.top*scale);
+        }
+        const ys=[...new Set(candidates)].filter(y=>y>=minY-1e-7 && y<=maxY+1e-7)
+          .sort((a,b)=>Math.abs(a-centerY)-Math.abs(b-centerY)).slice(0,20);
+        for(const y of ys) {
+          const clear=boxes.every(box=>obstacles.every(obstacle=>box.right*scale+x<=obstacle.left+1e-7 || box.left*scale+x>=obstacle.right-1e-7 || box.bottom*scale+y<=obstacle.top+1e-7 || box.top*scale+y>=obstacle.bottom-1e-7));
+          if(clear) return {x,y,scale};
+        }
+      }
+    }
+  }
   if (mode === "fit" || !layout.cards.length) return all;
   const note = composerNoteBounds(layout);
   const opening = new Set(layout.openingCluster ?? []);
