@@ -76,13 +76,16 @@ export function useConstellationViewport({ viewportRef, canvasRef, layoutKey, ge
     const fitRects = safeReserve > 0 && cards.length
       ? [...cards, { left: left - safeReserve, top, width: safeReserve, height: bottom - top, rotation: 0 }]
       : cards;
-    const fit = fitRectsToViewport({ width: viewport.clientWidth, height: viewport.clientHeight }, { width: canvas.offsetWidth, height: canvas.offsetHeight }, fitRects, 32);
+    const heading = decorationMargin && viewport.dataset.home === "false" ? viewport.previousElementSibling as HTMLElement : null;
+    const inset = heading ? Math.max(72, heading.offsetHeight + 16) : 32;
+    const fit = fitRectsToViewport({ width: viewport.clientWidth, height: viewport.clientHeight }, { width: canvas.offsetWidth, height: canvas.offsetHeight }, fitRects, inset);
     const focus = cards[callbacks.current.getFocusIndex?.() ?? 4] ?? cards[0];
     if (!fit || !focus) return null;
     fitRef.current = fit;
     minimumRef.current = getMinimumScale(fit.view.scale, PREFERRED_MIN_SCALE);
     setMinimumScale((current) => Math.abs(current - minimumRef.current) < .0001 ? current : minimumRef.current);
-    const group = readableGroupSize ? [...cards].sort((a, b) => {
+    const start = Math.max(0, Math.min(cards.length - 3, cards.indexOf(focus) - 1));
+    const group = readableGroupSize === 3 ? cards.slice(start, start + 3) : readableGroupSize ? [...cards].sort((a, b) => {
       const distance = (card: typeof focus) => Math.hypot(card.left + card.width / 2 - focus.left - focus.width / 2, card.top + card.height / 2 - focus.top - focus.height / 2);
       return distance(a) - distance(b);
     }).slice(0, readableGroupSize) : [];
@@ -131,6 +134,7 @@ export function useConstellationViewport({ viewportRef, canvasRef, layoutKey, ge
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(schedule);
     observer?.observe(viewport);
     observer?.observe(canvas);
+    if (decorationMargin && viewport.previousElementSibling) observer?.observe(viewport.previousElementSibling);
     if (!observer) window.addEventListener("resize", schedule);
     desktopQuery.addEventListener("change", mediaChanged);
     return () => {
@@ -139,7 +143,7 @@ export function useConstellationViewport({ viewportRef, canvasRef, layoutKey, ge
       desktopQuery.removeEventListener("change", mediaChanged);
       if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
     };
-  }, [canvasRef, commitView, constrain, enabled, layoutKey, updateFitGeometry, viewportRef]);
+  }, [canvasRef, commitView, constrain, enabled, layoutKey, updateFitGeometry, viewportRef, decorationMargin]);
 
   useEffect(() => {
     const viewport = viewportRef.current;

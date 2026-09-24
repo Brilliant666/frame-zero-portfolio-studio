@@ -19,7 +19,7 @@ async function load(t) {
 
 test("compositions preserve IDs, order, ratios and rotated boundaries across counts and orientations", async (t) => {
   const { buildCollectionPhotoComposition: build, getPhotoCompositionBounds, fitRectsToViewport } = await load(t);
-  for (const count of [0, 1, 2, 9, 13, 40, 200]) for (const ratios of [[1.5], [2 / 3], [2, 0.5, 1, 16 / 9], [0.001, 1000, NaN, 0, -1, Infinity]]) for (const viewportWidth of [1440, 769, 768, 767, 390, 375, 320]) {
+  for (const count of [0, 1, 2, 3, 9, 11, 12, 13, 40, 200]) for (const ratios of [[1.5], [2 / 3], [2, 0.5, 1, 16 / 9], [0.001, 1000, NaN, 0, -1, Infinity]]) for (const viewportWidth of [1440, 769, 768, 767, 390, 375, 320]) {
     const cards = Array.from({ length: count }, (_, index) => ({ id: `asset-${index}`, aspectRatio: ratios[index % ratios.length] }));
     const options = { viewportWidth, focusId: cards[2]?.id };
     const result = build(cards, options);
@@ -57,15 +57,20 @@ test("sequential reading groups preserve focus identity without moving it before
     for (const ids of layout.readingGroups) {
       const boxes = ids.map((id) => getPhotoCompositionBounds(layout.placements.find((card) => card.id === id)));
       for (let index = 1; index < boxes.length; index++) assert.ok(boxes[index].left > boxes[index - 1].right);
-      if (priorGroup) assert.ok(boxes[0].left > priorGroup.right || boxes[0].top > priorGroup.bottom, "next group is to the right or below, never inserted before its predecessor");
+      if (priorGroup && (count < 3 || count > 16)) assert.ok(boxes[0].left > priorGroup.right || boxes[0].top > priorGroup.bottom, "large groups keep their existing reading bands");
       priorGroup = { right: Math.max(...boxes.map((box) => box.right)), bottom: Math.max(...boxes.map((box) => box.bottom)) };
     }
   }
   const layout = build(cards, { focusId: "asset-4" });
+  for (const count of [11, 13]) {
+    const wide = build(Array.from({ length: count }, (_, index) => ({ id: String(index), aspectRatio: 2 / 3 })));
+    assert.ok(wide.canvasWidth / wide.canvasHeight > 1.6, "portrait collections spread across a landscape canvas");
+  }
   const area = (card) => card.photoWidth * card.photoHeight;
   assert.equal(layout.focusId, "asset-4");
   assert.ok(area(layout.placements[4]) > area(layout.placements[0]) * 1.4);
-  assert.equal(layout.threads.length, 0);
+  assert.equal(layout.threads.length, cards.length - 1);
+  assert.equal(new Set(layout.placements.map((card) => Math.round(card.top))).size, cards.length, "small collections do not share row baselines");
   assert.equal(build(cards, { focusId: "absent" }).focusId, "asset-0");
   assert.throws(() => build([cards[0], cards[0]]), /unique/);
   assert.throws(() => build(Array.from({ length: 501 }, (_, index) => ({ id: String(index), aspectRatio: 1 }))), /500/);
@@ -105,7 +110,7 @@ test("photo composition is explicit saved-workspace presentation, not a cover or
   assert.ok(scene.includes("enabled: !(readOnly && compact)"));
   assert.ok(scene.includes("decorationMargin: readOnly ? 24 : 0"));
   assert.ok(scene.includes("data-scene-shell"));
-  const css = await read("collection.module.css");
+  const css = await read("scene.module.css");
   assert.match(css, /\.sceneShell \.canvas\s*\{\s*isolation:\s*isolate/,
     "natural mobile canvas must isolate large card z-index values beneath Lightbox");
   assert.ok(scene.includes("item.id === placement.id"));
@@ -114,7 +119,7 @@ test("photo composition is explicit saved-workspace presentation, not a cover or
   assert.ok(scene.includes('data-composition={composed ? "pasted" : undefined}'));
   assert.ok(scene.includes('<div className={field.canvasTitle} aria-hidden="true">'));
   assert.ok(!scene.includes('method: "PUT"'));
-  assert.ok(scene.includes("readableGroupSize: composed ? 7 : undefined"));
+  assert.ok(scene.includes('initialMode: "overview"'));
   const viewport = await read("use-constellation-viewport.ts");
   assert.ok(viewport.includes("readableGroupSize ? [...cards]"));
   assert.ok(viewport.includes("if (geometry.readableFit)"));

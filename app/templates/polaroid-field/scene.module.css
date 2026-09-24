@@ -62,23 +62,25 @@
   :global([data-composition]) .sceneHeading { position: absolute; margin: 0; padding: 0; }
 }
 
-.sceneShell { display: grid; grid-template-rows: auto minmax(360px, 1fr) auto; min-width: 0; background: #e9e1d0; }
-.sceneShell[data-home="true"] { grid-template-columns: minmax(180px, 25%) minmax(0, 1fr); grid-template-rows: minmax(360px, 1fr) auto; }
-.sceneHeader { min-width: 0; padding: 18px 24px; overflow-wrap: anywhere; }
+.sceneShell { position: relative; min-width: 0; background: linear-gradient(#1822270e 1px, transparent 1px) 0 0 / 4rem 4rem, linear-gradient(90deg, #1822270e 1px, transparent 1px) 0 0 / 4rem 4rem, radial-gradient(circle, #1822272b 0 .7px, transparent .8px) 0 0 / 10px 10px, #e9e1d0; }
+.sceneHeader { position: absolute; z-index: 24; top: 0; left: 0; max-width: 100%; padding: 18px 24px; overflow-wrap: anywhere; pointer-events: none; }
 .sceneHeader .sceneHeading, .sceneHeader .identity { position: static; width: auto; margin: 0; padding: 0; pointer-events: auto; }
 .sceneHeader .sceneHeading { align-items: start; flex-wrap: wrap; gap: 12px; }
 .sceneHeader .sceneHeading div { min-width: 0; max-width: 100%; flex: 0 1 auto; }
-.sceneHeader .identity h1 { font-size: clamp(28px, 3vw, 44px); }
-.sceneHeader .identity h1 span { white-space: normal; }
-.sceneShell .viewport { min-height: 0; height: 100%; margin: 0; padding: 0; }
+.sceneHeader .identity h1 { font-size: clamp(42px, 5.3vw, 104px); }
+.sceneHeader .identity h1 span { white-space: normal; text-wrap: balance; }
+.sceneShell .viewport { min-height: 0; height: 100%; margin: 0; padding: 0; background: transparent; border: 0; box-shadow: none; }
 .sceneShell .canvas { isolation: isolate; }
-.sceneTools { grid-column: 1 / -1; display: flex; justify-content: flex-end; align-items: center; gap: 16px; padding: 12px 24px; }
-.sceneTools .controls { display: flex; position: static; }
-.sceneTools > button { padding: 12px; border: 1px solid; background: var(--paper); cursor: pointer; }
+.sceneShell > .controls { display: flex; position: absolute; z-index: 24; right: 24px; bottom: 16px; top: auto; }
+.sceneShell[data-home="true"] .sceneHeader { display: flex; flex-direction: column; justify-content: space-between; width: 25%; height: 90%; padding: clamp(24px, 5vw, 96px) 24px 24px clamp(24px, 5vw, 96px); }
+.homeActions { position: static; margin-top: 32px; pointer-events: auto; }
+.homeActions button { min-width: 0; }
+.sceneShell .thread::before { background: #e9c76b; border: 2px solid var(--ink); box-shadow: 0 0 0 4px #e9c76b33; }
 .sceneShell .card { box-shadow: 0 8px 16px #18222730, 0 3px 5px #18222733; transform: rotate(var(--rotation)); }
 .sceneShell .card:hover, .sceneShell .card:focus-visible { transform: rotate(var(--rotation)); box-shadow: 0 8px 16px #18222730; }
 .sceneShell[data-home="true"] .caption { height: 84px; }
 .sceneShell[data-home="true"] .caption strong { white-space: normal; font-size: 15px; line-height: 17px; overflow-wrap: anywhere; }
 .sceneShell[data-compact="true"] { display: block; height: auto; min-height: 0; }
+.sceneShell[data-compact="true"] .sceneHeader { position: relative; width: auto; height: auto; }
 .sceneShell[data-compact="true"] .viewport { cursor: auto; touch-action: pan-y pinch-zoom; }
 .sceneShell[data-compact="true"] .canvas { top: 0; left: 0; transform: none !important; transition: none; }

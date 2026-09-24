@@ -9,7 +9,7 @@ import { buildCollectionPhotoComposition } from "./collection-photo-composition"
 import { useConstellationViewport } from "./use-constellation-viewport";
 import type { ViewState } from "./viewport-fit";
 import field from "./field.module.css";
-import styles from "./collection.module.css";
+import styles from "./scene.module.css";
 
 export type SceneCard = {
   id: string; asset: PhotoAsset | null; title: string; subtitle: string;
@@ -52,12 +52,12 @@ export default function CollectionScene({ cards, sceneId, title, description, co
   const getFocusIndex = useCallback(() => Math.max(0, cards.findIndex((card) => card.id === layout.focusId)), [cards, layout.focusId]);
   const camera = useConstellationViewport({
     viewportRef, canvasRef, layoutKey: layout, getFocusIndex,
-    initialMode: compact ? "overview" : isHome ? "focus" : cards.length <= 9 ? "overview" : "readable",
+    initialMode: "overview",
     mobileEnabled: true, enabled: !(readOnly && compact), decorationMargin: readOnly ? 24 : 0,
-    reserveLeft: !readOnly && isHome && width > 800 ? 360 : 0, initialView, onViewChange,
-    readableGroupSize: composed ? 7 : undefined,
+    reserveLeft: isHome && width > 800 ? 360 : 0, initialView, onViewChange,
   });
   const { showOverview } = camera;
+  const overviewLabel = camera.sceneMode === "overview" ? "返回首页构图" : "查看全部图集";
   useEffect(() => {
     if (previousCompact.current === compact) return;
     previousCompact.current = compact;
@@ -73,7 +73,7 @@ export default function CollectionScene({ cards, sceneId, title, description, co
   }, [restoreFocusId]);
 
   const photoHeading = <><button type="button" onClick={onBack}>← 返回图集首页</button>
-    <div><strong>{title}</strong><span>{cards.length} 张照片{description ? ` · ${description}` : ""}</span>{composed && <span>{compact ? "按编号向下浏览 · 点击照片查看大图" : "按编号浏览 · 拖动画布 · FIT 查看全部"}</span>}</div></>;
+    <div><strong>{title}</strong><span>{cards.length} 张照片{description ? ` · ${description}` : ""}</span></div></>;
   const identity = <div className={`${field.sceneIdentity} ${styles.identity}`}>
     {(readOnly ? content.hero.eyebrow : content.profile.photographer) && <small>{readOnly ? content.hero.eyebrow : `${content.profile.photographer} · 摄影作品`}</small>}
     <h1>{content.profile.photographer}{(!readOnly || content.hero.title) && <span>{readOnly ? content.hero.title : "漂浮拍立得星图"}</span>}</h1>
@@ -123,14 +123,14 @@ export default function CollectionScene({ cards, sceneId, title, description, co
     </div>
     {!cards.length && <p className={styles.empty}>{readOnly ? "暂无可展示照片。素材可能尚未添加、已回收或暂时不可用。" : "这个图集还没有照片。可在临时配置中选择素材。"}</p>}
     {!readOnly && isHome && <div className={`${field.sceneActions} ${styles.actions}`} data-field-controls>
-      <button type="button" onClick={camera.sceneMode === "overview" ? camera.showFocus : camera.showOverview}>{camera.sceneMode === "overview" ? "返回首页构图" : "查看全部图集"}<span>↗</span></button>
+      <button type="button" onClick={camera.sceneMode === "overview" ? camera.showFocus : camera.showOverview}>{overviewLabel}<span>↗</span></button>
       <p>{cards.length} 个图集 · 点击封面，走进作品星图</p>
     </div>}
     {!readOnly && controls}
   </div>;
   return readOnly ? <div ref={shellRef} className={styles.sceneShell} data-scene-shell data-home={isHome} data-compact={compact} style={compact ? undefined : { height: `calc(100svh - ${navigationHeight}px)` }}>
-    <div className={styles.sceneHeader}>{isHome ? identity : <div className={styles.sceneHeading} data-field-controls>{photoHeading}</div>}</div>
+    <div className={styles.sceneHeader}>{isHome ? <>{identity}{!compact && <div className={`${field.sceneActions} ${styles.homeActions}`}><button type="button" onClick={camera.sceneMode === "overview" ? camera.showFocus : camera.showOverview}>{overviewLabel}<span>↗</span></button><p>点击封面，走进作品星图</p></div>}</> : <div className={styles.sceneHeading} data-field-controls>{photoHeading}</div>}</div>
     {scene}
-    {!compact && <div className={styles.sceneTools}>{isHome && <button type="button" onClick={camera.sceneMode === "overview" ? camera.showFocus : camera.showOverview}>{camera.sceneMode === "overview" ? "返回首页构图" : "查看全部图集"}</button>}{controls}</div>}
+    {!compact && controls}
   </div> : scene;
 }

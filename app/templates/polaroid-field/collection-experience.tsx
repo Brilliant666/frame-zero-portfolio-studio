@@ -1,18 +1,20 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element -- local photo-library thumbnail variants. */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { assetToWork, parsePhotoLibraryManifest, type PhotoAsset } from "../../photo-library";
 import type { TemplateProps } from "../types";
 import { collectionCover, initialCollections, moveItem, uniqueAvailableAssetIds, type Collection } from "./collection-model";
 import CollectionScene, { type SceneCard } from "./collection-scene";
 import type { ViewState } from "./viewport-fit";
-import styles from "./collection.module.css";
+import styles from "./scene.module.css";
 
 type Props = Pick<TemplateProps, "content" | "onOpenWork" | "onBeforeViewChange" | "isPreview"> & {
   homeRequest: number; isActive: boolean; savedCollections?: readonly Collection[]; initialCollectionId?: string;
 };
 const hashPrefix = "#polaroid-collection-";
+// The saved workspace is loopback-development-only; do not ship its composer in production.
+const ComposerScene = process.env.NODE_ENV === "development" ? lazy(() => import("./composer-scene")) : null;
 const cameraKey = (id: string) => `${id}:${window.innerWidth < 600 ? "mobile" : "desktop"}`;
 const assetLabel = (asset: PhotoAsset, index: number) => `素材 ${String(index + 1).padStart(2, "0")} · ${asset.aspectRatio > 1.05 ? "横幅" : asset.aspectRatio < .95 ? "竖幅" : "方幅"}`;
 
@@ -121,11 +123,12 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
 
   return <div className={styles.experience} data-collection-proof={savedCollections ? undefined : "local-only"}>
     {libraryError && <p role="alert">{libraryState}</p>}
-    <CollectionScene key={`${sceneId}${savedCollections && selected ? cards.length ? ":photos" : ":empty" : ""}`} cards={cards} sceneId={sceneId} content={content} title={selected?.name} description={selected?.description}
+    {savedCollections && selected && ComposerScene ? <Suspense fallback={<p role="status">正在准备构图画布…</p>}><ComposerScene key={sceneId} cards={cards} sceneId={sceneId} title={selected.name} description={selected.description}
+      focusId={selected.focusAssetId} onBack={() => returnHome()} onOpen={openCard} onAssetUnavailable={(id) => setAssets(current => current.filter(asset => asset.id !== id))} /></Suspense> : <CollectionScene key={`${sceneId}${savedCollections && selected ? cards.length ? ":photos" : ":empty" : ""}`} cards={cards} sceneId={sceneId} content={content} title={selected?.name} description={selected?.description}
       composedPhotos={!!savedCollections && !!selected}
       readOnly={!!savedCollections} onAssetUnavailable={(id) => setAssets((current) => current.filter((asset) => asset.id !== id))}
       focusId={selected?.focusAssetId} initialView={restoredView} onViewChange={rememberCamera} onOpen={openCard}
-      onBack={selected ? () => returnHome() : undefined} restoreFocusId={selected ? null : lastSelected} />
+      onBack={selected ? () => returnHome() : undefined} restoreFocusId={selected ? null : lastSelected} />}
     {process.env.NODE_ENV === "development" && !savedCollections && <button type="button" className={styles.configure} aria-expanded={panelOpen} onClick={() => setPanelOpen((value) => !value)}>临时配置 {panelOpen ? "×" : "⚙"}</button>}
     {process.env.NODE_ENV === "development" && !savedCollections && panelOpen && <section className={styles.panel} aria-label="图集临时配置">
       <div className={styles.panelHeader}><strong>图集临时配置</strong><button type="button" onClick={() => setPanelOpen(false)}>关闭配置 ×</button></div>
