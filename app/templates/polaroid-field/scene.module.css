@@ -1,0 +1,86 @@
+.experience { position: relative; }
+:global(body):has(.experience) :global(.template-preview-ribbon) { display: none; }
+.viewport { min-height: 620px; height: calc(100svh - 5rem); }
+.canvas { display: block; padding: 0; }
+.canvas .card { max-width: none; padding: 12px; opacity: 1; }
+.card .photo img { filter: none; transform: none; }
+.photo::after { display: none; }
+.caption { position: relative; display: grid; height: 44px; padding-top: 8px; gap: 2px; overflow: hidden; }
+.caption strong { padding-right: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; line-height: 19px; }
+.caption small { color: var(--ink-soft); font-size: 10px; line-height: 12px; }
+.caption em { position: absolute; right: 0; bottom: 4px; color: var(--coral); }
+.sceneHeading { position: absolute; z-index: 24; top: 18px; left: 4%; right: 4%; display: flex; align-items: center; gap: 24px; pointer-events: none; }
+.sceneHeading button { pointer-events: auto; padding: 12px 18px; border: 1px solid var(--ink); background: var(--paper); cursor: pointer; }
+.sceneHeading div { display: grid; gap: 4px; padding: 8px 12px; background: #fffdf7e8; }
+.sceneHeading strong { font-size: 20px; }
+.sceneHeading span { font-size: 12px; color: var(--ink-soft); }
+.viewport > .controls { display: flex; z-index: 24; bottom: 24px; right: 4%; top: auto; }
+.controls button:nth-child(-n+4) { display: none; }
+.configure { position: fixed; z-index: 45; right: 12px; bottom: 8px; padding: 4px 8px; border: 1px solid #bdb3a5; background: var(--paper); color: var(--ink-soft); font-size: 11px; cursor: pointer; }
+.panel { position: fixed; z-index: 80; top: 5.5rem; right: 12px; bottom: 38px; width: min(560px, calc(100% - 24px)); overflow: auto; padding: 20px; border: 1px solid #bdb3a5; background: var(--paper); box-shadow: 0 12px 50px #18222730; }
+.panelHeader { display: flex; justify-content: space-between; align-items: center; }
+.panel p { font-size: 12px; color: var(--ink-soft); }
+.panel button { padding: 6px 10px; border: 1px solid #bdb3a5; background: white; cursor: pointer; }
+.panel button:disabled { opacity: .4; }
+.panelActions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.editor { margin-top: 10px; border: 1px solid #d6cec0; }
+.editor summary { padding: 12px; cursor: pointer; }
+.editorBody { display: grid; gap: 12px; padding: 12px; }
+.editorBody > label { display: grid; gap: 5px; font-size: 13px; }
+.editorBody input:not([type="checkbox"]):not([type="range"]), .editorBody select { width: 100%; min-height: 36px; border: 1px solid #bdb3a5; background: white; }
+.focusControls { display: grid; gap: 10px; }
+.assetPicker { max-height: 280px; overflow: auto; }
+.assetChoice, .assetChoice label { display: flex; align-items: center; gap: 6px; }
+.assetChoice { justify-content: space-between; margin: 5px 0; font-size: 12px; }
+.assetChoice img { object-fit: cover; }
+.empty { position: absolute; top: 45%; width: 100%; text-align: center; color: var(--ink-soft); }
+.emptyPhoto { display: grid; height: 100%; place-items: center; color: var(--ink-soft); }
+@media (max-width: 800px) {
+  .viewport { display: block; height: 680px; min-height: 0; padding: 0; overflow: clip; touch-action: pan-y pinch-zoom; }
+  .viewport .canvas { position: absolute; top: 50%; left: 50%; display: block; transform: var(--scene-transform) !important; }
+  .canvas .card { position: absolute; left: var(--card-left) !important; top: var(--card-top) !important; width: var(--card-width) !important; max-width: none; transform: rotate(var(--rotation)); }
+  .canvas .card:hover, .canvas .card:focus-visible { transform: rotate(var(--rotation)); }
+  .canvas .thread { display: block; }
+  .viewport .identity { position: absolute; top: 20px; left: 20px; width: calc(100% - 40px); pointer-events: none; }
+  .identity h1 { font-size: 42px; }
+  .identity h1 span { font-size: 21px; }
+  .identity p { font-size: 12px; }
+  .viewport .actions { top: auto; bottom: 55px; left: 18px; right: auto; }
+  .viewport > .controls { display: flex !important; position: fixed; left: 12px; right: 12px; bottom: 38px; justify-content: center; }
+  .controls button:nth-child(-n+4) { display: block; }
+  .controls button { min-width: 30px; padding: 8px; }
+  .controls span { min-width: 38px; }
+  .sceneHeading { top: 12px; left: 12px; right: 12px; gap: 8px; flex-wrap: wrap; }
+  .sceneHeading div { padding: 5px 8px; }
+  .sceneHeading strong { font-size: 16px; }
+  .sceneHeading button { padding: 8px; }
+  .panel { top: 8rem; }
+}
+@media (max-width: 599px) {
+  .viewport[data-home="true"] .canvas { top: calc(50% + 65px); }
+  .sceneHeading { position: sticky; top: 8px; padding-top: 12px; margin-inline: 12px; }
+  :global([data-composition]) .sceneHeading { position: absolute; margin: 0; padding: 0; }
+}
+
+.sceneShell { position: relative; min-width: 0; background: linear-gradient(#1822270e 1px, transparent 1px) 0 0 / 4rem 4rem, linear-gradient(90deg, #1822270e 1px, transparent 1px) 0 0 / 4rem 4rem, radial-gradient(circle, #1822272b 0 .7px, transparent .8px) 0 0 / 10px 10px, #e9e1d0; }
+.sceneHeader { position: absolute; z-index: 24; top: 0; left: 0; max-width: 100%; padding: 18px 24px; overflow-wrap: anywhere; pointer-events: none; }
+.sceneHeader .sceneHeading, .sceneHeader .identity { position: static; width: auto; margin: 0; padding: 0; pointer-events: auto; }
+.sceneHeader .sceneHeading { align-items: start; flex-wrap: wrap; gap: 12px; }
+.sceneHeader .sceneHeading div { min-width: 0; max-width: 100%; flex: 0 1 auto; }
+.sceneHeader .identity h1 { font-size: clamp(42px, 5.3vw, 104px); }
+.sceneHeader .identity h1 span { white-space: normal; text-wrap: balance; }
+.sceneShell .viewport { min-height: 0; height: 100%; margin: 0; padding: 0; background: transparent; border: 0; box-shadow: none; }
+.sceneShell .canvas { isolation: isolate; }
+.sceneShell > .controls { display: flex; position: absolute; z-index: 24; right: 24px; bottom: 16px; top: auto; }
+.sceneShell[data-home="true"] .sceneHeader { display: flex; flex-direction: column; justify-content: space-between; width: 25%; height: 90%; padding: clamp(24px, 5vw, 96px) 24px 24px clamp(24px, 5vw, 96px); }
+.homeActions { position: static; margin-top: 32px; pointer-events: auto; }
+.homeActions button { min-width: 0; }
+.sceneShell .thread::before { background: #e9c76b; border: 2px solid var(--ink); box-shadow: 0 0 0 4px #e9c76b33; }
+.sceneShell .card { box-shadow: 0 8px 16px #18222730, 0 3px 5px #18222733; transform: rotate(var(--rotation)); }
+.sceneShell .card:hover, .sceneShell .card:focus-visible { transform: rotate(var(--rotation)); box-shadow: 0 8px 16px #18222730; }
+.sceneShell[data-home="true"] .caption { height: 84px; }
+.sceneShell[data-home="true"] .caption strong { white-space: normal; font-size: 15px; line-height: 17px; overflow-wrap: anywhere; }
+.sceneShell[data-compact="true"] { display: block; height: auto; min-height: 0; }
+.sceneShell[data-compact="true"] .sceneHeader { position: relative; width: auto; height: auto; }
+.sceneShell[data-compact="true"] .viewport { cursor: auto; touch-action: pan-y pinch-zoom; }
+.sceneShell[data-compact="true"] .canvas { top: 0; left: 0; transform: none !important; transition: none; }

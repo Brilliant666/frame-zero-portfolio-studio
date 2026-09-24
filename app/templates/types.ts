@@ -12,5 +12,5 @@ export type TemplateProps = {
   isPreview: boolean;
   onCopy: (value: string, key: string) => Promise<void>;
   onBeforeViewChange?: () => void;
-  onOpenWork: (work: Work) => void;
+  onOpenWork: (work: Work, scope?: readonly Work[]) => void;
 };

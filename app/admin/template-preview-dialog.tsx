@@ -57,7 +57,9 @@ export default function TemplatePreviewDialog({
     copiedKey,
     copyText,
     lightboxRef,
+    lightboxWorks,
     moveActiveWork,
+    openWork,
     setActiveWork,
   } = useTemplateInteractions(works);
   const closeActiveWork = useCallback(() => setActiveWork(null), [setActiveWork]);
@@ -130,12 +132,13 @@ export default function TemplatePreviewDialog({
           isPreview
           onCopy={copyText}
           onBeforeViewChange={closeActiveWork}
-          onOpenWork={setActiveWork}
+          onOpenWork={openWork}
         />
         {activeWork ? (
           <Lightbox
             work={activeWork}
-            works={[...works]}
+            works={[...lightboxWorks]}
+            theme={templateId === "polaroid-field" ? "light" : "dark"}
             frameRef={lightboxRef}
             closeButtonRef={closeButtonRef}
             onMove={moveActiveWork}

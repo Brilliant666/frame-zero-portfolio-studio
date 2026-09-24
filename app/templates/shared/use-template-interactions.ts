@@ -10,17 +10,31 @@ import type { Work } from "../../site-config";
 
 export function useTemplateInteractions(works: readonly Work[]) {
   const [activeWork, setActiveWork] = useState<Work | null>(null);
+  const [workScope, setWorkScope] = useState<readonly Work[] | null>(null);
+  const lightboxWorks = workScope ?? works;
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const lightboxRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   const moveActiveWork = useCallback((direction: -1 | 1) => {
     setActiveWork((current) => {
-      if (!current || works.length === 0) return current;
-      const index = works.findIndex((work) => work.code === current.code);
-      return works[(index + direction + works.length) % works.length];
+      if (!current || lightboxWorks.length === 0) return current;
+      const index = lightboxWorks.findIndex((work) => work.assetId === current.assetId && work.code === current.code);
+      return lightboxWorks[(index + direction + lightboxWorks.length) % lightboxWorks.length];
     });
-  }, [works]);
+  }, [lightboxWorks]);
+
+  const openWork = useCallback((work: Work, scope?: readonly Work[]) => {
+    setWorkScope(scope ?? null);
+    setActiveWork(work);
+  }, []);
+
+  useEffect(() => {
+    if (!activeWork || !workScope) return;
+    if (workScope.some((work) => work.assetId === activeWork.assetId && work.code === activeWork.code)) return;
+    const frame = window.requestAnimationFrame(() => setActiveWork(null));
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeWork, workScope]);
 
   useEffect(() => {
     if (!activeWork) return;
@@ -87,7 +101,9 @@ export function useTemplateInteractions(works: readonly Work[]) {
     copiedKey,
     copyText,
     lightboxRef,
+    lightboxWorks,
     moveActiveWork,
+    openWork,
     setActiveWork,
   } as const;
 }

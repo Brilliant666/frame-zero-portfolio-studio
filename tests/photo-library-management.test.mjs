@@ -250,3 +250,36 @@ test("reference map covers saved and draft works through IDs and legacy variant 
     slotIndex: 4,
   });
 });
+
+test("preview reference audit includes hidden collections, covers, focus and members without changing IDs", async (t) => {
+  const { parsePreviewPhotoReferences } = await importTypeScriptModule(t, "../app/admin/layout/preview-photo-references.ts");
+  const references = parsePreviewPhotoReferences({ content: { schemaVersion: 1, collections: [
+    { visible: false, coverAssetId: assetId, focusAssetId: assetId, assetIds: [assetId, secondAssetId] },
+    { coverAssetId: null, focusAssetId: null, assetIds: [] },
+  ] } });
+  assert.equal(references.get(assetId), 3);
+  assert.equal(references.get(secondAssetId), 1);
+  assert.equal(parsePreviewPhotoReferences({ configured: false, content: null }).size, 0);
+  assert.equal(parsePreviewPhotoReferences({ content: null, revision: 0, updatedAt: null }).size, 0);
+  assert.equal(parsePreviewPhotoReferences({ content: { schemaVersion: 1, collections: [
+    { coverAssetId: "legacy-photo", focusAssetId: null, assetIds: ["legacy-photo"] },
+  ] } }).get("legacy-photo"), 2);
+  for (const value of [null, {}, { content: null }, { content: { schemaVersion: 2, collections: [] } },
+    { content: { schemaVersion: 1, collections: [{ coverAssetId: assetId, focusAssetId: null }] } }]) {
+    assert.equal(parsePreviewPhotoReferences(value), null);
+  }
+});
+
+test("preview audit fails safe for missing, corrupt or failed endpoints instead of reporting unused", async (t) => {
+  const { loadPreviewPhotoReferences } = await importTypeScriptModule(t, "../app/admin/layout/preview-photo-references.ts");
+  for (const response of [new Response("{}", { status: 404 }), new Response("{}"), new Response("broken")]) {
+    await assert.rejects(() => loadPreviewPhotoReferences(async () => response));
+  }
+  await assert.rejects(() => loadPreviewPhotoReferences(async () => { throw new Error("offline"); }));
+  const references = await loadPreviewPhotoReferences(async (url, init) => {
+    assert.equal(url, "/api/preview/site-content");
+    assert.equal(init.cache, "no-store");
+    return new Response(JSON.stringify({ configured: false, content: null }));
+  });
+  assert.equal(references.size, 0);
+});

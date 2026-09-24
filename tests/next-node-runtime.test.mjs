@@ -124,6 +124,17 @@ test("Standard Next.js standalone starts over HTTP with current route parity", a
   t.after(async () => stopChildProcess(child));
   await waitUntilReady(origin, child, logs);
 
+  for (const route of ["/preview", "/preview/admin", "/api/preview/site-content"]) {
+    const response = await fetch(`${origin}${route}`, { headers: {
+      "x-frame-zero-preview-proof": "forged-local-development-proof",
+      "x-frame-zero-preview-origin": origin,
+      "x-forwarded-host": "127.0.0.1:3001",
+    } });
+    assert.equal(response.status, 404, `${route} must fail closed in production`);
+  }
+  const previewWrite = await fetch(`${origin}/api/preview/site-content`, { method: "PUT", headers: { Origin: origin, "Content-Type": "application/json" }, body: JSON.stringify({ content: {}, expectedRevision: 0 }) });
+  assert.equal(previewWrite.status, 404, "production cannot save local preview content");
+
   for (const [pathname, status] of [
     ["/api/health/live", "live"],
     ["/api/health/ready", "ready"],

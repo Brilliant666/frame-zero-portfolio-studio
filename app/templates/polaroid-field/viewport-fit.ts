@@ -156,3 +156,29 @@ export function constrainView(
     scale,
   };
 }
+
+/** Finite paper decoration allowance: tape (12px) and a 24px shadow halo.
+ * Expand about the same rotation centre, before projecting to screen space. */
+export function withDecorationMargin(rect: RotatedRect, margin = 24): RotatedRect {
+  return { ...rect, left: rect.left - margin, top: rect.top - margin,
+    width: rect.width + margin * 2, height: rect.height + margin * 2 };
+}
+
+/** Positions one existing card in the same canvas without creating a cover copy. */
+export function focusRectInViewport(
+  fit: ViewportFit,
+  rect: RotatedRect,
+  minimumScale: number,
+  maximumScale: number,
+): ViewState {
+  const card = getRotatedBounds(rect);
+  const cardHeight = card.bottom - card.top;
+  const scale = clamp(Math.min(1.12, fit.viewport.height * .68 / cardHeight), minimumScale, maximumScale);
+  const cardCenterX = rect.left + rect.width / 2;
+  const cardCenterY = rect.top + rect.height / 2;
+  return constrainView({
+    x: fit.viewport.width * .15 - (cardCenterX - fit.canvas.width / 2) * scale,
+    y: (fit.viewport.height * .49 - fit.viewport.height / 2) - (cardCenterY - fit.canvas.height / 2) * scale,
+    scale,
+  }, fit, minimumScale, maximumScale);
+}

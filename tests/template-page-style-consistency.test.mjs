@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import test from "node:test";
 
 const styles = {
-  polaroid: new URL("../app/templates/polaroid-field/polaroid-field.module.css", import.meta.url),
+  polaroid: new URL("../app/templates/polaroid-field/field.module.css", import.meta.url),
   film: new URL("../app/templates/film-rail/film-rail.module.css", import.meta.url),
   prism: new URL("../app/templates/prism-liquid/template.module.css", import.meta.url),
   editorial: new URL("../app/templates/editorial-duet/template.module.css", import.meta.url),
