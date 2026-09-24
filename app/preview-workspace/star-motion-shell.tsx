@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import styles from "./star-motion.module.css";
+import StarSky from "./star-sky";
 
 type Theme = "paper" | "night";
 const ThemeContext = createContext<{ theme: Theme; change: (theme: Theme) => void }>({ theme: "paper", change: () => {} });
@@ -21,7 +22,7 @@ export default function StarMotionShell({ children }: { children: ReactNode }) {
   }, []);
   const change = (next: Theme) => { setTheme(next); try { localStorage.setItem(key, next); } catch { /* Per-visit fallback. */ } };
   return <ThemeContext.Provider value={{theme, change}}><div className={styles.shell} data-star-theme={theme}>
-    <div className={styles.stars} aria-hidden="true">{Array.from({length:48},(_,i)=><i key={i} style={{left:`${(i*37.13)%100}%`,top:`${(i*61.79)%100}%`,animationDelay:`${-(i%9)}s`,width:i%5===0?3:1,height:i%5===0?3:1}} />)}</div>
+    <StarSky active={theme === "night"} className={styles.stars} />
     {children}
   </div></ThemeContext.Provider>;
 }

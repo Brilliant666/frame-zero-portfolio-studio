@@ -12,7 +12,7 @@
   background:radial-gradient(55% 45% at 88% 8%,rgba(150,205,255,.28),rgba(150,205,255,0) 62%),radial-gradient(50% 42% at 4% 96%,rgba(185,190,255,.20),rgba(185,190,255,0) 62%),radial-gradient(38% 30% at 42% 58%,rgba(255,225,150,.08),rgba(255,225,150,0) 70%),linear-gradient(rgba(40,70,110,.05) 1px,transparent 1px) 0 0/64px 64px,linear-gradient(90deg,rgba(40,70,110,.05) 1px,transparent 1px) 0 0/64px 64px,radial-gradient(circle,rgba(40,70,110,.11) 0 .7px,transparent .8px) 0 0/10px 10px,#f3f6f9;
 }
 .shell[data-star-theme="paper"] { --star-caption-muted:var(--star-muted); --star-caption-accent:var(--star-accent-2); --star-tape:color-mix(in srgb,var(--star-accent) 35%,var(--star-paper)); }
-.shell[data-star-theme="night"] { --star-focus:#f1c86a; --star-accent-2:#b98a2e; }
+.shell[data-star-theme="night"] { --star-focus:#f1c86a; --star-accent-2:#b98a2e; --star-intro-bg:#05070d; }
 .shell[data-star-theme="night"] { color-scheme:dark; --star-ink:#eef1f8; --star-muted:#aab4c9; --star-accent:#f1c86a; --star-paper:#f6f1e7; --star-glass:#172139eb; --star-line:#ffffff26; --star-grad:linear-gradient(180deg,#f8dc97,#d7aa4a); --star-on-accent:#1d1604; --star-shadow:0 22px 44px -16px #000b,0 2px 4px #0007; background:radial-gradient(ellipse at 78% 0,#1d2c5a,transparent 58%),radial-gradient(ellipse at 0 100%,#f3a6bd24,transparent 60%),linear-gradient(#0b1122,#06080f); }
 .shell > main { background:transparent; color:var(--star-ink); --ink:var(--star-ink); --ink-soft:var(--star-muted); --coral:var(--star-accent); --paper:var(--star-paper); --cream:var(--star-glass); }
 .shell[data-star-theme="night"] [data-star-paper] { --ink:#1c2433; --ink-soft:#5b6576; --coral:#2a78b8; color:var(--ink); }
@@ -24,9 +24,7 @@
 .toggle button { cursor:pointer; border:0; border-radius:999px; padding:9px 13px; background:transparent; color:var(--star-muted); font-family:inherit; font-size:13px; font-weight:600; line-height:1.2; transition:background .3s,color .3s; }
 .toggle button[aria-pressed="true"] { color:var(--star-on-accent); background:var(--star-grad); box-shadow:0 5px 16px -8px var(--star-accent); }
 .toggle button:focus-visible { outline:2px solid var(--star-focus,var(--star-accent)); outline-offset:3px; }
-.stars { position:absolute; z-index:-1; inset:0; overflow:hidden; pointer-events:none; display:none; }
+.stars { position:fixed; z-index:-1; inset:0; width:100%; height:100svh; overflow:hidden; pointer-events:none; display:none; }
 .shell[data-star-theme="night"] .stars { display:block; }
-.stars i { position:absolute; border-radius:50%; background:#f6e6b8; box-shadow:0 0 7px #e7d39299; animation:twinkle 5s ease-in-out infinite alternate; }
-@keyframes twinkle { from { opacity:.2; } to { opacity:.9; } }
 @media(max-width:767px) { .shell > main > header { grid-template-columns:1fr auto; min-height:108px; gap:8px; padding:10px 16px; } .shell > main > header > nav { grid-row:2; grid-column:1/-1; justify-self:center; } .shell > main > header > a strong { max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .toggle { grid-column:2; grid-row:1; } }
-@media(prefers-reduced-motion:reduce) { .stars i { animation:none; opacity:.55; } .toggle button { transition:none; } }
+@media(prefers-reduced-motion:reduce) { .toggle button { transition:none; } }
