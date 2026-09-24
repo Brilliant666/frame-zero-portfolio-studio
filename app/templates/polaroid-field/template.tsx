@@ -22,7 +22,7 @@ import { canOpenCollectionProof } from "./collection-proof-gate";
 import { selectPolaroidFocus } from "./hero-selection";
 import { getPolaroidViewFromHash, POLAROID_VIEW_HASHES, type PolaroidView } from "./navigation";
 import { useConstellationViewport } from "./use-constellation-viewport";
-import styles from "./polaroid-field.module.css";
+import styles from "./field.module.css";
 
 type PolaroidStyle = CSSProperties & { "--rotation": string };
 type FieldCanvasStyle = CSSProperties & {

@@ -3,6 +3,9 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { createRequire } from "node:module";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import test from "node:test";
 import ts from "typescript";
 
@@ -17,6 +20,30 @@ async function loadModule(t, relativePath, baseName) {
 }
 
 const loadModel = (t) => loadModule(t, "../app/templates/polaroid-field/collection-model.ts", "collection-model");
+
+test("saved preview Lightbox reserves an external operation row and preserves legacy defaults", async () => {
+  const source = await fs.readFile(new URL("../app/templates/shared/lightbox.tsx", import.meta.url), "utf8");
+  const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+  const compiled = { exports: {} };
+  new Function("require", "module", "exports", js)(createRequire(import.meta.url), compiled, compiled.exports);
+  const Lightbox = compiled.exports.default;
+  const work = { assetId: "a", code: "01", title: "匿名作品", subtitle: "测试", image: "/a.jpg", preview: "/a.jpg", previewWidth: 400, fullWidth: 1200 };
+  const props = { work, works: [work, { ...work, assetId: "b", code: "02" }], frameRef: { current: null }, closeButtonRef: { current: null }, onMove() {}, onClose() {} };
+  const render = (extra = {}) => renderToStaticMarkup(createElement(Lightbox, { ...props, ...extra }));
+  const saved = render({ theme: "light", separateControls: true });
+  assert.match(saved, /data-separated="true"/);
+  assert.doesNotMatch(saved.split('class="lightbox-info"')[0], /aria-label="[上下]一张作品"/);
+  assert.match(saved.split('class="lightbox-info"')[1], /aria-label="上一张作品"/);
+  assert.match(saved.split('class="lightbox-info"')[1], /aria-label="下一张作品"/);
+  assert.match(saved, /关闭 ×/);
+  assert.doesNotMatch(render({ theme: "light", separateControls: true, works: [work] }), /aria-label="[上下]一张作品"/);
+  const legacy = render();
+  assert.doesNotMatch(legacy, /data-separated/);
+  assert.match(legacy, /lightbox-nav lightbox-prev/);
+  assert.match(legacy, /CLOSE ×/);
+  const wiring = await fs.readFile(new URL("../app/preview-workspace/portfolio-view.tsx", import.meta.url), "utf8");
+  assert.match(wiring, /<Lightbox theme="light" safeMissingImage separateControls/);
+});
 
 test("a query parameter alone cannot expose the editor outside loopback development", async (t) => {
   const { canOpenCollectionProof } = await loadModule(t, "../app/templates/polaroid-field/collection-proof-gate.ts", "collection-proof-gate");

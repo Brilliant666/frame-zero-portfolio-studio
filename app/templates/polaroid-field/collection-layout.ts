@@ -42,7 +42,7 @@ function thread(from: CollectionPlacement, to: CollectionPlacement): PolaroidFie
  * separate user action: a large collection must not shrink its cards by default. */
 export function buildCollectionLayout(
   cards: readonly CollectionLayoutCard[],
-  options: Readonly<{ focusId?: string | null; kind?: "covers" | "photos"; viewportWidth?: number }> = {},
+  options: Readonly<{ focusId?: string | null; kind?: "covers" | "photos"; viewportWidth?: number; captionExtra?: number }> = {},
 ): CollectionLayout {
   if (!cards.length) return { canvasWidth: 960, canvasHeight: 640, focusId: null, placements: [], threads: [] };
   if (new Set(cards.map((card) => card.id)).size !== cards.length) throw new RangeError("Collection card IDs must be unique.");
@@ -59,7 +59,7 @@ export function buildCollectionLayout(
     return {
       id: card.id, aspectRatio, index, photoWidth, photoHeight,
       width: photoWidth + COLLECTION_CARD_CHROME.horizontal,
-      height: photoHeight + COLLECTION_CARD_CHROME.vertical,
+      height: photoHeight + COLLECTION_CARD_CHROME.vertical + (options.captionExtra ?? 0),
       left: 0, top: 0, rotation: ROTATIONS[index % ROTATIONS.length],
       zIndex: hero ? cards.length + 2 : index + 1, tone: TONES[index % TONES.length],
     };

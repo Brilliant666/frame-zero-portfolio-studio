@@ -30,7 +30,7 @@ export function PreviewPortfolioView({ document, embedded = false, initialCollec
       booted copiedKey={interactions.copiedKey} isPreview={embedded} onCopy={interactions.copyText}
       onOpenWork={interactions.openWork} onBeforeViewChange={close}
       collectionWorkspace={{ collections: document.collections, initialCollectionId }} /></Suspense>
-    {interactions.activeWork && <Lightbox theme="light" safeMissingImage work={interactions.activeWork} works={[...interactions.lightboxWorks]}
+    {interactions.activeWork && <Lightbox theme="light" safeMissingImage separateControls work={interactions.activeWork} works={[...interactions.lightboxWorks]}
       frameRef={interactions.lightboxRef} closeButtonRef={interactions.closeButtonRef} onMove={interactions.moveActiveWork} onClose={close} />}
   </>;
 }

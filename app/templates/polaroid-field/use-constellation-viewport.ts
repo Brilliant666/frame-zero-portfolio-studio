@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
-import { constrainView, fitRectsToViewport, focusRectInViewport, getMinimumScale, getRotatedBounds, type ViewportFit, type ViewState } from "./viewport-fit";
+import { constrainView, fitRectsToViewport, focusRectInViewport, getMinimumScale, getRotatedBounds, withDecorationMargin, type ViewportFit, type ViewState } from "./viewport-fit";
 
 const INITIAL_VIEW: ViewState = { x: 0, y: 0, scale: 1 };
 const PREFERRED_MIN_SCALE = .72;
@@ -23,10 +23,11 @@ export type ConstellationViewportOptions = {
   onViewChange?: (view: ViewState) => void;
   /** Optional local first-look group for large saved photo compositions. */
   readableGroupSize?: number;
+  decorationMargin?: number;
 };
 
 /** Shared camera for the original nine-photo field and temporary collection scenes. */
-export function useConstellationViewport({ viewportRef, canvasRef, layoutKey, getFocusIndex, initialMode = "focus", enabled = true, mobileEnabled = false, reserveLeft = 0, initialView, onViewChange, readableGroupSize }: ConstellationViewportOptions) {
+export function useConstellationViewport({ viewportRef, canvasRef, layoutKey, getFocusIndex, initialMode = "focus", enabled = true, mobileEnabled = false, reserveLeft = 0, initialView, onViewChange, readableGroupSize, decorationMargin = 0 }: ConstellationViewportOptions) {
   const callbacks = useRef({ getFocusIndex, onViewChange });
   useLayoutEffect(() => { callbacks.current = { getFocusIndex, onViewChange }; });
   const viewRef = useRef<ViewState>(initialView ?? INITIAL_VIEW);
@@ -63,10 +64,10 @@ export function useConstellationViewport({ viewportRef, canvasRef, layoutKey, ge
     const viewport = viewportRef.current;
     const canvas = canvasRef.current;
     if (!enabled || !viewport || !canvas || (!mobileEnabled && !window.matchMedia("(min-width: 801px)").matches)) return null;
-    const cards = Array.from(canvas.querySelectorAll<HTMLElement>("[data-polaroid]"), (card) => ({
+    const cards = Array.from(canvas.querySelectorAll<HTMLElement>("[data-polaroid]"), (card) => withDecorationMargin({
       left: card.offsetLeft, top: card.offsetTop, width: card.offsetWidth, height: card.offsetHeight,
       rotation: Number.parseFloat(card.dataset.rotation ?? "0"),
-    }));
+    }, decorationMargin));
     const bounds = cards.map(getRotatedBounds);
     const safeReserve = Number.isFinite(reserveLeft) ? Math.max(0, reserveLeft) : 0;
     const left = bounds.length ? Math.min(...bounds.map((card) => card.left)) : 0;
@@ -87,16 +88,18 @@ export function useConstellationViewport({ viewportRef, canvasRef, layoutKey, ge
     }).slice(0, readableGroupSize) : [];
     const readableFit = group.length ? fitRectsToViewport(fit.viewport, fit.canvas, group, 40) : null;
     return { fit, focus, readableFit };
-  }, [canvasRef, enabled, mobileEnabled, reserveLeft, viewportRef, readableGroupSize]);
+  }, [canvasRef, enabled, mobileEnabled, reserveLeft, viewportRef, readableGroupSize, decorationMargin]);
   const constrain = useCallback((next: ViewState) => fitRef.current ? constrainView(next, fitRef.current, minimumRef.current, MAX_SCALE) : next, []);
   const showOverview = useCallback(() => {
     const geometry = updateFitGeometry();
+    if (!geometry) return;
     modeRef.current = "overview";
     setSceneMode("overview");
     if (geometry) commitView(geometry.fit.view);
   }, [commitView, updateFitGeometry]);
   const showFocus = useCallback(() => {
     const geometry = updateFitGeometry();
+    if (!geometry) return;
     modeRef.current = "focus";
     setSceneMode("focus");
     if (geometry) commitView(focusRectInViewport(geometry.fit, geometry.focus, minimumRef.current, MAX_SCALE));
@@ -192,7 +195,7 @@ export function useConstellationViewport({ viewportRef, canvasRef, layoutKey, ge
     commitView(constrain({ ...viewRef.current, x: viewRef.current.x + x, y: viewRef.current.y + y }));
   }, [commitView, constrain]);
   const handleFieldKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.target !== event.currentTarget || (!mobileEnabled && !window.matchMedia("(min-width: 801px)").matches)) return;
+    if (!enabled || event.target !== event.currentTarget || (!mobileEnabled && !window.matchMedia("(min-width: 801px)").matches)) return;
     const distance = event.shiftKey ? 100 : 42;
     switch (event.key) {
       case "ArrowLeft": event.preventDefault(); panBy(distance, 0); break;

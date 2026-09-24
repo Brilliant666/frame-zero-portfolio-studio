@@ -39,6 +39,28 @@ function importFieldLayoutModule(t) {
   );
 }
 
+test("decorated FIT uses screen margins and remains reachable for 200 cards", async (t) => {
+  const { fitRectsToViewport, withDecorationMargin, getRotatedBounds, getMinimumScale } = await importFitModule(t);
+  for (const count of [1, 2, 9, 13, 40, 200]) {
+    const cards = Array.from({ length: count }, (_, i) => withDecorationMargin({
+      left: (i % 12) * 340, top: Math.floor(i / 12) * 450,
+      width: i % 2 ? 180 : 290, height: i % 2 ? 390 : 220, rotation: i % 2 ? -5 : 4,
+    }));
+    const fit = fitRectsToViewport({ width: 768, height: 480 }, { width: 4200, height: 8000 }, cards, 32);
+    assert.ok(fit);
+    assert.ok(getMinimumScale(fit.view.scale) <= fit.view.scale);
+    for (const card of cards) {
+      const b = getRotatedBounds(card), v = fit.view;
+      const x = 384 + v.x - 2100 * v.scale, y = 240 + v.y - 4000 * v.scale;
+      assert.ok(x + b.left * v.scale >= 32 - 1e-6);
+      assert.ok(y + b.top * v.scale >= 32 - 1e-6);
+      assert.ok(x + b.right * v.scale <= 736 + 1e-6);
+      assert.ok(y + b.bottom * v.scale <= 448 + 1e-6);
+    }
+  }
+  assert.equal(fitRectsToViewport({ width: 0, height: 480 }, { width: 1, height: 1 }, []), null);
+});
+
 function importHeroSelectionModule(t) {
   return importTypescriptModule(
     t,
@@ -486,7 +508,7 @@ test("polaroid contact renders WeChat and Email while delegating uploaded cards 
 test("polaroid template exposes accessible Chinese view navigation on desktop and mobile", async () => {
   const [template, css] = await Promise.all([
     fs.readFile(new URL("../app/templates/polaroid-field/template.tsx", import.meta.url), "utf8"),
-    fs.readFile(new URL("../app/templates/polaroid-field/polaroid-field.module.css", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/templates/polaroid-field/field.module.css", import.meta.url), "utf8"),
   ]);
   const navStart = template.indexOf('<nav aria-label="作品集页面导航">');
   const navEnd = template.indexOf("</nav>", navStart);
@@ -550,7 +572,7 @@ test("polaroid template exposes accessible Chinese view navigation on desktop an
 test("polaroid first screen and overview share one card collection", async () => {
   const [template, css, camera] = await Promise.all([
     fs.readFile(new URL("../app/templates/polaroid-field/template.tsx", import.meta.url), "utf8"),
-    fs.readFile(new URL("../app/templates/polaroid-field/polaroid-field.module.css", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/templates/polaroid-field/field.module.css", import.meta.url), "utf8"),
     fs.readFile(new URL("../app/templates/polaroid-field/use-constellation-viewport.ts", import.meta.url), "utf8"),
   ]);
   assert.equal((template.match(/fieldSlots\.map\(\(slot, index\) => \{/g) ?? []).length, 1, "one set of work cards");
@@ -571,7 +593,7 @@ test("polaroid first screen and overview share one card collection", async () =>
 test("polaroid mobile reflows the same cards and respects reduced motion", async () => {
   const [template, css] = await Promise.all([
     fs.readFile(new URL("../app/templates/polaroid-field/template.tsx", import.meta.url), "utf8"),
-    fs.readFile(new URL("../app/templates/polaroid-field/polaroid-field.module.css", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/templates/polaroid-field/field.module.css", import.meta.url), "utf8"),
   ]);
   assert.match(template, /data-scene-role=\{sceneRole\}/);
   assert.match(css, /@media \(max-width: 800px\)[\s\S]*\.fieldSection\[data-scene-mode="focus"\] \.fieldCanvas/);
@@ -645,7 +667,7 @@ test("polaroid package facts use only non-empty trust items and stay out of the 
 test("polaroid header removes the fixed field note and suppresses blank availability", async () => {
   const [template, css] = await Promise.all([
     fs.readFile(new URL("../app/templates/polaroid-field/template.tsx", import.meta.url), "utf8"),
-    fs.readFile(new URL("../app/templates/polaroid-field/polaroid-field.module.css", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/templates/polaroid-field/field.module.css", import.meta.url), "utf8"),
   ]);
   assert.ok(!template.includes("FIELD NOTE / 001—009"));
   assert.ok(!template.includes("styles.heroIndex"));
@@ -700,7 +722,7 @@ test("polaroid header removes the fixed field note and suppresses blank availabi
 test("template wiring preserves nine slots, keyboard access, FIT reset, mobile layout, and reduced motion", async () => {
   const [template, css, catalog, camera] = await Promise.all([
     fs.readFile(new URL("../app/templates/polaroid-field/template.tsx", import.meta.url), "utf8"),
-    fs.readFile(new URL("../app/templates/polaroid-field/polaroid-field.module.css", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/templates/polaroid-field/field.module.css", import.meta.url), "utf8"),
     fs.readFile(new URL("../app/templates/catalog.ts", import.meta.url), "utf8"),
     fs.readFile(new URL("../app/templates/polaroid-field/use-constellation-viewport.ts", import.meta.url), "utf8"),
   ]);

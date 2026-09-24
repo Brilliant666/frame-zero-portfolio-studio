@@ -157,6 +157,13 @@ export function constrainView(
   };
 }
 
+/** Finite paper decoration allowance: tape (12px) and a 24px shadow halo.
+ * Expand about the same rotation centre, before projecting to screen space. */
+export function withDecorationMargin(rect: RotatedRect, margin = 24): RotatedRect {
+  return { ...rect, left: rect.left - margin, top: rect.top - margin,
+    width: rect.width + margin * 2, height: rect.height + margin * 2 };
+}
+
 /** Positions one existing card in the same canvas without creating a cover copy. */
 export function focusRectInViewport(
   fit: ViewportFit,

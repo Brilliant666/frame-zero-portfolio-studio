@@ -1096,6 +1096,17 @@ footer p { margin: 0; }
 .lightbox-light .lightbox-controls { color: #536066; }
 .lightbox-light .lightbox-info button { border-color: #bfb6a8; color: #182227; }
 
+/* Saved preview only: controls occupy their own row, never the photograph. */
+.lightbox[data-separated] { padding: .6rem; color-scheme: light; }
+.lightbox[data-separated] .lightbox-frame { display: grid; grid-template-rows: minmax(0, 1fr) auto; width: min(calc(100vw - 1.2rem), 92rem); height: calc(100svh - 1.2rem); max-height: none; }
+.lightbox[data-separated] .lightbox-stage { overflow: hidden; }
+.lightbox[data-separated] .lightbox-stage > img { width: 100%; height: 100%; min-height: 0; max-height: 100%; }
+.lightbox[data-separated] .lightbox-info { grid-template-columns: 1fr; gap: .4rem; padding: .5rem; }
+.lightbox[data-separated] .lightbox-info > span,
+.lightbox[data-separated] .lightbox-info > div:not(.lightbox-controls) { display: none; }
+.lightbox[data-separated] .lightbox-controls { display: flex; grid-column: auto; justify-content: center; gap: .4rem; flex-wrap: wrap; }
+.lightbox[data-separated] .lightbox-controls button { min-width: 44px; min-height: 44px; padding: .5rem; font-size: .75rem; }
+
 @keyframes boot-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes boot-spin { from { opacity: 0; transform: translate(-50%,-50%) rotate(0) scale(.5); } to { opacity: 1; transform: translate(-50%,-50%) rotate(135deg) scale(1); } }
 @keyframes title-in { from { opacity: 0; transform: translateY(3rem); clip-path: inset(100% 0 0); } to { opacity: 1; transform: none; clip-path: inset(0); } }
