@@ -6,6 +6,7 @@ import type { SiteContent, Work } from "../site-config";
 import { getClientVisiblePortfolioTitle } from "../client-visible-title";
 import Lightbox from "../templates/shared/lightbox";
 import { useTemplateInteractions } from "../templates/shared/use-template-interactions";
+import { PreviewLoading } from "./preview-loading";
 
 // Keep local-only design assets out of both production runtime artifacts.
 const StarMotionShell = process.env.NODE_ENV === "development" ? lazy(() => import("./star-motion-shell")) : Fragment;
@@ -37,8 +38,8 @@ function PreviewPortfolioExperience({ document, embedded = false, initialCollect
   useEffect(() => {
     if (!embedded) window.document.title = getClientVisiblePortfolioTitle(document.profile);
   }, [document.profile, embedded]);
-  return <Suspense fallback={<p>正在载入拍立得作品集…</p>}><StarMotionShell>
-    <Suspense fallback={<p>正在载入拍立得作品集…</p>}><PolaroidFieldTemplate templateId="polaroid-field" content={content} works={content.works}
+  return <Suspense fallback={<PreviewLoading />}><StarMotionShell>
+    <Suspense fallback={<PreviewLoading />}><PolaroidFieldTemplate templateId="polaroid-field" content={content} works={content.works}
       packages={content.packages.filter(p => p.enabled)} bookingTemplate={["【约拍任务申请】", ...content.bookingFields].join("\n")}
       booted copiedKey={interactions.copiedKey} isPreview={embedded} onCopy={interactions.copyText}
       onOpenWork={openWork} onBeforeViewChange={close}

@@ -59,8 +59,8 @@ export default function MotionHome({ cards, content, onOpen, restoreFocusId }: M
     </button>;
   };
   return <section ref={root} className={styles.home} aria-label="摄影图集首页" data-motion-home>
-    <button type="button" className={styles.intro} data-home-intro hidden aria-label="跳过开场动画">
-      <i data-intro-star aria-hidden="true">✦</i><b data-intro-count aria-hidden="true">00</b><small>开场进度 · 点击或按 Esc 跳过</small>
+    <button type="button" className={styles.intro} data-home-intro hidden aria-label="开场动画进度，点击或按 Esc 跳过">
+      <i data-intro-star aria-hidden="true">✦</i><b data-intro-count aria-hidden="true">00</b>
     </button>
     <div className={styles.sparks} aria-hidden="true">{Array.from({ length: 12 }, (_, index) => <i key={index} data-intro-spark>✦</i>)}</div>
     <div className={styles.opening}>

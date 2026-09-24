@@ -8,6 +8,7 @@ import { collectionCover, initialCollections, moveItem, uniqueAvailableAssetIds,
 import CollectionScene, { type SceneCard } from "./collection-scene";
 import type { ViewState } from "./viewport-fit";
 import type { CollectionEntranceSource } from "./collection-entrance";
+import { PreviewLoading } from "../../preview-workspace/preview-loading";
 import styles from "./scene.module.css";
 
 type Props = Pick<TemplateProps, "content" | "onOpenWork" | "onBeforeViewChange" | "isPreview"> & {
@@ -133,7 +134,7 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
 
   return <div className={styles.experience} data-collection-proof={savedCollections ? undefined : "local-only"}>
     {libraryError && <p role="alert">{libraryState}</p>}
-    {savedCollections && !selected && MotionHome ? <Suspense fallback={<p role="status">正在准备图集封面…</p>}><MotionHome cards={cards} content={content} onOpen={openCard} restoreFocusId={lastSelected} /></Suspense> : savedCollections && selected && ComposerScene ? <Suspense fallback={<p role="status">正在准备构图画布…</p>}><ComposerScene key={sceneId} cards={cards} sceneId={sceneId} title={selected.name} description={selected.description}
+    {savedCollections && !selected && MotionHome ? <Suspense fallback={<PreviewLoading />}><MotionHome cards={cards} content={content} onOpen={openCard} restoreFocusId={lastSelected} /></Suspense> : savedCollections && selected && ComposerScene ? <Suspense fallback={<PreviewLoading />}><ComposerScene key={sceneId} cards={cards} sceneId={sceneId} title={selected.name} description={selected.description}
       focusId={selected.focusAssetId} coverId={selected.coverAssetId} entranceSource={entranceSource} onBack={() => returnHome()} onOpen={openCard} onAssetUnavailable={(id) => setAssets(current => current.filter(asset => asset.id !== id))} /></Suspense> : <CollectionScene key={`${sceneId}${savedCollections && selected ? cards.length ? ":photos" : ":empty" : ""}`} cards={cards} sceneId={sceneId} content={content} title={selected?.name} description={selected?.description}
       composedPhotos={!!savedCollections && !!selected}
       readOnly={!!savedCollections} onAssetUnavailable={(id) => setAssets((current) => current.filter((asset) => asset.id !== id))}

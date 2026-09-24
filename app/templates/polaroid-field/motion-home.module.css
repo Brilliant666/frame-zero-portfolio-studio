@@ -10,7 +10,6 @@
 .intro[hidden] { display: none; }
 .intro i { font-style: normal; font-size: 44px; }
 .intro b { font: 700 13px/1 monospace; letter-spacing: .3em; }
-.intro small { color: var(--star-muted, #5b6576); font-size: 12px; }
 .intro:focus-visible { outline: 3px solid var(--star-accent, #4a9be0); outline-offset: -6px; }
 .sparks { position: fixed; inset: 0; pointer-events: none; z-index: 999; }
 .sparks i { position: absolute; left: 50%; top: 50%; opacity: 0; color: var(--star-accent, #4a9be0); font-style: normal; font-size: 20px; }
@@ -51,7 +50,7 @@
 @container (max-width: 767px) {
   .opening { display: block; min-height: 0; }
   .hero { padding: 38px 0 30px; }
-  .title { font-size: clamp(60px, 18cqw, 132px); }
+  .title { font-size: clamp(84px, 30vw, 150px); }
   .covers { display: grid; gap: 38px; height: auto; min-height: 0; max-height: none; padding: 24px 16px; }
   .covers > .cover:nth-child(n), .covers[data-count="1"] > .cover { position: relative; inset: auto; width: min(100%, 380px, var(--natural-width)); justify-self: center; --rotation: -2deg !important; }
   .covers > .cover:nth-child(2n) { --rotation: 2deg !important; }

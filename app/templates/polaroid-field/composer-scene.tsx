@@ -258,7 +258,7 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
       }
     }}>
     <div className={styles.header} ref={headerRef}>
-      <div className={styles.identity}><button type="button" onClick={onBack}>← 返回图集首页</button><div><strong>{title || "未命名图集"}</strong><span>{cards.length} 张照片{description ? ` · ${description}` : ""}</span></div></div>
+      <div className={styles.identity}><button type="button" onClick={onBack}>← 返回图集首页</button><div><strong>{title || "未命名图集"}</strong><span className={styles.description}>{cards.length} 张照片{description ? ` · ${description}` : ""}</span>{description && <details className={styles.mobileDescription}><summary>图集说明</summary><span>{cards.length} 张照片 · {description}</span></details>}</div></div>
       <div className={styles.options}>
         <div className={styles.modes} role="group" aria-label="构图">{COMPOSER_MODES.map(mode => <button type="button" key={mode} aria-pressed={mode === preference.mode} onClick={() => updatePreference({ ...preference, mode })}>{labels[mode]}</button>)}</div>
         <details><summary>调整摆放</summary><div className={styles.settings}>
