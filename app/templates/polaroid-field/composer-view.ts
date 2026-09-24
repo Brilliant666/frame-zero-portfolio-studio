@@ -53,7 +53,20 @@ export function composerView(layout: ComposerLayout, width: number, height: numb
   const note = composerNoteBounds(layout);
   const opening = new Set(layout.openingCluster ?? []);
   const noteWithHero = layout.heroStartsOpeningCluster ?? layout.heroOnly.includes(0);
-  const indices = width < 700 ? layout.heroOnly : layout.heroIdx;
+  let indices = width < 700 ? layout.heroOnly : layout.heroIdx;
+  // In the constellation path, the next group in saved order may start a new
+  // row. Framing both rows is then an overview, not an introduction to the hero.
+  // Keep the complete hero group (including its auxiliary photographs) instead.
+  // Same-row neighbours, scatter piles and editorial spreads retain their own
+  // framing. This is a spatial relationship, not a universal zoom/size quota.
+  if (width >= 700 && layout.lines.length > 0 && !note && layout.heroOnly.length > 1) {
+    const neighbours = indices.filter(i => !layout.heroOnly.includes(i));
+    if (neighbours.length) {
+      const group = composerBounds(layout, layout.heroOnly);
+      const adjacent = composerBounds(layout, neighbours);
+      if (adjacent.top >= group.bottom || adjacent.bottom <= group.top) indices = layout.heroOnly;
+    }
+  }
   let box = composerBounds(layout, note && !noteWithHero ? indices.filter(i => !opening.has(i)) : indices);
   if (note && noteWithHero) box = unionBounds(box, note);
   const hero = fit(box, 1.05);

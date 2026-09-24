@@ -16,7 +16,7 @@ export type ComposerLayout = {
   note: { cx: number; cy: number; rot: number } | null;
   heroIdx: number[]; heroOnly: number[]; heroPad?: number; world: { w: number; h: number };
   openingCluster?: number[]; heroStartsOpeningCluster?: boolean;
-  meta?: { selectedRows: number; availableW: number; availableH: number; candidates: { rows: number; width: number; height: number; fitScale: number }[] };
+  meta?: { selectedRows: number; availableW: number; availableH: number; candidates: { rows: number; width: number; height: number; fitScale: number; score?: number }[] };
 };
 type RawLayout = Omit<ComposerLayout, "world" | "heroOnly"> & {
   heroOnly?: number[]; wm: boolean; defaultView: string;
@@ -311,8 +311,14 @@ function layoutClusters(members: Member[], h: number, P: Parameters, seed: numbe
 function median(a: number[]){ if (!a.length) return 0; const s = [...a].sort((x,y)=>x-y); return s[Math.floor(s.length/2)]; }
 
 /* ---------- style 3: editorial spread ---------- */
-function layoutEditorial(members: Member[], h: number, seed: number): RawLayout{
-  const rng = mulberry32(seed), n = members.length, H = 980, gap = 34, cards = new Array<ComposerCard>(n);
+function layoutEditorial(members: Member[], h: number, seed: number, availableW: number, availableH: number): RawLayout{
+  const n=members.length,H=980,gap=34,maxSide=Math.max(h,n-h-1,1);
+  const estimate=Math.max(2,Math.round(Math.sqrt(maxSide/1.8)));
+  const rowCounts=[...new Set((n<=5?[1,2]:n<=14?[2,3]:[estimate-1,estimate,estimate+1])
+    .map(rows=>clamp(rows,1,maxSide)))];
+  function arrange(targetRows: number): RawLayout {
+  // Reuse the same seeded per-photo rotation and spacing in every candidate.
+  const rng=mulberry32(seed),cards=new Array<ComposerCard>(n);
   const hm = members[h];
   let hph = H - 70, hpw = hph*hm.r;
   const maxHeroWidth = n>1 && hm.r>=1 ? 820 : 1250;
@@ -320,7 +326,7 @@ function layoutEditorial(members: Member[], h: number, seed: number): RawLayout{
   cards[h] = makeCard(h, hm, 'hero', hpw*hph, 'editorial');
   function block(list: number[], x0: number){
     if (!list.length) return x0;
-    const rows = list.length <= 3 ? 1 : list.length <= 13 ? 2 : Math.max(3,Math.round(Math.sqrt(list.length/1.8)));
+    const rows = Math.min(targetRows,list.length);
     const rowH = (H - gap*(rows - 1)) / rows, per = Math.ceil(list.length / rows);
     let maxX = x0;
     for (let r = 0; r < rows; r++){
@@ -347,6 +353,19 @@ function layoutEditorial(members: Member[], h: number, seed: number): RawLayout{
   const nearest = (side: ComposerCard[]) => side.sort((a,b)=>Math.hypot(a.x-hero.x,a.y-hero.y)-Math.hypot(b.x-hero.x,b.y-hero.y))[0]?.i;
   const neighbors=[nearest(cards.slice(0,h)),nearest(cards.slice(h+1))].filter((i): i is number=>i!==undefined);
   return { cards, lines:[], heroIdx:[h,...neighbors], heroOnly:[h], note:null, wm:false, defaultView:'hero' };
+  }
+  const trials=rowCounts.map(rows=>{
+    const layout=arrange(rows),b=union(layout.cards.map(c=>aabb(c,36)));
+    const width=b.r-b.l,height=b.b-b.t,fitScale=Math.min(1,availableW/width,availableH/height);
+    const hero=layout.cards[h],heroArea=hero.pw*hero.ph;
+    const auxiliaryArea=median(layout.cards.filter(c=>c.i!==h).map(c=>c.pw*c.ph)) || heroArea;
+    // Compare real photo areas after overview scaling, not paper/world area.
+    const score=fitScale*fitScale*Math.sqrt(heroArea*auxiliaryArea);
+    return {layout,rows,width,height,fitScale,score};
+  });
+  const best=trials.reduce((a,b)=>b.score>a.score?b:a);
+  return {...best.layout,meta:{selectedRows:best.rows,availableW,availableH,
+    candidates:trials.map(({rows,width,height,fitScale,score})=>({rows,width,height,fitScale,score}))}};
 }
 
 
@@ -363,7 +382,7 @@ export function buildComposerLayout(
   const mobile=options.viewportWidth!==undefined && options.viewportWidth<768;
   const availableW=Math.max(80,(mobile?1440:options.viewportWidth ?? 1440)-80);
   const availableH=mobile?608:Math.max(80,(options.viewportHeight ?? 820)-(options.viewportTop ?? 140)-72);
-  const L = options.mode === "editorial" ? layoutEditorial(members,h,options.seed)
+  const L = options.mode === "editorial" ? layoutEditorial(members,h,options.seed,availableW,availableH)
     : layoutClusters(members,h,options.mode === "scatter" ? P_SCATTER : P_CONST,options.seed,availableW,availableH);
   const width = options.viewportWidth;
   if (width !== undefined && width < 768) {

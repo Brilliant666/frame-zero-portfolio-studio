@@ -135,3 +135,20 @@ test("editorial short prefix or suffix cannot exceed the multi-photo hero",()=>{
   assert.ok(result.heroIdx.includes(focus));
  }
 });
+test("editorial evaluates bounded row choices against projected real photo areas",()=>{
+ let selectedThree=false;
+ for(const n of [2,11,13,40,200])for(const ratios of [[1.5],[2/3],[1.5,2/3]])for(const focus of [0,Math.floor(n/2),n-1]){
+  const input=members(n).map((m,i)=>({...m,aspectRatio:ratios[i%ratios.length]}));
+  const a=build(input,{mode:"editorial",seed:183,focusId:input[focus].id,viewportWidth:1440,viewportHeight:820,viewportTop:150});
+  const b=build(input,{mode:"editorial",seed:183,focusId:input[focus].id,viewportWidth:1024,viewportHeight:680,viewportTop:150});
+  assert.deepEqual(a.cards.map(c=>[c.id,c.i,c.rot]),b.cards.map(c=>[c.id,c.i,c.rot]));
+  for(const result of [a,b]){
+   const meta=result.meta,chosen=meta.candidates.find(c=>c.rows===meta.selectedRows);
+   assert.equal(chosen.score,Math.max(...meta.candidates.map(c=>c.score)));
+   assert.ok(meta.candidates.length<=3);
+   if(n===11 || n===13){assert.ok(meta.candidates.some(c=>c.rows===2));assert.ok(meta.candidates.some(c=>c.rows===3));}
+   if(meta.selectedRows===3)selectedThree=true;
+  }
+ }
+ assert.ok(selectedThree,"two auxiliary rows are a candidate rather than a permanent limit");
+});

@@ -90,3 +90,17 @@ test("editorial hero view frames actual neighbouring photos rather than blank pa
     assert.ok(bounds.top*view.scale+view.y>=146-1e-6 && bounds.bottom*view.scale+view.y<=748+1e-6);
   }
 });
+test("constellation hero camera does not turn a cross-row neighbour into a distant overview",()=>{
+  const input=Array.from({length:11},(_,i)=>({id:"p"+i,aspectRatio:i===1?2/3:1.5}));
+  const layout=build(input,{mode:"constellation",focusId:"p1",seed:17,viewportWidth:1440,viewportHeight:820,viewportTop:110});
+  assert.ok(layout.heroOnly.length>1,"hero group retains auxiliary photographs");
+  const neighbours=layout.heroIdx.filter(i=>!layout.heroOnly.includes(i));
+  assert.ok(neighbours.length);
+  for(const i of neighbours) layout.cards[i].y+=5000;
+  const view=composerView(layout,1440,820,110,"hero");
+  assert.deepEqual(view,composerView({...layout,heroIdx:layout.heroOnly},1440,820,110,"hero"));
+  assert.ok(view.scale>composerView(layout,1440,820,110,"fit").scale);
+  const group=composerBounds(layout,layout.heroOnly);
+  assert.ok(group.top*view.scale+view.y>=110-1e-6 && group.bottom*view.scale+view.y<=748+1e-6);
+  assert.deepEqual(layout.cards.map(card=>card.id),input.map(card=>card.id));
+});
