@@ -23,3 +23,20 @@ No private photos or external runtime font requests are involved. No eager
 preload of all slices is needed. `sources.json` and this README are repository
 documentation; only the WOFF2 files and original license enter standalone
 public output.
+
+## Production artifact contract
+
+Both the ordinary Standard Next standalone output and the loopback-only local
+preview standalone output retain the same reviewed 101 WOFF2 files plus
+`OFL.txt` at `/fonts/noto-serif-sc-900/`. Packaging a font does not enable the
+preview: ordinary production still returns 404 for the preview workspace and
+its content API. The preview CSS uses the local paths and weight 900; the
+ordinary site's existing Geist font settings are unchanged. Geist resources
+are emitted by Next under `/_next/static/media/`, not this public manifest.
+
+`sources.json` independently records the original official subset URLs, byte
+sizes and SHA-256 digests. Font tests validate those bytes and the exact
+101-subset family. Container verification rebuilds without cache, checks the
+builder's public tree against the explicit manifest, then requests every font
+from the running image and checks its WOFF2 signature, byte size and digest.
+The source record and this README are deliberately excluded from runtime.
