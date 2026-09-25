@@ -1,9 +1,11 @@
 import type { PhotoAsset } from "../../photo-library";
 
 const prepared = new Map<string, Promise<boolean>>();
+export function invalidateEntryPhoto(src:string){prepared.delete(new URL(src,location.href).href);}
 export function entryPhotoSource(asset: PhotoAsset, width = 600) {
   const tier = width > 1100 ? 2200 : width > 600 ? 1100 : 600;
-  return `/__local-preview-photo?src=${encodeURIComponent(asset.variants[tier > 1100 ? "full" : "card"].src)}&w=${tier}`;
+  const source=asset.variants.card.width>=Math.min(tier,asset.variants.full.width)?asset.variants.card:asset.variants.full;
+  return `/__local-preview-photo?src=${encodeURIComponent(source.src)}&w=${tier}`;
 }
 export function prepareEntryPhoto(src: string): Promise<boolean> {
   src = new URL(src, location.href).href;
@@ -12,8 +14,11 @@ export function prepareEntryPhoto(src: string): Promise<boolean> {
   const image = new Image();
   image.decoding = "async";
   const ready = new Promise<boolean>(resolve => {
-    image.onload = () => { void image.decode().then(() => { performance.mark(`entry:decoded:${src}`); resolve(true); }).catch(()=>{prepared.delete(src);resolve(false);}); };
-    image.onerror = () => { prepared.delete(src); resolve(false); };
+    let done=false;
+    const finish=(ok:boolean)=>{if(done)return;done=true;clearTimeout(timer);if(!ok)prepared.delete(src);resolve(ok);};
+    const timer=setTimeout(()=>finish(false),10_000);
+    image.onload = () => { void image.decode().then(() => { performance.mark(`entry:decoded:${src}`); finish(true); }).catch(()=>finish(false)); };
+    image.onerror = () => finish(false);
   });
   prepared.set(src, ready); image.src = src;
   return ready;

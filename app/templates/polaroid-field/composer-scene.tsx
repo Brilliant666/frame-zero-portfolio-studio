@@ -13,6 +13,7 @@ import styles from "./composer.module.css";
 import "./motion-fonts.css";
 import { entryPhotoSource, prepareEntryPhoto, revealEntryImage } from "./entry-photos";
 import GlassSegments from "../../preview-workspace/glass-segments";
+import { observePhotoUpgrades, type PhotoUpgrade } from "./photo-upgrade";
 
 type Props = { cards: readonly SceneCard[]; sceneId: string; title?: string; description?: string;
   active?: boolean; focusId?: string | null; coverId?: string | null; entranceSource?: CollectionEntranceSource; onBack: () => void; onOpen: (id: string) => void; onAssetUnavailable: (id: string) => void };
@@ -27,6 +28,8 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
   const [preference, setPreference] = useState(() => readPreference(sceneId));
   const hero = resolveComposerHero(cards.map(card => card.id), preference.heroId, focusId, coverId);
   const [lines, setLines] = useState(true);
+  const [photoSources,setPhotoSources]=useState<Record<string,PhotoUpgrade>>({});
+  const upgradeAfter=useRef<number|null>(null);
   const [size, setSize] = useState({ width: 1280, height: 800, top: 110, nav: 80 });
   const [overlays, setOverlays] = useState<ComposerBounds[]>([]);
   const cameraOptions = useMemo(() => ({mode:preference.mode,overlays}),[preference.mode,overlays]);
@@ -42,7 +45,7 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
   const animations=useRef(new Set<Animation>());
   const entrance=useRef<(()=>void)|null>(null),entranceStarted=useRef(false);
   const entrancePending=useRef(false),entranceGeneration=useRef(0);
-  const cancelEntrance=useCallback(()=>{entranceGeneration.current++;entrancePending.current=false;entrance.current?.();entrance.current=null;entranceSource?.flight?.cleanup();if(worldRef.current)worldRef.current.style.visibility="visible";},[entranceSource]);
+  const cancelEntrance=useCallback(()=>{entranceGeneration.current++;entrancePending.current=false;entrance.current?.();entrance.current=null;entranceSource?.flight?.cleanup();if(worldRef.current){worldRef.current.style.visibility="visible";worldRef.current.dispatchEvent(new Event("composer:ready"));}},[entranceSource]);
   const interruptEntrance=useCallback(()=>{entranceStarted.current=true;cancelEntrance();},[cancelEntrance]);
   useLayoutEffect(()=>{if(!active)interruptEntrance();},[active,interruptEntrance]);
   const beginEntrance=useCallback((mobile=false)=>{
@@ -62,6 +65,7 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
       images.filter(image=>image.complete&&image.naturalWidth).forEach(image=>{image.style.opacity="1";});
       performance.mark("entry:pin-start");
       entrance.current=playCollectionEntrance(world,entranceSource,{pin:`.${styles.pin}`,tape:`.${styles.tape}`,lines:`.${styles.lines}`},mobile);
+      world.dispatchEvent(new Event("composer:ready"));
     });
   },[entranceSource]);
   useLayoutEffect(()=>()=>{cancelEntrance();entranceStarted.current=false;},[cancelEntrance]);
@@ -93,27 +97,12 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
     worldRef.current?.dispatchEvent(new CustomEvent("composer:scale",{detail:next.scale}));
   }, []);
   useLayoutEffect(()=>{
-    const world=worldRef.current;if(!world)return;
-    let timer:ReturnType<typeof setTimeout>;
-    const upgrade=()=>{
-      clearTimeout(timer);
-      timer=setTimeout(()=>{
-        if (!entranceStarted.current || performance.now()-(entranceSource?.startedAt ?? 0)<1600) return;
-        world.querySelectorAll<HTMLImageElement>("img[data-photo-id]").forEach(image=>{
-          const asset=cards.find(card=>card.id===image.dataset.photoId)?.asset;if(!asset)return;
-          const box=image.getBoundingClientRect();
-          if(box.right<0||box.left>innerWidth||box.bottom<0||box.top>innerHeight)return;
-          const required=box.width*Math.min(2,devicePixelRatio||1);
-          const tier=required>1100?2200:required>600?1100:600;
-          if(tier<=Number(image.dataset.photoTier||600))return;
-          const src=entryPhotoSource(asset,tier);
-          void prepareEntryPhoto(src).then(loaded=>{if(loaded&&image.isConnected&&tier>Number(image.dataset.photoTier||600)){image.src=src;image.dataset.photoTier=String(tier);}});
-        });
-      },180);
-    };
-    world.addEventListener("composer:scale",upgrade);upgrade();
-    return()=>{clearTimeout(timer);world.removeEventListener("composer:scale",upgrade);};
-  },[cards,entranceSource]);
+    const world=worldRef.current;if(!world || !active)return;
+    upgradeAfter.current ??= (entranceSource?.startedAt ?? performance.now())+1600;
+    const assets=new Map(cards.flatMap(card=>card.asset?[[card.id,card.asset] as const]:[]));
+    return observePhotoUpgrades(world,assets,{allowed:()=>entranceStarted.current,protectedUntil:upgradeAfter.current,
+      update:(id,value)=>setPhotoSources(old=>old[id]?.base===value.base&&old[id].tier>=value.tier?old:{...old,[id]:{...value,previous:old[id]?.base===value.base?old[id]:undefined}})});
+  },[cards,active,entranceSource]);
   const motion=useComposerMotion(viewRef,commit,!compact,constrain);
   useLayoutEffect(()=>{
     if(compact && worldRef.current)worldRef.current.style.transform="none";
@@ -209,6 +198,7 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
       // Keep native scrolling only inside editable settings and expanded controls.
       if ((event.target as Element).closest('select,input,textarea,[contenteditable="true"],details[open]')) return;
       event.preventDefault();
+      if(![event.deltaX,event.deltaY,event.clientX,event.clientY].every(Number.isFinite))return;
       cameraMode.current = "manual";
       const unit=event.deltaMode===1?16:event.deltaMode===2?size.height:1;
       const delta=event.deltaY*unit;
@@ -332,6 +322,12 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
       {layout.note && <div className={styles.note} data-composer-note style={{ left: layout.note.cx - 125, top: layout.note.cy - 80, transform: `rotate(${layout.note.rot}deg)` }}><i>✦</i><strong>{title || "我的图集"}</strong><span>{cards.length} 张照片</span></div>}
       {layout.cards.map(card => {
         const source = cards[card.i], star = card.role === "hero" ? 16 : card.role === "lead" ? 11 : 8.5;
+        const upgraded=source.asset&&photoSources[card.id]?.base===entryPhotoSource(source.asset)?photoSources[card.id]:undefined;
+        const imageFailed=()=>{
+          if(!upgraded){onAssetUnavailable(card.id);return;}
+          setPhotoSources(old=>{const next={...old};if(upgraded.previous)next[card.id]=upgraded.previous;else delete next[card.id];return next;});
+          worldRef.current?.dispatchEvent(new CustomEvent("composer:photo-error",{detail:{id:card.id,src:upgraded.src}}));
+        };
         return <button type="button" className={styles.card} data-card-id={card.id} data-role={card.role} data-rotation={card.rot} key={card.id}
           aria-label={`查看第 ${card.i + 1} 张照片${card.role === "hero" ? "（主角）" : ""}`} onClick={() => {motion.stop();onOpen(card.id);}}
           onPointerMove={event => {
@@ -349,7 +345,7 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
           }}
           style={{ left: card.x - card.w / 2, top: card.y - card.h / 2, width: card.w, height: card.h, zIndex: card.z, "--angle": `${card.rot}deg`, "--enter-delay": `${Math.min(card.i,12)*35}ms` } as CSSProperties}>
           <span className={styles.sheet}>
-            <span className={styles.photo} style={{ left: card.f.side, top: card.f.top, width: card.pw, height: card.ph }}>{source.asset ? <img src={entryPhotoSource(source.asset)} data-photo-id={card.id} data-photo-tier="600" style={{opacity:card.id===entranceSource?.assetId?1:0}} onLoad={event=>revealEntryImage(event.currentTarget,card.id===entranceSource?.assetId)} alt={`图集照片 ${card.i + 1}`} width={source.asset.variants.card.width} height={source.asset.variants.card.height} loading={card.i < 3 || card.role === "hero" || card.id === coverId || card.id === entranceSource?.assetId ? "eager" : "lazy"} draggable={false} onError={() => onAssetUnavailable(card.id)} /> : "照片暂不可用"}</span>
+            <span className={styles.photo} style={{ left: card.f.side, top: card.f.top, width: card.pw, height: card.ph }}>{source.asset ? <img src={upgraded?.src ?? entryPhotoSource(source.asset)} data-photo-id={card.id} data-photo-tier={upgraded?.tier ?? Math.min(600,Math.max(source.asset.variants.card.width,source.asset.variants.full.width))} style={{opacity:card.id===entranceSource?.assetId?1:0}} onLoad={event=>revealEntryImage(event.currentTarget,card.id===entranceSource?.assetId)} alt={`图集照片 ${card.i + 1}`} width={source.asset.variants.card.width} height={source.asset.variants.card.height} loading={card.i < 3 || card.role === "hero" || card.id === coverId || card.id === entranceSource?.assetId ? "eager" : "lazy"} draggable={false} onError={imageFailed} /> : "照片暂不可用"}</span>
             <span className={styles.caption} style={{ height: card.f.bottom, paddingInline: card.f.side, justifyContent: card.cap === "right" ? "flex-end" : undefined, fontSize: Math.max(15, Math.min(34, card.f.bottom * .5)) }}>{card.role === "hero" ? "✦ " : ""}No.{String(card.i + 1).padStart(2, "0")}</span>
           </span>
           {[card.tape, card.tape2].map((tape, index) => tape && <i className={styles.tape} key={index} aria-hidden="true" style={{ left: tape.x * card.w - tape.w / 2, width: tape.w, background: "var(--star-tape)", transform: `rotate(${tape.rot}deg)` }} />)}
