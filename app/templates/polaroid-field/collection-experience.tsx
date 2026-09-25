@@ -122,7 +122,8 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
       if (process.env.NODE_ENV === "development" && savedCollections) {
         const element = [...document.querySelectorAll<HTMLElement>("[data-motion-cover]")].find(item => item.dataset.motionCover === id);
         const image = element?.querySelector("img"), box = element?.getBoundingClientRect();
-        setEntranceSource(box && image ? { x: box.left, y: box.top, width: box.width, height: box.height, src: image.currentSrc || image.src } : undefined);
+        const assetId = cards.find(card => card.id === id)?.asset?.id;
+        setEntranceSource(box && image && assetId ? { assetId, x: box.left, y: box.top, width: box.width, height: box.height, src: image.currentSrc || image.src } : undefined);
       }
       const scrollTop = scrollPositions.current.get(cameraKey(id)) ?? 0;
       scrollPositions.current.set(cameraKey("home"), window.scrollY); setLastSelected(id); setRestoredView(cameras.current.get(cameraKey(id)));

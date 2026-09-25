@@ -15,7 +15,7 @@ import "./motion-fonts.css";
 type Props = { cards: readonly SceneCard[]; sceneId: string; title?: string; description?: string;
   focusId?: string | null; coverId?: string | null; entranceSource?: CollectionEntranceSource; onBack: () => void; onOpen: (id: string) => void; onAssetUnavailable: (id: string) => void };
 const labels = { constellation: "星座", scatter: "散落", editorial: "跨页" };
-const preferenceKey = (id: string) => `frame-zero:preview-composer:v1:${id}`;
+const preferenceKey = (id: string) => `frame-zero:preview-composer:v2:${id}`;
 function readPreference(id: string) {
   try { return parseComposerPreference(JSON.parse(localStorage.getItem(preferenceKey(id)) ?? "null")); }
   catch { return parseComposerPreference(null); }
@@ -262,7 +262,7 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
       <div className={styles.options}>
         <div className={styles.modes} role="group" aria-label="构图">{COMPOSER_MODES.map(mode => <button type="button" key={mode} aria-pressed={mode === preference.mode} onClick={() => updatePreference({ ...preference, mode })}>{labels[mode]}</button>)}</div>
         <details><summary>调整摆放</summary><div className={styles.settings}>
-          <label>主角照片<select aria-label="主角照片" value={hero.id ?? ""} disabled={!cards.length} onChange={event => updatePreference({ ...preference, heroId: event.target.value })}>{cards.map((card, index) => <option key={card.id} value={card.id}>第 {index + 1} 张</option>)}</select></label>
+          <label>主角照片<select aria-label="主角照片" value={hero.source === "preference" ? hero.id ?? "" : ""} disabled={!cards.length} onChange={event => updatePreference({ ...preference, heroId: event.target.value || undefined })}><option value="">封面（默认）</option>{cards.map((card, index) => <option key={card.id} value={card.id}>第 {index + 1} 张</option>)}</select></label>
           <button type="button" disabled={cards.length < 2} onClick={() => updatePreference({ ...preference, seed: (preference.seed + 1) >>> 0 })}>换一种摆法</button>
           <label><input type="checkbox" checked={lines} disabled={preference.mode !== "constellation"} onChange={event => setLines(event.target.checked)} />星座连线</label>
         </div></details>
@@ -290,7 +290,7 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
           }}
           style={{ left: card.x - card.w / 2, top: card.y - card.h / 2, width: card.w, height: card.h, zIndex: card.z, "--angle": `${card.rot}deg`, "--enter-delay": `${Math.min(card.i,12)*35}ms` } as CSSProperties}>
           <span className={styles.sheet}>
-            <span className={styles.photo} style={{ left: card.f.side, top: card.f.top, width: card.pw, height: card.ph }}>{source.asset ? <img src={source.asset.variants.card.src} alt={`图集照片 ${card.i + 1}`} width={source.asset.variants.card.width} height={source.asset.variants.card.height} loading={card.i < 3 || card.role === "hero" ? "eager" : "lazy"} draggable={false} onError={() => onAssetUnavailable(card.id)} /> : "照片暂不可用"}</span>
+            <span className={styles.photo} style={{ left: card.f.side, top: card.f.top, width: card.pw, height: card.ph }}>{source.asset ? <img src={source.asset.variants.card.src} alt={`图集照片 ${card.i + 1}`} width={source.asset.variants.card.width} height={source.asset.variants.card.height} loading={card.i < 3 || card.role === "hero" || card.id === coverId || card.id === entranceSource?.assetId ? "eager" : "lazy"} draggable={false} onError={() => onAssetUnavailable(card.id)} /> : "照片暂不可用"}</span>
             <span className={styles.caption} style={{ height: card.f.bottom, paddingInline: card.f.side, justifyContent: card.cap === "right" ? "flex-end" : undefined, fontSize: Math.max(15, Math.min(34, card.f.bottom * .5)) }}>{card.role === "hero" ? "✦ " : ""}No.{String(card.i + 1).padStart(2, "0")}</span>
           </span>
           {[card.tape, card.tape2].map((tape, index) => tape && <i className={styles.tape} key={index} aria-hidden="true" style={{ left: tape.x * card.w - tape.w / 2, width: tape.w, background: `var(--star-tape, ${tape.color})`, transform: `rotate(${tape.rot}deg)` }} />)}

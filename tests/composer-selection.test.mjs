@@ -8,7 +8,8 @@ const { resolveComposerHero: resolve } = await import("data:text/javascript;base
 test("hero validates every fallback tier against displayable members", () => {
   const ids = ["a", "b", "c"];
   assert.deepEqual(resolve(ids, "c", "b", "a"), { id: "c", source: "preference" });
-  assert.deepEqual(resolve(ids, "missing", "b", "c"), { id: "b", source: "focus" });
+  assert.deepEqual(resolve(ids, "missing", "b", "c"), { id: "c", source: "cover" });
+  assert.deepEqual(resolve(ids, null, "b", "missing"), { id: "b", source: "focus" });
   assert.deepEqual(resolve(ids, null, "missing", "c"), { id: "c", source: "cover" });
   assert.deepEqual(resolve(ids, null, null, "c"), { id: "c", source: "cover" });
   assert.deepEqual(resolve(ids, "missing", "missing", "outside"), { id: "a", source: "first" });
