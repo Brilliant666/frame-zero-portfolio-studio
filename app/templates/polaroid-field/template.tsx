@@ -11,6 +11,7 @@ import {
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
+  type ComponentType,
 } from "react";
 import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
@@ -51,7 +52,8 @@ export default function PolaroidFieldTemplate({
   onBeforeViewChange,
   onOpenWork,
   collectionWorkspace,
-}: TemplateProps & { collectionWorkspace?: { collections: readonly Collection[]; initialCollectionId?: string; headerAccessory?: ReactNode } }) {
+}: TemplateProps & { collectionWorkspace?: { collections: readonly Collection[]; initialCollectionId?: string; headerAccessory?: ReactNode; Navigation?: ComponentType<{active:PolaroidView;onNavigate:(event:ReactMouseEvent<HTMLElement>,view:PolaroidView)=>void}> } }) {
+  const Navigation = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? collectionWorkspace?.Navigation : undefined;
   const fieldSlots = useMemo(
     () => buildPhotoSlots(works, POLAROID_RATIOS, { templateId: "polaroid-field" }),
     [works],
@@ -111,7 +113,7 @@ export default function PolaroidFieldTemplate({
   }, [isPreview, scrollToViewTarget, onBeforeViewChange]);
 
   const handleViewLink = useCallback((
-    event: ReactMouseEvent<HTMLAnchorElement>,
+    event: ReactMouseEvent<HTMLElement>,
     view: PolaroidView,
     hash = POLAROID_VIEW_HASHES[view],
     focusTarget = false,
@@ -177,7 +179,7 @@ export default function PolaroidFieldTemplate({
           <span aria-hidden={collectionWorkspace ? true : undefined}>{collectionWorkspace ? "✦" : content.profile.mark}</span>
           <strong>{collectionWorkspace ? content.profile.photographer : content.profile.brand}</strong>
         </a>
-        <nav aria-label="作品集页面导航">
+        {Navigation ? <Navigation active={activeView} onNavigate={handleViewLink}/> : <nav aria-label="作品集页面导航">
           <a
             href="#polaroid-top"
             aria-current={activeView === "field" ? "page" : undefined}
@@ -193,7 +195,7 @@ export default function PolaroidFieldTemplate({
             aria-current={activeView === "booking" ? "page" : undefined}
             onClick={(event) => handleViewLink(event, "booking")}
           >联系约拍</a>
-        </nav>
+        </nav>}
         {collectionWorkspace?.headerAccessory ?? (headerStatus ? <p>{headerStatus}</p> : null)}
       </header>
 

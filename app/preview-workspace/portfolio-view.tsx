@@ -11,6 +11,7 @@ import { PreviewLoading } from "./preview-loading";
 // Keep local-only design assets out of both production runtime artifacts.
 const StarMotionShell = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? lazy(() => import("./star-motion-shell")) : Fragment;
 const StarThemeToggle = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? lazy(() => import("./star-motion-shell").then(module => ({ default: module.StarThemeToggle }))) : () => null;
+const StarNavigation = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? lazy(() => import("./star-motion-shell").then(module => ({ default: module.StarNavigation }))) : () => null;
 
 const PolaroidFieldTemplate = lazy(() => import("../templates/polaroid-field/template"));
 
@@ -43,7 +44,7 @@ function PreviewPortfolioExperience({ document, embedded = false, initialCollect
       packages={content.packages.filter(p => p.enabled)} bookingTemplate={["【约拍任务申请】", ...content.bookingFields].join("\n")}
       booted copiedKey={interactions.copiedKey} isPreview={embedded} onCopy={interactions.copyText}
       onOpenWork={openWork} onBeforeViewChange={close}
-      collectionWorkspace={{ collections: document.collections, initialCollectionId, headerAccessory: <StarThemeToggle /> }} /></Suspense>
+      collectionWorkspace={{ collections: document.collections, initialCollectionId, headerAccessory: <StarThemeToggle />, Navigation:embedded?undefined:StarNavigation }} /></Suspense>
     {interactions.activeWork && <Lightbox theme="light" safeMissingImage separateControls motionOrigin={origin} work={interactions.activeWork} works={[...interactions.lightboxWorks]}
       frameRef={interactions.lightboxRef} closeButtonRef={interactions.closeButtonRef} onMove={interactions.moveActiveWork} onClose={close} />}
   </StarMotionShell></Suspense>;

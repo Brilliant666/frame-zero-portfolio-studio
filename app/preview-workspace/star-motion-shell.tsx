@@ -9,6 +9,9 @@ import "./preview-theme.css";
 import "../templates/polaroid-field/motion-fonts.css";
 import StarSky from "./star-sky";
 import { PREVIEW_THEME_KEY } from "./preview-theme";
+import GlassSegments from "./glass-segments";
+import type { PolaroidView } from "../templates/polaroid-field/navigation";
+import type { MouseEvent } from "react";
 
 type Theme = "paper" | "night";
 const themeEvent="preview:theme-change";
@@ -16,6 +19,9 @@ const subscribeTheme=(notify:()=>void)=>{window.addEventListener(themeEvent,noti
 const currentTheme=():Theme|"disabled"=>!/^\/preview\/?$/.test(location.pathname)?"disabled":document.documentElement.dataset.previewTheme==="night"?"night":"paper";
 const serverTheme=()=>"disabled" as const;
 const ThemeContext = createContext<{ theme: Theme; enabled:boolean; change: (theme: Theme, origin:{x:number;y:number}) => void }>({ theme: "paper", enabled:false, change: () => {} });
+export function StarNavigation({active,onNavigate}:{active:PolaroidView;onNavigate:(event:MouseEvent<HTMLElement>,view:PolaroidView)=>void}) {
+  return <GlassSegments navigation label="作品集页面导航" value={active} options={[{value:"field",label:"作品",href:"#polaroid-top"},{value:"packages",label:"拍摄套餐",href:"#polaroid-packages"},{value:"booking",label:"联系约拍",href:"#polaroid-booking"}]} onChange={(view,event)=>onNavigate(event,view)}/>;
+}
 export function StarThemeToggle() {
   const { theme, enabled, change } = useContext(ThemeContext);
   if(!enabled)return null;
@@ -57,7 +63,7 @@ export default function StarMotionShell({ children }: { children: ReactNode }) {
       if(transition.current!==current)return;
       const radius=Math.hypot(Math.max(origin.x,innerWidth-origin.x),Math.max(origin.y,innerHeight-origin.y));
       reveal.current=root.animate({clipPath:[`circle(0px at ${origin.x}px ${origin.y}px)`,`circle(${radius}px at ${origin.x}px ${origin.y}px)`]},
-        {duration:450,easing:"cubic-bezier(.22,1,.36,1)",pseudoElement:"::view-transition-new(root)"});
+        {duration:700,easing:"cubic-bezier(.22,1,.36,1)",pseudoElement:"::view-transition-new(root)"});
     }).catch(()=>{/* Skipped or unsupported snapshot: theme still changes. */});
     void current.finished.finally(()=>{if(transition.current===current){transition.current=null;reveal.current=null;}}).catch(()=>{});
   };

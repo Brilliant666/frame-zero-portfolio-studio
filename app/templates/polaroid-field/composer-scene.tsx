@@ -12,6 +12,7 @@ import { COMPOSER_MODES, composerSeed, composerView, parseComposerPreference, ty
 import styles from "./composer.module.css";
 import "./motion-fonts.css";
 import { entryPhotoSource, prepareEntryPhoto, revealEntryImage } from "./entry-photos";
+import GlassSegments from "../../preview-workspace/glass-segments";
 
 type Props = { cards: readonly SceneCard[]; sceneId: string; title?: string; description?: string;
   active?: boolean; focusId?: string | null; coverId?: string | null; entranceSource?: CollectionEntranceSource; onBack: () => void; onOpen: (id: string) => void; onAssetUnavailable: (id: string) => void };
@@ -129,7 +130,7 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
       const stageBox=stage.getBoundingClientRect();
       // Only persistent chrome counts: opening the options popover must not
       // refit the scene underneath the visitor's pointer.
-      const parts=[header.querySelector(`.${styles.identity}`),header.querySelector(`.${styles.modes}`),header.querySelector("summary")];
+      const parts=[header.querySelector(`.${styles.identity}`),header.querySelector("[data-preview-segments]"),header.querySelector("summary")];
       const measured=parts.filter((element): element is Element=>Boolean(element)).map(element=>{
         const range=element.tagName==="SUMMARY"?document.createRange():null;
         if(range) range.selectNodeContents(element);
@@ -299,7 +300,7 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
     <div className={styles.header} ref={headerRef}>
       <div className={styles.identity}><button type="button" onClick={onBack}>← 返回图集首页</button><div><strong>{title || "未命名图集"}</strong><span className={styles.description}>{cards.length} 张照片{description ? ` · ${description}` : ""}</span>{description && <details className={styles.mobileDescription}><summary>图集说明</summary><span>{cards.length} 张照片 · {description}</span></details>}</div></div>
       <div className={styles.options}>
-        <div className={styles.modes} role="group" aria-label="构图">{COMPOSER_MODES.map(mode => <button type="button" key={mode} aria-pressed={mode === preference.mode} onClick={() => updatePreference({ ...preference, mode })}>{labels[mode]}</button>)}</div>
+        <GlassSegments label="构图" value={preference.mode} options={COMPOSER_MODES.map(mode=>({value:mode,label:labels[mode]}))} onChange={mode=>updatePreference({...preference,mode})}/>
         <details><summary>调整摆放</summary><div className={styles.settings}>
           <label>主角照片<select aria-label="主角照片" value={hero.source === "preference" ? hero.id ?? "" : ""} disabled={!cards.length} onChange={event => updatePreference({ ...preference, heroId: event.target.value || undefined })}><option value="">封面（默认）</option>{cards.map((card, index) => <option key={card.id} value={card.id}>第 {index + 1} 张</option>)}</select></label>
           <button type="button" disabled={cards.length < 2} onClick={() => updatePreference({ ...preference, seed: (preference.seed + 1) >>> 0 })}>换一种摆法</button>

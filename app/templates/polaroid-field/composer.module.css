@@ -108,3 +108,10 @@
 :global([data-star-theme="night"]) .pin { filter:drop-shadow(0 0 6px var(--star-glow)); }
 :global([data-star-theme="night"]) .pin path { fill:var(--star-accent); stroke:var(--star-accent-2); }
 @media(prefers-reduced-motion:reduce) { :global([data-star-theme]) .card,:global([data-star-theme]) .lines path { animation:none; transition:none; } :global([data-star-theme]) .sheet,:global([data-star-theme]) .modes button { transition:none; } }
+
+:global(html[data-preview-theme]) .stage { height:calc(100svh - var(--preview-header-height,68px) - env(safe-area-inset-top,0px)); }
+:global(html[data-preview-theme]) .header { inset:16px var(--preview-gutter,24px) auto; align-items:start; }
+:global(html[data-preview-theme]) .stage[data-compact="true"] { height:auto; }
+:global(html[data-preview-theme]) .stage[data-compact="true"] .header { inset:auto; padding:12px var(--preview-gutter,16px); }
+:global(html[data-preview-theme]) .stage[data-compact="true"] .options { display:flex; width:100%; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+:global(html[data-preview-theme]) .stage[data-compact="true"] .options details { position:relative; }
