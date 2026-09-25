@@ -481,7 +481,12 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(viteConfig, /\^http:\\\/\\\/127\\\.0\\\.0\\\.1:/);
   assert.match(viteConfig, /\.\.\.resolvedConfig\.vars/);
   assert.match(viteConfig, /\[LOCAL_PHOTO_IMPORT_ORIGIN_ENV\]: localPhotoImportOrigin/);
-  assert.doesNotMatch(viteConfig, /CLOUDFLARE_INCLUDE_PROCESS_ENV|NEXT_PUBLIC_|VITE_FRAME_ZERO/);
+  // Worker builds explicitly disable the Node-only local preview opt-in.
+  // Permit only this reviewed literal: no environment value or ingest origin
+  // may be exposed through NEXT_PUBLIC_ (including another use of this key).
+  const disabledPreviewDefine = /"process\.env\.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW"\s*:\s*JSON\.stringify\("0"\)/g;
+  assert.equal((viteConfig.match(disabledPreviewDefine) ?? []).length, 1);
+  assert.doesNotMatch(viteConfig.replace(disabledPreviewDefine, ""), /CLOUDFLARE_INCLUDE_PROCESS_ENV|NEXT_PUBLIC_|VITE_FRAME_ZERO/);
   assert.match(css, /\.libraryStats\s*\{/);
   assert.match(css, /\.photoImportProgress\s*,/);
   assert.match(css, /\.photoImportActions\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/s);
