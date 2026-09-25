@@ -5,7 +5,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProper
 import type { SceneCard } from "./collection-scene";
 import { buildComposerLayout } from "./composer-layout";
 import { resolveComposerHero } from "./composer-selection";
-import {composerReleaseVelocity,composerZoomLimit,createComposerWheelClassifier,composerWheelZoomFactor,composerFlip,composerPaperBounds,constrainComposer,zoomComposerAt,type MotionSample} from "./composer-motion";
+import {composerReleaseVelocity,composerZoomLimit,createComposerWheelClassifier,composerWheelZoomFactor,composerZoomShortcut,composerFlip,composerPaperBounds,constrainComposer,zoomComposerAt,type MotionSample} from "./composer-motion";
 import {useComposerMotion} from "./use-composer-motion";
 import {playCollectionEntrance,type CollectionEntranceSource} from "./collection-entrance";
 import { COMPOSER_MODES, composerSeed, composerView, parseComposerPreference, type ComposerBounds, type ComposerPreference, type ComposerView } from "./composer-view";
@@ -206,7 +206,9 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
     if (!stage || compact) return;
     const wheelKind=createComposerWheelClassifier();
     const wheel = (event: WheelEvent) => {
-      if ((event.target as Element).closest("button,select,input,a,summary,details") && !(event.target as Element).closest("[data-card-id]")) return;
+      // Floating camera/navigation buttons are part of the canvas, not scroll exits.
+      // Keep native scrolling only inside editable settings and expanded controls.
+      if ((event.target as Element).closest('select,input,textarea,[contenteditable="true"],details[open]')) return;
       event.preventDefault();
       cameraMode.current = "manual";
       const unit=event.deltaMode===1?16:event.deltaMode===2?size.height:1;
@@ -230,6 +232,22 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
     cameraMode.current = "manual";
     motion.zoom(zoomComposerAt(old,size.width/2,size.height/2,scale));
   };
+  useLayoutEffect(()=>{
+    if(!active||compact)return;
+    const shortcut=(event:KeyboardEvent)=>{
+      const action=composerZoomShortcut(event);
+      if(!action||event.defaultPrevented||document.querySelector('[aria-modal="true"]'))return;
+      const target=event.target;
+      if(target instanceof Element && target.closest('input,textarea,select,[contenteditable="true"]'))return;
+      event.preventDefault();event.stopPropagation();interruptEntrance();
+      if(action==="fit"){cameraMode.current="fit";motion.move(composerView(layout,size.width,size.height,size.top,"fit",cameraOptions));return;}
+      const old=motion.target(),fit=composerView(layout,size.width,size.height,size.top,"fit",cameraOptions);
+      cameraMode.current="manual";
+      motion.zoom(zoomComposerAt(old,size.width/2,size.height/2,composerZoomLimit(old.scale*(action==="in"?1.2:1/1.2),fit.scale)));
+    };
+    window.addEventListener("keydown",shortcut,true);
+    return()=>window.removeEventListener("keydown",shortcut,true);
+  },[active,compact,layout,size,cameraOptions,motion,interruptEntrance]);
   const finishDrag = (id: number,cancelled=false) => {
     pointers.current.delete(id);
     if(pinch.current){

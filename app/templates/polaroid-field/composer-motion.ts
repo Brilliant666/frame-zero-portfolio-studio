@@ -54,6 +54,13 @@ export function createComposerWheelClassifier(){
 export function composerWheelZoomFactor(delta:number,ctrlKey:boolean){
   return Math.exp(-delta*(ctrlKey && Math.abs(delta)<50?.01:.0016));
 }
+export function composerZoomShortcut(event:{key:string;code:string;ctrlKey:boolean;metaKey:boolean;altKey:boolean}) {
+  if(!(event.ctrlKey||event.metaKey)||event.altKey)return null;
+  if(event.key==="+"||event.key==="="||event.code==="NumpadAdd")return "in";
+  if(event.key==="-"||event.code==="NumpadSubtract")return "out";
+  if(event.key==="0"||event.code==="Numpad0")return "fit";
+  return null;
+}
 export function constrainComposer(view:ComposerView,box:ComposerBounds,width:number,height:number,rubber=false):ComposerView {
   const kx=Math.min(width*.3,(box.right-box.left)*view.scale*.3),ky=Math.min(height*.3,(box.bottom-box.top)*view.scale*.3);
   const axis=(value:number,min:number,max:number)=>value<min?min+(value-min)*(rubber?.35:0):value>max?max+(value-max)*(rubber?.35:0):value;

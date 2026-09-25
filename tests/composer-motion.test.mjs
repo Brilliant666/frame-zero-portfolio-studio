@@ -4,7 +4,7 @@ import test from "node:test";
 import ts from "typescript";
 const text=await fs.readFile(new URL("../app/templates/polaroid-field/composer-motion.ts",import.meta.url),"utf8");
 const js=ts.transpileModule(text,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
-const {zoomComposerAt,interpolateComposer,composerReleaseVelocity,composerInertiaStep,composerZoomLimit,composerWheelKind,createComposerWheelClassifier,composerWheelZoomFactor,constrainComposer,composerSpringStep,composerFlip,composerPaperBounds}=await import("data:text/javascript;base64,"+Buffer.from(js).toString("base64"));
+const {zoomComposerAt,interpolateComposer,composerReleaseVelocity,composerInertiaStep,composerZoomLimit,composerWheelKind,createComposerWheelClassifier,composerWheelZoomFactor,composerZoomShortcut,constrainComposer,composerSpringStep,composerFlip,composerPaperBounds}=await import("data:text/javascript;base64,"+Buffer.from(js).toString("base64"));
 
 test("wheel/button zoom keeps the chosen world point under its screen anchor",()=>{
   const from={x:-120,y:36,scale:.7},point={x:456,y:234};
@@ -91,6 +91,18 @@ test("Ctrl mouse uses modest zoom while small pinch deltas retain sensitivity",(
   assert.equal(composerWheelZoomFactor(50,true),Math.exp(-.08));
   assert.equal(composerWheelZoomFactor(49,true),Math.exp(-.49));
   assert.equal(composerWheelZoomFactor(3*16,false),Math.exp(-48*.0016));
+});
+
+test("canvas zoom shortcuts recognize Ctrl/Cmd and keypad variants",()=>{
+  const event={key:"=",code:"Equal",ctrlKey:true,metaKey:false,altKey:false};
+  assert.equal(composerZoomShortcut(event),"in");
+  assert.equal(composerZoomShortcut({...event,key:"+"}),"in");
+  assert.equal(composerZoomShortcut({...event,key:"-",code:"Minus"}),"out");
+  assert.equal(composerZoomShortcut({...event,key:"0",code:"Digit0"}),"fit");
+  assert.equal(composerZoomShortcut({...event,key:"",code:"NumpadSubtract"}),"out");
+  assert.equal(composerZoomShortcut({...event,ctrlKey:false,metaKey:true}),"in");
+  assert.equal(composerZoomShortcut({...event,ctrlKey:false}),null);
+  assert.equal(composerZoomShortcut({...event,altKey:true}),null);
 });
 
 test("soft bounds retain both axes, apply .35 resistance and settle with 120ms spring",()=>{
