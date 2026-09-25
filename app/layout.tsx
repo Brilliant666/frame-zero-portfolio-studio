@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 import { siteConfig } from "./site-config";
+import { PREVIEW_THEME_BOOTSTRAP, PREVIEW_THEME_BOOTSTRAP_CSS } from "./preview-workspace/preview-theme";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -50,7 +51,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" suppressHydrationWarning>
+      {process.env.NODE_ENV === "development" && <head>
+        <style dangerouslySetInnerHTML={{ __html: PREVIEW_THEME_BOOTSTRAP_CSS }} />
+        <script dangerouslySetInnerHTML={{ __html: PREVIEW_THEME_BOOTSTRAP }} />
+      </head>}
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         {children}
       </body>

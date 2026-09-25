@@ -1,0 +1,13 @@
+/* Loaded only by the development preview shell; never changes legacy Lightbox defaults. */
+html[data-preview-theme] .lightbox[data-separated] { color-scheme:inherit; color:var(--star-paper-ink); }
+html[data-preview-theme] .lightbox .lightbox-backdrop { background:var(--star-overlay); }
+html[data-preview-theme] .lightbox .lightbox-frame { background:var(--star-paper); border:1px solid var(--star-paper-border); border-radius:20px; box-shadow:var(--star-shadow-up); overflow:hidden; }
+html[data-preview-theme] .lightbox .lightbox-stage { background:var(--star-placeholder); }
+html[data-preview-theme] .lightbox .lightbox-info { background:var(--star-paper); color:var(--star-paper-ink); border-color:var(--star-line); }
+html[data-preview-theme] .lightbox .lightbox-info > span { color:var(--star-accent); }
+html[data-preview-theme] .lightbox .lightbox-info small,
+html[data-preview-theme] .lightbox .lightbox-controls { color:var(--star-paper-muted); }
+html[data-preview-theme] .lightbox .lightbox-nav,
+html[data-preview-theme] .lightbox .lightbox-controls button { border:1px solid var(--star-line); border-radius:999px; background:var(--star-glass); color:var(--star-ink); }
+html[data-preview-theme] .lightbox .lightbox-controls button:hover { background:var(--star-grad); color:var(--star-on-accent); }
+html[data-preview-theme] .lightbox button:focus-visible { outline:2px solid var(--star-focus); outline-offset:2px; }

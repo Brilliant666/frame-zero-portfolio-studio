@@ -293,7 +293,7 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
             <span className={styles.photo} style={{ left: card.f.side, top: card.f.top, width: card.pw, height: card.ph }}>{source.asset ? <img src={source.asset.variants.card.src} alt={`图集照片 ${card.i + 1}`} width={source.asset.variants.card.width} height={source.asset.variants.card.height} loading={card.i < 3 || card.role === "hero" || card.id === coverId || card.id === entranceSource?.assetId ? "eager" : "lazy"} draggable={false} onError={() => onAssetUnavailable(card.id)} /> : "照片暂不可用"}</span>
             <span className={styles.caption} style={{ height: card.f.bottom, paddingInline: card.f.side, justifyContent: card.cap === "right" ? "flex-end" : undefined, fontSize: Math.max(15, Math.min(34, card.f.bottom * .5)) }}>{card.role === "hero" ? "✦ " : ""}No.{String(card.i + 1).padStart(2, "0")}</span>
           </span>
-          {[card.tape, card.tape2].map((tape, index) => tape && <i className={styles.tape} key={index} aria-hidden="true" style={{ left: tape.x * card.w - tape.w / 2, width: tape.w, background: `var(--star-tape, ${tape.color})`, transform: `rotate(${tape.rot}deg)` }} />)}
+          {[card.tape, card.tape2].map((tape, index) => tape && <i className={styles.tape} key={index} aria-hidden="true" style={{ left: tape.x * card.w - tape.w / 2, width: tape.w, background: "var(--star-tape)", transform: `rotate(${tape.rot}deg)` }} />)}
           {card.pin && <svg className={styles.pin} viewBox="-12 -12 24 24" aria-hidden="true" style={{ width: star * 2, height: star * 2, left: card.w / 2 - star, top: card.f.top * .55 - star }}><path d="M0-11L2.8-2.8 11 0 2.8 2.8 0 11-2.8 2.8-11 0-2.8-2.8Z" /></svg>}
         </button>;
       })}

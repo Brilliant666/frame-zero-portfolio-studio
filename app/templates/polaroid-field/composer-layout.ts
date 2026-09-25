@@ -32,7 +32,7 @@ type Parameters = {
 function mulberry32(a: number) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const between = (rng: () => number, [a,b]: [number,number]) => a + (b-a)*rng();
-const WASHI = ['#f2b8c3','#f6c9a6','#f3dd92','#bfe0cf','#b8dbe6','#c3d2f2','#d7c7ef'];
+const WASHI = Array.from({ length: 7 }, () => 'var(--star-tape)');
 const washiFor = (rng: () => number) => WASHI[Math.floor(rng()*WASHI.length)];
 export function composerCardBounds(c: Pick<ComposerCard, "x" | "y" | "w" | "h" | "rot">, margin = 30): Box {
   const a = Math.abs(c.rot)*Math.PI/180, cs = Math.abs(Math.cos(a)), sn = Math.abs(Math.sin(a));

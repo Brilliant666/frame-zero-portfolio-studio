@@ -9,6 +9,7 @@ export default function StarSky({ active, className }: { active: boolean; classN
     const canvas = ref.current, ctx = canvas?.getContext("2d");
     if (!active || !canvas || !ctx) return;
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+    const tokens=getComputedStyle(canvas), starColor=tokens.getPropertyValue("--star-sky-star").trim(), highlightColor=tokens.getPropertyValue("--star-sky-highlight").trim();
     let width = 0, height = 0, dpr = 1, frame = 0, last = 0, boostStart = 0, boostEnd = 0;
     let stars: { x: number; y: number; z: number; phase: number; gold: boolean }[] = [];
     const draw = (now: number) => {
@@ -17,7 +18,7 @@ export default function StarSky({ active, className }: { active: boolean; classN
       for (const star of stars) {
         const x = star.x * width, y = star.y * height;
         ctx.globalAlpha = reduced.matches ? .55 : .35 + .3 * (1 + Math.sin(now * .0006 + star.phase));
-        ctx.fillStyle = star.gold ? "#f6d68c" : "#dfe6ff";
+        ctx.fillStyle = star.gold ? highlightColor : starColor;
         const radius = .35 + star.z * 1.2;
         if (boost > .02) {
           ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = radius; ctx.beginPath(); ctx.moveTo(x, y);
