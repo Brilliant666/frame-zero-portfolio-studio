@@ -9,19 +9,20 @@ const {playCollectionEntrance,collectionEntranceTiming,collectionLandingGeometry
 function fixture(reduced=false){
   const running=[],ghosts=[],events=[],listeners=new Set();
   const node=(role)=>({dataset:{role,rotation:"-3"},style:{setProperty(key,value){this[key]=value;}},offsetWidth:240,offsetHeight:350,children:[],setAttribute(){},removeAttribute(key){if(key==="data-card-id")delete this.dataset.cardId;},append(child){this.children.push(child);},remove(){this.removed=true;},
-    animate(frames,options){const a={element:this,frames,options,cancelled:false,finished:new Promise(()=>{}),cancel(){this.cancelled=true;}};running.push(a);return a;},
+    animate(frames,options){let finish;const a={element:this,frames,options,cancelled:false,finished:new Promise(resolve=>{finish=resolve;}),finish:()=>finish(),cancel(){this.cancelled=true;}};running.push(a);return a;},
     querySelectorAll(){return [];},cloneNode(){const n=node(role);n.dataset={...this.dataset};return n;},
     getBoundingClientRect(){return {left:200,top:100,right:440,bottom:450,width:240,height:350};}});
   const cards=["support","hero","support"].map((role,i)=>{const n=node(role),img=node(),pin=node();n.dataset.cardId=`photo-${i}`;n.querySelector=()=>img;n.querySelectorAll=selector=>selector==="*"?[]:[pin];return n;});
   const line=node();
   const world={style:{visibility:"hidden"},closest:selector=>selector==="[data-star-theme]"?{getAttribute:()=>"night"}:null,querySelectorAll:selector=>selector==="[data-card-id]"?cards:[line]};
-  globalThis.matchMedia=()=>({matches:reduced,addEventListener:(_type,fn)=>listeners.add(fn),removeEventListener:(_type,fn)=>listeners.delete(fn)});
+  const media={matches:reduced,addEventListener:(_type,fn)=>listeners.add(fn),removeEventListener:(_type,fn)=>listeners.delete(fn)};
+  globalThis.matchMedia=()=>media;
   globalThis.document={createElement:()=>node(),body:{append(element){ghosts.push(element);}}};
   globalThis.CustomEvent=class{constructor(type,init){this.type=type;this.detail=init.detail;}};
   globalThis.window={dispatchEvent:event=>events.push(event)};
   globalThis.innerWidth=1440;globalThis.innerHeight=900;
   globalThis.getComputedStyle=()=>({length:0,getPropertyValue:()=>"#eee"});
-  return {world,cards,running,ghosts,events,listeners};
+  return {world,cards,running,ghosts,events,listeners,media};
 }
 test("entrance preserves saved order and distinct theme timing",()=>{
   assert.equal(collectionEntranceTiming(2,true,false).delay,1100);
@@ -133,4 +134,39 @@ test("home exit skips selected cover and cleanup restores visibility and resolve
   assert.ok(!f.running.some(a=>a.element===f.cards[1]));
   exit.cleanup();await exit.finished;
   assert.equal(f.cards[1].style.visibility,"");assert.ok(f.running.every(a=>a.cancelled));assert.equal(f.listeners.size,0);
+});
+
+test("flight hides landing paper until arrival, restores synchronously, then pops pin and fades ghost",async()=>{
+  const f=fixture(),card=f.cards[0];card.style.visibility="visible";
+  const cleanup=playCollectionEntrance(f.world,{x:5,y:10,width:100,height:140,src:"/anonymous.svg",assetId:"photo-0"},{pin:".pin",tape:".tape",lines:".lines"});
+  assert.equal(f.world.style.visibility,"visible");assert.equal(card.style.visibility,"hidden");
+  assert.ok(!f.running.some(a=>a.element===card||a.element===card.querySelector("img")||a.element===card.querySelectorAll(".pin")[0]));
+  f.running.find(a=>a.options.duration===980).finish();
+  await Promise.resolve();
+  assert.equal(card.style.visibility,"visible");
+  assert.ok(f.running.some(a=>a.element===card.querySelectorAll(".pin")[0]&&a.options.duration===560));
+  assert.ok(!f.running.some(a=>a.element===card||a.element===card.querySelector("img")));
+  const fade=f.running.find(a=>a.options.duration===180);assert.ok(fade);assert.notEqual(f.ghosts[0].removed,true);
+  fade.finish();await Promise.resolve();assert.equal(f.ghosts[0].removed,true);
+  cleanup();assert.equal(card.style.visibility,"visible");
+});
+
+test("navigation cancellation and midflight reduced motion restore original landing visibility",async()=>{
+  for(const cancel of ["navigation","reduced"]){
+    const f=fixture(),card=f.cards[0];card.style.visibility="";
+    const cleanup=playCollectionEntrance(f.world,{x:5,y:10,width:100,height:140,src:"/anonymous.svg",assetId:"photo-0"},{pin:".pin",tape:".tape",lines:".lines"});
+    const flight=f.running.find(a=>a.options.duration===980);assert.equal(card.style.visibility,"hidden");
+    if(cancel==="navigation")cleanup();else{f.media.matches=true;for(const listener of [...f.listeners])listener();}
+    assert.equal(card.style.visibility,"");assert.equal(f.ghosts[0].removed,true);
+    const count=f.running.length;flight.finish();await Promise.resolve();assert.equal(f.running.length,count,"cancelled arrival must not create new pin/fade animations");
+    cleanup();
+  }
+});
+
+test("invalid flight and initially reduced motion never hide the destination",()=>{
+  for(const reduced of [false,true]){
+    const f=fixture(reduced);f.cards[0].style.visibility="visible";
+    const cleanup=playCollectionEntrance(f.world,{x:0,y:-200,width:100,height:140,src:"/anonymous.svg",assetId:"photo-0"},{pin:".pin",tape:".tape",lines:".lines"});
+    assert.equal(f.cards[0].style.visibility,"visible");assert.equal(f.ghosts.length,0);cleanup();
+  }
 });

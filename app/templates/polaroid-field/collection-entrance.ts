@@ -66,7 +66,8 @@ export function playCollectionEntrance(world: HTMLElement, source: CollectionEnt
   void _compact;
   const animations=new Set<Animation>(),media=matchMedia("(prefers-reduced-motion: reduce)");
   let session=source?.flight;
-  const cleanup=()=>{animations.forEach(animation=>animation.cancel());animations.clear();session?.cleanup();session=undefined;world.style.visibility="visible";media.removeEventListener("change",onChange);};
+  let restoreLanding=()=>{};
+  const cleanup=()=>{animations.forEach(animation=>animation.cancel());animations.clear();session?.cleanup();session=undefined;restoreLanding();world.style.visibility="visible";media.removeEventListener("change",onChange);};
   const onChange=()=>{if(media.matches)cleanup();};
   const track=(element:Element,frames:Keyframe[],options:KeyframeAnimationOptions)=>{
     const animation=element.animate(frames,{...options,fill:"backwards"});animations.add(animation);
@@ -85,6 +86,10 @@ export function playCollectionEntrance(world: HTMLElement, source: CollectionEnt
   if(flight&&source&&landingCard&&target){
     session??=createCollectionFlight(source);
     if(session){
+      const previousVisibility=landingCard.style.visibility;
+      restoreLanding=()=>{landingCard.style.visibility=previousVisibility;restoreLanding=()=>{};};
+      // Hide the whole destination paper (including its decorations) before revealing the world.
+      landingCard.style.visibility="hidden";
       const ghost=session.element,from=ghost.getBoundingClientRect();session.stopPreparation();
       const geometry=collectionLandingGeometry(target,landingCard.offsetWidth,landingCard.offsetHeight,Number(landingCard.dataset.rotation??0));
       Object.assign(ghost.style,{left:"0px",top:"0px",width:`${geometry.width}px`,height:`${geometry.height}px`});
@@ -98,7 +103,13 @@ export function playCollectionEntrance(world: HTMLElement, source: CollectionEnt
       const landing=`translate(${geometry.x-geometry.width/2}px,${geometry.y-geometry.height/2}px) rotate(${geometry.angle}deg) scale(${geometry.scale})`;
       ghost.style.transform=landing;
       const animation=track(ghost,[{transform:start,opacity:1},{transform:landing,opacity:1}],{duration:980,easing:"cubic-bezier(.7,0,.2,1)"});
-      void animation.finished.then(()=>{if(!session)return;const fade=track(ghost,[{opacity:1},{opacity:0}],{duration:180});void fade.finished.then(()=>{session?.cleanup();session=undefined;}).catch(()=>{});}).catch(()=>{});
+      void animation.finished.then(()=>{
+        if(!session)return;
+        restoreLanding();
+        landingCard.querySelectorAll(selectors.pin).forEach(pin=>track(pin,[{opacity:0,scale:".1"},{opacity:1,scale:"1.3",offset:.65},{opacity:1,scale:"1"}],{duration:560,easing:collectionEntranceTiming(0,false,night).easing}));
+        const fade=track(ghost,[{opacity:1},{opacity:0}],{duration:180});
+        void fade.finished.then(()=>{session?.cleanup();session=undefined;}).catch(()=>{});
+      }).catch(()=>{});
     }
   }else{session?.cleanup();session=undefined;}
   const visibleCards=cards.map(card=>({card,box:card.getBoundingClientRect()})).filter(item=>visible(item.box)).sort((a,b)=>a.box.top-b.box.top||a.box.left-b.box.left);
