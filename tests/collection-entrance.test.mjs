@@ -4,7 +4,7 @@ import test from "node:test";
 import ts from "typescript";
 const source=await fs.readFile(new URL("../app/templates/polaroid-field/collection-entrance.ts",import.meta.url),"utf8");
 const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
-const {playCollectionEntrance,collectionEntranceTiming,collectionLandingGeometry}=await import("data:text/javascript;base64,"+Buffer.from(js).toString("base64"));
+const {playCollectionEntrance,collectionEntranceTiming,collectionLandingGeometry,createCollectionFlight,playHomeExit}=await import("data:text/javascript;base64,"+Buffer.from(js).toString("base64"));
 
 function fixture(reduced=false){
   const running=[],ghosts=[],events=[],listeners=new Set();
@@ -32,12 +32,12 @@ test("entrance preserves saved order and distinct theme timing",()=>{
 test("flight, developing, line redraw and cancellation are scene owned",()=>{
   const f=fixture();
   const cleanup=playCollectionEntrance(f.world,{x:5,y:10,width:100,height:140,src:"/anonymous.svg",assetId:"photo-0"},{pin:".pin",tape:".tape",lines:".lines"},false);
-  assert.equal(f.ghosts.length,1);assert.equal(f.running[0].options.duration,980);
+  assert.equal(f.ghosts.length,1);assert.ok(f.running.some(a=>a.options.duration===980));
   assert.equal(f.ghosts[0].dataset.collectionFlightAsset,"photo-0");
   assert.equal(f.ghosts[0].dataset.cardId,undefined);
   assert.equal(f.running.filter(a=>a.options.duration===1200).length,2);
   assert.ok(!f.running.some(a=>a.element===f.cards[0] || a.element===f.cards[0].querySelector("img")));
-  assert.ok(f.running.filter(a=>a.options.duration===1200).every(a=>a.frames[0].filter==="brightness(1.2) saturate(.6)" && a.frames.every(frame=>frame.opacity===1)));
+  assert.ok(f.running.filter(a=>a.options.duration===1200).every(a=>a.frames[0].filter==="brightness(1.2) saturate(.6)" && a.frames.every(frame=>frame.opacity===undefined)));
   assert.equal(f.running.at(-1).frames[0].strokeDashoffset,1);
   assert.equal(f.world.style.visibility,"visible");assert.equal(f.events[0].detail.duration,1100);
   cleanup();cleanup();
@@ -82,4 +82,55 @@ test("rotated landing geometry retains unrotated paper dimensions and uniform wo
   assert.ok(Math.abs(g.scale-scale)<1e-10);assert.equal(g.x,100+w/2);assert.equal(g.y,200+h/2);
   assert.match(source,/duration:180/);
   assert.ok(!source.includes("brightness(1.65)"));assert.ok(!source.includes("blur(2px)"));
+});
+
+test("click-frame preparation creates one simple paper and reuses it for uniform flight",()=>{
+  const f=fixture(),input={x:5,y:10,width:100,height:140,src:"/anonymous.svg",assetId:"photo-0"};
+  input.flight=createCollectionFlight(input);
+  assert.equal(f.ghosts.length,1);
+  assert.equal(f.ghosts[0].children.length,1);
+  assert.equal(f.ghosts[0].children[0].src,input.src);
+  assert.equal(f.ghosts[0].style.padding,"8px 8px 28px");
+  assert.equal(f.ghosts[0].children[0].style.objectFit,"contain");
+  assert.equal(f.ghosts[0].style.background,"var(--star-paper)");
+  assert.equal(f.ghosts[0].style.boxShadow,"var(--star-shadow)");
+  assert.equal(f.running[0].options.duration,300);
+  f.cards[0].querySelector("img").parentElement={offsetLeft:14,offsetTop:12,offsetWidth:212,offsetHeight:284};
+  f.ghosts[0].getBoundingClientRect=()=>({left:5,top:10,width:120,height:70});
+  const cleanup=playCollectionEntrance(f.world,input,{pin:".pin",tape:".tape",lines:".lines"});
+  assert.equal(f.ghosts.length,1);
+  const flight=f.running.find(a=>a.options.duration===980);
+  assert.ok(flight.frames.every(frame=>/scale\([^,)]+\)/.test(frame.transform)));
+  assert.match(flight.frames[0].transform,/scale\(0\.5\)/);
+  assert.equal(f.ghosts[0].style.padding,"12px 14px 54px 14px");
+  assert.equal(f.running[0].cancelled,true);
+  assert.doesNotMatch(source,/cloneNode|getComputedStyle/);
+  cleanup();assert.equal(f.ghosts[0].removed,true);
+});
+
+test("visible pin-in order uses top then left and never animates offscreen papers",()=>{
+  const f=fixture();
+  const box=(left,top)=>({left,top,right:left+100,bottom:top+100,width:100,height:100});
+  f.cards[0].getBoundingClientRect=()=>box(300,200);
+  f.cards[1].getBoundingClientRect=()=>box(100,200);
+  f.cards[2].getBoundingClientRect=()=>box(100,1200);
+  const cleanup=playCollectionEntrance(f.world,undefined,{pin:".pin",tape:".tape",lines:".lines"});
+  const entrances=f.running.filter(a=>f.cards.includes(a.element));
+  assert.deepEqual(entrances.map(a=>a.element.dataset.cardId),["photo-1","photo-0"]);
+  assert.deepEqual(entrances.map(a=>a.options.delay),[0,60]);
+  assert.ok(entrances.every(a=>a.frames[0].opacity===0&&a.options.fill==="backwards"&&a.options.duration===760));
+  assert.ok(!f.running.some(a=>a.element===f.cards[2]||a.element===f.cards[2].querySelector("img")));
+  cleanup();
+});
+
+test("home exit skips selected cover and cleanup restores visibility and resolves",async()=>{
+  const f=fixture();
+  f.cards.forEach((card,index)=>{card.dataset.motionCover=String(index);card.style.visibility="";});
+  const home={querySelectorAll:selector=>selector==="[data-motion-cover]"?f.cards:[]};
+  const exit=playHomeExit(home,"1");
+  assert.equal(f.cards[1].style.visibility,"hidden");
+  assert.equal(f.running.length,2);
+  assert.ok(!f.running.some(a=>a.element===f.cards[1]));
+  exit.cleanup();await exit.finished;
+  assert.equal(f.cards[1].style.visibility,"");assert.ok(f.running.every(a=>a.cancelled));assert.equal(f.listeners.size,0);
 });

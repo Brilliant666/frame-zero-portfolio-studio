@@ -90,12 +90,13 @@ export async function loadProductionPublicFiles(projectRoot) {
   return Object.freeze([...files]);
 }
 
-export async function prepareNextStandalone(projectRoot) {
+export async function prepareNextStandalone(projectRoot, distDirectory = ".next") {
+  if (![".next", ".next-local-preview"].includes(distDirectory)) throw new Error("Unsupported Next.js artifact directory.");
   const resolvedRoot = path.resolve(projectRoot);
-  const nextRoot = path.join(resolvedRoot, ".next");
+  const nextRoot = path.join(resolvedRoot, distDirectory);
   const standaloneRoot = path.join(nextRoot, "standalone");
   const staticSource = path.join(nextRoot, "static");
-  const staticTarget = path.join(standaloneRoot, ".next", "static");
+  const staticTarget = path.join(standaloneRoot, distDirectory, "static");
   const publicSource = path.join(resolvedRoot, "public");
   const publicTarget = path.join(standaloneRoot, "public");
 

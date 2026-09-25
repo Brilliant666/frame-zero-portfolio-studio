@@ -16,8 +16,10 @@ type Props = Pick<TemplateProps, "content" | "onOpenWork" | "onBeforeViewChange"
 };
 const hashPrefix = "#polaroid-collection-";
 // The saved workspace is loopback-development-only; do not ship its composer in production.
-const ComposerScene = process.env.NODE_ENV === "development" ? lazy(() => import("./composer-scene")) : null;
-const MotionHome = process.env.NODE_ENV === "development" ? lazy(() => import("./motion-home")) : null;
+let preparedComposer: typeof import("./composer-scene").default | undefined;
+const loadComposer = () => import("./composer-scene").then(module => {preparedComposer=module.default;return module;});
+const ComposerScene = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? lazy(loadComposer) : null;
+const MotionHome = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? lazy(() => import("./motion-home")) : null;
 const cameraKey = (id: string) => `${id}:${window.innerWidth < 600 ? "mobile" : "desktop"}`;
 const assetLabel = (asset: PhotoAsset, index: number) => `素材 ${String(index + 1).padStart(2, "0")} · ${asset.aspectRatio > 1.05 ? "横幅" : asset.aspectRatio < .95 ? "竖幅" : "方幅"}`;
 
@@ -28,7 +30,9 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
   const [libraryError, setLibraryError] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(initialCollectionId ?? null);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [entranceSource, setEntranceSource] = useState<CollectionEntranceSource>();
+  const [entry, setEntry] = useState<{source?:CollectionEntranceSource;exiting:boolean}>();
+  const entranceSource=entry?.source,homeExiting=entry?.exiting;
+  const entryGeneration = useRef(0);
   const cameras = useRef(new Map<string, ViewState>());
   const [lastSelected, setLastSelected] = useState<string | null>(null);
   const [restoredView, setRestoredView] = useState<ViewState | undefined>();
@@ -44,18 +48,29 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
     return { ...work, title: "照片", subtitle: "" };
   }), [selectedAssets]);
   const sceneId = selected?.id ?? "home";
+  // Render the resolved component directly: React.lazy's first suspension can
+  // otherwise add a 300ms fallback throttle even after the module was preloaded.
+  const ReadyScene=ComposerScene ? preparedComposer ?? ComposerScene : null;
   useEffect(() => {
     if (!isActive) return;
-    const remember = () => scrollPositions.current.set(cameraKey(sceneId), window.scrollY);
+    const remember = () => scrollPositions.current.set(cameraKey(sceneId), scrollY);
     addEventListener("scroll", remember, { passive: true });
     return () => removeEventListener("scroll", remember);
   }, [isActive, sceneId]);
   const rememberCamera = useCallback((view: ViewState) => { cameras.current.set(cameraKey(sceneId), view); }, [sceneId]);
+  const homeCards = useMemo<SceneCard[]>(() => visible.map((item) => ({ id: item.id, asset: collectionCover(item, assetMap), title: item.name || "未命名图集",
+    subtitle: `${uniqueAvailableAssetIds(item, new Set(assetMap.keys())).length} 张照片`, fit: item.coverFit, focusX: item.coverFocusX, focusY: item.coverFocusY,
+  })), [visible, assetMap]);
   const cards = useMemo<SceneCard[]>(() => selected ? selectedAssets.map((asset, index) => ({
     id: asset.id, asset, title: `${String(index + 1).padStart(2, "0")} / ${selected.name}`, subtitle: "查看完整影像",
-  })) : visible.map((item) => ({ id: item.id, asset: collectionCover(item, assetMap), title: item.name || "未命名图集",
-    subtitle: `${uniqueAvailableAssetIds(item, new Set(assetMap.keys())).length} 张照片`, fit: item.coverFit, focusX: item.coverFocusX, focusY: item.coverFocusY,
-  })), [selected, selectedAssets, visible, assetMap]);
+  })) : homeCards, [selected, selectedAssets, homeCards]);
+  const prepare = (id: string) => {
+    if (!ComposerScene) return Promise.resolve();
+    void loadComposer().catch(()=>{});
+    const collection = visible.find(item => item.id === id);
+    const collectionAssets = collection ? uniqueAvailableAssetIds(collection,new Set(assetMap.keys())).map(key => assetMap.get(key)!) : [];
+    return import("./entry-photos").then(module => module.prepareEntryPhotos(collectionAssets));
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -70,7 +85,8 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
   }, []);
 
   const returnHome = useCallback((push = true) => {
-    setEntranceSource(undefined);
+    if (ComposerScene) entryGeneration.current++;
+    setEntry(undefined);
     const scrollTop = scrollPositions.current.get(cameraKey("home")) ?? 0;
     onBeforeViewChange?.(); setRestoredView(cameras.current.get(cameraKey("home"))); setSelectedId(null);
     if (push && !isPreview) window.history.pushState(null, "", "#polaroid-top");
@@ -85,7 +101,8 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
   useEffect(() => {
     if (isPreview) return;
     const sync = () => {
-      setEntranceSource(undefined);
+      if (ComposerScene) entryGeneration.current++;
+      setEntry(undefined);
       const id = location.hash.startsWith(hashPrefix) ? location.hash.slice(hashPrefix.length) : null;
       const next = visible.some((item) => item.id === id) ? id : null;
       const scrollTop = scrollPositions.current.get(cameraKey(next ?? "home")) ?? 0;
@@ -114,19 +131,23 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
     onBeforeViewChange?.();
     setCollections((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item));
   };
-  const openCard = (id: string) => {
+  const openCard = async (id: string, source?: CollectionEntranceSource, exit?: Promise<void>) => {
     if (selected) {
       const index = selectedAssets.findIndex((asset) => asset.id === id);
       if (index >= 0) onOpenWork(works[index], works);
     } else {
-      if (process.env.NODE_ENV === "development" && savedCollections) {
-        const element = [...document.querySelectorAll<HTMLElement>("[data-motion-cover]")].find(item => item.dataset.motionCover === id);
-        const image = element?.querySelector("img"), box = element?.getBoundingClientRect();
-        const assetId = cards.find(card => card.id === id)?.asset?.id;
-        setEntranceSource(box && image && assetId ? { assetId, x: box.left, y: box.top, width: box.width, height: box.height, src: image.currentSrc || image.src } : undefined);
+      if (savedCollections && ComposerScene) {
+        const generation=++entryGeneration.current;
+        await loadComposer();
+        if (entryGeneration.current!==generation || source?.cancelled) {source?.flight?.cleanup();return;}
+        if(source)source.accepted=true;
+        setEntry({source,exiting:Boolean(exit)});
+        void (exit ?? Promise.resolve()).then(() => {
+          if(entryGeneration.current===generation) setEntry(current=>current&&{...current,exiting:false});
+        });
       }
       const scrollTop = scrollPositions.current.get(cameraKey(id)) ?? 0;
-      scrollPositions.current.set(cameraKey("home"), window.scrollY); setLastSelected(id); setRestoredView(cameras.current.get(cameraKey(id)));
+      scrollPositions.current.set(cameraKey("home"), scrollY); setLastSelected(id); setRestoredView(cameras.current.get(cameraKey(id)));
       setSelectedId(id);
       requestAnimationFrame(() => window.scrollTo({ top: scrollTop, behavior: "instant" }));
       if (!isPreview) history.pushState(null, "", `${hashPrefix}${id}`);
@@ -135,8 +156,9 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
 
   return <div className={styles.experience} data-collection-proof={savedCollections ? undefined : "local-only"}>
     {libraryError && <p role="alert">{libraryState}</p>}
-    {savedCollections && !selected && MotionHome ? <Suspense fallback={<PreviewLoading />}><MotionHome cards={cards} content={content} onOpen={openCard} restoreFocusId={lastSelected} /></Suspense> : savedCollections && selected && ComposerScene ? <Suspense fallback={<PreviewLoading />}><ComposerScene key={sceneId} cards={cards} sceneId={sceneId} title={selected.name} description={selected.description}
-      focusId={selected.focusAssetId} coverId={selected.coverAssetId} entranceSource={entranceSource} onBack={() => returnHome()} onOpen={openCard} onAssetUnavailable={(id) => setAssets(current => current.filter(asset => asset.id !== id))} /></Suspense> : <CollectionScene key={`${sceneId}${savedCollections && selected ? cards.length ? ":photos" : ":empty" : ""}`} cards={cards} sceneId={sceneId} content={content} title={selected?.name} description={selected?.description}
+    {savedCollections && MotionHome && (!selected || homeExiting) && <div style={homeExiting ? {position:"absolute",inset:"0 0 auto",zIndex:10,pointerEvents:"none"} : undefined} aria-hidden={homeExiting || undefined} inert={homeExiting || undefined}><Suspense fallback={<PreviewLoading />}><MotionHome cards={homeCards} content={content} active={isActive} onWarm={loadComposer} onPrepare={prepare} onOpen={openCard} restoreFocusId={homeExiting ? null : lastSelected} /></Suspense></div>}
+    {savedCollections && !selected && MotionHome ? null : savedCollections && selected && ReadyScene ? <Suspense fallback={null}><ReadyScene key={sceneId} cards={cards} sceneId={sceneId} title={selected.name} description={selected.description}
+      active={isActive} focusId={selected.focusAssetId} coverId={selected.coverAssetId} entranceSource={entranceSource} onBack={() => returnHome()} onOpen={openCard} onAssetUnavailable={(id) => setAssets(current => current.filter(asset => asset.id !== id))} /></Suspense> : <CollectionScene key={`${sceneId}${savedCollections && selected ? cards.length ? ":photos" : ":empty" : ""}`} cards={cards} sceneId={sceneId} content={content} title={selected?.name} description={selected?.description}
       composedPhotos={!!savedCollections && !!selected}
       readOnly={!!savedCollections} onAssetUnavailable={(id) => setAssets((current) => current.filter((asset) => asset.id !== id))}
       focusId={selected?.focusAssetId} initialView={restoredView} onViewChange={rememberCamera} onOpen={openCard}

@@ -13,7 +13,12 @@ export async function requirePreviewWorkspace(request?: Request): Promise<boolea
   const source = h.get("sec-fetch-site");
   if (source && source !== "none" && source !== "same-origin") return false;
   if (h.get("origin") && h.get("origin") !== h.get(PREVIEW_ORIGIN_HEADER)) return false;
-  return h.get(PREVIEW_PROOF_HEADER) === secret && /^http:\/\/(127\.0\.0\.1|localhost|\[::1\]):3001$/.test(h.get(PREVIEW_ORIGIN_HEADER) ?? "");
+  const localOrigin = (env as Record<string, unknown>).FRAME_ZERO_LOCAL_PREVIEW_ORIGIN;
+  const localPort = typeof localOrigin === "string" ? /^http:\/\/127\.0\.0\.1:([1-9][0-9]{0,4})$/.exec(localOrigin)?.[1] : undefined;
+  const validOrigin = typeof localOrigin === "string"
+    ? !!localPort && Number(localPort) <= 65535 && h.get(PREVIEW_ORIGIN_HEADER) === localOrigin
+    : /^http:\/\/(127\.0\.0\.1|localhost|\[::1\]):3001$/.test(h.get(PREVIEW_ORIGIN_HEADER) ?? "");
+  return h.get(PREVIEW_PROOF_HEADER) === secret && validOrigin;
 }
 export function previewDatabase(): PreviewDatabase { return getLegacyD1Database() as unknown as PreviewDatabase; }
 export async function readSavedPreviewDocument() { return readPreviewDocument(previewDatabase()); }

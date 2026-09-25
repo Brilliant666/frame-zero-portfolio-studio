@@ -3,6 +3,7 @@ import { defineConfig, type ViteDevServer } from "vite";
 import hostingConfig from "./.openai/hosting.json";
 import { sites } from "./build/sites-vite-plugin";
 import { randomBytes } from "node:crypto";
+import { createLocalPreviewPhotoHandler } from "./scripts/lib/local-preview-photo.mjs";
 
 const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   "00000000-0000-4000-8000-000000000000";
@@ -62,6 +63,8 @@ export default defineConfig(async ({ command, isPreview }) => {
   };
 
   return {
+    // The production-only local opt-in belongs to the Node runner, never Worker builds.
+    define: { "process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW": JSON.stringify("0") },
     server: isCodexSeatbeltSandbox
       ? { watch: { useFsEvents: false, usePolling: true } }
       : undefined,
@@ -70,6 +73,12 @@ export default defineConfig(async ({ command, isPreview }) => {
         name: "local-preview-workspace-proof",
         enforce: "pre",
         configureServer(server: ViteDevServer) {
+          const photos = createLocalPreviewPhotoHandler({ root: process.cwd() });
+          server.middlewares.use((request, response, next) => {
+            if (!previewWorkspaceSecret || !["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(request.socket.remoteAddress ?? "") ||
+              !/^(127\.0\.0\.1|localhost|\[::1\]):3001$/.test(request.headers.host ?? "") || !(request.url ?? "").startsWith("/__local-preview-photo?")) { next(); return; }
+            void photos(request, response).then(handled => { if (!handled) next(); }).catch(next);
+          });
           server.middlewares.use((request, response, next) => {
             delete request.headers["x-frame-zero-preview-proof"];
             delete request.headers["x-frame-zero-preview-origin"];

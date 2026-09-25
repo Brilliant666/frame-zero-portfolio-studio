@@ -9,8 +9,8 @@ import { useTemplateInteractions } from "../templates/shared/use-template-intera
 import { PreviewLoading } from "./preview-loading";
 
 // Keep local-only design assets out of both production runtime artifacts.
-const StarMotionShell = process.env.NODE_ENV === "development" ? lazy(() => import("./star-motion-shell")) : Fragment;
-const StarThemeToggle = process.env.NODE_ENV === "development" ? lazy(() => import("./star-motion-shell").then(module => ({ default: module.StarThemeToggle }))) : () => null;
+const StarMotionShell = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? lazy(() => import("./star-motion-shell")) : Fragment;
+const StarThemeToggle = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? lazy(() => import("./star-motion-shell").then(module => ({ default: module.StarThemeToggle }))) : () => null;
 
 const PolaroidFieldTemplate = lazy(() => import("../templates/polaroid-field/template"));
 
@@ -21,7 +21,7 @@ export function previewDisplayContent(document: PreviewPortfolioDocumentV1): Sit
     activeTemplate: "polaroid-field", works: [], templateWorks: {} };
 }
 
-export const PreviewPortfolioView = process.env.NODE_ENV === "development" ? PreviewPortfolioExperience : () => null;
+export const PreviewPortfolioView = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? PreviewPortfolioExperience : () => null;
 
 function PreviewPortfolioExperience({ document, embedded = false, initialCollectionId }: { document: PreviewPortfolioDocumentV1; embedded?: boolean; initialCollectionId?: string }) {
   const content = useMemo(() => previewDisplayContent(document), [document]);

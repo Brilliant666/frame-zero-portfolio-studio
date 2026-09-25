@@ -52,7 +52,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
-      {process.env.NODE_ENV === "development" && <head>
+      {(process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1") && <head>
         <style dangerouslySetInnerHTML={{ __html: PREVIEW_THEME_BOOTSTRAP_CSS }} />
         <script dangerouslySetInnerHTML={{ __html: PREVIEW_THEME_BOOTSTRAP }} />
       </head>}

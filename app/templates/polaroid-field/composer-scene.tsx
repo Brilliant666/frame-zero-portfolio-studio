@@ -11,9 +11,10 @@ import {playCollectionEntrance,type CollectionEntranceSource} from "./collection
 import { COMPOSER_MODES, composerSeed, composerView, parseComposerPreference, type ComposerBounds, type ComposerPreference, type ComposerView } from "./composer-view";
 import styles from "./composer.module.css";
 import "./motion-fonts.css";
+import { entryPhotoSource, prepareEntryPhoto, revealEntryImage } from "./entry-photos";
 
 type Props = { cards: readonly SceneCard[]; sceneId: string; title?: string; description?: string;
-  focusId?: string | null; coverId?: string | null; entranceSource?: CollectionEntranceSource; onBack: () => void; onOpen: (id: string) => void; onAssetUnavailable: (id: string) => void };
+  active?: boolean; focusId?: string | null; coverId?: string | null; entranceSource?: CollectionEntranceSource; onBack: () => void; onOpen: (id: string) => void; onAssetUnavailable: (id: string) => void };
 const labels = { constellation: "星座", scatter: "散落", editorial: "跨页" };
 const preferenceKey = (id: string) => `frame-zero:preview-composer:v2:${id}`;
 function readPreference(id: string) {
@@ -21,7 +22,7 @@ function readPreference(id: string) {
   catch { return parseComposerPreference(null); }
 }
 
-export default function ComposerScene({ cards, sceneId, title, description, focusId, coverId, entranceSource, onBack, onOpen, onAssetUnavailable }: Props) {
+export default function ComposerScene({ cards, sceneId, title, description, active=true, focusId, coverId, entranceSource, onBack, onOpen, onAssetUnavailable }: Props) {
   const [preference, setPreference] = useState(() => readPreference(sceneId));
   const hero = resolveComposerHero(cards.map(card => card.id), preference.heroId, focusId, coverId);
   const [lines, setLines] = useState(true);
@@ -39,13 +40,28 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
   const flip=useRef<Map<string,{x:number;y:number;width:number;angle:number}>|null>(null);
   const animations=useRef(new Set<Animation>());
   const entrance=useRef<(()=>void)|null>(null),entranceStarted=useRef(false);
-  const cancelEntrance=useCallback(()=>{entrance.current?.();entrance.current=null;if(worldRef.current)worldRef.current.style.visibility="visible";},[]);
+  const entrancePending=useRef(false),entranceGeneration=useRef(0);
+  const cancelEntrance=useCallback(()=>{entranceGeneration.current++;entrancePending.current=false;entrance.current?.();entrance.current=null;entranceSource?.flight?.cleanup();if(worldRef.current)worldRef.current.style.visibility="visible";},[entranceSource]);
   const interruptEntrance=useCallback(()=>{entranceStarted.current=true;cancelEntrance();},[cancelEntrance]);
+  useLayoutEffect(()=>{if(!active)interruptEntrance();},[active,interruptEntrance]);
   const beginEntrance=useCallback((mobile=false)=>{
-    if(entranceStarted.current || !worldRef.current)return;
+    if(entranceStarted.current || entrancePending.current || !worldRef.current)return;
     if(!worldRef.current.querySelector("[data-card-id]")){worldRef.current.style.visibility="visible";return;}
-    entranceStarted.current=true;
-    entrance.current=playCollectionEntrance(worldRef.current,entranceSource,{pin:`.${styles.pin}`,tape:`.${styles.tape}`,lines:`.${styles.lines}`},mobile);
+    entrancePending.current=true;
+    const generation=entranceGeneration.current,world=worldRef.current;
+    const images=[...world.querySelectorAll<HTMLImageElement>("img")].filter(image=>{const box=image.getBoundingClientRect();return box.right>0&&box.left<innerWidth&&box.bottom>0&&box.top<innerHeight;});
+    images.forEach(image=>{image.loading="eager";});
+    const ready=Promise.all(images.map(image=>prepareEntryPhoto(image.currentSrc||image.src).then(()=>image.decode().catch(()=>{}))));
+    const wait=Math.max(0,300-(performance.now()-(entranceSource?.startedAt ?? performance.now())));
+    let timer:ReturnType<typeof setTimeout>;
+    void Promise.race([entranceSource?.ready ?? ready,new Promise(resolve=>{timer=setTimeout(resolve,wait);})]).then(()=>{
+      clearTimeout(timer);
+      if(generation!==entranceGeneration.current || !world.isConnected)return;
+      entrancePending.current=false;entranceStarted.current=true;
+      images.filter(image=>image.complete&&image.naturalWidth).forEach(image=>{image.style.opacity="1";});
+      performance.mark("entry:pin-start");
+      entrance.current=playCollectionEntrance(world,entranceSource,{pin:`.${styles.pin}`,tape:`.${styles.tape}`,lines:`.${styles.lines}`},mobile);
+    });
   },[entranceSource]);
   useLayoutEffect(()=>()=>{cancelEntrance();entranceStarted.current=false;},[cancelEntrance]);
   const cancelAnimations=useCallback(()=>{animations.current.forEach(animation=>animation.cancel());animations.current.clear();},[]);
@@ -73,7 +89,30 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
     if(worldRef.current)worldRef.current.style.transform=`translate3d(${next.x}px,${next.y}px,0) scale(${next.scale})`;
     const label=`${Math.round(next.scale*100)}%`;
     if(zoomOutput.current && zoomOutput.current.textContent!==label)zoomOutput.current.textContent=label;
+    worldRef.current?.dispatchEvent(new CustomEvent("composer:scale",{detail:next.scale}));
   }, []);
+  useLayoutEffect(()=>{
+    const world=worldRef.current;if(!world)return;
+    let timer:ReturnType<typeof setTimeout>;
+    const upgrade=()=>{
+      clearTimeout(timer);
+      timer=setTimeout(()=>{
+        if (!entranceStarted.current || performance.now()-(entranceSource?.startedAt ?? 0)<1600) return;
+        world.querySelectorAll<HTMLImageElement>("img[data-photo-id]").forEach(image=>{
+          const asset=cards.find(card=>card.id===image.dataset.photoId)?.asset;if(!asset)return;
+          const box=image.getBoundingClientRect();
+          if(box.right<0||box.left>innerWidth||box.bottom<0||box.top>innerHeight)return;
+          const required=box.width*Math.min(2,devicePixelRatio||1);
+          const tier=required>1100?2200:required>600?1100:600;
+          if(tier<=Number(image.dataset.photoTier||600))return;
+          const src=entryPhotoSource(asset,tier);
+          void prepareEntryPhoto(src).then(loaded=>{if(loaded&&image.isConnected&&tier>Number(image.dataset.photoTier||600)){image.src=src;image.dataset.photoTier=String(tier);}});
+        });
+      },180);
+    };
+    world.addEventListener("composer:scale",upgrade);upgrade();
+    return()=>{clearTimeout(timer);world.removeEventListener("composer:scale",upgrade);};
+  },[cards,entranceSource]);
   const motion=useComposerMotion(viewRef,commit,!compact,constrain);
   useLayoutEffect(()=>{
     if(compact && worldRef.current)worldRef.current.style.transform="none";
@@ -290,7 +329,7 @@ export default function ComposerScene({ cards, sceneId, title, description, focu
           }}
           style={{ left: card.x - card.w / 2, top: card.y - card.h / 2, width: card.w, height: card.h, zIndex: card.z, "--angle": `${card.rot}deg`, "--enter-delay": `${Math.min(card.i,12)*35}ms` } as CSSProperties}>
           <span className={styles.sheet}>
-            <span className={styles.photo} style={{ left: card.f.side, top: card.f.top, width: card.pw, height: card.ph }}>{source.asset ? <img src={source.asset.variants.card.src} alt={`图集照片 ${card.i + 1}`} width={source.asset.variants.card.width} height={source.asset.variants.card.height} loading={card.i < 3 || card.role === "hero" || card.id === coverId || card.id === entranceSource?.assetId ? "eager" : "lazy"} draggable={false} onError={() => onAssetUnavailable(card.id)} /> : "照片暂不可用"}</span>
+            <span className={styles.photo} style={{ left: card.f.side, top: card.f.top, width: card.pw, height: card.ph }}>{source.asset ? <img src={entryPhotoSource(source.asset)} data-photo-id={card.id} data-photo-tier="600" style={{opacity:card.id===entranceSource?.assetId?1:0}} onLoad={event=>revealEntryImage(event.currentTarget,card.id===entranceSource?.assetId)} alt={`图集照片 ${card.i + 1}`} width={source.asset.variants.card.width} height={source.asset.variants.card.height} loading={card.i < 3 || card.role === "hero" || card.id === coverId || card.id === entranceSource?.assetId ? "eager" : "lazy"} draggable={false} onError={() => onAssetUnavailable(card.id)} /> : "照片暂不可用"}</span>
             <span className={styles.caption} style={{ height: card.f.bottom, paddingInline: card.f.side, justifyContent: card.cap === "right" ? "flex-end" : undefined, fontSize: Math.max(15, Math.min(34, card.f.bottom * .5)) }}>{card.role === "hero" ? "✦ " : ""}No.{String(card.i + 1).padStart(2, "0")}</span>
           </span>
           {[card.tape, card.tape2].map((tape, index) => tape && <i className={styles.tape} key={index} aria-hidden="true" style={{ left: tape.x * card.w - tape.w / 2, width: tape.w, background: "var(--star-tape)", transform: `rotate(${tape.rot}deg)` }} />)}
