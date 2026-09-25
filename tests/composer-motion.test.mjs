@@ -76,12 +76,23 @@ test("real captured mouse burst zooms from its first small event, with or withou
   }
 });
 
-test("all wheel zoom uses the former Ctrl sensitivity without large-notch jumps",()=>{
+test("wheel zoom is continuous, monotone and reversible across the former threshold",()=>{
   assert.equal(composerWheelZoomFactor(-100),Math.exp(.16));
-  assert.equal(composerWheelZoomFactor(2),Math.exp(-.02));
+  assert.equal(composerWheelZoomFactor(2),Math.exp(-.0032));
   assert.equal(composerWheelZoomFactor(50),Math.exp(-.08));
-  assert.equal(composerWheelZoomFactor(49),Math.exp(-.49));
-  assert.equal(composerWheelZoomFactor(3*16),Math.exp(-.48));
+  assert.equal(composerWheelZoomFactor(49),Math.exp(-49*.0016));
+  assert.equal(composerWheelZoomFactor(3*16),Math.exp(-48*.0016));
+  assert.equal(composerWheelZoomFactor(0),1);
+  const deltas=[-1000,-51,-50.001,-50,-49.999,-49,-.001,0,.001,49,49.999,50,50.001,51,1000];
+  for(let i=0;i<deltas.length;i++){
+    const delta=deltas[i],factor=composerWheelZoomFactor(delta);
+    assert.ok(Math.abs(factor*composerWheelZoomFactor(-delta)-1)<1e-12);
+    if(i)assert.ok(factor<composerWheelZoomFactor(deltas[i-1]));
+    assert.ok(Math.abs(factor-composerWheelZoomFactor(delta+1e-6))<1e-7);
+  }
+  assert.ok(Math.abs(composerWheelZoomFactor(5)**20-composerWheelZoomFactor(100))<1e-12);
+  for(const delta of [NaN,Infinity,-Infinity])assert.equal(composerWheelZoomFactor(delta),1);
+  for(const delta of [Number.MAX_VALUE,-Number.MAX_VALUE])assert.ok(Number.isFinite(composerWheelZoomFactor(delta))&&composerWheelZoomFactor(delta)>0);
 });
 
 test("canvas zoom shortcuts recognize Ctrl/Cmd and keypad variants",()=>{

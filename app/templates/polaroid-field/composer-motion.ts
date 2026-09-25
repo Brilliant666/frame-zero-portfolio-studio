@@ -40,7 +40,10 @@ export function composerWheelKind(event:{ctrlKey:boolean;shiftKey:boolean}):"pan
 }
 /** delta is already normalized to pixels, including Firefox line/page units. */
 export function composerWheelZoomFactor(delta:number){
-  return Math.exp(-delta*(Math.abs(delta)<50?.01:.0016));
+  // One continuous sensitivity for every device; cap pathological finite input
+  // before exponentiation. Invalid input must leave the camera unchanged.
+  if(!Number.isFinite(delta))return 1;
+  return Math.exp(-Math.max(-4,Math.min(4,delta*.0016)));
 }
 export function composerZoomShortcut(event:{key:string;code:string;ctrlKey:boolean;metaKey:boolean;altKey:boolean}) {
   if(!(event.ctrlKey||event.metaKey)||event.altKey)return null;
