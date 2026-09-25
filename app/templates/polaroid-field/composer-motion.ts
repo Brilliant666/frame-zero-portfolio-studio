@@ -34,25 +34,13 @@ export function composerReleaseVelocity(samples:readonly MotionSample[],now:numb
   return {x:x*k,y:y*k};
 }
 export function composerZoomLimit(scale:number,fitScale:number){return Math.max(fitScale*.8,Math.min(2.4,scale));}
-export function composerWheelKind(deltaX:number,deltaY:number,deltaMode:number,ctrlKey:boolean,shiftKey=false,wheelDeltaY?:number):"pan"|"zoom" {
-  if(ctrlKey)return "zoom";
-  if(shiftKey)return "pan";
-  if(deltaMode!==0)return "zoom";
-  if(deltaX!==0)return "pan";
-  if(typeof wheelDeltaY==="number" && wheelDeltaY!==0 && Math.abs(wheelDeltaY)%120===0)return "zoom";
-  return Math.abs(deltaY)>=50?"zoom":"pan";
-}
-export function createComposerWheelClassifier(){
-  let lock:{kind:"pan"|"zoom";until:number}|undefined;
-  return (event:{deltaX:number;deltaY:number;deltaMode:number;ctrlKey:boolean;shiftKey:boolean;wheelDeltaY?:number},now:number)=>{
-    if(lock && now<lock.until){lock.until=now+160;return lock.kind;}
-    const kind=composerWheelKind(event.deltaX,event.deltaY,event.deltaMode,event.ctrlKey,event.shiftKey,event.wheelDeltaY);
-    lock={kind,until:now+160};return kind;
-  };
+export function composerWheelKind(event:{ctrlKey:boolean;shiftKey:boolean}):"pan"|"zoom" {
+  // Explicit gesture semantics: never infer a device from fractional deltas.
+  return event.shiftKey && !event.ctrlKey ? "pan" : "zoom";
 }
 /** delta is already normalized to pixels, including Firefox line/page units. */
-export function composerWheelZoomFactor(delta:number,ctrlKey:boolean){
-  return Math.exp(-delta*(ctrlKey && Math.abs(delta)<50?.01:.0016));
+export function composerWheelZoomFactor(delta:number){
+  return Math.exp(-delta*(Math.abs(delta)<50?.01:.0016));
 }
 export function composerZoomShortcut(event:{key:string;code:string;ctrlKey:boolean;metaKey:boolean;altKey:boolean}) {
   if(!(event.ctrlKey||event.metaKey)||event.altKey)return null;

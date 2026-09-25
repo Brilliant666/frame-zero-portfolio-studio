@@ -5,7 +5,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProper
 import type { SceneCard } from "./collection-scene";
 import { buildComposerLayout } from "./composer-layout";
 import { resolveComposerHero } from "./composer-selection";
-import {composerReleaseVelocity,composerZoomLimit,createComposerWheelClassifier,composerWheelZoomFactor,composerZoomShortcut,composerFlip,composerPaperBounds,constrainComposer,zoomComposerAt,type MotionSample} from "./composer-motion";
+import {composerReleaseVelocity,composerZoomLimit,composerWheelKind,composerWheelZoomFactor,composerZoomShortcut,composerFlip,composerPaperBounds,constrainComposer,zoomComposerAt,type MotionSample} from "./composer-motion";
 import {useComposerMotion} from "./use-composer-motion";
 import {playCollectionEntrance,type CollectionEntranceSource} from "./collection-entrance";
 import { COMPOSER_MODES, composerSeed, composerView, parseComposerPreference, type ComposerBounds, type ComposerPreference, type ComposerView } from "./composer-view";
@@ -204,7 +204,6 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
   useLayoutEffect(() => {
     const stage = stageRef.current;
     if (!stage || compact) return;
-    const wheelKind=createComposerWheelClassifier();
     const wheel = (event: WheelEvent) => {
       // Floating camera/navigation buttons are part of the canvas, not scroll exits.
       // Keep native scrolling only inside editable settings and expanded controls.
@@ -213,13 +212,13 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
       cameraMode.current = "manual";
       const unit=event.deltaMode===1?16:event.deltaMode===2?size.height:1;
       const delta=event.deltaY*unit;
-      if(wheelKind(event,performance.now())==="pan"){
+      if(composerWheelKind(event)==="pan"){
         motion.stop();const old=viewRef.current,c=constraintRef.current;
         commit(constrainComposer({...old,x:old.x-event.deltaX*unit,y:old.y-delta},c.bounds,c.width,c.height,true));
         motion.release({x:0,y:0});return;
       }
       const old = motion.target(), fit = composerView(layout, size.width, size.height, size.top, "fit", cameraOptions);
-      const scale = composerZoomLimit(old.scale*composerWheelZoomFactor(delta,event.ctrlKey),fit.scale);
+      const scale = composerZoomLimit(old.scale*composerWheelZoomFactor(delta),fit.scale);
       const rect = stage.getBoundingClientRect(), x = event.clientX - rect.left, y = event.clientY - rect.top;
       motion.zoom(zoomComposerAt(old,x,y,scale));
     };
