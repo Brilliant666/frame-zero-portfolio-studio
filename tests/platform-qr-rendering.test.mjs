@@ -1,6 +1,76 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
+import { readFileSync, existsSync } from "node:fs";
+import path from "node:path";
+import { createRequire } from "node:module";
 import test from "node:test";
+import vm from "node:vm";
+import ts from "typescript";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+
+const require = createRequire(import.meta.url);
+
+// Execute repository TSX with React's real server renderer. CSS modules only
+// provide class names; the unrelated, browser-only collection canvas is omitted.
+// Neither template contact branches nor PlatformAccounts are replaced by fixtures.
+function contactRenderer() {
+  const modules = new Map();
+  let sharedCalls = 0;
+  function load(filename) {
+    if (modules.has(filename)) return modules.get(filename).exports;
+    const loadedModule = { exports: {} };
+    modules.set(filename, loadedModule);
+    const source = readFileSync(filename, "utf8");
+    const compiled = ts.transpileModule(source, {
+      fileName: filename,
+      compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 },
+    }).outputText;
+    const localRequire = (id) => {
+      if (id.endsWith(".css")) return { default: new Proxy({}, { get: (_, name) => String(name) }) };
+      if (id === "./collection-experience") return { default: () => null };
+      if (!id.startsWith(".")) return require(id);
+      const base = path.resolve(path.dirname(filename), id);
+      const resolved = [base, `${base}.ts`, `${base}.tsx`, `${base}.json`].find(existsSync);
+      assert.ok(resolved, `Cannot resolve ${id} from ${filename}`);
+      if (resolved.endsWith(".json")) return JSON.parse(readFileSync(resolved, "utf8"));
+      const imported = load(resolved);
+      if (id === "../shared/platform-accounts") {
+        return { ...imported, default: (props) => {
+          sharedCalls += 1;
+          return createElement(imported.default, props);
+        } };
+      }
+      return imported;
+    };
+    vm.runInNewContext(compiled, {
+      module: loadedModule, exports: loadedModule.exports, require: localRequire,
+      process: { env: { NODE_ENV: "development" } },
+      URL, structuredClone,
+    }, { filename });
+    return loadedModule.exports;
+  }
+  return {
+    render(templateId, collectionWorkspace) {
+      sharedCalls = 0;
+      const Template = load(path.resolve(`app/templates/${templateId}/template.tsx`)).default;
+      const content = {
+        profile: { brand: "TEST", mark: "T", photographer: "测试摄影师", role: "摄影", city: "测试城市", availability: "可约", intro: "测试简介" },
+        hero: { eyebrow: "测试", title: "测试作品", services: "摄影" },
+        trustItems: [], works: [], templateWorks: {}, packages: [], bookingFields: [],
+        contact: { wechat: "fixture", email: "fixture@portfolio.example", note: "测试联系" },
+        statement: { eyebrow: "测试", lineOne: "预约", lineTwo: "摄影" },
+        social: [{ label: "测试平台", handle: "https://example.com/profile" }],
+      };
+      const html = renderToStaticMarkup(createElement(Template, {
+        templateId, content, works: [], packages: [], bookingTemplate: "测试预约清单",
+        booted: true, copiedKey: null, isPreview: true,
+        onCopy: async () => {}, onOpenWork: () => {}, collectionWorkspace,
+      }));
+      return { html, sharedCalls };
+    },
+  };
+}
 
 const templateIds = [
   "archive-os",
@@ -17,12 +87,34 @@ const templateIds = [
 ];
 
 test("all eleven contact surfaces use exactly one shared platform account renderer", async () => {
+  const renderer = contactRenderer();
   for (const templateId of templateIds) {
     const source = await fs.readFile(`app/templates/${templateId}/template.tsx`, "utf8");
     assert.equal((source.match(/import PlatformAccounts from "\.\.\/shared\/platform-accounts";/g) ?? []).length, 1, templateId);
-    assert.equal((source.match(/<PlatformAccounts accounts=\{content\.social\}/g) ?? []).length, 1, templateId);
     assert.doesNotMatch(source, /content\.social\.map|SocialQrCode|toDataURL|data:image/i, templateId);
+    const { html, sharedCalls } = renderer.render(templateId);
+    assert.equal(sharedCalls, 1, `${templateId}: shared component executions`);
+    assert.equal((html.match(/aria-label="平台账号与分享卡片"/g) ?? []).length, 1, `${templateId}: rendered account regions, including hidden content`);
+    assert.equal((html.match(/href="https:\/\/example.com\/profile"/g) ?? []).length, 1, `${templateId}: account link`);
   }
+});
+
+test("legacy and preview polaroid contacts render one shared account region in mutually exclusive footer branches", () => {
+  const renderer = contactRenderer();
+  const legacy = renderer.render("polaroid-field");
+  const preview = renderer.render("polaroid-field", {
+    collections: [], Navigation: () => createElement("nav", { "aria-label": "预览导航" }),
+  });
+  for (const result of [legacy, preview]) {
+    assert.equal(result.sharedCalls, 1);
+    assert.equal((result.html.match(/aria-label="平台账号与分享卡片"/g) ?? []).length, 1);
+    assert.equal((result.html.match(/href="https:\/\/example.com\/profile"/g) ?? []).length, 1);
+    assert.match(result.html, /target="_blank" rel="noopener noreferrer"/);
+  }
+  assert.match(legacy.html, /<footer\b[^>]*class="footer"/);
+  assert.doesNotMatch(legacy.html, /aria-label="预览导航"/);
+  assert.doesNotMatch(preview.html, /<footer\b/);
+  assert.match(preview.html, /aria-label="预览导航"/);
 });
 
 test("shared platform account cards preserve links, accessibility, natural ratio, and fail-safe rendering", async () => {
