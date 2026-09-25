@@ -5,7 +5,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProper
 import type { SceneCard } from "./collection-scene";
 import { buildComposerLayout } from "./composer-layout";
 import { resolveComposerHero } from "./composer-selection";
-import {composerReleaseVelocity,composerZoomLimit,composerWheelKind,composerFlip,composerPaperBounds,constrainComposer,zoomComposerAt,type MotionSample} from "./composer-motion";
+import {composerReleaseVelocity,composerZoomLimit,createComposerWheelClassifier,composerWheelZoomFactor,composerFlip,composerPaperBounds,constrainComposer,zoomComposerAt,type MotionSample} from "./composer-motion";
 import {useComposerMotion} from "./use-composer-motion";
 import {playCollectionEntrance,type CollectionEntranceSource} from "./collection-entrance";
 import { COMPOSER_MODES, composerSeed, composerView, parseComposerPreference, type ComposerBounds, type ComposerPreference, type ComposerView } from "./composer-view";
@@ -204,18 +204,20 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
   useLayoutEffect(() => {
     const stage = stageRef.current;
     if (!stage || compact) return;
+    const wheelKind=createComposerWheelClassifier();
     const wheel = (event: WheelEvent) => {
       if ((event.target as Element).closest("button,select,input,a,summary,details") && !(event.target as Element).closest("[data-card-id]")) return;
       event.preventDefault();
       cameraMode.current = "manual";
-      if(composerWheelKind(event.deltaX,event.deltaY,event.deltaMode,event.ctrlKey)==="pan"){
+      const unit=event.deltaMode===1?16:event.deltaMode===2?size.height:1;
+      const delta=event.deltaY*unit;
+      if(wheelKind(event,performance.now())==="pan"){
         motion.stop();const old=viewRef.current,c=constraintRef.current;
-        commit(constrainComposer({...old,x:old.x-event.deltaX,y:old.y-event.deltaY},c.bounds,c.width,c.height,true));
+        commit(constrainComposer({...old,x:old.x-event.deltaX*unit,y:old.y-delta},c.bounds,c.width,c.height,true));
         motion.release({x:0,y:0});return;
       }
       const old = motion.target(), fit = composerView(layout, size.width, size.height, size.top, "fit", cameraOptions);
-      const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? size.height : 1);
-      const scale = composerZoomLimit(old.scale*Math.exp(-delta*(event.ctrlKey?.01:.0016)),fit.scale);
+      const scale = composerZoomLimit(old.scale*composerWheelZoomFactor(delta,event.ctrlKey),fit.scale);
       const rect = stage.getBoundingClientRect(), x = event.clientX - rect.left, y = event.clientY - rect.top;
       motion.zoom(zoomComposerAt(old,x,y,scale));
     };

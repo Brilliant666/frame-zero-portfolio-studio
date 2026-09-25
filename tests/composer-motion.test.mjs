@@ -4,7 +4,7 @@ import test from "node:test";
 import ts from "typescript";
 const text=await fs.readFile(new URL("../app/templates/polaroid-field/composer-motion.ts",import.meta.url),"utf8");
 const js=ts.transpileModule(text,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
-const {zoomComposerAt,interpolateComposer,composerReleaseVelocity,composerInertiaStep,composerZoomLimit,composerWheelKind,constrainComposer,composerSpringStep,composerFlip,composerPaperBounds}=await import("data:text/javascript;base64,"+Buffer.from(js).toString("base64"));
+const {zoomComposerAt,interpolateComposer,composerReleaseVelocity,composerInertiaStep,composerZoomLimit,composerWheelKind,createComposerWheelClassifier,composerWheelZoomFactor,constrainComposer,composerSpringStep,composerFlip,composerPaperBounds}=await import("data:text/javascript;base64,"+Buffer.from(js).toString("base64"));
 
 test("wheel/button zoom keeps the chosen world point under its screen anchor",()=>{
   const from={x:-120,y:36,scale:.7},point={x:456,y:234};
@@ -50,6 +50,49 @@ test("all zoom inputs share FIT-relative floor and trackpad gestures are classif
   assert.equal(composerWheelKind(1,4.2,0,true),"zoom");
   assert.equal(composerWheelKind(0,3,1,false),"zoom");
 });
+for(const [name,input,expected] of [
+  ["Windows fractional mouse notch",[0,33.333333,0,false,false,-120],"zoom"],
+  ["Windows floating point mouse noise",[0,100.00000762939453,0,false,false,-120],"zoom"],
+  ["Firefox line wheel",[0,3,1,false],"zoom"],
+  ["high precision mouse",[0,60,0,false,false,-72],"zoom"],
+  ["Ctrl mouse notch",[0,100,0,true],"zoom"],
+  ["trackpad pinch",[0,2,0,true],"zoom"],
+  ["Mac diagonal trackpad",[.8,4.2,0,false],"pan"],
+  ["Windows precision trackpad",[0,18,0,false,false,-21],"pan"],
+  ["Shift wheel",[0,120,0,false,true,-120],"pan"],
+])test(`wheel classification: ${name}`,()=>assert.equal(composerWheelKind(...input),expected));
+
+test("wheel precedence and fallback threshold do not depend on integer deltas",()=>{
+  assert.equal(composerWheelKind(1,120,1,true,true,-120),"zoom");
+  assert.equal(composerWheelKind(1,120,1,false,true,-120),"pan");
+  assert.equal(composerWheelKind(1,3,1,false),"zoom");
+  assert.equal(composerWheelKind(.01,120,0,false,false,-120),"pan");
+  assert.equal(composerWheelKind(0,49.99,0,false,false,0),"pan");
+  assert.equal(composerWheelKind(0,-50,0,false),"zoom");
+  assert.equal(composerWheelKind(0,133.333333,0,false,false,-120),"zoom");
+});
+
+test("wheel burst keeps the first kind with a sliding strictly-under-160ms window",()=>{
+  const classify=createComposerWheelClassifier();
+  const mouse={deltaX:0,deltaY:33.333333,deltaMode:0,ctrlKey:false,shiftKey:false,wheelDeltaY:-120};
+  const trackpad={...mouse,deltaY:18,wheelDeltaY:-21};
+  assert.equal(classify(mouse,0),"zoom");
+  assert.equal(classify(trackpad,159),"zoom");
+  assert.equal(classify(trackpad,318),"zoom");
+  assert.equal(classify(trackpad,478),"pan");
+  assert.equal(classify({...mouse,ctrlKey:true},500),"pan");
+  assert.equal(classify(mouse,660),"zoom");
+  assert.equal(createComposerWheelClassifier()(trackpad,0),"pan","independent canvases do not share locks");
+});
+
+test("Ctrl mouse uses modest zoom while small pinch deltas retain sensitivity",()=>{
+  assert.equal(composerWheelZoomFactor(-100,true),Math.exp(.16));
+  assert.equal(composerWheelZoomFactor(2,true),Math.exp(-.02));
+  assert.equal(composerWheelZoomFactor(50,true),Math.exp(-.08));
+  assert.equal(composerWheelZoomFactor(49,true),Math.exp(-.49));
+  assert.equal(composerWheelZoomFactor(3*16,false),Math.exp(-48*.0016));
+});
+
 test("soft bounds retain both axes, apply .35 resistance and settle with 120ms spring",()=>{
   const box={left:0,right:2000,top:0,bottom:1500},view={x:-5000,y:4000,scale:1};
   const target=constrainComposer(view,box,1000,800);
