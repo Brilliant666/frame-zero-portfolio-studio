@@ -185,6 +185,10 @@
   color: var(--star-muted);
 }
 
+.sections :global(#polaroid-booking) > [aria-label="平台账号与分享卡片"] {
+  grid-column: 1 / -1;
+}
+
 .sections [aria-label="平台账号与分享卡片"][data-tone] {
   --accounts-bg: var(--star-glass);
   --accounts-panel: var(--star-paper);

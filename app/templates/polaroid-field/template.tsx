@@ -461,7 +461,7 @@ export default function PolaroidFieldTemplate({
           </button>
         </div>
 
-        <footer data-star-dark className={styles.footer}>
+        {Navigation ? <PlatformAccounts accounts={content.social} tone="dark" /> : <footer data-star-dark className={styles.footer}>
           <div>
             <strong>{content.profile.brand}</strong>
             <span>{content.profile.photographer} · {content.profile.role}</span>
@@ -469,7 +469,7 @@ export default function PolaroidFieldTemplate({
           <PlatformAccounts accounts={content.social} tone="dark" />
           <p>{content.statement.lineOne}{content.statement.lineTwo}</p>
           <small>© 2026 / EVERY MEMORY HAS COORDINATES.</small>
-        </footer>
+        </footer>}
       </section>
 
       <div className={styles.mobileCta} aria-label="快速约拍">
