@@ -1,5 +1,10 @@
 # Self-Hosted V1 Launch Roadmap
 
+> 2026-09-26 有限例外：用户以 `LOCAL_ACCOUNT_FOUNDATION_01` 明确授权在本机合并验证
+> PostgreSQL 与身份基础（含最小 `/login`），不等待远程部署。参见
+> [实施边界](LOCAL_ACCOUNT_FOUNDATION.md)。历史 Stage 门禁不用于阻止该本机任务；
+> 远程部署、内容迁移、作品库和 Site 后台接线仍需后续授权。
+
 > - Status: `CURRENT_SOURCE_OF_TRUTH`
 > - Product authority: [PORTFOLIO_PLATFORM_NORTH_STAR.md](PORTFOLIO_PLATFORM_NORTH_STAR.md)
 > - Current stage: `STAGE_A_RUNTIME`
