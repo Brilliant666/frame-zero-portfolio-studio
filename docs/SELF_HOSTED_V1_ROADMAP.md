@@ -1,21 +1,19 @@
 # Self-Hosted V1 Launch Roadmap
 
-> 2026-09-26 有限例外：用户以 `LOCAL_ACCOUNT_FOUNDATION_01` 明确授权在本机合并验证
-> PostgreSQL 与身份基础（含最小 `/login`），不等待远程部署。参见
-> [实施边界](LOCAL_ACCOUNT_FOUNDATION.md)。历史 Stage 门禁不用于阻止该本机任务；
-> 远程部署、内容迁移、作品库和 Site 后台接线仍需后续授权。
+> 2026-09-26：`PRODUCT_DELIVERY_MISSION_02` 授权下列 M1–M5 产品研发，
+> 无需等待远程 HTTPS 或 Mission 文档合并。远程部署仍冻结；真实数据正式切换、
+> 破坏性操作和真实开户资料保持独立审批/输入边界。
 
 > - Status: `CURRENT_SOURCE_OF_TRUTH`
 > - Product authority: [PORTFOLIO_PLATFORM_NORTH_STAR.md](PORTFOLIO_PLATFORM_NORTH_STAR.md)
-> - Current stage: `STAGE_A_RUNTIME`
+> - Active slice and verified heads: [CURRENT_STATUS.md](CURRENT_STATUS.md)
 > - V1 status: `NOT_LAUNCHED`
 > - Online status: `NOT_ONLINE_PREVIEW`
 
-This roadmap turns the Portfolio Platform North Star into a launch-critical
-sequence with an early deployment lane. Stages are ordered to avoid circular
-dependencies, to prevent one PR from combining several infrastructure changes,
-and to make the real server a continuous validation environment well before
-the final V1 gate.
+M1–M5 determine current product execution. Old Stage numbers below remain a
+technical acceptance and eventual deployment mapping. Their per-Stage scope
+exclusions limit those historical slices, not Mission-authorized work. No real
+server, HTTPS or Docker-repair prerequisite is imposed on local product code.
 
 ## 1. Current state
 
@@ -32,12 +30,43 @@ The repository currently has:
 - Cloudflare/vinext runtime wiring that is not the accepted self-hosted
   production target.
 
-It does not yet have a standard Next.js Node production runtime, PostgreSQL,
-production authentication, Site-scoped routes, Draft/Publish persistence,
-hosted uploads, or the target Linux deployment.
+Standard Next Node parity and repository deployment packaging are accepted.
+PR #28 implements PostgreSQL migrations, real Better Auth, operator provisioning,
+AuthUser → PortfolioUser → Site and grants, verified against real PostgreSQL in
+CI. Local PostgreSQL readback and real star provisioning remain incomplete.
+Site routes, independent content, publication and Site assets are the product
+delivery path; target Linux deployment is separately unauthorized.
 
 PR #16 remains `KEEP_DRAFT`. It is Auth research evidence for
 Better Auth + vinext + workerd + D1, not a self-hosted production baseline.
+
+### Authorized product milestones
+
+| Milestone | User capability and acceptance | Old Stage mapping |
+| --- | --- | --- |
+| M1 | `/` introduction; existing real `/login`; dynamic `/:siteSlug`; real session/ownership-gated Admin shell; `/test` and `/test/admin` legacy reference; unavailable/unpublished states fail safely; real PG two-user positive/negative HTTP chain | B/C/E foundation reused; D and F entry |
+| M2 | Existing basic and premium polaroid editors adapted to Site + independent content-space versions and concurrency; correct editor, no global write shortcut or common mandatory payload | F + G draft foundation |
+| M3 | Same-Site Asset pool reused without file copies; independent collections/covers/order; Site-scoped queries and cross-Site denial; removal of reference not deletion; migration dry-run/mapping/recovery | H + I planning |
+| M4 | Save Draft only; explicit Publish immutable snapshot/pointer; public page and metadata read same Published version; rollback preserves history; template changes retain other spaces | G |
+| M5 | Second anonymous fixture photographer uses operator provisioning and own uploads/editors; grants/session expiry/logout/cross-Site rejection proven; real second account only on user input | E/F/H end-to-end |
+
+Preserve `/preview` and current edits until new content is usable. All product
+login/editing belongs to one Standard Next application/origin; test ports do not
+become permanent module services. No star hardcode, fake session or global 2601
+fallback. M2 adapts SiteContent and PreviewPortfolioDocumentV1 without rewriting
+both editors or forcing future templates into one payload.
+
+Each slice records added user capability, existing dependencies, current real
+verification, and remaining user/environment/authority needs. Use focused tests;
+final milestone/PR head runs full existing gates including real PG and five CI
+checks. Do not repeatedly run full research for text-only changes or weaken
+budgets/tests/design. Track implementation, CI, local and real-star evidence
+independently.
+
+PR #28 remains foundation-only. Topic branches may stack on its verified head;
+state real base/dependency, with at most two pending review layers. Delivery or
+green CI is not an automatic stop; at capacity, stop dependent work and present
+one review list. Merge/approve/auto-merge and remote actions need separate consent.
 
 ## 2. Online maturity model
 
@@ -67,7 +96,7 @@ flowchart LR
     C --> D["Stage D: Routes"]
     A2 --> OP["ONLINE_PREVIEW"]
     D --> OP
-    OP --> E["Stage E: Identity + Login"]
+    C --> E["Stage E: Identity + Login"]
     E --> F["Stage F: Site-scoped Admin"]
     F --> G["Stage G: Publication + SSR"]
     G --> H["Stage H: Hosted Assets"]
@@ -80,8 +109,9 @@ flowchart LR
 Stage A2 is an early launch lane, not a new product-capability Stage. It may
 proceed after Stage A while Stages B–D continue. `ONLINE_PREVIEW` is reached
 only when both the deployment bootstrap and Stage D public routes are ready.
-Research may run in parallel only when it cannot change a later contract or
-delay the current Stage.
+Online deployment is a separate lane. Continue authorized M1–M5 without waiting
+for it; a local Docker failure only blocks local DB/star acceptance. Do not retry
+known environment failures without new evidence or install/reset system services.
 
 ## 4. Stage A — Runtime migration
 
@@ -230,9 +260,9 @@ Separate the platform landing page from the first public Site route.
 - server-rendering and metadata route boundaries are established;
 - all eleven templates remain available through the Site route;
 - no client-provided Site identity is trusted;
-- `DEPLOYMENT_BOOTSTRAP_READY` has been proven;
-- the real server serves `/` and `/star` as public read-only routes over HTTPS;
-- Production Preview Smoke proves both routes healthy without exposing
+- for online acceptance only: `DEPLOYMENT_BOOTSTRAP_READY` has been proven;
+- for online acceptance only: the real server serves `/` and `/star` over HTTPS;
+- online Production Preview Smoke proves both routes healthy without exposing
   production Admin, hosted upload, or public registration.
 
 ### Must not do
@@ -293,11 +323,13 @@ operator-provisioned login.
 
 ### Objective
 
-Move the existing Admin V2 behind a stable Site route and ownership boundary.
+Adapt existing basic Admin V2 and the premium polaroid editor behind stable
+Site routes, grants and independent content-space boundaries.
 
 ### Definition of Done
 
-- `/:siteSlug/admin` renders the existing six-section Admin V2;
+- `/:siteSlug/admin` selects the authorized editor: basic Admin V2 or premium
+  polaroid, retaining existing editing work rather than a generic replacement;
 - `/star/admin` requires an authenticated, authorized Site context;
 - every read and write repository query is scoped by Site;
 - anonymous, wrong-user, mixed-site, and stale-session tests deny access;
@@ -335,7 +367,8 @@ content publicly.
 
 ### Definition of Done
 
-- `site_drafts` and immutable `site_revisions` use whole-document JSONB;
+- drafts and immutable revisions are scoped by Site and content space, with
+  independent versions/concurrency; JSONB payload contracts may differ by space;
 - Save creates a Draft Revision with optimistic concurrency;
 - Publish validates the document, template compatibility, and asset references
   available through the current compatibility resolver; Stage H adds the final
@@ -404,7 +437,7 @@ publication, and storage model without losing data.
 
 ### Definition of Done
 
-- complete backup of current `site_settings`, manifest, derivatives, and any
+- complete backup of legacy record 1, preview record 2601, manifest, derivatives, and any
   confirmed originals;
 - Better Auth User `star` and corresponding Portfolio User;
 - stable Site UUID with `siteSlug=star`;
@@ -560,15 +593,17 @@ Does it affect templates, Admin, SiteDocument, migration, or real assets?
 After ONLINE_PREVIEW, does it preserve the existing Production Preview Smoke?
 ```
 
-If it does not advance the current Stage, stop with:
+Current work must advance M1–M5 without changing Accepted invariants; Stage
+questions above describe technical impact rather than a new authorization gate.
+Read CURRENT_STATUS for the active slice and checkpoint instead of restarting
+Stage A or Auth research. Safe read-only checks, backup and isolated migration
+rehearsal are allowed; real import/cutover, overwrites, deletes and system/remote
+operations need explicit approval. Missing star credentials block real onboarding,
+not anonymous fixture tests. Do not create fake customers in the real account DB.
 
-```text
-OUT_OF_CURRENT_NORTH_STAR
-```
-
-The exact next development task is:
-
-```text
-STAGE A / RUNTIME-01
-Standard Next.js Node Parity
-```
+At a session checkpoint report: new capability; branch/head/PR/dependency;
+implemented/CI/local/real-star layers; data and authorization changes; one local
+blocker and its impact; safe next work; minimal user action/review. Stop only the
+affected work for safety, changed product decisions, missing necessary input,
+unauthorized external action, review capacity or exhaustion of safe authorized
+work. Subsequent authorized merges do not require a new Mission-resume message.
