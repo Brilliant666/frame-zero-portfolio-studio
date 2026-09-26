@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -85,6 +85,52 @@ test("allowlisted public entries must be regular files", async (t) => {
   const root = await createFixture(t, { version: 1, files: ["directory"] });
   await mkdir(path.join(root, "public", "directory"));
   await assert.rejects(prepareNextStandalone(root), /must be a regular file/);
+});
+
+async function createDependencyAliasFixture(t) {
+  const root = await createFixture(t);
+  const standalone = path.join(root, ".next", "standalone");
+  const source = path.join(root, "node_modules", "pg");
+  const traced = path.join(standalone, "node_modules", "pg");
+  const alias = path.join(standalone, ".next", "node_modules", "pg-587764f78a6c7a9c");
+  await mkdir(source, { recursive: true });
+  await mkdir(traced, { recursive: true });
+  await mkdir(path.dirname(alias), { recursive: true });
+  await writeFile(path.join(root, "package.json"), JSON.stringify({ dependencies: { pg: "8.23.0" } }));
+  await writeFile(path.join(traced, "package.json"), JSON.stringify({ name: "pg", version: "8.23.0" }));
+  await writeFile(path.join(traced, "index.js"), "module.exports = 'traced';\n");
+  await writeFile(path.join(source, "untraced-secret.txt"), "must not be copied");
+  await symlink(source, alias, process.platform === "win32" ? "junction" : "dir");
+  return { root, source, traced, alias };
+}
+
+test("hashed runtime aliases materialize only the pinned standalone traced files", async (t) => {
+  const { root, source, alias } = await createDependencyAliasFixture(t);
+  await prepareNextStandalone(root);
+  assert.equal((await lstat(alias)).isSymbolicLink(), false);
+  assert.equal(await readFile(path.join(alias, "index.js"), "utf8"), "module.exports = 'traced';\n");
+  await assert.rejects(readFile(path.join(alias, "untraced-secret.txt")), { code: "ENOENT" });
+  assert.equal(await readFile(path.join(source, "untraced-secret.txt"), "utf8"), "must not be copied");
+  await prepareNextStandalone(root); // repeat preparation remains safe
+});
+
+test("dependency aliases reject outside targets without altering them", async (t) => {
+  const { root, alias } = await createDependencyAliasFixture(t);
+  await rm(alias);
+  await symlink(path.join(root, "public"), alias, process.platform === "win32" ? "junction" : "dir");
+  await assert.rejects(prepareNextStandalone(root), /outside its reviewed package/);
+  assert.equal((await lstat(alias)).isSymbolicLink(), true);
+  assert.equal(await readFile(path.join(root, "public", "safe.svg"), "utf8"), "<svg/>\n");
+});
+
+test("dependency aliases reject nested links and mismatched package versions", async (t) => {
+  const nested = await createDependencyAliasFixture(t);
+  await symlink(nested.source, path.join(nested.traced, "nested"), process.platform === "win32" ? "junction" : "dir");
+  await assert.rejects(prepareNextStandalone(nested.root), /Symlink inside traced/);
+  assert.equal((await lstat(nested.alias)).isSymbolicLink(), true);
+  const mismatched = await createDependencyAliasFixture(t);
+  await writeFile(path.join(mismatched.traced, "package.json"), JSON.stringify({ name: "pg", version: "0.0.0" }));
+  await assert.rejects(prepareNextStandalone(mismatched.root), /does not match its exact runtime pin/);
 });
 
 test("both standalone variants preserve reviewed font bytes and exclude source records", async (t) => {

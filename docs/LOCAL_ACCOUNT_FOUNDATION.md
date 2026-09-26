@@ -113,5 +113,20 @@ Schema 再生成：
 
 ## 验证记录
 
-验证进行中；真实 PostgreSQL 集成检查独立列入 CI，不以 mock 或 SQLite 代替。
-最终结果在本文件收口后记录，不把代码、CI、本机 PG 和真实开户合并称为完成。
+Draft PR：[#28](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/28)。
+
+- 首轮 CI 的真实 PostgreSQL + Standard Next 测试 12/12 通过：空库迁移、重复迁移、
+  并发开户、冲突拒绝、开户故障事务回滚与恢复、真实 session、跨 Site 查询拒绝、
+  注册变体/运营端点关闭、伪造身份/转发头/跨源拒绝、退出/撤销/过期和限流。
+  重启证据是 Node 服务重启后账号与 Site 保持；不是本机 PG 容器重启证明。
+- CI 完整 npm test、lint、Standard Next 与 legacy 预算通过。CI legacy public JS
+  为 542.1 KiB；Next application JS 263.4 KiB、bootstrap JS 581.7 KiB。
+  Windows 本机 legacy 测量为 563206 bytes，比 550 KiB 限制多 6 bytes，仍如实记为失败；
+  没有放宽预算。其余本机静态检查、Next 构建和预算、public safety 通过。
+- 本机 Docker Desktop 已普通重启，未 Reset、清理卷或修改守护进程；引擎仍持续超时，
+  日志为 unexpected EOF。因此本机 PG 迁移、持久化与真实 star 登录尚未验证。
+- 3001 的 `/`、`/admin`、`/preview`、`/preview/admin` 回归均为 200；没有修改旧内容、
+  视觉或素材代码，没有调用旧内容写接口。未取得本轮开始前的 SQLite 内容快照，
+  因此不声称已用前后 hash 证明记录 1/2601 的内容、时间戳和 revision 完全一致。
+- 私人图库和两个账号环境文件仍被 Git 忽略。真实 star 尚未创建，需要本机 PG 恢复，
+  然后由运营者在交互 CLI 输入明确的真实邮箱及不回显的密码。
