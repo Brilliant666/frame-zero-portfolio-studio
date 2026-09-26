@@ -22,6 +22,7 @@ scripts/**
 !scripts/lib/
 scripts/lib/**
 !scripts/lib/local-preview-build.mjs
+!scripts/lib/account-config.mjs
 
 !config/
 config/**

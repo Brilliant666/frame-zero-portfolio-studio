@@ -1,0 +1,31 @@
+name: frame-zero-accounts
+services:
+  development:
+    image: postgres:17.6-alpine
+    env_file: .env.accounts.local
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - development-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    restart: "no"
+  test:
+    image: postgres:17.6-alpine
+    env_file: .env.accounts.test
+    ports:
+      - "127.0.0.1:55433:5432"
+    volumes:
+      - test-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    restart: "no"
+volumes:
+  development-data:
+  test-data:
