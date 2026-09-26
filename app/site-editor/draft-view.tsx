@@ -1,7 +1,7 @@
 "use client";
 import type { SiteContent } from "../site-config";
 import type { PreviewPortfolioDocumentV1 } from "../preview-workspace/document";
-import { SitePortfolioView } from "../preview-workspace/portfolio-view";
+import { SitePortfolioView } from "./premium-view";
 import TemplateRenderer from "../templates/template-renderer";
 import { useTemplateInteractions } from "../templates/shared/use-template-interactions";
 import type { ContentSpace } from "./content-schema";

@@ -24,15 +24,7 @@ export function previewDisplayContent(document: PreviewPortfolioDocumentV1): Sit
 
 export const PreviewPortfolioView = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? PreviewPortfolioExperience : () => null;
 
-const NO_SITE_ASSETS = [] as const;
-type PortfolioViewProps = { document: PreviewPortfolioDocumentV1; embedded?: boolean; initialCollectionId?: string };
-/** Called only from an owner-authorized Site route or its editor. Never resolves local assets. */
-export function SitePortfolioView(props: PortfolioViewProps) {
-  return <PreviewPortfolioExperience {...props} siteMode />;
-}
-
-function PreviewPortfolioExperience({ document, embedded = false, initialCollectionId, siteMode = false }: PortfolioViewProps & { siteMode?: boolean }) {
-  const Shell = siteMode ? Fragment : StarMotionShell;
+function PreviewPortfolioExperience({ document, embedded = false, initialCollectionId }: { document: PreviewPortfolioDocumentV1; embedded?: boolean; initialCollectionId?: string }) {
   const content = useMemo(() => previewDisplayContent(document), [document]);
   const interactions = useTemplateInteractions(content.works);
   const { setActiveWork } = interactions;
@@ -47,13 +39,13 @@ function PreviewPortfolioExperience({ document, embedded = false, initialCollect
   useEffect(() => {
     if (!embedded) window.document.title = getClientVisiblePortfolioTitle(document.profile);
   }, [document.profile, embedded]);
-  return <Suspense fallback={<PreviewLoading />}><Shell>
+  return <Suspense fallback={<PreviewLoading />}><StarMotionShell>
     <Suspense fallback={<PreviewLoading />}><PolaroidFieldTemplate templateId="polaroid-field" content={content} works={content.works}
       packages={content.packages.filter(p => p.enabled)} bookingTemplate={["【约拍任务申请】", ...content.bookingFields].join("\n")}
       booted copiedKey={interactions.copiedKey} isPreview={embedded} onCopy={interactions.copyText}
       onOpenWork={openWork} onBeforeViewChange={close}
-      collectionWorkspace={{ collections: document.collections, initialCollectionId, assets: siteMode ? NO_SITE_ASSETS : undefined, headerAccessory: siteMode ? undefined : <StarThemeToggle />, Navigation: embedded || siteMode ? undefined : StarNavigation }} /></Suspense>
+      collectionWorkspace={{ collections: document.collections, initialCollectionId, headerAccessory: <StarThemeToggle />, Navigation:embedded?undefined:StarNavigation }} /></Suspense>
     {interactions.activeWork && <Lightbox theme="light" safeMissingImage separateControls motionOrigin={origin} work={interactions.activeWork} works={[...interactions.lightboxWorks]}
       frameRef={interactions.lightboxRef} closeButtonRef={interactions.closeButtonRef} onMove={interactions.moveActiveWork} onClose={close} />}
-  </Shell></Suspense>;
+  </StarMotionShell></Suspense>;
 }

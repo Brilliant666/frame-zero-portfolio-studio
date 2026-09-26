@@ -16,6 +16,7 @@ Account head: 3263d4d917b3d59c623b420cb1537cb5a8ff99ff
 Active branch: codex/site-content-editor-integration (based on verified main)
 M1 implementation head: 8318e06
 M1 PR: #29 accepted and Squash merged into main
+M2 Draft PR: #30 (base: main; merge not authorized)
 Remote deployment: FROZEN / NOT_AUTHORIZED
 External deployment gate: EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED
 V1 status: NOT_LAUNCHED

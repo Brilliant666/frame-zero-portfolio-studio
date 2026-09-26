@@ -1,6 +1,8 @@
 # M2：Site 独立内容编辑与草稿保存
 
-日期：2026-09-26。状态：IMPLEMENTED / CI_PENDING。
+日期：2026-09-26。状态：IMPLEMENTED / FINAL_CI_PENDING。
+
+分支：`codex/site-content-editor-integration`；[Draft PR #30](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/30)。最终 head 的 CI 结果在 PR 验收评论记录，避免把早期 head 结果替代最终验证。
 
 ## 合并收口
 
@@ -37,6 +39,7 @@ PR28_PR29 = MERGED_AND_MAIN_VERIFIED
 - 每次服务端校验真实 session + slug owner + premium grant，数据库操作再次包含 site、space、owner/grant 条件。
 - 显式迁移增加 `site_content_drafts`；主键 `(site_id,space)`，独立 revision。PUT 必须提供 expectedRevision，单条 SQL CAS，冲突 409 保留编辑。
 - 基础 Provider 位于持久 layout，跨分区保留草稿；保存期间的新编辑不被旧响应覆盖。
+- 基础空站点可以新增/删除空白套餐与信任信息，不填示例资料。两套 schema 与空默认独立，未来高级字段扩展不强制基础同步。
 - 私人 `/:slug/admin/preview/:space` 授权后读取草稿。公开 `/:slug` 仍显示未发布，不读取草稿。
 
 ## 明确未接线
@@ -49,7 +52,7 @@ M3 Site 选片、上传、资源解析、平台卡尚未接入。Site 模式不�
 
 - IMPLEMENTED：真实编辑器、独立内容 API、显式迁移、CAS 和受保护预览。
 - VERIFIED_LOCALLY：Next 正式构建、原预算、TypeScript、ESLint、编辑器及 schema 行为测试。无本机 PG 或完整真实登录保存验收。
-- VERIFIED_IN_CI：等待本 PR 最终 head 五项 CI 与真实 PostgreSQL HTTP 链路。
+- VERIFIED_IN_CI：初始 head `c04ea3f` 和修订 `33824f9` 的真实 PostgreSQL HTTP 链路均 21/21 通过（runs 36242808037 / 36243017371）；包括双空间保存、跨 Site 拒绝、并发 200/409、重启读取。Quality 先发现旧导航源码断言，再发现高级预览错误进入 legacy 打包图谱。已修正断言，正在隔离 Node 专用预览并验证最终 head 五项 CI；未提高任何预算。
 - VERIFIED_WITH_REAL_STAR：NO。
 
 REAL_STAR_PROVISIONING = NOT_CREATED

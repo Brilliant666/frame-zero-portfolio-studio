@@ -210,7 +210,7 @@ export default function PolaroidFieldTemplate({
         hidden={activeView !== "field"}
         tabIndex={-1}
       >
-        {collectionProof ? <CollectionExperience key={collectionWorkspace ? JSON.stringify(collectionWorkspace.collections) : undefined} savedCollections={collectionWorkspace?.collections} suppliedAssets={collectionWorkspace?.assets} initialCollectionId={collectionWorkspace?.initialCollectionId} content={content} isPreview={isPreview} isActive={activeView === "field"} homeRequest={homeRequest} onOpenWork={onOpenWork} onBeforeViewChange={onBeforeViewChange} /> :
+        {collectionProof ? <CollectionExperience key={collectionWorkspace ? JSON.stringify(collectionWorkspace.collections) : undefined} savedCollections={collectionWorkspace?.collections} {...(process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? { suppliedAssets: collectionWorkspace?.assets } : {})} initialCollectionId={collectionWorkspace?.initialCollectionId} content={content} isPreview={isPreview} isActive={activeView === "field"} homeRequest={homeRequest} onOpenWork={onOpenWork} onBeforeViewChange={onBeforeViewChange} /> :
         <div
           id="polaroid-field"
           ref={viewportRef}

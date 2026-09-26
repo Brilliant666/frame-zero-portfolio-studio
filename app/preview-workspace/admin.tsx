@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element -- Shared local library variants and local-only platform cards. */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import { createPortal } from "react-dom";
 import { parsePhotoLibraryManifest, type PhotoAsset } from "../photo-library";
 import { getPlatformQrAssetPath } from "../platform-qr";
@@ -10,7 +10,7 @@ import { moveItem, type Collection } from "../templates/polaroid-field/collectio
 import { isAdminSaveShortcut } from "../admin/admin-state";
 import { createEmptyPreviewDocument, copyLegacyBasics, parsePreviewDocument, type PreviewPortfolioDocumentV1 } from "./document";
 import { importPrototypeCollections, previewIsDirty, reconcilePreviewSave } from "./admin-state";
-import { PreviewPortfolioView, SitePortfolioView } from "./portfolio-view";
+import { PreviewPortfolioView } from "./portfolio-view";
 import type { SiteEditorScope } from "../site-editor/scope";
 import styles from "./admin.module.css";
 
@@ -29,10 +29,12 @@ function readEnvelope(value: unknown): Envelope {
   return { content: raw.content === null ? null : parsePreviewDocument(raw.content), revision: raw.revision as number, updatedAt: raw.updatedAt };
 }
 
-export default function PreviewPortfolioAdmin({ siteScope }: { siteScope?: SiteEditorScope } = {}) {
+export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorScope; SitePreview?: ComponentType<{ document: PreviewPortfolioDocumentV1; embedded?: boolean; initialCollectionId?: string }> }) {
+  // Site routes exist only in Standard Next Node; omit their adapter from rollback builds.
+  const siteScope = process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? props?.siteScope : undefined;
   const endpoint = siteScope?.endpoint ?? "/api/preview/site-content";
   const siteMode = Boolean(siteScope);
-  const PortfolioView = siteMode ? SitePortfolioView : PreviewPortfolioView;
+  const PortfolioView = process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? props?.SitePreview ?? PreviewPortfolioView : PreviewPortfolioView;
   const [draft, setDraft] = useState(createEmptyPreviewDocument);
   const [saved, setSaved] = useState<PreviewPortfolioDocumentV1 | null>(null);
   const [revision, setRevision] = useState(0);
@@ -181,7 +183,7 @@ export default function PreviewPortfolioAdmin({ siteScope }: { siteScope?: SiteE
     </div></header>
     <div className={styles.body}>
       <p className={styles.notice} role="status">{message}{updatedAt && <><br /><small>服务端更新时间：{updatedAt}</small></>}</p>
-      <div className={styles.row}>{siteMode ? <><a href={siteScope?.adminBasePath}>返回本站后台</a><span className={styles.hint}>两套内容独立保存；本站素材接入尚未开放。</span></> : <><a href="/admin" target="_blank" rel="noreferrer">原版后台 ↗</a><a href="/" target="_blank" rel="noreferrer">原版十一模板主页 ↗</a><span className={styles.hint}>新旧内容独立保存，素材库共用。</span></>}<button type="button" onClick={exportDraft}>导出当前草稿</button></div>
+      <div className={styles.row}>{siteMode ? <><a href={siteScope?.adminBasePath.replace(/\/premium-polaroid$/, "")} onClick={(event) => { if (dirty && !window.confirm("当前草稿尚未保存，确认返回内容空间选择？")) event.preventDefault(); }}>返回本站后台</a><span className={styles.hint}>两套内容独立保存；本站素材接入尚未开放。</span></> : <><a href="/admin" target="_blank" rel="noreferrer">原版后台 ↗</a><a href="/" target="_blank" rel="noreferrer">原版十一模板主页 ↗</a><span className={styles.hint}>新旧内容独立保存，素材库共用。</span></>}<button type="button" onClick={exportDraft}>导出当前草稿</button></div>
       <nav className={styles.nav} aria-label="新版编辑分区">{[["profile", "主页资料"], ["collections", "图集管理"], ["contact", "套餐与联系"]].map(([id, label]) => <button key={id} type="button" aria-pressed={section === id} onClick={() => setSection(id)}>{label}</button>)}</nav>
       <fieldset disabled={loadState !== "ready"} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
         {section === "profile" && <>

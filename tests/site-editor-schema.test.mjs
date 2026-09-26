@@ -28,6 +28,14 @@ test('Site spaces have empty independent defaults and lossless separate schemas'
   assert.equal(basic.profile.photographer, '');
   assert.equal(premium.contact.email, '');
   assert.equal(Object.keys(basic.templateWorks).length, 11);
+  assert.deepEqual(Object.keys(basic).sort(), ['activeTemplate', 'bookingFields', 'contact', 'hero', 'packages', 'profile', 'social', 'statement', 'templateWorks', 'trustItems', 'works'].sort());
+  for (const key of Object.keys(basic)) {
+    const incomplete = structuredClone(basic); delete incomplete[key];
+    assert.throws(() => m.parseSpaceContent('basic', incomplete), `Basic requires its own ${key} field`);
+  }
+  for (const extra of ['schemaVersion', 'collections', 'futurePremiumSetting']) {
+    assert.throws(() => m.parseSpaceContent('basic', { ...basic, [extra]: null }));
+  }
   basic.profile.photographer = 'Independent basic';
   basic.packages = [{ number: '01', english: 'Basic', name: 'Basic package', description: '', price: '100', duration: '', deliverables: [], enabled: true }];
   assert.equal(premium.profile.photographer, '');
