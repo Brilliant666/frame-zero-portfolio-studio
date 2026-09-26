@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { cp, lstat, mkdir, readFile, realpath, rm } from "node:fs/promises";
+import { cp, lstat, mkdir, readFile, readdir, realpath, rm } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -90,6 +90,56 @@ export async function loadProductionPublicFiles(projectRoot) {
   return Object.freeze([...files]);
 }
 
+async function assertRegularDependencyTree(directory) {
+  const stats = await lstat(directory);
+  if (!stats.isDirectory() || stats.isSymbolicLink()) throw new Error("Traced dependency must be a regular directory.");
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const file = path.join(directory, entry.name);
+    if (entry.isSymbolicLink()) throw new Error("Symlink inside traced dependency is not allowed.");
+    if (entry.isDirectory()) await assertRegularDependencyTree(file);
+    else if (!entry.isFile()) throw new Error("Non-regular traced dependency entry is not allowed.");
+  }
+}
+
+// Turbopack emits hashed package aliases as symlinks. Materialize only aliases
+// for exact-pinned runtime dependencies, using the already-traced standalone
+// package (never copying an arbitrary symlink target or the full source package).
+export async function materializeTracedDependencyAliases(projectRoot, standaloneRoot, distDirectory) {
+  projectRoot = await realpath(projectRoot);
+  standaloneRoot = await realpath(standaloneRoot);
+  const aliases = path.join(standaloneRoot, distDirectory, "node_modules");
+  try { await lstat(aliases); } catch (error) { if (error.code === "ENOENT") return; throw error; }
+  assertPathInside(standaloneRoot, aliases);
+  const realStandalone = await realpath(standaloneRoot);
+  if ((await lstat(aliases)).isSymbolicLink() || await realpath(aliases) !== aliases) {
+    throw new Error("Dependency alias directory must not traverse symlinks.");
+  }
+  const runtimeDependencies = JSON.parse(await readFile(path.join(projectRoot, "package.json"), "utf8")).dependencies ?? {};
+  for (const entry of await readdir(aliases, { withFileTypes: true })) {
+    if (!entry.isSymbolicLink()) continue;
+    const match = /^([a-z0-9][a-z0-9._-]*)-[a-f0-9]{16}$/.exec(entry.name);
+    if (!match || !/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/.test(runtimeDependencies[match[1]] ?? "")) {
+      throw new Error("Unreviewed standalone dependency alias.");
+    }
+    const name = match[1];
+    const alias = path.join(aliases, entry.name);
+    const traced = path.join(standaloneRoot, "node_modules", name);
+    const installed = path.join(projectRoot, "node_modules", name);
+    const target = await realpath(alias);
+    if (target !== installed && target !== traced) throw new Error("Dependency alias target is outside its reviewed package.");
+    const realTraced = await realpath(traced);
+    assertPathInside(realStandalone, realTraced);
+    if (realTraced !== traced) throw new Error("Traced dependency path must not traverse symlinks.");
+    await assertRegularDependencyTree(traced);
+    const manifest = JSON.parse(await readFile(path.join(traced, "package.json"), "utf8"));
+    if (manifest.name !== name || manifest.version !== runtimeDependencies[name]) throw new Error("Traced dependency does not match its exact runtime pin.");
+    assertPathInside(standaloneRoot, alias);
+    // Remove only the vetted link, never recursively remove its resolved target.
+    await rm(alias);
+    await cp(traced, alias, { recursive: true, dereference: false, errorOnExist: true, force: false });
+  }
+}
+
 export async function prepareNextStandalone(projectRoot, distDirectory = ".next") {
   if (![".next", ".next-local-preview"].includes(distDirectory)) throw new Error("Unsupported Next.js artifact directory.");
   const resolvedRoot = path.resolve(projectRoot);
@@ -132,6 +182,8 @@ export async function prepareNextStandalone(projectRoot, distDirectory = ".next"
     await mkdir(path.dirname(target), { recursive: true });
     await cp(source, target);
   }
+
+  await materializeTracedDependencyAliases(resolvedRoot, standaloneRoot, distDirectory);
 
   return {
     publicFiles: publicFiles.length,

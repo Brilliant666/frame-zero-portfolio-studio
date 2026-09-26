@@ -1,5 +1,13 @@
 # Portfolio Platform Current Status
 
+## 2026-09-26 本机账号基础有限解冻
+
+用户授权 `LOCAL_ACCOUNT_FOUNDATION_01`：本地 PostgreSQL、Better Auth、运营开户、
+`/login`、PortfolioUser/Site 与最小模板授权。进度与验证见
+[本轮记录](LOCAL_ACCOUNT_FOUNDATION.md)。本授权覆盖下文历史本机 Auth/PG 冻结描述，
+不解除 `ENGINEERING_LAUNCH_LINE` 的远程部署冻结，不代表生产 Auth、Stage 全部完成或 V1 上线。
+内容迁移与两套后台接线尚未开始；免费和付费业务内容独立，同 Site 作品资源未来共享。
+
 > - Updated: 2026-08-24
 > - Baseline: `main@dc471795139dc47649368bb37c0178fb77188fea`
 

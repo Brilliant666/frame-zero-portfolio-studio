@@ -7,6 +7,7 @@ const isLocalPreviewBuild = isStandardNodeBuild && process.env.FRAME_ZERO_LOCAL_
 const nextConfig: NextConfig = isStandardNodeBuild
   ? {
       output: "standalone",
+      pageExtensions: ["node.tsx", "node.ts", "tsx", "ts", "jsx", "js"],
       distDir: isLocalPreviewBuild ? ".next-local-preview" : ".next",
       env: { NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW: isLocalPreviewBuild ? "1" : "0" },
       turbopack: {

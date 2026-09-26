@@ -19,6 +19,7 @@ COPY db ./db
 COPY types ./types
 COPY scripts/build-next-node.mjs scripts/prepare-next-standalone.mjs ./scripts/
 COPY scripts/lib/local-preview-build.mjs ./scripts/lib/local-preview-build.mjs
+COPY scripts/lib/account-config.mjs ./scripts/lib/account-config.mjs
 COPY config/production-public-files.json ./config/production-public-files.json
 COPY public ./public
 

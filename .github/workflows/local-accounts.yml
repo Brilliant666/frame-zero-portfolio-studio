@@ -1,0 +1,42 @@
+name: Local Account PostgreSQL Integration
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: local-accounts-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  postgres-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17.6-alpine
+        env:
+          POSTGRES_USER: account_test
+          POSTGRES_PASSWORD: isolated-ci-test-only
+          POSTGRES_DB: frame_zero_accounts_test
+        ports: ['127.0.0.1:55433:5432']
+        options: >-
+          --health-cmd "pg_isready -U account_test -d frame_zero_accounts_test"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.1
+          cache: npm
+      - run: npm ci
+      # Build intentionally receives no account configuration or database secrets.
+      - run: npm run build
+      - name: Real PostgreSQL and Standard Next identity tests
+        run: node --test tests/local-accounts.test.mjs
+        env:
+          FRAME_ZERO_LOCAL_ACCOUNTS: '1'
+          FRAME_ZERO_ACCOUNT_DATABASE_URL: postgresql://account_test:isolated-ci-test-only@127.0.0.1:55433/frame_zero_accounts_test
+          FRAME_ZERO_ACCOUNT_SECRET: isolated-ci-account-test-secret-never-used-outside-tests-2026
+          FRAME_ZERO_ACCOUNT_ORIGIN: http://127.0.0.1:3004

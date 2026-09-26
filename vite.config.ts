@@ -64,7 +64,7 @@ export default defineConfig(async ({ command, isPreview }) => {
 
   return {
     // The production-only local opt-in belongs to the Node runner, never Worker builds.
-    define: { "process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW": JSON.stringify("0") },
+    define: { "process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW": JSON.stringify("0"), "process.env.FRAME_ZERO_ACCOUNT_NODE_RUNTIME": JSON.stringify("0") },
     server: isCodexSeatbeltSandbox
       ? { watch: { useFsEvents: false, usePolling: true } }
       : undefined,
