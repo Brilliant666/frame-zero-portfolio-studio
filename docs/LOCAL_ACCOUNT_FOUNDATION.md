@@ -7,7 +7,7 @@
 Site 和模板使用授权；不是生产 Auth 上线。远程部署继续冻结。
 
 ```text
-FOUNDATION_IMPLEMENTATION = INCOMPLETE (verification in progress)
+FOUNDATION_IMPLEMENTATION = COMPLETE (code and CI; local acceptance pending)
 LOCAL_POSTGRES_VERIFIED = NO (Docker engine currently unresponsive)
 STAR_PROVISIONING = WAITING_FOR_OPERATOR_INPUT
 CONTENT_MIGRATION = NOT_STARTED
@@ -114,6 +114,11 @@ Schema 再生成：
 ## 验证记录
 
 Draft PR：[#28](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/28)。
+
+最终代码 `ed1dd6b` 的五项 CI 全通过：完整测试与构建预算、公开仓库安全、生产容器、
+Compose/proxy/update/rollback、真实 PostgreSQL 集成。仍保持 Draft，不 Ready、不 Merge。
+容器首次发现 PG 的 Next hashed alias 符号链接；打包阶段仅对精确版本和路径校验通过的
+已追踪依赖实体化，原扫描门禁未放宽。新增容器契约测试后 9/9 通过。
 
 - 首轮 CI 的真实 PostgreSQL + Standard Next 测试 12/12 通过：空库迁移、重复迁移、
   并发开户、冲突拒绝、开户故障事务回滚与恢复、真实 session、跨 Site 查询拒绝、
