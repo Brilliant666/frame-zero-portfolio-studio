@@ -1,0 +1,1521 @@
+{
+  "cssSource": "https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@900&display=swap",
+  "licenseSource": "https://raw.githubusercontent.com/google/fonts/main/ofl/notoserifsc/OFL.txt",
+  "files": [
+    {
+      "file": "subset-000.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.4.woff2",
+      "bytes": 2804,
+      "sha256Chunks": [
+        "c6af45d6",
+        "5c4ceda4",
+        "7f0ca26b",
+        "c728f4d7",
+        "9330ba7f",
+        "60cdbbfc",
+        "a74527ec",
+        "e4f08955"
+      ]
+    },
+    {
+      "file": "subset-001.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.5.woff2",
+      "bytes": 14856,
+      "sha256Chunks": [
+        "dc7c5ba8",
+        "83eb6b2f",
+        "54ffc3cc",
+        "be1ce094",
+        "b65dcca8",
+        "069600ec",
+        "ae94c3f1",
+        "a0b3ebb7"
+      ]
+    },
+    {
+      "file": "subset-002.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.6.woff2",
+      "bytes": 8928,
+      "sha256Chunks": [
+        "2ffa70a4",
+        "6e336c67",
+        "c0786a75",
+        "e16bd245",
+        "88bdfde3",
+        "f6313fbd",
+        "61cf68f4",
+        "04dc545d"
+      ]
+    },
+    {
+      "file": "subset-003.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.21.woff2",
+      "bytes": 13932,
+      "sha256Chunks": [
+        "6b9718fd",
+        "336319d0",
+        "d4c33da1",
+        "974e993b",
+        "bac5e7c8",
+        "2d006987",
+        "a2c823db",
+        "12a5eca3"
+      ]
+    },
+    {
+      "file": "subset-004.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.22.woff2",
+      "bytes": 43432,
+      "sha256Chunks": [
+        "8a67e2d2",
+        "75ab88e6",
+        "3b7c6e8b",
+        "e88525d0",
+        "5dd5074c",
+        "333d7861",
+        "97ecea7c",
+        "92bc1c32"
+      ]
+    },
+    {
+      "file": "subset-005.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.23.woff2",
+      "bytes": 37220,
+      "sha256Chunks": [
+        "54fec51b",
+        "2de743f7",
+        "45c358cd",
+        "2f56f47a",
+        "78c6a674",
+        "12e12dda",
+        "2c1010ba",
+        "3aefb5d2"
+      ]
+    },
+    {
+      "file": "subset-006.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.24.woff2",
+      "bytes": 42188,
+      "sha256Chunks": [
+        "06b09ae8",
+        "245efa1b",
+        "9711954f",
+        "773588e2",
+        "f075680e",
+        "6f47c1dd",
+        "70d28b28",
+        "96a8f5e9"
+      ]
+    },
+    {
+      "file": "subset-007.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.25.woff2",
+      "bytes": 39984,
+      "sha256Chunks": [
+        "1d92e8c5",
+        "6b8e713d",
+        "4e57d10d",
+        "3cd243f8",
+        "d3adbf71",
+        "208b711e",
+        "f486115e",
+        "17737b8d"
+      ]
+    },
+    {
+      "file": "subset-008.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.26.woff2",
+      "bytes": 36712,
+      "sha256Chunks": [
+        "117a4e06",
+        "080a68b6",
+        "315e3141",
+        "417bf898",
+        "6c2cd081",
+        "c9e4bd62",
+        "11864fc6",
+        "13a1de81"
+      ]
+    },
+    {
+      "file": "subset-009.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.27.woff2",
+      "bytes": 33592,
+      "sha256Chunks": [
+        "0e518521",
+        "53ce2b2e",
+        "627fbbbe",
+        "40b33da5",
+        "4424eae9",
+        "db47cdc2",
+        "f80d6249",
+        "65a624cc"
+      ]
+    },
+    {
+      "file": "subset-010.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.28.woff2",
+      "bytes": 34620,
+      "sha256Chunks": [
+        "78a04461",
+        "f3c6016b",
+        "546a7bb3",
+        "c0360608",
+        "ba033beb",
+        "c4010da0",
+        "00b83847",
+        "9cdd2a92"
+      ]
+    },
+    {
+      "file": "subset-011.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.29.woff2",
+      "bytes": 37404,
+      "sha256Chunks": [
+        "55e09934",
+        "fb64c6be",
+        "5fdf5cf4",
+        "3cdb403c",
+        "f3996a73",
+        "b73c4ce1",
+        "534aea8e",
+        "cee4892a"
+      ]
+    },
+    {
+      "file": "subset-012.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.30.woff2",
+      "bytes": 38248,
+      "sha256Chunks": [
+        "c2b2150d",
+        "c1b961fe",
+        "f488abff",
+        "9ef059e5",
+        "24159871",
+        "4326a70b",
+        "f7d62c85",
+        "bec8ad70"
+      ]
+    },
+    {
+      "file": "subset-013.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.31.woff2",
+      "bytes": 32088,
+      "sha256Chunks": [
+        "80a49e89",
+        "b5abb5d4",
+        "cb5839fc",
+        "b65bfdd0",
+        "5bf64632",
+        "4af1776c",
+        "0b64ad5c",
+        "e04d7fe2"
+      ]
+    },
+    {
+      "file": "subset-014.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.32.woff2",
+      "bytes": 35256,
+      "sha256Chunks": [
+        "78e373ae",
+        "3ea71c7e",
+        "3196a832",
+        "3f0443b0",
+        "c72c64b5",
+        "aa7b59bb",
+        "6c58f9ce",
+        "143664ba"
+      ]
+    },
+    {
+      "file": "subset-015.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.33.woff2",
+      "bytes": 34188,
+      "sha256Chunks": [
+        "aa5fdbaa",
+        "f265e847",
+        "faad8b35",
+        "9eeb423f",
+        "46452e17",
+        "154649b6",
+        "4637cba8",
+        "88203562"
+      ]
+    },
+    {
+      "file": "subset-016.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.34.woff2",
+      "bytes": 33624,
+      "sha256Chunks": [
+        "a3c13ee3",
+        "cb61d606",
+        "fc2fe4af",
+        "ecfabd15",
+        "5c10a82d",
+        "2acf0f20",
+        "a9a6d069",
+        "4e4c1ec8"
+      ]
+    },
+    {
+      "file": "subset-017.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.35.woff2",
+      "bytes": 32452,
+      "sha256Chunks": [
+        "2c9de71a",
+        "46fade20",
+        "0d5e95e9",
+        "cb364cc2",
+        "be3ad84e",
+        "ea320fb4",
+        "4339a341",
+        "2ccbcc3f"
+      ]
+    },
+    {
+      "file": "subset-018.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.36.woff2",
+      "bytes": 29260,
+      "sha256Chunks": [
+        "dd7c66b5",
+        "7ed00ceb",
+        "f3fc1248",
+        "e41034af",
+        "85110763",
+        "92115a71",
+        "96de88cc",
+        "df7fa6c8"
+      ]
+    },
+    {
+      "file": "subset-019.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.37.woff2",
+      "bytes": 35248,
+      "sha256Chunks": [
+        "aa8ac9b8",
+        "e2cb0ce7",
+        "23b903ec",
+        "1616b0a0",
+        "6bda6540",
+        "e877b5b5",
+        "72b7e617",
+        "c2bc322b"
+      ]
+    },
+    {
+      "file": "subset-020.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.38.woff2",
+      "bytes": 39012,
+      "sha256Chunks": [
+        "2eaa24f3",
+        "b58f11bf",
+        "75e34eb5",
+        "b92c3748",
+        "a3a286e3",
+        "41d4919f",
+        "38b8817a",
+        "dfd87511"
+      ]
+    },
+    {
+      "file": "subset-021.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.39.woff2",
+      "bytes": 37120,
+      "sha256Chunks": [
+        "938cf2c1",
+        "26f1fbb4",
+        "c4affe91",
+        "c1caf6e3",
+        "cd501df3",
+        "09385b65",
+        "04e3f6cd",
+        "6d4b83c2"
+      ]
+    },
+    {
+      "file": "subset-022.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.40.woff2",
+      "bytes": 34008,
+      "sha256Chunks": [
+        "4f453879",
+        "a914c166",
+        "35180411",
+        "b77e5299",
+        "949831e4",
+        "ba8f02fb",
+        "889948ac",
+        "1bbcdbb8"
+      ]
+    },
+    {
+      "file": "subset-023.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.41.woff2",
+      "bytes": 26320,
+      "sha256Chunks": [
+        "375b308e",
+        "762e7cb7",
+        "e0c020a2",
+        "01cd5fda",
+        "709eb376",
+        "7180dc1a",
+        "bc440f8d",
+        "40f063ef"
+      ]
+    },
+    {
+      "file": "subset-024.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.42.woff2",
+      "bytes": 32756,
+      "sha256Chunks": [
+        "16ccc71c",
+        "e243016d",
+        "f57c9c9d",
+        "bb3d8b23",
+        "2d11a4f1",
+        "8bcc7dbb",
+        "4592d33b",
+        "eb50a1cf"
+      ]
+    },
+    {
+      "file": "subset-025.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.43.woff2",
+      "bytes": 30408,
+      "sha256Chunks": [
+        "83469b75",
+        "64615bbe",
+        "19e40675",
+        "6155a571",
+        "6aab9c9f",
+        "e79964b6",
+        "0b1116a4",
+        "159196da"
+      ]
+    },
+    {
+      "file": "subset-026.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.44.woff2",
+      "bytes": 37960,
+      "sha256Chunks": [
+        "dcaa67d1",
+        "31732f85",
+        "d234b3fb",
+        "6df64be0",
+        "7399c03b",
+        "79435c9c",
+        "5deab865",
+        "592e5bb1"
+      ]
+    },
+    {
+      "file": "subset-027.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.45.woff2",
+      "bytes": 47688,
+      "sha256Chunks": [
+        "24870b93",
+        "84d9632d",
+        "13738c12",
+        "1ddd6d45",
+        "b0ee8d5d",
+        "95abd6bf",
+        "4bde89bd",
+        "ee237431"
+      ]
+    },
+    {
+      "file": "subset-028.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.46.woff2",
+      "bytes": 38620,
+      "sha256Chunks": [
+        "13ce11c1",
+        "ea3ce7f5",
+        "780ce0e1",
+        "22e7c188",
+        "b6a4be8a",
+        "5a7689b7",
+        "faf333db",
+        "a1e45acf"
+      ]
+    },
+    {
+      "file": "subset-029.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.47.woff2",
+      "bytes": 38408,
+      "sha256Chunks": [
+        "87016a5b",
+        "bca5ae06",
+        "e6035f0a",
+        "b62c0b7c",
+        "4da7631e",
+        "bff6c2c8",
+        "e702f5a2",
+        "08d4e362"
+      ]
+    },
+    {
+      "file": "subset-030.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.48.woff2",
+      "bytes": 32596,
+      "sha256Chunks": [
+        "3fc59194",
+        "303d68a3",
+        "e9484c3c",
+        "be363d80",
+        "ee8f7025",
+        "1f376a10",
+        "afcf31f0",
+        "93aa52e3"
+      ]
+    },
+    {
+      "file": "subset-031.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.49.woff2",
+      "bytes": 36828,
+      "sha256Chunks": [
+        "7b204172",
+        "89016ad3",
+        "d18caae7",
+        "cd1f7192",
+        "c30b348a",
+        "315a5cfa",
+        "313d69ae",
+        "e048d43e"
+      ]
+    },
+    {
+      "file": "subset-032.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.50.woff2",
+      "bytes": 33140,
+      "sha256Chunks": [
+        "a4756a55",
+        "12d512fe",
+        "bf1bd8fa",
+        "2aec6f8f",
+        "b2a7da6c",
+        "20355827",
+        "44200ded",
+        "6b8144d5"
+      ]
+    },
+    {
+      "file": "subset-033.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.51.woff2",
+      "bytes": 29304,
+      "sha256Chunks": [
+        "a5312d18",
+        "9ebf7491",
+        "c9b8ea2e",
+        "d353b443",
+        "c0ee6fd6",
+        "f552cd97",
+        "f1f404ec",
+        "5da8f7c6"
+      ]
+    },
+    {
+      "file": "subset-034.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.52.woff2",
+      "bytes": 35156,
+      "sha256Chunks": [
+        "bdfd9dc1",
+        "461716eb",
+        "eca3fb56",
+        "5ff96cd5",
+        "b27665cc",
+        "3941baec",
+        "d50f36f7",
+        "daf01e1c"
+      ]
+    },
+    {
+      "file": "subset-035.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.53.woff2",
+      "bytes": 28328,
+      "sha256Chunks": [
+        "53a6264a",
+        "bcb5d896",
+        "5b380d92",
+        "d6c4b788",
+        "0a411925",
+        "1d27b682",
+        "15432164",
+        "db578687"
+      ]
+    },
+    {
+      "file": "subset-036.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.54.woff2",
+      "bytes": 36316,
+      "sha256Chunks": [
+        "2f87ca1b",
+        "ee3845c3",
+        "1d6ffd4b",
+        "3e89c7f6",
+        "029bf56e",
+        "01bc2f9b",
+        "8df54c06",
+        "0a08c7f8"
+      ]
+    },
+    {
+      "file": "subset-037.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.55.woff2",
+      "bytes": 31872,
+      "sha256Chunks": [
+        "eb9455f7",
+        "d3a22868",
+        "502da5e5",
+        "e9325f1c",
+        "dda960d1",
+        "64edbcb3",
+        "d9ecaf8a",
+        "104ba079"
+      ]
+    },
+    {
+      "file": "subset-038.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.56.woff2",
+      "bytes": 37120,
+      "sha256Chunks": [
+        "75ea074e",
+        "31e43a06",
+        "7514e105",
+        "66850a0d",
+        "415107d3",
+        "47401a4c",
+        "53611428",
+        "d4bd630e"
+      ]
+    },
+    {
+      "file": "subset-039.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.57.woff2",
+      "bytes": 38940,
+      "sha256Chunks": [
+        "3441d6c8",
+        "e7ac21f3",
+        "14631c31",
+        "4aa8e571",
+        "7b5104f4",
+        "bc723e04",
+        "a359834d",
+        "b47dced9"
+      ]
+    },
+    {
+      "file": "subset-040.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.58.woff2",
+      "bytes": 42552,
+      "sha256Chunks": [
+        "a7d7d027",
+        "22b46771",
+        "314f6cc0",
+        "032eecca",
+        "d76836b8",
+        "79cc65cd",
+        "93d2ae45",
+        "18cccfb1"
+      ]
+    },
+    {
+      "file": "subset-041.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.59.woff2",
+      "bytes": 35228,
+      "sha256Chunks": [
+        "35d93c79",
+        "f0316302",
+        "1664f905",
+        "af336cd0",
+        "0c336bb6",
+        "b3d456f4",
+        "2ccbac25",
+        "6876ccf6"
+      ]
+    },
+    {
+      "file": "subset-042.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.60.woff2",
+      "bytes": 30908,
+      "sha256Chunks": [
+        "71aadcd9",
+        "0c531595",
+        "c458f7e4",
+        "65c71850",
+        "3cf50363",
+        "ee55a0b6",
+        "cb8f7ae9",
+        "5214447d"
+      ]
+    },
+    {
+      "file": "subset-043.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.61.woff2",
+      "bytes": 31712,
+      "sha256Chunks": [
+        "cde3b312",
+        "fbad0f6d",
+        "84f0bbc1",
+        "c4916970",
+        "4af5e938",
+        "af088488",
+        "d3bfca20",
+        "5da979bc"
+      ]
+    },
+    {
+      "file": "subset-044.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.62.woff2",
+      "bytes": 41408,
+      "sha256Chunks": [
+        "9981ddca",
+        "2fd6773f",
+        "709bde8b",
+        "cc9526fe",
+        "88e9d8fa",
+        "d918eff8",
+        "8c244c3c",
+        "c4f35ba9"
+      ]
+    },
+    {
+      "file": "subset-045.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.63.woff2",
+      "bytes": 33200,
+      "sha256Chunks": [
+        "58221a0b",
+        "465c0f9c",
+        "3c019cc1",
+        "c9da77ee",
+        "c5c50b80",
+        "33fcd426",
+        "5963ca82",
+        "80924b48"
+      ]
+    },
+    {
+      "file": "subset-046.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.64.woff2",
+      "bytes": 26204,
+      "sha256Chunks": [
+        "128ecbaf",
+        "36efe236",
+        "f435e8a7",
+        "ae0ab08a",
+        "20cea9f3",
+        "6258d6c1",
+        "e212d3de",
+        "96978d48"
+      ]
+    },
+    {
+      "file": "subset-047.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.65.woff2",
+      "bytes": 30096,
+      "sha256Chunks": [
+        "c3551a6b",
+        "f1f2cf0d",
+        "d5c76519",
+        "8b66d117",
+        "16976955",
+        "c681567e",
+        "3f6bbe20",
+        "12da3245"
+      ]
+    },
+    {
+      "file": "subset-048.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.66.woff2",
+      "bytes": 36444,
+      "sha256Chunks": [
+        "f1b2220a",
+        "ab4cdf12",
+        "0ee2547e",
+        "95f4599e",
+        "883023ac",
+        "5a2d8f07",
+        "789fe6a3",
+        "0abd5642"
+      ]
+    },
+    {
+      "file": "subset-049.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.67.woff2",
+      "bytes": 37816,
+      "sha256Chunks": [
+        "589007d7",
+        "ef17ce09",
+        "06a3653c",
+        "6eb47ec3",
+        "ff622e54",
+        "6da1b61f",
+        "c9b995e5",
+        "fe8b4062"
+      ]
+    },
+    {
+      "file": "subset-050.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.68.woff2",
+      "bytes": 28504,
+      "sha256Chunks": [
+        "f5d2d9d8",
+        "60db3ba5",
+        "f0a77fe9",
+        "0b1155c2",
+        "5a5e1828",
+        "0fb637d3",
+        "f93b6fb6",
+        "240df7fd"
+      ]
+    },
+    {
+      "file": "subset-051.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.69.woff2",
+      "bytes": 38680,
+      "sha256Chunks": [
+        "48835a9f",
+        "b5fc66a6",
+        "1c963df7",
+        "460bd52a",
+        "e06ed4f6",
+        "4e019e29",
+        "b8773ee8",
+        "54890959"
+      ]
+    },
+    {
+      "file": "subset-052.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.70.woff2",
+      "bytes": 28088,
+      "sha256Chunks": [
+        "a8625f70",
+        "4ec04730",
+        "0d3e3820",
+        "bf02312c",
+        "bf5e1a50",
+        "cad5a1b3",
+        "76a9003c",
+        "d2ff9647"
+      ]
+    },
+    {
+      "file": "subset-053.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.71.woff2",
+      "bytes": 32976,
+      "sha256Chunks": [
+        "cd64bb30",
+        "8421ecb1",
+        "180a0902",
+        "a91b0767",
+        "aa57e7c4",
+        "a496221d",
+        "075ee941",
+        "e5125ff3"
+      ]
+    },
+    {
+      "file": "subset-054.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.72.woff2",
+      "bytes": 34260,
+      "sha256Chunks": [
+        "31ce51a6",
+        "d9e136e1",
+        "b805d5cb",
+        "48a24c63",
+        "b348f23d",
+        "6dd7b0e5",
+        "f83ba040",
+        "5052d0d7"
+      ]
+    },
+    {
+      "file": "subset-055.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.73.woff2",
+      "bytes": 29288,
+      "sha256Chunks": [
+        "b142a83d",
+        "cbcf2fcc",
+        "ac89e1bc",
+        "3e7691f4",
+        "cc0d5c62",
+        "dcae5e50",
+        "82f49c5a",
+        "a96e1c40"
+      ]
+    },
+    {
+      "file": "subset-056.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.74.woff2",
+      "bytes": 39920,
+      "sha256Chunks": [
+        "2943315a",
+        "6595c8d5",
+        "a3a0a6b7",
+        "50363dd2",
+        "72a70e19",
+        "4c46f076",
+        "218e3807",
+        "450649c4"
+      ]
+    },
+    {
+      "file": "subset-057.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.75.woff2",
+      "bytes": 30640,
+      "sha256Chunks": [
+        "2dbcb891",
+        "a450e485",
+        "9e66bb54",
+        "3dfdc24d",
+        "88b07fec",
+        "1c5c450a",
+        "d5bd7ffe",
+        "6618ab07"
+      ]
+    },
+    {
+      "file": "subset-058.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.76.woff2",
+      "bytes": 34976,
+      "sha256Chunks": [
+        "dd64a6dd",
+        "fe2b46a7",
+        "5670f0f1",
+        "d3cb4f79",
+        "a3d69162",
+        "8e622843",
+        "2ac8c987",
+        "5b500170"
+      ]
+    },
+    {
+      "file": "subset-059.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.77.woff2",
+      "bytes": 27104,
+      "sha256Chunks": [
+        "0c9cb7be",
+        "7a6e8c9e",
+        "7777c0d9",
+        "81c2e607",
+        "7a914229",
+        "bb75a124",
+        "514f753a",
+        "ba5ca1ad"
+      ]
+    },
+    {
+      "file": "subset-060.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.78.woff2",
+      "bytes": 37616,
+      "sha256Chunks": [
+        "4a15c242",
+        "cac9f39a",
+        "e12780cb",
+        "9e334f4b",
+        "dbe4f84f",
+        "6e19b3d6",
+        "64218020",
+        "c4299f65"
+      ]
+    },
+    {
+      "file": "subset-061.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.79.woff2",
+      "bytes": 31024,
+      "sha256Chunks": [
+        "8a835943",
+        "0e470d04",
+        "b8214337",
+        "690ec1cb",
+        "c2636b5f",
+        "e939c42e",
+        "b1e05d15",
+        "f7dcbe70"
+      ]
+    },
+    {
+      "file": "subset-062.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.80.woff2",
+      "bytes": 23632,
+      "sha256Chunks": [
+        "d1a249f4",
+        "61450b6a",
+        "9c256d6b",
+        "083a64d1",
+        "9428f49b",
+        "ee515aa4",
+        "a5cbe53c",
+        "43562c2e"
+      ]
+    },
+    {
+      "file": "subset-063.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.81.woff2",
+      "bytes": 32348,
+      "sha256Chunks": [
+        "7fdb63f6",
+        "17c781af",
+        "ab604cf2",
+        "8f9162d2",
+        "4ff09eb6",
+        "cae4d4f1",
+        "abb352c7",
+        "2092da18"
+      ]
+    },
+    {
+      "file": "subset-064.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.82.woff2",
+      "bytes": 33032,
+      "sha256Chunks": [
+        "bcbdf1af",
+        "7d25a8bf",
+        "d26a58fe",
+        "c03db4ad",
+        "badbf759",
+        "11458a10",
+        "711cc4a8",
+        "885c2a7c"
+      ]
+    },
+    {
+      "file": "subset-065.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.83.woff2",
+      "bytes": 30808,
+      "sha256Chunks": [
+        "1425cc6e",
+        "77306681",
+        "e2cc2570",
+        "8d228b59",
+        "f2c9059b",
+        "51e0bf46",
+        "ed7efc5a",
+        "b52a4b37"
+      ]
+    },
+    {
+      "file": "subset-066.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.84.woff2",
+      "bytes": 22404,
+      "sha256Chunks": [
+        "4dfecdd5",
+        "cf6cbf2f",
+        "bb17538b",
+        "4d87db85",
+        "b5a14669",
+        "9e21688c",
+        "d2d2c122",
+        "686bd62a"
+      ]
+    },
+    {
+      "file": "subset-067.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.85.woff2",
+      "bytes": 22044,
+      "sha256Chunks": [
+        "ba893636",
+        "5405cb16",
+        "e8cf57e7",
+        "258716ba",
+        "f4bd0930",
+        "14649dba",
+        "d77fc974",
+        "020196ad"
+      ]
+    },
+    {
+      "file": "subset-068.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.86.woff2",
+      "bytes": 24832,
+      "sha256Chunks": [
+        "58f15410",
+        "ef289384",
+        "f3301458",
+        "57d5df9b",
+        "95a9aa52",
+        "dcc5f0d4",
+        "cb7a461d",
+        "df4ba332"
+      ]
+    },
+    {
+      "file": "subset-069.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.87.woff2",
+      "bytes": 5416,
+      "sha256Chunks": [
+        "250e62dc",
+        "0373377a",
+        "87d36a2e",
+        "8c660110",
+        "8af31090",
+        "15e779ed",
+        "a4ec4e4e",
+        "d14afe7c"
+      ]
+    },
+    {
+      "file": "subset-070.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.88.woff2",
+      "bytes": 6132,
+      "sha256Chunks": [
+        "7cf8ea30",
+        "085b1f94",
+        "ae4b8793",
+        "3e44fd85",
+        "80571776",
+        "ec4feabe",
+        "c955e79b",
+        "af6ab3ff"
+      ]
+    },
+    {
+      "file": "subset-071.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.89.woff2",
+      "bytes": 6880,
+      "sha256Chunks": [
+        "09a44968",
+        "8261c094",
+        "1b91b594",
+        "077334ad",
+        "fb0e6568",
+        "322d2af9",
+        "d435ec4a",
+        "31bb80dc"
+      ]
+    },
+    {
+      "file": "subset-072.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.90.woff2",
+      "bytes": 5820,
+      "sha256Chunks": [
+        "04eec5ea",
+        "984ba3b1",
+        "87473f6b",
+        "bd4dbbab",
+        "dccb2ace",
+        "a00fef62",
+        "8a412d51",
+        "43230fec"
+      ]
+    },
+    {
+      "file": "subset-073.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.91.woff2",
+      "bytes": 5820,
+      "sha256Chunks": [
+        "98cab016",
+        "5259bee9",
+        "3356866d",
+        "63405990",
+        "d0299764",
+        "e7f5c2c1",
+        "fe3aba70",
+        "4aa29cbe"
+      ]
+    },
+    {
+      "file": "subset-074.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.97.woff2",
+      "bytes": 1532,
+      "sha256Chunks": [
+        "c5fe90a0",
+        "1024b64a",
+        "1d626a73",
+        "0256193b",
+        "7ee60048",
+        "7fb192cc",
+        "3df6a580",
+        "d1b050b6"
+      ]
+    },
+    {
+      "file": "subset-075.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.98.woff2",
+      "bytes": 2592,
+      "sha256Chunks": [
+        "29d0ee4b",
+        "1c036ba7",
+        "491beebd",
+        "071f2bc2",
+        "0ebd2db4",
+        "d6b90738",
+        "6a6f7c0f",
+        "1d3a0522"
+      ]
+    },
+    {
+      "file": "subset-076.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.99.woff2",
+      "bytes": 6892,
+      "sha256Chunks": [
+        "f233d753",
+        "e63c88d8",
+        "bc24b83a",
+        "2ce9bbdf",
+        "5a53dd65",
+        "7ca405f1",
+        "8b3ee3da",
+        "32453f72"
+      ]
+    },
+    {
+      "file": "subset-077.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.100.woff2",
+      "bytes": 45568,
+      "sha256Chunks": [
+        "82d5a96d",
+        "266ef17c",
+        "9ebbc8de",
+        "329dccdb",
+        "69712d08",
+        "6f00aec4",
+        "76534b49",
+        "43269aa1"
+      ]
+    },
+    {
+      "file": "subset-078.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.101.woff2",
+      "bytes": 41848,
+      "sha256Chunks": [
+        "19a48c41",
+        "f54668d4",
+        "f3d26953",
+        "7bba74b3",
+        "c2edea46",
+        "1bb279f6",
+        "0cbb74fa",
+        "3aa2a5fc"
+      ]
+    },
+    {
+      "file": "subset-079.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.102.woff2",
+      "bytes": 42992,
+      "sha256Chunks": [
+        "70342dda",
+        "a4cfc347",
+        "0ce311fb",
+        "8fdba863",
+        "b08eba8f",
+        "862236c8",
+        "b717fa53",
+        "65e97537"
+      ]
+    },
+    {
+      "file": "subset-080.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.103.woff2",
+      "bytes": 45416,
+      "sha256Chunks": [
+        "c50132e8",
+        "3e5c9887",
+        "89154cbe",
+        "b7d954f4",
+        "2f4413d1",
+        "aaa1777c",
+        "a41ccbc4",
+        "9c5dac39"
+      ]
+    },
+    {
+      "file": "subset-081.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.104.woff2",
+      "bytes": 43464,
+      "sha256Chunks": [
+        "a886c037",
+        "cebc9db7",
+        "a3e7b24b",
+        "e48775ed",
+        "56434ede",
+        "49d336a8",
+        "48c7db45",
+        "427124e1"
+      ]
+    },
+    {
+      "file": "subset-082.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.105.woff2",
+      "bytes": 43772,
+      "sha256Chunks": [
+        "1b47adb2",
+        "89e9c51b",
+        "eb3444e6",
+        "d09b7e93",
+        "6d77e39d",
+        "662cefff",
+        "355b432c",
+        "75a770d5"
+      ]
+    },
+    {
+      "file": "subset-083.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.106.woff2",
+      "bytes": 43884,
+      "sha256Chunks": [
+        "8bb12b51",
+        "5b9bd43b",
+        "9d3e64fa",
+        "4c5adf01",
+        "787cf8c8",
+        "4a8e6358",
+        "13e5fd2a",
+        "f074dbf7"
+      ]
+    },
+    {
+      "file": "subset-084.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.107.woff2",
+      "bytes": 42768,
+      "sha256Chunks": [
+        "4b610747",
+        "e2c5e890",
+        "8bcdbe39",
+        "138e0f3a",
+        "f43f62ff",
+        "c4d11b5c",
+        "dca66bac",
+        "7d56e783"
+      ]
+    },
+    {
+      "file": "subset-085.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.108.woff2",
+      "bytes": 44896,
+      "sha256Chunks": [
+        "aacf5f77",
+        "b64203f0",
+        "f54f8e1f",
+        "dc61c8a8",
+        "8059af4a",
+        "24a6e673",
+        "981aaed0",
+        "6fb95a95"
+      ]
+    },
+    {
+      "file": "subset-086.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.109.woff2",
+      "bytes": 42576,
+      "sha256Chunks": [
+        "8b1a89b0",
+        "b7de4191",
+        "510cce87",
+        "ce769bdc",
+        "8221d882",
+        "d4ee3ad7",
+        "b5fe48a5",
+        "4d0b995d"
+      ]
+    },
+    {
+      "file": "subset-087.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.110.woff2",
+      "bytes": 42820,
+      "sha256Chunks": [
+        "b14d03d2",
+        "99ca08c0",
+        "0bae705b",
+        "c8556f90",
+        "ee5248fb",
+        "964d5071",
+        "1b5afed6",
+        "8a2674a6"
+      ]
+    },
+    {
+      "file": "subset-088.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.111.woff2",
+      "bytes": 43488,
+      "sha256Chunks": [
+        "dc8633e2",
+        "95d3e0d8",
+        "1ecda510",
+        "1452fa81",
+        "3b0c4f9a",
+        "f8596681",
+        "085ca23e",
+        "b9883e57"
+      ]
+    },
+    {
+      "file": "subset-089.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.112.woff2",
+      "bytes": 40668,
+      "sha256Chunks": [
+        "13c37401",
+        "3e0a57de",
+        "9340c106",
+        "099f9ed9",
+        "a0c32766",
+        "d84da239",
+        "421e5c72",
+        "cc3d415d"
+      ]
+    },
+    {
+      "file": "subset-090.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.113.woff2",
+      "bytes": 40832,
+      "sha256Chunks": [
+        "e23bc4a8",
+        "c420bde9",
+        "49598746",
+        "df12562b",
+        "bcf8ea83",
+        "f9307d14",
+        "c5fb0d19",
+        "52682d4f"
+      ]
+    },
+    {
+      "file": "subset-091.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.114.woff2",
+      "bytes": 40256,
+      "sha256Chunks": [
+        "866f3bd6",
+        "04402512",
+        "09e4f8b9",
+        "c4eb6f4d",
+        "cd7a829c",
+        "7ca844c4",
+        "6edabd66",
+        "9cce64e9"
+      ]
+    },
+    {
+      "file": "subset-092.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.115.woff2",
+      "bytes": 38924,
+      "sha256Chunks": [
+        "4c33192f",
+        "c095e6f2",
+        "a466a66e",
+        "de164a0a",
+        "d32924eb",
+        "fdde842c",
+        "8fdc6c48",
+        "c10a8cc3"
+      ]
+    },
+    {
+      "file": "subset-093.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.116.woff2",
+      "bytes": 36364,
+      "sha256Chunks": [
+        "21806542",
+        "73fdbcb6",
+        "7c5c549e",
+        "d70bbed2",
+        "af8d4900",
+        "58c64111",
+        "f922e00f",
+        "bb264547"
+      ]
+    },
+    {
+      "file": "subset-094.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.117.woff2",
+      "bytes": 35828,
+      "sha256Chunks": [
+        "2c768bfa",
+        "05a06bac",
+        "f7bc8c62",
+        "0e41920e",
+        "b09ef106",
+        "5d9520ad",
+        "ea2cdae5",
+        "22cd5155"
+      ]
+    },
+    {
+      "file": "subset-095.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.118.woff2",
+      "bytes": 31332,
+      "sha256Chunks": [
+        "1558082f",
+        "ae63ccce",
+        "6e6a3c86",
+        "47e073cf",
+        "55f66615",
+        "4c60c6de",
+        "e039faad",
+        "2eed076f"
+      ]
+    },
+    {
+      "file": "subset-096.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrCWqm5Tjb17qLDam6T2isIOpAN0AzDc6KDF2jLlrDm0HbsE.119.woff2",
+      "bytes": 48712,
+      "sha256Chunks": [
+        "5368a206",
+        "9f05731a",
+        "63743f24",
+        "02feeff2",
+        "b3506cbf",
+        "6906460c",
+        "414553c8",
+        "c3676016"
+      ]
+    },
+    {
+      "file": "subset-097.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrBWs-Y_RdA.woff2",
+      "bytes": 8140,
+      "sha256Chunks": [
+        "b62ddcf2",
+        "ce83cad0",
+        "4c10a0d4",
+        "356823a8",
+        "d2dd3b3d",
+        "bf02d2e8",
+        "1664248e",
+        "522c4391"
+      ]
+    },
+    {
+      "file": "subset-098.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrBWn-Y_RdA.woff2",
+      "bytes": 5856,
+      "sha256Chunks": [
+        "e8092512",
+        "c9c58bbc",
+        "eb908e87",
+        "2e4888bf",
+        "e96ab5ee",
+        "94bb1f1c",
+        "b8ebf0c0",
+        "f50989f1"
+      ]
+    },
+    {
+      "file": "subset-099.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrBWm-Y_RdA.woff2",
+      "bytes": 5760,
+      "sha256Chunks": [
+        "f0fc095b",
+        "2cb96b05",
+        "37213e9a",
+        "a85eb1b7",
+        "e78019c5",
+        "e202bfe8",
+        "bcbc30ce",
+        "746dbd4e"
+      ]
+    },
+    {
+      "file": "subset-100.woff2",
+      "source": "https://fonts.gstatic.com/s/notoserifsc/v35/H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7QrrBWo-Y8.woff2",
+      "bytes": 18400,
+      "sha256Chunks": [
+        "0fbb1a53",
+        "da43bc99",
+        "ddd32e9b",
+        "50f70955",
+        "433d9f23",
+        "5b81f2c9",
+        "4a9f5020",
+        "6471e2c2"
+      ]
+    }
+  ]
+}

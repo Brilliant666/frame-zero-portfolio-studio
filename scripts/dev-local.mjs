@@ -204,7 +204,7 @@ export function createDevLocalSupervisor({
           "web",
           [vinextCli, "dev", "--hostname", "127.0.0.1", "--port", "3001"],
           "inherit",
-          { [LOCAL_PHOTO_IMPORT_ORIGIN_ENV]: importerOrigin },
+          { [LOCAL_PHOTO_IMPORT_ORIGIN_ENV]: importerOrigin, FRAME_ZERO_PREVIEW_WORKSPACE_ENABLED: "1" },
         );
       } catch {
         if (!shutdownPromise) {

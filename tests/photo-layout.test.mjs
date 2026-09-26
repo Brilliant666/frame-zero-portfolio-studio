@@ -538,7 +538,7 @@ test("all formal renderers opt into the shared slot-level orientation policy and
     "orbital-portal": "../app/templates/orbital-portal/template.module.css",
     "archive-os": "../app/templates/archive-os/archive-os.module.css",
     "editorial-duet": "../app/templates/editorial-duet/template.module.css",
-    "polaroid-field": "../app/templates/polaroid-field/polaroid-field.module.css",
+    "polaroid-field": "../app/templates/polaroid-field/field.module.css",
     "character-select": "../app/templates/character-select/template.module.css",
     "museum-depth": "../app/templates/museum-depth/template.module.css",
   };

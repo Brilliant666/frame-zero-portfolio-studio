@@ -319,10 +319,10 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(layout, /最早记录/);
   assert.match(layout, /导入批次/);
   assert.match(layout, /既有素材（时间未知）/);
-  assert.match(layout, /当前草稿 \{references\.draft\.length\} 处 · 已保存 \{references\.saved\.length\} 处/);
+  assert.match(layout, /原站草稿 \{references\.draft\.length\} 处 · 原站已保存 \{references\.saved\.length\} 处/);
   assert.match(layout, /移入回收站/);
   assert.match(layout, /恢复素材/);
-  assert.match(layout, /现有排版引用保持可用/);
+  assert.match(layout, /原文件与新旧引用保留/);
   assert.match(layout, /archivedAssetCount === 0/);
   assert.match(layout, /没有符合筛选条件的回收站素材/);
   assert.match(layout, /archiveConfirmRef/);
@@ -481,7 +481,12 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(viteConfig, /\^http:\\\/\\\/127\\\.0\\\.0\\\.1:/);
   assert.match(viteConfig, /\.\.\.resolvedConfig\.vars/);
   assert.match(viteConfig, /\[LOCAL_PHOTO_IMPORT_ORIGIN_ENV\]: localPhotoImportOrigin/);
-  assert.doesNotMatch(viteConfig, /CLOUDFLARE_INCLUDE_PROCESS_ENV|NEXT_PUBLIC_|VITE_FRAME_ZERO/);
+  // Worker builds explicitly disable the Node-only local preview opt-in.
+  // Permit only this reviewed literal: no environment value or ingest origin
+  // may be exposed through NEXT_PUBLIC_ (including another use of this key).
+  const disabledPreviewDefine = /"process\.env\.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW"\s*:\s*JSON\.stringify\("0"\)/g;
+  assert.equal((viteConfig.match(disabledPreviewDefine) ?? []).length, 1);
+  assert.doesNotMatch(viteConfig.replace(disabledPreviewDefine, ""), /CLOUDFLARE_INCLUDE_PROCESS_ENV|NEXT_PUBLIC_|VITE_FRAME_ZERO/);
   assert.match(css, /\.libraryStats\s*\{/);
   assert.match(css, /\.photoImportProgress\s*,/);
   assert.match(css, /\.photoImportActions\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/s);
@@ -521,9 +526,10 @@ test("all formal templates have deterministic public-safe neutral structure prev
   assert.equal(TEMPLATE_STRUCTURE_PREVIEW_HEIGHT, 675);
 
   const previewPaths = templateIds.map((id) => `template-structure-previews/${id}.webp`).sort();
+  const titleFontPaths = ["fonts/noto-serif-sc-900/OFL.txt", ...Array.from({ length: 101 }, (_, index) => `fonts/noto-serif-sc-900/subset-${String(index).padStart(3, "0")}.woff2`)];
   assert.deepEqual(JSON.parse(manifestSource), {
     version: 1,
-    files: ["favicon.svg", "file.svg", "globe.svg", ...previewPaths, "window.svg"],
+    files: ["favicon.svg", "file.svg", ...titleFontPaths, "globe.svg", ...previewPaths, "window.svg"],
   });
   assert.match(safetySource, /const templateStructurePreviewNames = new Set/);
   assert.match(safetySource, /const templateStructurePreviewDigests = new Map/);

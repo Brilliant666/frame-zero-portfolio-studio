@@ -2,15 +2,19 @@
 
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import process from "node:process";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 const MAX_OUTPUT = 64 * 1024 * 1024;
 const imageName = `frame-zero-container-verify:${process.pid}-${Date.now()}`;
+const builderImageName = `${imageName}-builder`;
 const containerName = `frame-zero-container-verify-${process.pid}-${Date.now()}`;
 const expectedSentinel = process.env.FRAME_ZERO_CONTAINER_TEST_SENTINEL ?? "";
 let imageCreated = false;
+let builderImageCreated = false;
 let containerCreated = false;
 
 async function docker(args, options = {}) {
@@ -126,6 +130,10 @@ async function cleanup() {
     await docker(["image", "rm", "--force", imageName], { timeout: 60_000 })
       .catch((error) => failures.push(error));
   }
+  if (builderImageCreated) {
+    await docker(["image", "rm", "--force", builderImageName], { timeout: 60_000 })
+      .catch((error) => failures.push(error));
+  }
   if (failures.length > 0) {
     throw new AggregateError(failures, "Container verification cleanup failed.");
   }
@@ -135,6 +143,20 @@ try {
   const daemonVersion = await docker(["version", "--format", "{{.Server.Version}}"], { timeout: 30_000 });
   assert.match(daemonVersion, /^\d+\.\d+/);
 
+  // Rebuild the builder without previous layers, then inspect the actual COPY
+  // result: directory negations in .dockerignore otherwise admit descendants.
+  builderImageCreated = true;
+  await docker(["build", "--pull", "--no-cache", "--target", "builder", "--file", "Dockerfile", "--tag", builderImageName, "."]);
+  await docker(["run", "--rm", "--entrypoint", "node", builderImageName, "-e", String.raw`
+    const fs = require("node:fs"), path = require("node:path"), assert = require("node:assert/strict");
+    const expected = JSON.parse(fs.readFileSync("config/production-public-files.json", "utf8")).files;
+    const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+      const file = path.join(dir, entry.name);
+      if (entry.isSymbolicLink()) throw Error("unexpected public symlink: " + file);
+      return entry.isDirectory() ? walk(file) : [path.relative("public", file)];
+    });
+    assert.deepEqual(walk("public").sort(), expected, "Docker context must contain only reviewed public files");
+  `]);
   imageCreated = true;
   await docker(["build", "--pull", "--file", "Dockerfile", "--tag", imageName, "."]);
 
@@ -198,6 +220,25 @@ try {
   assert.ok(staticAsset, "homepage must reference a packaged Next static asset");
   assert.equal((await fetch(`${origin}${staticAsset}`)).status, 200);
   assert.equal((await fetch(`${origin}/favicon.svg`)).status, 200);
+  const fontSources = JSON.parse(await readFile(new URL("../public/fonts/noto-serif-sc-900/sources.json", import.meta.url), "utf8"));
+  assert.equal(fontSources.files.length, 101);
+  let fontBytes = 0;
+  for (const font of fontSources.files) {
+    const response = await fetch(`${origin}/fonts/noto-serif-sc-900/${font.file}`);
+    assert.equal(response.status, 200, font.file);
+    assert.match(response.headers.get("content-type") ?? "", /^(?:font\/woff2|application\/(?:font-woff2|octet-stream))\b/i);
+    const bytes = Buffer.from(await response.arrayBuffer());
+    assert.equal(bytes.subarray(0, 4).toString("ascii"), "wOF2");
+    assert.equal(bytes.length, font.bytes);
+    assert.equal(createHash("sha256").update(bytes).digest("hex"), font.sha256Chunks.join(""));
+    fontBytes += bytes.length;
+  }
+  const license = await fetch(`${origin}/fonts/noto-serif-sc-900/OFL.txt`);
+  assert.equal(license.status, 200);
+  assert.equal(await license.text(), await readFile(new URL("../public/fonts/noto-serif-sc-900/OFL.txt", import.meta.url), "utf8"));
+  for (const route of ["/preview", "/preview/admin", "/api/preview/site-content"]) {
+    assert.equal((await fetch(`${origin}${route}`)).status, 404, `${route} must remain closed`);
+  }
 
   const adminRedirect = await fetch(`${origin}/admin`, { redirect: "manual" });
   assert.ok([307, 308].includes(adminRedirect.status));
@@ -217,6 +258,8 @@ try {
     daemonVersion,
     exitCode: stopped.State.ExitCode,
     imageTitle: inspection.Config.Labels["org.opencontainers.image.title"],
+    fontFiles: fontSources.files.length,
+    fontBytes,
     imageSizeBytes: inspection.Size,
     layerCount: inspection.RootFS.Layers.length,
     readOnlyRoot: true,

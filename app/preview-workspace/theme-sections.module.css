@@ -1,0 +1,234 @@
+/* Attached only by the development-only preview shell; legacy templates retain
+   their own card shapes, colours and typography. */
+.sections :global(#polaroid-packages),
+.sections :global(#polaroid-booking) {
+  background: transparent;
+  color: var(--star-ink);
+  padding-block: clamp(3rem, 6vw, 6rem);
+}
+
+.sections :global(#polaroid-packages) > div:first-child h2,
+.sections :global(#polaroid-packages) article h3,
+.sections :global(#polaroid-booking) h2,
+.sections :global(#polaroid-booking) h2 span,
+.sections :global(#polaroid-booking) footer > div:first-child strong {
+  font-family: var(--star-serif);
+  font-weight: 900;
+  letter-spacing: -.035em;
+  line-height: 1.12;
+}
+
+.sections :global(#polaroid-packages) > div:first-child h2 {
+  font-size: clamp(2.6rem, 5.4vw, 5rem);
+}
+
+.sections :global(#polaroid-packages) > div:first-child small,
+.sections :global(#polaroid-packages) article small,
+.sections :global(#polaroid-booking) > div:first-child > small {
+  color: var(--star-accent-2);
+}
+
+.sections :global(#polaroid-packages) > div:first-child > p {
+  color: var(--star-muted);
+  border-color: var(--star-accent);
+}
+
+.sections :global(#polaroid-packages) article,
+.sections :global(#polaroid-booking) > div,
+.sections :global(#polaroid-booking) > footer {
+  border: 1px solid var(--star-line);
+  border-radius: 20px;
+  background: var(--star-glass);
+  color: var(--star-ink);
+  box-shadow: var(--star-panel-shadow);
+  transform: none;
+}
+
+.sections :global(#polaroid-packages) article:nth-child(n) {
+  margin-top: 0;
+  box-shadow: var(--star-panel-shadow);
+  transform: none;
+}
+
+.sections :global(#polaroid-packages) article:hover,
+.sections :global(#polaroid-packages) article:focus-within {
+  box-shadow: var(--star-shadow);
+  transform: translateY(-4px);
+}
+
+.sections :global(#polaroid-packages) article > span,
+.sections :global(#polaroid-booking) > div:nth-child(2) > span {
+  display: none;
+}
+
+.sections :global(#polaroid-packages) article > div:first-of-type {
+  color: var(--star-accent);
+  font-size: clamp(3rem, 5vw, 5rem);
+}
+
+.sections :global(#polaroid-packages) article > div:nth-of-type(2) {
+  border-bottom: 1px solid var(--star-line);
+}
+
+.sections :global(#polaroid-packages) article > p,
+.sections :global(#polaroid-packages) > p {
+  color: var(--star-muted);
+}
+
+.sections :global(#polaroid-packages) article > div:nth-of-type(3) > strong {
+  color: var(--star-accent-2);
+  font-weight: 700;
+}
+
+.sections :global(#polaroid-packages) article li::before {
+  color: var(--star-accent);
+}
+
+.sections :global(#polaroid-packages) article > a,
+.sections :global(#polaroid-booking) > div:nth-child(2) > button {
+  min-height: 46px;
+  padding: .85rem 1.15rem;
+  border: 1px solid var(--star-line);
+  border-radius: 999px;
+  background: var(--star-grad);
+  color: var(--star-on-accent);
+  box-shadow: none;
+}
+
+.sections :global(#polaroid-packages) article > a span {
+  color: inherit;
+}
+
+.sections :global(#polaroid-packages) [aria-label="约拍关键信息"] {
+  padding-inline: 1.25rem;
+  border: 1px solid var(--star-line);
+  border-radius: 18px;
+  background: var(--star-glass);
+}
+
+.sections :global(#polaroid-booking) {
+  gap: clamp(1.25rem, 3vw, 3rem);
+  align-items: start;
+}
+
+.sections :global(#polaroid-booking) > div {
+  align-self: stretch;
+}
+
+.sections :global(#polaroid-booking) h2 {
+  font-size: clamp(2.8rem, 4.7vw, 4.75rem);
+}
+
+.sections :global(#polaroid-booking) h2 span {
+  color: var(--star-accent-2);
+}
+
+.sections :global(#polaroid-booking) > div:first-child > p {
+  color: var(--star-muted);
+}
+
+.sections :global(#polaroid-booking) > div:first-child > button,
+.sections :global(#polaroid-booking) > div:first-child > a {
+  padding: .9rem 1.2rem;
+  border: 1px solid var(--star-line);
+  border-radius: 999px;
+  background: var(--star-paper);
+  color: var(--star-paper-ink);
+  box-shadow: none;
+}
+
+.sections :global(#polaroid-booking) > div:first-child > button span,
+.sections :global(#polaroid-booking) > div:first-child > a span {
+  color: var(--star-accent-2);
+}
+
+.sections :global(#polaroid-booking) > div:first-child > button:hover,
+.sections :global(#polaroid-booking) > div:first-child > a:hover,
+.sections :global(#polaroid-booking) > div:first-child > button:focus-visible,
+.sections :global(#polaroid-booking) > div:first-child > a:focus-visible {
+  border-color: var(--star-accent);
+  background: var(--star-glass);
+  color: var(--star-ink);
+  transform: none;
+}
+
+.sections :global(#polaroid-booking) > div:nth-child(2) {
+  min-height: 36rem;
+}
+
+.sections :global(#polaroid-booking) > div:nth-child(2) > div {
+  border-color: var(--star-line);
+  color: var(--star-muted);
+}
+
+.sections :global(#polaroid-booking) > div:nth-child(2) > div strong {
+  color: var(--star-accent-2);
+}
+
+.sections :global(#polaroid-booking) pre {
+  background: repeating-linear-gradient(to bottom, transparent 0 2rem, var(--star-line) 2rem 2.05rem);
+  color: var(--star-ink);
+}
+
+.sections :global(#polaroid-booking) footer {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  margin-top: 1rem;
+  gap: 1.5rem;
+  align-items: start;
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+}
+
+.sections :global(#polaroid-booking) footer > p,
+.sections :global(#polaroid-booking) footer > small {
+  grid-column: auto;
+  grid-row: auto;
+  color: var(--star-muted);
+}
+
+.sections :global(#polaroid-booking) > [aria-label="平台账号与分享卡片"] {
+  grid-column: 1 / -1;
+}
+
+.sections [aria-label="平台账号与分享卡片"][data-tone] {
+  --accounts-bg: var(--star-glass);
+  --accounts-panel: var(--star-paper);
+  --accounts-text: var(--star-paper-ink);
+  --accounts-muted: var(--star-paper-muted);
+  --accounts-line: var(--star-line);
+  --accounts-accent: var(--star-accent-2);
+  margin-top: 0;
+  border-radius: 18px;
+}
+
+.sections [aria-label="平台账号与分享卡片"] article {
+  border-radius: 18px;
+}
+
+.sections [aria-label="快速约拍"] {
+  padding: 4px;
+  gap: 4px;
+  border: 1px solid var(--star-line);
+  border-radius: 999px;
+  background: var(--star-glass);
+  box-shadow: var(--star-panel-shadow);
+}
+
+.sections [aria-label="快速约拍"] button,
+.sections [aria-label="快速约拍"] a {
+  border-radius: 999px;
+  background: transparent;
+  color: var(--star-ink);
+}
+
+.sections [aria-label="快速约拍"] a {
+  background: var(--star-grad);
+  color: var(--star-on-accent);
+}
+
+@media (max-width: 800px) {
+  .sections :global(#polaroid-packages),
+  .sections :global(#polaroid-booking) { padding: 2rem 1rem 6rem; }
+  .sections :global(#polaroid-booking) h2 { font-size: clamp(2.5rem, 11vw, 4rem); }
+  .sections :global(#polaroid-booking) footer { grid-template-columns: minmax(0, 1fr); }
+  .sections :global(#polaroid-booking) > div:nth-child(2) { min-height: 32rem; }
+}

@@ -1,7 +1,9 @@
 import vinext from "vinext";
-import { defineConfig } from "vite";
+import { defineConfig, type ViteDevServer } from "vite";
 import hostingConfig from "./.openai/hosting.json";
 import { sites } from "./build/sites-vite-plugin";
+import { randomBytes } from "node:crypto";
+import { createLocalPreviewPhotoHandler } from "./scripts/lib/local-preview-photo.mjs";
 
 const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   "00000000-0000-4000-8000-000000000000";
@@ -33,6 +35,8 @@ export default defineConfig(async ({ command, isPreview }) => {
   // Wrangler snapshots its log path while the Cloudflare plugin is imported.
   const { cloudflare } = await import("@cloudflare/vite-plugin");
   const localPhotoImportOrigin = getLocalPhotoImportWorkerOrigin(command, isPreview);
+  const previewWorkspaceSecret = command === "serve" && !isPreview && process.env.FRAME_ZERO_PREVIEW_WORKSPACE_ENABLED === "1"
+    ? randomBytes(32).toString("hex") : null;
 
   const localBindingConfig = {
     main: "./worker/index.ts",
@@ -59,21 +63,51 @@ export default defineConfig(async ({ command, isPreview }) => {
   };
 
   return {
+    // The production-only local opt-in belongs to the Node runner, never Worker builds.
+    define: { "process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW": JSON.stringify("0") },
     server: isCodexSeatbeltSandbox
       ? { watch: { useFsEvents: false, usePolling: true } }
       : undefined,
     plugins: [
+      {
+        name: "local-preview-workspace-proof",
+        enforce: "pre",
+        configureServer(server: ViteDevServer) {
+          const photos = createLocalPreviewPhotoHandler({ root: process.cwd() });
+          server.middlewares.use((request, response, next) => {
+            if (!previewWorkspaceSecret || !["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(request.socket.remoteAddress ?? "") ||
+              !/^(127\.0\.0\.1|localhost|\[::1\]):3001$/.test(request.headers.host ?? "") || !(request.url ?? "").startsWith("/__local-preview-photo?")) { next(); return; }
+            void photos(request, response).then(handled => { if (!handled) next(); }).catch(next);
+          });
+          server.middlewares.use((request, response, next) => {
+            delete request.headers["x-frame-zero-preview-proof"];
+            delete request.headers["x-frame-zero-preview-origin"];
+            // Cloudflare's Fetch adapter consumes rawHeaders, not headers.
+            request.rawHeaders = request.rawHeaders.filter((_, index, raw) => !["x-frame-zero-preview-proof", "x-frame-zero-preview-origin"].includes(raw[index - index % 2].toLowerCase()));
+            const remote = request.socket.remoteAddress;
+            const host = request.headers.host ?? "";
+            if (previewWorkspaceSecret && ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(remote ?? "") && /^(127\.0\.0\.1|localhost|\[::1\]):3001$/.test(host)) {
+              request.headers["x-frame-zero-preview-proof"] = previewWorkspaceSecret;
+              request.headers["x-frame-zero-preview-origin"] = `http://${host}`;
+              request.rawHeaders.push("x-frame-zero-preview-proof", previewWorkspaceSecret, "x-frame-zero-preview-origin", `http://${host}`);
+            }
+            if (/^\/(?:preview(?:\/|\?|$)|api\/preview(?:\/|\?|$))/.test(request.url ?? "")) response.setHeader("Cache-Control", "no-store, private");
+            next();
+          });
+        },
+      },
       vinext(),
       sites(),
       cloudflare({
         viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
         config: (resolvedConfig) => ({
           ...localBindingConfig,
-          ...(localPhotoImportOrigin
+          ...(localPhotoImportOrigin || previewWorkspaceSecret
             ? {
                 vars: {
                   ...resolvedConfig.vars,
-                  [LOCAL_PHOTO_IMPORT_ORIGIN_ENV]: localPhotoImportOrigin,
+                  ...(localPhotoImportOrigin ? { [LOCAL_PHOTO_IMPORT_ORIGIN_ENV]: localPhotoImportOrigin } : {}),
+                  ...(previewWorkspaceSecret ? { FRAME_ZERO_PREVIEW_WORKSPACE_SECRET: previewWorkspaceSecret } : {}),
                 },
               }
             : {}),

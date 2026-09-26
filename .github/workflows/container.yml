@@ -41,6 +41,10 @@ jobs:
           printf '%s\n' "$sentinel" > .frame-zero/container-sentinel
           printf '%s\n' "$sentinel" > public/photos/library-manifest.json
           printf '%s\n' "$sentinel" > public/og.png
+          printf '%s\n' "$sentinel" > public/container-unlisted-sentinel.txt
+          mkdir -p public/fonts/noto-serif-sc-900 public/template-structure-previews
+          printf '%s\n' "$sentinel" > public/fonts/noto-serif-sc-900/container-unlisted-sentinel.txt
+          printf '%s\n' "$sentinel" > public/template-structure-previews/container-unlisted-sentinel.txt
           printf '%s\n' "$sentinel" > .openai/container-sentinel
 
       - name: Verify Linux production container

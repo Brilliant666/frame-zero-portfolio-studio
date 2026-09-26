@@ -1,0 +1,7 @@
+.segments { position:relative; display:inline-flex; align-items:stretch; padding:4px; gap:0; border:1px solid var(--star-line); border-radius:999px; background:var(--star-glass); -webkit-backdrop-filter:blur(14px) saturate(140%); backdrop-filter:blur(14px) saturate(140%); isolation:isolate; }
+.segments > a,.segments > button { position:relative; z-index:1; display:flex; justify-content:center; align-items:center; min-height:36px; padding:9px 15px; border:0; border-radius:999px; background:none; color:var(--star-muted); font:600 13px/1.2 Arial,sans-serif; white-space:nowrap; text-decoration:none; cursor:pointer; transition:color 350ms; }
+.segments > a[data-segment-active="true"],.segments > button[data-segment-active="true"] { color:var(--star-on-accent); }
+.segments > a:not([data-segment-active="true"]):hover,.segments > button:not([data-segment-active="true"]):hover { color:var(--star-ink); }
+.segments > a:focus-visible,.segments > button:focus-visible { outline:2px solid var(--star-focus); outline-offset:2px; }
+.indicator { position:absolute; top:4px; bottom:4px; left:var(--segment-left,4px); width:var(--segment-width,0px); border-radius:999px; background:var(--star-grad); box-shadow:0 8px 20px -8px var(--star-glow),inset 0 1px 0 var(--star-segment-highlight); transition:left 500ms cubic-bezier(.22,1,.36,1),width 500ms cubic-bezier(.22,1,.36,1); pointer-events:none; }
+@media(prefers-reduced-motion:reduce) { .indicator,.segments > a,.segments > button { transition:none; } }

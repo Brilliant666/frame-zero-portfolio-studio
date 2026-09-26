@@ -1,0 +1,4 @@
+export const PREVIEW_THEME_KEY = "frame-zero:preview-star-theme:v1";
+export const PREVIEW_THEME_BOOTSTRAP = `(function(){if(!/^\\/preview\\/?$/.test(location.pathname))return;var t='paper';try{if(localStorage.getItem('${PREVIEW_THEME_KEY}')==='night')t='night'}catch(e){}var h=document.documentElement;h.dataset.previewTheme=t;h.dataset.starTheme=t})()`;
+// Loaded in the development-only head, before lazy preview CSS and the first paint.
+export const PREVIEW_THEME_BOOTSTRAP_CSS = `html[data-preview-theme="paper"]{background:#f3f6f9;color:#1c2433;color-scheme:light;--star-intro-bg:#f5f8fb;--star-accent:#4a9be0}html[data-preview-theme="night"]{background:#06080f;color:#e8ecf5;color-scheme:dark;--star-intro-bg:#06080f;--star-accent:#f1c86a}html[data-preview-theme] body{background:transparent;color:inherit}`;

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -35,6 +35,8 @@ test("production public manifest exactly names the reviewed repository assets", 
   assert.deepEqual(await loadProductionPublicFiles(projectRoot), [
     "favicon.svg",
     "file.svg",
+    "fonts/noto-serif-sc-900/OFL.txt",
+    ...Array.from({ length: 101 }, (_, index) => `fonts/noto-serif-sc-900/subset-${String(index).padStart(3, "0")}.woff2`),
     "globe.svg",
     "template-structure-previews/archive-os.webp",
     "template-structure-previews/character-select.webp",
@@ -85,6 +87,28 @@ test("allowlisted public entries must be regular files", async (t) => {
   await assert.rejects(prepareNextStandalone(root), /must be a regular file/);
 });
 
+test("both standalone variants preserve reviewed font bytes and exclude source records", async (t) => {
+  const files = await loadProductionPublicFiles(projectRoot);
+  const root = await createFixture(t, { version: 1, files });
+  for (const file of files) {
+    const target = path.join(root, "public", file);
+    await mkdir(path.dirname(target), { recursive: true });
+    await cp(path.join(projectRoot, "public", file), target);
+  }
+  await writeFile(path.join(root, "public", "fonts", "noto-serif-sc-900", "sources.json"), "not-runtime");
+  for (const dist of [".next", ".next-local-preview"]) {
+    await mkdir(path.join(root, dist, "static"), { recursive: true });
+    const result = await prepareNextStandalone(root, dist);
+    assert.equal(result.publicFiles, 117);
+    for (const file of files.filter(file => file.startsWith("fonts/"))) {
+      assert.deepEqual(await readFile(path.join(result.standaloneRoot, "public", file)), await readFile(path.join(projectRoot, "public", file)));
+    }
+    await assert.rejects(readFile(path.join(result.standaloneRoot, "public", "fonts", "noto-serif-sc-900", "sources.json")), { code: "ENOENT" });
+  }
+  await rm(path.join(root, "public", "fonts", "noto-serif-sc-900", "subset-000.woff2"));
+  await assert.rejects(prepareNextStandalone(root), { code: "ENOENT" });
+});
+
 test("Docker contract is default-deny, pinned, non-root, and Standard Next only", async () => {
   const [dockerfile, dockerignore, packageJson, workflow, preparer, verifier] = await Promise.all([
     readFile(path.join(projectRoot, "Dockerfile"), "utf8"),
@@ -96,6 +120,9 @@ test("Docker contract is default-deny, pinned, non-root, and Standard Next only"
   ]);
 
   assert.equal(dockerignore.split(/\r?\n/).find((line) => line && !line.startsWith("#")), "**");
+  for (const directory of ["public", "public/fonts", "public/fonts/noto-serif-sc-900", "public/template-structure-previews"]) {
+    assert.ok(dockerignore.replaceAll("\r\n", "\n").includes(`!${directory}/\n${directory}/**`), `${directory} descendants must remain denied until individually allowed`);
+  }
   for (const privatePath of [".git", ".frame-zero", ".env", ".openai", "public/photos", "public/og.png"]) {
     const escapedPath = privatePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     assert.doesNotMatch(dockerignore, new RegExp(`^!${escapedPath}`, "m"));
@@ -116,6 +143,9 @@ test("Docker contract is default-deny, pinned, non-root, and Standard Next only"
   );
   assert.match(dockerfile, /^COPY --from=builder --chown=1000:1000 \/workspace\/\.next\/standalone \.\/$/m);
   assert.doesNotMatch(dockerfile, /COPY\s+\.\s+\./);
+  assert.match(dockerignore, /^!scripts\/lib\/local-preview-build\.mjs$/m);
+  assert.match(dockerfile, /^COPY scripts\/lib\/local-preview-build\.mjs \.\/scripts\/lib\/local-preview-build\.mjs$/m);
+  assert.doesNotMatch(dockerignore, /^!public\/(?:\*\*|fonts\/\*\*)$/m);
   assert.doesNotMatch(dockerfile, /\b(?:vinext|wrangler|cloudflare:workers)\b/i);
   assert.doesNotMatch(dockerfile, /^(?:ARG|ENV)\s+.*(?:PASSWORD|SECRET|TOKEN)/im);
   assert.doesNotMatch(dockerfile, /chmod\s+777|apt-get|\b(?:curl|wget|python)\b/i);
@@ -127,6 +157,8 @@ test("Docker contract is default-deny, pinned, non-root, and Standard Next only"
   assert.doesNotMatch(preparer, /\bgit\b|execFile|child_process/);
   assert.match(verifier, /!current\.startsWith\("\/app\/node_modules\/"\).*local Windows path leaked/s);
   assert.match(verifier, /build-context sentinel leaked into runtime/);
+  assert.match(verifier, /"--no-cache", "--target", "builder"/);
+  assert.match(verifier, /Docker context must contain only reviewed public files/);
   assert.match(
     verifier,
     /inspection\.Config\.Labels\?\.\["org\.opencontainers\.image\.title"\], "Portfolio Platform"/,

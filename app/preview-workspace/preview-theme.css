@@ -1,0 +1,36 @@
+html[data-preview-theme], [data-preview-local-theme="paper"] {
+  color-scheme:light; --star-serif:"Noto Serif SC",serif;
+  --star-ink:#1c2433; --star-muted:#5b6576; --star-line:rgba(28,36,51,.14); --star-line-2:rgba(28,36,51,.3);
+  --star-glass:rgba(255,255,255,.66); --star-glass-2:rgba(255,255,255,.94); --star-segment-highlight:rgba(255,255,255,.55); --star-top-fade:rgba(243,246,249,.9);
+  --star-accent:#4a9be0; --star-accent-2:#2f76b8; --star-on-accent:#0f2a46; --star-accent-soft:rgba(74,155,224,.16);
+  --star-grad:linear-gradient(180deg,#e6f3ff,#b3dafc); --star-glow:rgba(74,155,224,.40); --star-focus:#2f76b8;
+  --star-gold:#f1c86a; --star-gold-2:#b98a2e;
+  --star-paper:#ffffff; --star-paper-ink:#1c2433; --star-thread:rgba(28,36,51,.34); --star-intro-bg:#f5f8fb;
+  --star-shadow:0 16px 32px -14px rgba(28,36,51,.38),0 2px 3px rgba(28,36,51,.14);
+  --star-shadow-up:0 34px 60px -22px rgba(28,36,51,.48),0 4px 8px rgba(28,36,51,.16);
+  --star-caption-muted:var(--star-muted); --star-caption-accent:var(--star-accent-2); --star-tape:color-mix(in srgb,var(--star-accent) 35%,var(--star-paper));
+  --star-paper-muted:#5b6576; --star-paper-border:rgba(28,36,51,.10); --star-placeholder:#e1e8f0;
+  --star-overlay:rgba(243,246,249,.96); --star-shine:radial-gradient(circle at var(--gx,50%) var(--gy,0%),#fff5,transparent 55%);
+  --star-panel-shadow:0 20px 50px -26px rgba(28,36,51,.45); --star-pin-shadow:drop-shadow(0 2px 2px rgba(28,36,51,.19));
+  --star-sky-star:#dfe6ff; --star-sky-highlight:#f6d68c;
+  --star-background:radial-gradient(55% 45% at 88% 8%,rgba(150,205,255,.28),rgba(150,205,255,0) 62%),radial-gradient(50% 42% at 4% 96%,rgba(185,190,255,.20),rgba(185,190,255,0) 62%),radial-gradient(38% 30% at 42% 58%,rgba(255,225,150,.08),rgba(255,225,150,0) 70%),linear-gradient(rgba(40,70,110,.05) 1px,transparent 1px) 0 0/64px 64px,linear-gradient(90deg,rgba(40,70,110,.05) 1px,transparent 1px) 0 0/64px 64px,radial-gradient(circle,rgba(40,70,110,.11) 0 .7px,transparent .8px) 0 0/10px 10px,#f3f6f9;
+}
+html[data-preview-theme="night"] {
+  color-scheme:dark; --star-ink:#e8ecf5; --star-muted:#9aa6bd; --star-line:rgba(255,255,255,.14); --star-line-2:rgba(255,255,255,.3);
+  --star-accent:#f1c86a; --star-accent-2:#b98a2e; --star-accent-soft:rgba(241,200,106,.16); --star-focus:#f1c86a;
+  --star-paper:#1c2333; --star-paper-ink:#e8ecf5; --star-paper-muted:#9aa6bd; --star-paper-border:rgba(255,255,255,.06); --star-placeholder:#2a3246;
+  --star-glass:rgba(23,33,57,.88); --star-glass-2:rgba(28,35,51,.96); --star-grad:linear-gradient(180deg,#f8dc97,#d7aa4a); --star-on-accent:#1d1604; --star-segment-highlight:rgba(255,255,255,.14); --star-top-fade:rgba(6,8,15,.72);
+  --star-glow:rgba(241,200,106,.25); --star-thread:rgba(154,166,189,.48); --star-intro-bg:#06080f;
+  --star-shadow:0 22px 44px -16px rgba(0,0,0,.72),0 2px 4px rgba(0,0,0,.44); --star-shadow-up:0 34px 60px -22px rgba(0,0,0,.82),0 4px 8px rgba(0,0,0,.5);
+  --star-panel-shadow:0 20px 50px -26px rgba(0,0,0,.75); --star-overlay:rgba(6,8,15,.96);
+  --star-shine:radial-gradient(circle at var(--gx,50%) var(--gy,0%),rgba(232,236,245,.08),transparent 55%);
+  --star-pin-shadow:drop-shadow(0 0 6px rgba(241,200,106,.6));
+  --star-caption-accent:#f1c86a;
+  --star-background:radial-gradient(ellipse at 78% 0,#1d2c5a,transparent 58%),radial-gradient(ellipse at 0 100%,#f3a6bd24,transparent 60%),linear-gradient(#0b1122,#06080f);
+}
+html[data-preview-theme]::view-transition-old(root),html[data-preview-theme]::view-transition-new(root) { animation:none; mix-blend-mode:normal; }
+html[data-preview-theme]::view-transition-old(root) { z-index:1; }
+html[data-preview-theme]::view-transition-new(root) { z-index:2; }
+html[data-preview-theme] :focus-visible { outline-color:var(--star-focus); }
+html[data-preview-theme] ::selection { background:var(--star-accent); color:var(--star-on-accent); }
+html[data-preview-theme] input { accent-color:var(--star-accent); }
