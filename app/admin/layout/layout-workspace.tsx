@@ -95,6 +95,7 @@ export default function LayoutWorkspace() {
     savedContent,
     localPhotoImportOrigin,
     localPhotoImportState,
+    siteScope,
     setContent,
   } = useAdmin();
   const [libraryItems, setLibraryItems] = useState<LocalPhotoLibraryItem[]>([]);
@@ -242,6 +243,12 @@ export default function LayoutWorkspace() {
   }, []);
 
   const loadLibrary = useCallback(async () => {
+    if (siteScope) {
+      setLibraryItems([]);
+      setLibraryState("empty");
+      setLibraryMessage("本站作品库为空；M3 站点素材选择、上传与资源解析尚未接线。不会读取本机共享图库。");
+      return 0;
+    }
     const request = libraryRequestRef.current + 1;
     libraryRequestRef.current = request;
     try {
@@ -281,7 +288,7 @@ export default function LayoutWorkspace() {
       setLibraryMessage(error instanceof Error ? error.message : "素材库读取失败");
       return null;
     }
-  }, [applyLocalSnapshot, localPhotoImportOrigin, localPhotoImportState]);
+  }, [applyLocalSnapshot, localPhotoImportOrigin, localPhotoImportState, siteScope]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void loadLibrary(), 0);
@@ -473,7 +480,7 @@ export default function LayoutWorkspace() {
         </div>
       </div>
 
-      <PhotoImportPanel
+      {siteScope ? <p role="status">{libraryMessage}</p> : <PhotoImportPanel
         importing={isImporting}
         libraryMessage={libraryMessage}
         libraryState={libraryState}
@@ -482,7 +489,7 @@ export default function LayoutWorkspace() {
         onImportingChange={setIsImporting}
         onRefresh={refreshLibrary}
         stats={libraryStats}
-      />
+      />}
 
       <LayoutCompositionPreview
         templateId={content.activeTemplate}

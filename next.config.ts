@@ -9,7 +9,7 @@ const nextConfig: NextConfig = isStandardNodeBuild
       output: "standalone",
       pageExtensions: ["node.tsx", "node.ts", "tsx", "ts", "jsx", "js"],
       distDir: isLocalPreviewBuild ? ".next-local-preview" : ".next",
-      env: { NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW: isLocalPreviewBuild ? "1" : "0" },
+      env: { NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW: isLocalPreviewBuild ? "1" : "0", NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR: "1" },
       turbopack: {
         resolveAlias: {
           // Stage B owns the PostgreSQL repository. Until then, the Standard

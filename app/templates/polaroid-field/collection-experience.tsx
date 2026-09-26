@@ -12,7 +12,7 @@ import { PreviewLoading } from "../../preview-workspace/preview-loading";
 import styles from "./scene.module.css";
 
 type Props = Pick<TemplateProps, "content" | "onOpenWork" | "onBeforeViewChange" | "isPreview"> & {
-  homeRequest: number; isActive: boolean; savedCollections?: readonly Collection[]; initialCollectionId?: string;
+  homeRequest: number; isActive: boolean; savedCollections?: readonly Collection[]; initialCollectionId?: string; suppliedAssets?: readonly PhotoAsset[];
 };
 const hashPrefix = "#polaroid-collection-";
 // The saved workspace is loopback-development-only; do not ship its composer in production.
@@ -23,9 +23,10 @@ const MotionHome = process.env.NODE_ENV === "development" || process.env.NEXT_PU
 const cameraKey = (id: string) => `${id}:${window.innerWidth < 600 ? "mobile" : "desktop"}`;
 const assetLabel = (asset: PhotoAsset, index: number) => `素材 ${String(index + 1).padStart(2, "0")} · ${asset.aspectRatio > 1.05 ? "横幅" : asset.aspectRatio < .95 ? "竖幅" : "方幅"}`;
 
-export default function CollectionExperience({ content, isPreview, homeRequest, isActive, savedCollections, initialCollectionId, onOpenWork, onBeforeViewChange }: Props) {
+export default function CollectionExperience({ content, isPreview, homeRequest, isActive, savedCollections, initialCollectionId, suppliedAssets: providedAssets, onOpenWork, onBeforeViewChange }: Props) {
+  const suppliedAssets = process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? providedAssets : undefined;
   const [collections, setCollections] = useState<Collection[]>(() => savedCollections ? structuredClone([...savedCollections]) : initialCollections.map((item) => ({ ...item, assetIds: [] })));
-  const [assets, setAssets] = useState<PhotoAsset[]>([]);
+  const [assets, setAssets] = useState<PhotoAsset[]>(() => suppliedAssets ? [...suppliedAssets] : []);
   const [libraryState, setLibraryState] = useState("读取本地素材库…");
   const [libraryError, setLibraryError] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(initialCollectionId ?? null);
@@ -50,7 +51,7 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
   const sceneId = selected?.id ?? "home";
   // Render the resolved component directly: React.lazy's first suspension can
   // otherwise add a 300ms fallback throttle even after the module was preloaded.
-  const ReadyScene=ComposerScene ? preparedComposer ?? ComposerScene : null;
+  const ReadyScene=!suppliedAssets && ComposerScene ? preparedComposer ?? ComposerScene : null;
   useEffect(() => {
     if (!isActive) return;
     const remember = () => scrollPositions.current.set(cameraKey(sceneId), scrollY);
@@ -73,6 +74,7 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
   };
 
   useEffect(() => {
+    if (suppliedAssets) return;
     const controller = new AbortController();
     fetch("/photos/library-manifest.json", { cache: "no-store", signal: controller.signal })
       .then((response) => response.ok ? response.json() : null)
@@ -82,7 +84,7 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
         setAssets(parsed.assets); setLibraryState(`可选素材 ${parsed.assets.length} 张；引用同一素材不会复制文件。`);
       }).catch(() => { if (!controller.signal.aborted) { setLibraryState("本地素材库暂时不可用。已保存的图集引用仍保留，请稍后刷新重试。"); setLibraryError(true); } });
     return () => controller.abort();
-  }, []);
+  }, [suppliedAssets]);
 
   const returnHome = useCallback((push = true) => {
     if (ComposerScene) entryGeneration.current++;
@@ -136,7 +138,7 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
       const index = selectedAssets.findIndex((asset) => asset.id === id);
       if (index >= 0) onOpenWork(works[index], works);
     } else {
-      if (savedCollections && ComposerScene) {
+      if (!suppliedAssets && savedCollections && ComposerScene) {
         const generation=++entryGeneration.current;
         await loadComposer();
         if (entryGeneration.current!==generation || source?.cancelled) {source?.flight?.cleanup();return;}
@@ -156,8 +158,8 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
 
   return <div className={styles.experience} data-collection-proof={savedCollections ? undefined : "local-only"}>
     {libraryError && <p role="alert">{libraryState}</p>}
-    {savedCollections && MotionHome && (!selected || homeExiting) && <div style={homeExiting ? {position:"absolute",inset:"0 0 auto",zIndex:10,pointerEvents:"none"} : undefined} aria-hidden={homeExiting || undefined} inert={homeExiting || undefined}><Suspense fallback={<PreviewLoading />}><MotionHome cards={homeCards} content={content} active={isActive} onWarm={loadComposer} onPrepare={prepare} onOpen={openCard} restoreFocusId={homeExiting ? null : lastSelected} /></Suspense></div>}
-    {savedCollections && !selected && MotionHome ? null : savedCollections && selected && ReadyScene ? <Suspense fallback={null}><ReadyScene key={sceneId} cards={cards} sceneId={sceneId} title={selected.name} description={selected.description}
+    {!suppliedAssets && savedCollections && MotionHome && (!selected || homeExiting) && <div style={homeExiting ? {position:"absolute",inset:"0 0 auto",zIndex:10,pointerEvents:"none"} : undefined} aria-hidden={homeExiting || undefined} inert={homeExiting || undefined}><Suspense fallback={<PreviewLoading />}><MotionHome cards={homeCards} content={content} active={isActive} onWarm={loadComposer} onPrepare={prepare} onOpen={openCard} restoreFocusId={homeExiting ? null : lastSelected} /></Suspense></div>}
+    {!suppliedAssets && savedCollections && !selected && MotionHome ? null : savedCollections && selected && ReadyScene ? <Suspense fallback={null}><ReadyScene key={sceneId} cards={cards} sceneId={sceneId} title={selected.name} description={selected.description}
       active={isActive} focusId={selected.focusAssetId} coverId={selected.coverAssetId} entranceSource={entranceSource} onBack={() => returnHome()} onOpen={openCard} onAssetUnavailable={(id) => setAssets(current => current.filter(asset => asset.id !== id))} /></Suspense> : <CollectionScene key={`${sceneId}${savedCollections && selected ? cards.length ? ":photos" : ":empty" : ""}`} cards={cards} sceneId={sceneId} content={content} title={selected?.name} description={selected?.description}
       composedPhotos={!!savedCollections && !!selected}
       readOnly={!!savedCollections} onAssetUnavailable={(id) => setAssets((current) => current.filter((asset) => asset.id !== id))}

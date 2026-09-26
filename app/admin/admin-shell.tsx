@@ -12,12 +12,12 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
   const pathname = usePathname();
   const router = useRouter();
   const internalTest = pathname.startsWith("/test/admin");
-  const sectionHref = (href: string) => internalTest ? `/test${href}` : href;
-  const current = getAdminSection(internalTest ? pathname.slice(5) : pathname);
-  const { dirty, editorLabel, loadState, message, reload, save, saveState, updatedAt } = useAdmin();
+  const { dirty, editorLabel, loadState, message, reload, save, saveState, updatedAt, siteScope, conflict } = useAdmin();
+  const sectionHref = (href: string) => siteScope ? `${siteScope.adminBasePath}${href.slice(6)}` : internalTest ? `/test${href}` : href;
+  const current = getAdminSection(siteScope ? `/admin${pathname.slice(siteScope.adminBasePath.length)}` : internalTest ? pathname.slice(5) : pathname);
   const savedAt = formatSavedAt(updatedAt);
   const status = getAdminStatus(loadState, saveState, dirty);
-  const saveDisabled = !dirty || loadState !== "ready" || saveState === "saving";
+  const saveDisabled = conflict || !dirty || loadState !== "ready" || saveState === "saving";
   const saveActionLabel = saveState === "saving"
     ? "正在保存修改"
     : saveState === "error"
@@ -31,7 +31,7 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
     ? message
     : savedAt
       ? `上次保存 ${savedAt}`
-      : "保存后，主页刷新即显示最新内容";
+      : siteScope ? "保存仅更新本站基础版草稿，不会公开发布" : "保存后，主页刷新即显示最新内容";
 
   return (
     <div className={styles.shell} data-admin-v2="true">
@@ -48,6 +48,8 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
         </div>
 
         <div className={styles.topbarActions}>
+          {siteScope && <a href={siteScope.adminBasePath.replace(/\/basic$/, "")} onClick={(event) => { if (dirty && !window.confirm("当前基础版草稿尚未保存。离开后未保存修改会丢失，确认返回内容空间选择？")) event.preventDefault(); }}>切换内容空间</a>}
+          {siteScope && <Link href={siteScope.previewHref} target="_blank">预览已保存草稿</Link>}
           <div
             className={styles.saveStatus}
             data-tone={status.tone}
@@ -109,10 +111,10 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
         </aside>
 
         <main id="admin-main" className={styles.main} tabIndex={-1}>
-          {loadState === "error" || loadState === "degraded" ? (
+          {loadState === "error" || loadState === "degraded" || conflict ? (
             <div className={styles.errorSummary} role="alert">
               <span>{message}</span>
-              <button type="button" onClick={() => void reload()}>重新读取</button>
+              <button type="button" onClick={() => { if (!dirty || window.confirm("重新读取会替换未保存草稿，请先备份并确认继续。")) void reload(); }}>重新读取</button>
             </div>
           ) : saveState === "error" ? <div className={styles.errorSummary} role="alert">{message}</div> : null}
           {children}

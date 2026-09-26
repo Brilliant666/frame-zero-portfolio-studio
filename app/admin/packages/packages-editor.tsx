@@ -8,7 +8,7 @@ import { splitAdminTextareaLines } from "../admin-state";
 import styles from "../admin-v2.module.css";
 
 export default function PackagesEditor() {
-  const { content, setContent } = useAdmin();
+  const { content, setContent, siteScope } = useAdmin();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const updatePackage = (index: number, patch: Partial<PhotographyPackage>) => {
@@ -61,6 +61,10 @@ export default function PackagesEditor() {
 
               <div id={panelId} className={styles.disclosurePanel} hidden={!open}>
                 <div className={styles.packageToolbar}>
+                  {siteScope && <button type="button" aria-label={`删除套餐 ${index + 1}`} onClick={() => {
+                    setContent((current) => ({ ...current, packages: current.packages.filter((_, itemIndex) => itemIndex !== index) }));
+                    setOpenIndex(null);
+                  }}>删除套餐</button>}
                   <AdminToggle
                     checked={item.enabled}
                     onChange={(checked) => updatePackage(index, { enabled: checked })}
@@ -90,6 +94,10 @@ export default function PackagesEditor() {
           );
         })}
       </div>
+      {siteScope && <button type="button" className={styles.secondaryButton} disabled={content.packages.length >= 12} onClick={() => {
+        setOpenIndex(content.packages.length);
+        setContent((current) => current.packages.length >= 12 ? current : ({ ...current, packages: [...current.packages, { number: "", english: "", name: "", description: "", price: "", duration: "", deliverables: [], enabled: true }] }));
+      }}>添加套餐</button>}
     </AdminSection>
   );
 }
