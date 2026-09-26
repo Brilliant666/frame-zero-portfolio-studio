@@ -9,22 +9,25 @@ reports record historical acceptance, not today's authorization gate.
 Mission: PRODUCT_DELIVERY_MISSION_02
 Product priority: invited photographer -> own Site Admin -> independent template content -> Publish
 Current slice: M1 / target routes and real Site authorization entry
-Slice status: IN_PROGRESS
+Slice status: IMPLEMENTED_AND_VERIFIED_IN_CI / WAITING_FOR_REVIEW_CAPACITY
 Main baseline: 92a81ee274ab9d7df829c7437219f0f42c273390
 Account foundation: Draft PR #28 / feat/local-account-site-foundation
 Account head: 3263d4d917b3d59c623b420cb1537cb5a8ff99ff
 Active branch: codex/site-route-entry (stacked on the verified PR #28 head)
+M1 implementation head: 8318e06
+M1 Draft PR: #29 (base: feat/local-account-site-foundation)
 Remote deployment: FROZEN / NOT_AUTHORIZED
 External deployment gate: EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED
 V1 status: NOT_LAUNCHED
 Online status: NOT_ONLINE_PREVIEW
 ```
 
-The active branch has no completed M1 head or PR evidence yet. Update this
-checkpoint at the next delivery; do not describe dependency code as merged main.
-Next: dynamic Site resolution, same-origin login/Admin entry, legacy `/test`
-mappings, real PostgreSQL two-user allow/deny tests. Preserve `/preview` until
-replacement content is genuinely available.
+M1 is delivered in [Draft PR #29](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/29),
+depending on [Draft PR #28](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/28).
+Neither dependency is merged into main. This reaches the two-layer pending review
+limit. Stop dependent M2 work here; after review capacity becomes available,
+continue M2 under the existing Mission authority without a new resume request.
+Do not merge either PR without explicit authorization.
 
 ## Capability and verification levels
 
@@ -32,7 +35,7 @@ replacement content is genuinely available.
 | --- | --- | --- | --- | --- |
 | PR #28 migration, Better Auth, operator provisioning, independent AuthUser/PortfolioUser/Site IDs and template grants | Yes | Five CI checks; 12 real PostgreSQL integration tests at account head above | Partial: build, login HTTP and anonymous denial; no local PostgreSQL readback | No |
 | Eleven templates, Admin V2, legacy content/local photos and accepted polaroid preview | Yes | Existing baseline | Existing local experience retained | Not target migration evidence |
-| M1 target routes and authorized Site Admin shell | In progress | Pending | Pending | No |
+| M1 target routes and authorized Site Admin shell | Yes | Five checks pass; real PostgreSQL HTTP suite 16/16 at implementation head | Next build/budget, lint/types; legacy HTTP 38/38; route status checks below; no local PG | No |
 | M2 independent content, M3 Site assets, M4 publication, M5 second photographer | Not delivered | Pending | Pending | No |
 
 Reuse the account foundation, not a new Auth POC. Commands and evidence:
@@ -48,10 +51,34 @@ Reuse the account foundation, not a new Auth POC. Commands and evidence:
 - Real `star` is **not created**. Real email and non-echoed password must be
   entered locally using the existing provisioning flow when PostgreSQL is
   available. CI fixtures are not real users or customer onboarding evidence.
-- Windows legacy bundle is 6 bytes over budget while CI passes. Preserve the
-  threshold; allow one bounded reproducible investigation, not a global blocker.
+- Windows legacy bundle baseline was 6 bytes over budget; M1 is 563638 bytes,
+  438 bytes over the unchanged 550 KiB threshold. CI passes the same threshold.
+  Preserve the threshold; allow one bounded reproducible investigation, not a global blocker.
   The recorded 337.4ms long frame remains a known accepted performance boundary
   unless a new reproducible regression is demonstrated.
+
+## Observable M1 delivery and next step
+
+- `/` is a minimal platform introduction. Old templates are at `/test`; the
+  six-section real legacy editor is reused at `/test/admin`. Both internal test
+  entries fail closed outside development or the explicit local runner.
+- `/login` links to the authenticated account's own `/:siteSlug/admin` on the
+  same origin. The shell uses session subject AND slug in the ownership SQL.
+  It shows granted products, but has no unconnected Save/Publish buttons.
+- Existing completed Sites show an explicit unpublished public page. Unknown
+  Sites are 404; anonymous Admin is 401; wrong owner is 403; unavailable database
+  is 503. No global 1/2601, default star or Draft content fallback exists.
+- Local Node runner remains `npm run accounts:start`, port 3003; no new service
+  or port was introduced. Verified `/`, `/login`, `/test`, `/test/admin/template`
+  = 200, anonymous `/example/admin` = 401, unavailable `/example` = 503.
+- Legacy dev remains `npm run dev`, port 3001. Verified `/`, `/test`,
+  `/test/admin/template`, `/preview`, `/preview/admin` = 200. `/admin` remains a
+  temporary compatibility entry; old global APIs are not claimed Site-secured.
+- No real content, SQLite, photo, manifest or platform-card writes or migration
+  were performed. No new design, composition, theme or motion changes.
+- Next product slice is M2: adapt the two existing editors to independent
+  Site/content-space drafts and version checks, without touching real sources
+  or exposing drafts publicly. It waits on review capacity, not Docker repair.
 
 ## Product development authority
 
