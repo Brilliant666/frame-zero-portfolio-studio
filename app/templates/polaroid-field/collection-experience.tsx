@@ -12,20 +12,23 @@ import { PreviewLoading } from "../../preview-workspace/preview-loading";
 import styles from "./scene.module.css";
 
 type Props = Pick<TemplateProps, "content" | "onOpenWork" | "onBeforeViewChange" | "isPreview"> & {
-  homeRequest: number; isActive: boolean; savedCollections?: readonly Collection[]; initialCollectionId?: string;
+  homeRequest: number; isActive: boolean; savedCollections?: readonly Collection[]; initialCollectionId?: string; suppliedAssets?: readonly PhotoAsset[];
 };
 const hashPrefix = "#polaroid-collection-";
 // The saved workspace is loopback-development-only; do not ship its composer in production.
 let preparedComposer: typeof import("./composer-scene").default | undefined;
 const loadComposer = () => import("./composer-scene").then(module => {preparedComposer=module.default;return module;});
-const ComposerScene = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? lazy(loadComposer) : null;
-const MotionHome = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? lazy(() => import("./motion-home")) : null;
+const LocalComposerScene = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? lazy(loadComposer) : null;
+const LocalMotionHome = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? lazy(() => import("./motion-home")) : null;
 const cameraKey = (id: string) => `${id}:${window.innerWidth < 600 ? "mobile" : "desktop"}`;
 const assetLabel = (asset: PhotoAsset, index: number) => `素材 ${String(index + 1).padStart(2, "0")} · ${asset.aspectRatio > 1.05 ? "横幅" : asset.aspectRatio < .95 ? "竖幅" : "方幅"}`;
 
-export default function CollectionExperience({ content, isPreview, homeRequest, isActive, savedCollections, initialCollectionId, onOpenWork, onBeforeViewChange }: Props) {
+export default function CollectionExperience({ content, isPreview, homeRequest, isActive, savedCollections, initialCollectionId, suppliedAssets, onOpenWork, onBeforeViewChange }: Props) {
+  // Explicit Site assets never enter the local prototype or its persisted preferences.
+  const ComposerScene = suppliedAssets ? null : LocalComposerScene;
+  const MotionHome = suppliedAssets ? null : LocalMotionHome;
   const [collections, setCollections] = useState<Collection[]>(() => savedCollections ? structuredClone([...savedCollections]) : initialCollections.map((item) => ({ ...item, assetIds: [] })));
-  const [assets, setAssets] = useState<PhotoAsset[]>([]);
+  const [assets, setAssets] = useState<PhotoAsset[]>(() => suppliedAssets ? [...suppliedAssets] : []);
   const [libraryState, setLibraryState] = useState("读取本地素材库…");
   const [libraryError, setLibraryError] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(initialCollectionId ?? null);
@@ -73,6 +76,7 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
   };
 
   useEffect(() => {
+    if (suppliedAssets) return;
     const controller = new AbortController();
     fetch("/photos/library-manifest.json", { cache: "no-store", signal: controller.signal })
       .then((response) => response.ok ? response.json() : null)
@@ -82,7 +86,7 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
         setAssets(parsed.assets); setLibraryState(`可选素材 ${parsed.assets.length} 张；引用同一素材不会复制文件。`);
       }).catch(() => { if (!controller.signal.aborted) { setLibraryState("本地素材库暂时不可用。已保存的图集引用仍保留，请稍后刷新重试。"); setLibraryError(true); } });
     return () => controller.abort();
-  }, []);
+  }, [suppliedAssets]);
 
   const returnHome = useCallback((push = true) => {
     if (ComposerScene) entryGeneration.current++;
@@ -91,7 +95,7 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
     onBeforeViewChange?.(); setRestoredView(cameras.current.get(cameraKey("home"))); setSelectedId(null);
     if (push && !isPreview) window.history.pushState(null, "", "#polaroid-top");
     requestAnimationFrame(() => window.scrollTo({ top: scrollTop, behavior: "instant" }));
-  }, [isPreview, onBeforeViewChange]);
+  }, [ComposerScene, isPreview, onBeforeViewChange]);
   useEffect(() => {
     if (homeRequest === priorHomeRequest.current) return;
     priorHomeRequest.current = homeRequest;
@@ -112,7 +116,7 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
     };
     sync(); addEventListener("popstate", sync); addEventListener("hashchange", sync);
     return () => { removeEventListener("popstate", sync); removeEventListener("hashchange", sync); };
-  }, [isPreview, visible, onBeforeViewChange]);
+  }, [ComposerScene, isPreview, visible, onBeforeViewChange]);
   useEffect(() => {
     if (!selectedId || selected) return;
     const frame = requestAnimationFrame(() => returnHome(false));

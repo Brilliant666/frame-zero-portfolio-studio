@@ -30,6 +30,7 @@ export async function readOwnedSite(runtime, headers, requestedId = null, reques
   return readSiteForPrincipal(runtime, session.user, requestedId, requestedSlug);
 }
 
+/** @param {string|null} requestedId @param {string|null} requestedSlug */
 export async function readSiteForPrincipal(runtime, user, requestedId = null, requestedSlug = null) {
   const result = await runtime.pool.query(`SELECT s.id, s.slug, p.id AS portfolio_user_id,
     COALESCE(array_agg(g.product) FILTER (WHERE g.product IS NOT NULL), '{}') AS premium

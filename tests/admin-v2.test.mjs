@@ -117,7 +117,7 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   );
   assert.match(continueHandler, /content\.activeTemplate !== templateId/);
   assert.match(continueHandler, /activeTemplate: templateId/);
-  assert.match(continueHandler, /router\.push\(pathname\.startsWith\("\/test\/admin"\) \? "\/test\/admin\/layout" : "\/admin\/layout"\)/);
+  assert.match(continueHandler, /router\.push\(siteScope \? `\$\{siteScope\.adminBasePath\}\/layout` : pathname\.startsWith\("\/test\/admin"\) \? "\/test\/admin\/layout" : "\/admin\/layout"\)/);
   assert.doesNotMatch(continueHandler, /save|fetch\(|method:\s*"PUT"|applyTemplateCompositionPreview|templateWorks/);
   assert.match(template, /onChange=\{\(event\) => inspectTemplate\(event\.target\.value\)\}/);
   assert.match(template, /当前草稿/);
@@ -596,9 +596,10 @@ test("Admin V2 keeps one shared save action on the unchanged site-content endpoi
     source("app/admin/layout/layout-workspace.tsx"),
     source("app/admin/template/template-composition-preview.tsx"),
   ]);
-  assert.match(provider, /fetch\("\/api\/site-content", \{ cache: "no-store" \}\)/);
+  assert.match(provider, /const endpoint = siteScope\?\.endpoint \?\? "\/api\/site-content"/);
+  assert.match(provider, /fetch\(endpoint, \{ cache: "no-store" \}\)/);
   assert.match(provider, /method: "PUT"/);
-  assert.match(provider, /JSON\.stringify\(\{ content: submitted \}\)/);
+  assert.match(provider, /JSON\.stringify\(\{ content: submitted, \.\.\.\(siteScope \? \{ expectedRevision: revision \} : \{\}\) \}\)/);
   assert.match(provider, /beforeunload/);
   assert.match(provider, /isAdminSaveShortcut/);
   assert.match(provider, /saveState !== "success"/);

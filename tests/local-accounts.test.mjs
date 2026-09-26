@@ -24,7 +24,7 @@ async function cleanTestTables() {
     const database = (await client.query('SELECT current_database() AS name')).rows[0].name;
     assert.equal(database, 'frame_zero_accounts_test', 'Refuse cleanup outside the dedicated test database');
     // Explicit list, no CASCADE: newly introduced referencing data must fail safely.
-    await client.query('TRUNCATE TABLE site_template_grants, sites, portfolio_users, "session", account, verification, "user", account_provisioning');
+    await client.query('TRUNCATE TABLE site_content_drafts, site_template_grants, sites, portfolio_users, "session", account, verification, "user", account_provisioning');
   } finally { client.release(); }
 }
 
@@ -87,6 +87,17 @@ async function sitePage(path, status, cookie) {
   return response.text();
 }
 
+const draftPath = (slug, space = 'basic') => `/api/sites/${slug}/drafts/${space}`;
+async function readDraft(slug, space, cookie) {
+  const response = await request(draftPath(slug, space), { cookie });
+  assert.equal(response.status, 200, `Read ${slug}/${space} through authenticated HTTP`);
+  assert.match(response.headers.get('cache-control') ?? '', /no-store/);
+  return response.json();
+}
+async function saveDraft(slug, space, cookie, content, expectedRevision) {
+  return request(draftPath(slug, space), { cookie, method: 'PUT', body: { content, expectedRevision } });
+}
+
 test('real PostgreSQL and Standard Next account boundary', { timeout: 180000 }, async t => {
   t.after(async () => { await stopServer(); await runtime.pool.end(); });
   await migrateAccounts(config);
@@ -133,7 +144,7 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 180000 }, 
     }
   });
   await startServer();
-  let alpha, beta, siteId;
+  let alpha, beta, siteId, savedBasic, savedPremium;
   await t.test('real sessions, owner-scoped lookup and separate template rights', async () => {
     assert.equal((await request('/api/account/site')).status, 401);
     alpha = await login('FIXTUREALPHA'); beta = await login('fixturebeta');
@@ -182,7 +193,7 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 180000 }, 
     try { await sitePage('/fixturegamma', 404); }
     finally { await runtime.pool.query("UPDATE account_provisioning SET completed_at=now() WHERE username='fixturegamma'"); }
   });
-  await t.test('slug admin is owner-only, read-only and grant-aware without administrator escalation', async () => {
+  await t.test('slug admin is an owner-only editor entry and grant-aware without administrator escalation', async () => {
     const a = await sitePage('/fixturealpha/admin', 200, alpha);
     const b = await sitePage('/fixturebeta/admin', 200, beta);
     for (const html of [a, b]) {
@@ -191,6 +202,9 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 180000 }, 
     }
     assert.match(a, /高级拍立得（已授权）/);
     assert.match(b, /尚未授权/);
+    assert.match(a, /href="\/fixturealpha\/admin\/basic\/profile"/);
+    assert.match(a, /href="\/fixturealpha\/admin\/premium-polaroid"/);
+    assert.doesNotMatch(b, /href="\/fixturebeta\/admin\/premium-polaroid"/);
     assert.ok(!a.includes('fixturebeta')); assert.ok(!b.includes('fixturealpha'));
     for (const slug of ['fixturealpha', 'fixturebeta']) await sitePage(`/${slug}/admin`, 401);
     const deniedAlpha = await sitePage('/fixturealpha/admin', 403, beta);
@@ -213,6 +227,106 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 180000 }, 
       assert.ok(!html.includes(hostile));
       assert.match(html, /&lt;script&gt;alert\(&quot;fixture&quot;\)&lt;\/script&gt;&amp;/);
     } finally { await runtime.pool.query('UPDATE "user" SET username=$1 WHERE id=$2', ['fixturealpha', user.id]); }
+  });
+  await t.test('independent real Site editors load and empty drafts contain no global or account defaults', async () => {
+    for (const section of ['template', 'layout', 'profile', 'packages', 'contact', 'advanced']) {
+      const response = await request(`/fixturealpha/admin/basic/${section}`, { cookie: alpha });
+      assert.equal(response.status, 200, `Existing basic ${section} editor loads`);
+    }
+    assert.equal((await request('/fixturealpha/admin/premium-polaroid', { cookie: alpha })).status, 200);
+    for (const space of ['basic', 'premium-polaroid']) {
+      const envelope = await readDraft('fixturealpha', space, alpha);
+      assert.equal(envelope.revision, 0);
+      assert.equal(envelope.updatedAt, null);
+      assert.ok(envelope.content);
+      assert.equal(envelope.content.profile.photographer, '');
+      assert.equal(envelope.content.contact.email, '');
+      assert.doesNotMatch(JSON.stringify(envelope.content), /fixturealpha|@accounts\.example|\/photos\//);
+      if (space === 'basic') assert.deepEqual(envelope.content.works, []);
+      else assert.deepEqual(envelope.content.collections, []);
+    }
+  });
+  await t.test('two Sites and two content spaces persist separate profiles, contacts and versions', async () => {
+    const basic = (await readDraft('fixturealpha', 'basic', alpha)).content;
+    basic.profile.photographer = 'Alpha basic photographer';
+    basic.contact.email = 'basic@fixture.example';
+    basic.hero.title = 'Private basic draft';
+    let response = await saveDraft('fixturealpha', 'basic', alpha, basic, 0);
+    assert.equal(response.status, 200);
+    savedBasic = await response.json();
+    assert.equal(savedBasic.revision, 1);
+    assert.deepEqual(savedBasic.content, basic);
+    assert.ok(savedBasic.updatedAt);
+    assert.equal((await readDraft('fixturealpha', 'premium-polaroid', alpha)).revision, 0);
+
+    const premium = (await readDraft('fixturealpha', 'premium-polaroid', alpha)).content;
+    premium.profile.photographer = 'Alpha premium photographer';
+    premium.contact.email = 'premium@fixture.example';
+    premium.hero.title = 'Private premium draft';
+    response = await saveDraft('fixturealpha', 'premium-polaroid', alpha, premium, 0);
+    assert.equal(response.status, 200);
+    savedPremium = await response.json();
+    assert.equal(savedPremium.revision, 1);
+    assert.deepEqual(savedPremium.content, premium);
+    assert.deepEqual(await readDraft('fixturealpha', 'basic', alpha), savedBasic);
+
+    const betaBasic = (await readDraft('fixturebeta', 'basic', beta)).content;
+    betaBasic.profile.photographer = 'Beta independent photographer';
+    assert.equal((await saveDraft('fixturebeta', 'basic', beta, betaBasic, 0)).status, 200);
+    assert.deepEqual((await readDraft('fixturebeta', 'basic', beta)).content, betaBasic);
+    assert.deepEqual(await readDraft('fixturealpha', 'basic', alpha), savedBasic);
+    assert.deepEqual(await readDraft('fixturealpha', 'premium-polaroid', alpha), savedPremium);
+  });
+  await t.test('draft reads, writes and previews reject other owners, missing sessions and missing premium grants', async () => {
+    for (const space of ['basic', 'premium-polaroid']) {
+      const content = space === 'basic' ? savedBasic.content : savedPremium.content;
+      for (const [cookie, expected] of [[undefined, 401], [beta, 403]]) {
+        assert.equal((await request(draftPath('fixturealpha', space), { cookie })).status, expected);
+        assert.equal((await saveDraft('fixturealpha', space, cookie, content, 1)).status, expected);
+        const preview = await request(`/fixturealpha/admin/preview/${space}`, { cookie });
+        assert.ok(preview.status === 401 || preview.status === 403 || preview.status === 404 || new URL(preview.url).pathname === '/login');
+        assert.doesNotMatch(await preview.text(), /Alpha basic photographer|Alpha premium photographer|Private basic draft|Private premium draft/);
+      }
+    }
+    assert.equal((await request(draftPath('fixturebeta', 'premium-polaroid'), { cookie: beta })).status, 403);
+    assert.equal((await saveDraft('fixturebeta', 'premium-polaroid', beta, savedPremium.content, 0)).status, 403);
+    const ungrantedPreview = await request('/fixturebeta/admin/preview/premium-polaroid', { cookie: beta });
+    assert.ok([401, 403, 404].includes(ungrantedPreview.status) || new URL(ungrantedPreview.url).pathname === '/login');
+    assert.equal((await request(draftPath('unknownfixture'), { cookie: alpha })).status, 403);
+    for (const space of ['basic', 'premium-polaroid']) {
+      assert.equal((await request(`/fixturealpha/admin/preview/${space}`, { cookie: alpha })).status, 200);
+    }
+  });
+  await t.test('wrong schema, arbitrary assets and injected scope cannot modify a draft', async () => {
+    for (const [space, content] of [['basic', savedPremium.content], ['premium-polaroid', savedBasic.content], ['basic', { ...savedBasic.content, profile: { photographer: 'incomplete' } }]]) {
+      assert.equal((await saveDraft('fixturealpha', space, alpha, content, 1)).status, 400);
+    }
+    const assetBasic = structuredClone(savedBasic.content);
+    assetBasic.works = [{ assetId: 'not-owned-by-this-site' }];
+    assert.equal((await saveDraft('fixturealpha', 'basic', alpha, assetBasic, 1)).status, 422);
+    const assetPremium = structuredClone(savedPremium.content);
+    assetPremium.social = [{ label: 'Unowned card', handle: 'fixture', qrAssetId: 'a'.repeat(64) }];
+    assert.equal((await saveDraft('fixturealpha', 'premium-polaroid', alpha, assetPremium, 1)).status, 422);
+    for (const expectedRevision of [-1, 0.5, '1']) {
+      assert.equal((await saveDraft('fixturealpha', 'basic', alpha, savedBasic.content, expectedRevision)).status, 400);
+    }
+    assert.equal((await request(draftPath('fixturealpha'), { cookie: alpha, method: 'PUT', body: { content: savedBasic.content, expectedRevision: 1, siteId: 'forged' } })).status, 400);
+    assert.equal((await request(draftPath('fixturealpha'), { cookie: alpha, method: 'PUT', headers: { origin: 'https://untrusted.example' }, body: { content: savedBasic.content, expectedRevision: 1 } })).status, 403);
+    assert.deepEqual(await readDraft('fixturealpha', 'basic', alpha), savedBasic);
+    assert.deepEqual(await readDraft('fixturealpha', 'premium-polaroid', alpha), savedPremium);
+  });
+  await t.test('simultaneous saves use atomic version checks without altering another space or public Site', async () => {
+    const attempts = ['first tab', 'second tab'].map(title => ({ ...structuredClone(savedBasic.content), hero: { ...savedBasic.content.hero, title } }));
+    const results = await Promise.all(attempts.map(content => saveDraft('fixturealpha', 'basic', alpha, content, 1)));
+    assert.deepEqual(results.map(response => response.status).sort(), [200, 409]);
+    const winner = await results.find(response => response.status === 200).json();
+    assert.equal(winner.revision, 2);
+    savedBasic = winner;
+    assert.deepEqual(await readDraft('fixturealpha', 'basic', alpha), winner);
+    assert.deepEqual(await readDraft('fixturealpha', 'premium-polaroid', alpha), savedPremium);
+    const html = await sitePage('/fixturealpha', 200);
+    assert.match(html, /data-site-state="unpublished"/);
+    assert.doesNotMatch(html, /Alpha basic photographer|Alpha premium photographer|first tab|second tab|Private premium draft/);
   });
   await t.test('registration variants and operator endpoints cannot create accounts', async () => {
     const before = (await runtime.pool.query('SELECT count(*)::int AS n FROM "user"')).rows[0].n;
@@ -244,18 +358,28 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 180000 }, 
     assert.equal((await request('/api/account/site', { cookie: alpha })).status, 401);
     await sitePage('/fixturealpha/admin', 401, second);
     await sitePage('/fixturealpha/admin', 401, alpha);
+    assert.equal((await request(draftPath('fixturealpha'), { cookie: alpha })).status, 401);
+    assert.equal((await saveDraft('fixturealpha', 'basic', alpha, savedBasic.content, savedBasic.revision)).status, 401);
+    assert.equal((await saveDraft('fixturebeta', 'basic', beta, savedBasic.content, 1)).status, 401);
   });
   await t.test('expired database session is rejected without a cookie-cache grace period', async () => {
     const cookie = await login('fixturebeta');
     await runtime.pool.query('UPDATE "session" SET expires_at=now()-interval \'1 minute\' WHERE user_id=(SELECT id FROM "user" WHERE username=$1)', ['fixturebeta']);
     assert.equal((await request('/api/account/site', { cookie })).status, 401);
     await sitePage('/fixturebeta/admin', 401, cookie);
+    assert.equal((await request(draftPath('fixturebeta'), { cookie })).status, 401);
+    assert.equal((await saveDraft('fixturebeta', 'basic', cookie, savedBasic.content, 1)).status, 401);
   });
   await t.test('server restart preserves accounts and Site relations', async () => {
     await stopServer(); await startServer();
     const cookie = await login('fixturealpha');
     const body = await (await request('/api/account/site', { cookie })).json();
     assert.equal(body.site.id, siteId);
+    assert.deepEqual(await readDraft('fixturealpha', 'basic', cookie), savedBasic);
+    assert.deepEqual(await readDraft('fixturealpha', 'premium-polaroid', cookie), savedPremium);
+    const publicHtml = await sitePage('/fixturealpha', 200);
+    assert.match(publicHtml, /data-site-state="unpublished"/);
+    assert.doesNotMatch(publicHtml, /Alpha basic photographer|Alpha premium photographer/);
   });
   await t.test('incorrect and unknown credentials share errors; attempts are limited', async () => {
     const wrong = await request('/api/auth/sign-in/username', { body: { username: 'fixturealpha', password: 'incorrect-password' } });
