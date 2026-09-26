@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useEffect, useState, type FormEvent } from 'react';
 type Account = { user: { username: string; email: string; emailVerified: boolean }; site: { slug: string }; templates: { basic: string[]; premium: string[] } };
 export default function Login() {
@@ -40,10 +41,12 @@ export default function Login() {
     } catch { setMessage('退出失败，请重试'); } finally { setBusy(false); }
   }
   return <main style={{ maxWidth: 600, margin: '64px auto', padding: 24 }}>
-    <h1>本地账号登录</h1><p>本轮仅验证身份和站点归属，尚未连接作品集后台。</p>
+    <Link href="/">返回平台首页</Link>
+    <h1>受邀账号登录</h1><p>登录后进入自己的站点。本站不开放公众注册。</p>
     <p role="status">{message}</p>
     {account ? <section><h2>{account.user.username}</h2><p>登录邮箱：{account.user.email}（{account.user.emailVerified ? '已验证' : '未验证'}）</p><p>站点：{account.site.slug}</p>
       <p>基础模板：{account.templates.basic.length} 套</p><p>高级产品：{account.templates.premium.join('、') || '未授权'}</p>
+      <p><a href={`/${encodeURIComponent(account.site.slug)}/admin`}>进入我的站点后台</a>{' · '}<a href={`/${encodeURIComponent(account.site.slug)}`}>查看我的主页</a></p>
       <button disabled={busy} onClick={() => void logout()}>退出登录</button>{' '}<button disabled={busy} onClick={() => void logout(true)}>撤销全部会话</button>
     </section> : <form onSubmit={submit}><p><label>用户名 <input name="username" autoComplete="username" required maxLength={30} /></label></p><p><label>密码 <input name="password" type="password" autoComplete="current-password" required maxLength={128} /></label></p><button disabled={busy} type="submit">{busy ? '登录中…' : '登录'}</button></form>}
   </main>;

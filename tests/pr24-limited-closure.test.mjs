@@ -86,7 +86,7 @@ test("template inspection and selection cannot automatically Apply or save a lay
   assert.match(inspectHandler, /setInspectedOverride\(value\)/);
   assert.doesNotMatch(inspectHandler, /setContent|templateWorks|applyTemplateCompositionPreview|fetch\(|method:\s*"PUT"/);
   assert.match(continueHandler, /setContent\(\(current\) => \(\{ \.\.\.current, activeTemplate: templateId \}\)\)/);
-  assert.match(continueHandler, /router\.push\("\/admin\/layout"\)/);
+  assert.match(continueHandler, /router\.push\(pathname\.startsWith\("\/test\/admin"\) \? "\/test\/admin\/layout" : "\/admin\/layout"\)/);
   assert.doesNotMatch(
     continueHandler,
     /templateWorks|applyTemplateCompositionPreview|save|fetch\(|method:\s*"PUT"|\/api\/site-content/,

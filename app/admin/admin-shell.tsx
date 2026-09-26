@@ -11,7 +11,9 @@ import styles from "./admin-v2.module.css";
 export default function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
   const router = useRouter();
-  const current = getAdminSection(pathname);
+  const internalTest = pathname.startsWith("/test/admin");
+  const sectionHref = (href: string) => internalTest ? `/test${href}` : href;
+  const current = getAdminSection(internalTest ? pathname.slice(5) : pathname);
   const { dirty, editorLabel, loadState, message, reload, save, saveState, updatedAt } = useAdmin();
   const savedAt = formatSavedAt(updatedAt);
   const status = getAdminStatus(loadState, saveState, dirty);
@@ -78,9 +80,9 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
       <div className={styles.mobileSwitcher}>
         <label>
           <span>切换后台分区</span>
-          <select value={current.href} onChange={(event) => router.push(event.target.value)}>
+          <select value={sectionHref(current.href)} onChange={(event) => router.push(event.target.value)}>
             {ADMIN_SECTIONS.map((section) => (
-              <option value={section.href} key={section.id}>{section.label}</option>
+              <option value={sectionHref(section.href)} key={section.id}>{section.label}</option>
             ))}
           </select>
         </label>
@@ -92,7 +94,7 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
             {ADMIN_SECTIONS.map((section, index) => {
               const active = section.id === current.id;
               return (
-                <Link href={section.href} aria-current={active ? "page" : undefined} key={section.id}>
+                <Link href={sectionHref(section.href)} aria-current={active ? "page" : undefined} key={section.id}>
                   <span>{String(index + 1).padStart(2, "0")}</span>
                   <strong>{section.label}</strong>
                   <small>{section.description}</small>

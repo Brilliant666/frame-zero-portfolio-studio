@@ -111,6 +111,7 @@ test("Standard Next.js standalone starts over HTTP with current route parity", a
   const logs = [];
   const environment = { ...process.env, HOSTNAME: "127.0.0.1", PORT: String(port) };
   delete environment.FRAME_ZERO_LOCAL_PHOTO_IMPORT_ORIGIN;
+  delete environment.FRAME_ZERO_INTERNAL_TEST_AREA;
   const child = spawn(process.execPath, [serverPath], {
     cwd: standaloneRoot,
     env: environment,
@@ -124,7 +125,7 @@ test("Standard Next.js standalone starts over HTTP with current route parity", a
   t.after(async () => stopChildProcess(child));
   await waitUntilReady(origin, child, logs);
 
-  for (const route of ["/preview", "/preview/admin", "/api/preview/site-content"]) {
+  for (const route of ["/test", "/test/admin/template", "/preview", "/preview/admin", "/api/preview/site-content"]) {
     const response = await fetch(`${origin}${route}`, { headers: {
       "x-frame-zero-preview-proof": "forged-local-development-proof",
       "x-frame-zero-preview-origin": origin,
@@ -159,10 +160,9 @@ test("Standard Next.js standalone starts over HTTP with current route parity", a
   assert.equal(homeResponse.status, 200);
   assert.match(homeResponse.headers.get("content-type") ?? "", /^text\/html\b/i);
   const homeHtml = await homeResponse.text();
-  assert.match(homeHtml, /<title>FRAME\/\/ZERO｜上海 · 杭州可约 Cosplay 摄影师<\/title>/);
-  assert.match(homeHtml, /id="archive"/);
-  assert.match(homeHtml, /id="services"/);
-  assert.match(homeHtml, /id="booking"/);
+  assert.match(homeHtml, /<title>摄影作品集平台<\/title>/);
+  assert.match(homeHtml, /href="\/login"/);
+  assert.doesNotMatch(homeHtml, /id="archive"/);
   const stylesheet = homeHtml.match(/href="([^"?]*\/_next\/static\/[^"?]+\.css)["?]/)?.[1];
   assert.ok(stylesheet, "the standalone HTML must reference packaged Next static CSS");
   assert.equal((await fetch(`${origin}${stylesheet}`)).status, 200);
@@ -189,9 +189,8 @@ test("Standard Next.js standalone starts over HTTP with current route parity", a
   }
 
   for (const templateId of templateIds) {
-    const response = await fetch(`${origin}/?template=${templateId}`, { redirect: "manual" });
-    assert.equal(response.status, 200, templateId);
-    assert.match(await response.text(), /<title>FRAME\/\/ZERO｜上海 · 杭州可约 Cosplay 摄影师<\/title>/);
+    const response = await fetch(`${origin}/test?template=${templateId}`, { redirect: "manual" });
+    assert.equal(response.status, 404, `${templateId}: internal template area is closed by default`);
   }
 
   const apiResponse = await fetch(`${origin}/api/site-content`, { cache: "no-store" });

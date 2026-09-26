@@ -77,6 +77,16 @@ async function login(username) {
   return cookies.map(value => value.split(';')[0]).join('; ');
 }
 
+async function sitePage(path, status, cookie) {
+  const response = await request(path, { cookie });
+  assert.equal(response.status, status, `${path} has the expected access boundary`);
+  assert.match(response.headers.get('content-type') ?? '', /text\/html/);
+  const cache = response.headers.get('cache-control') ?? '';
+  assert.match(cache, /no-store/);
+  assert.match(cache, /private/);
+  return response.text();
+}
+
 test('real PostgreSQL and Standard Next account boundary', { timeout: 180000 }, async t => {
   t.after(async () => { await stopServer(); await runtime.pool.end(); });
   await migrateAccounts(config);
@@ -138,6 +148,72 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 180000 }, 
     assert.equal(await readOwnedSite(runtime, new Headers({ cookie: beta }), siteId), null);
     assert.equal((await request(`/api/account/site?siteId=${siteId}`, { cookie: alpha })).status, 200);
   });
+  await t.test('platform landing and explicit internal test area remain separate from Sites', async () => {
+    const root = await request('/');
+    assert.equal(root.status, 200);
+    const html = await root.text();
+    assert.match(html, /摄影作品集平台/);
+    assert.doesNotMatch(html, /data-site-state=|data-site-admin=/);
+    // The dedicated local runner explicitly enables this internal area. The
+    // normal production runner's disabled case is covered by runtime tests.
+    assert.equal((await request('/test')).status, 200);
+    assert.equal((await request('/test/admin')).status, 200);
+  });
+  await t.test('public Sites are unpublished and expose no private identity or grants', async () => {
+    const identities = await runtime.pool.query(`SELECT u.id AS auth_id,p.id AS portfolio_id,s.id AS site_id,
+      p.provisioning_id,u.email FROM sites s JOIN portfolio_users p ON p.id=s.owner_id
+      JOIN "user" u ON u.id=p.auth_user_id`);
+    for (const slug of ['fixturealpha', 'fixturebeta']) {
+      const html = await sitePage(`/${slug}`, 200);
+      assert.match(html, /data-site-state="unpublished"/);
+      assert.doesNotMatch(html, /data-site-admin=|premium-polaroid|已授权|<img\b/);
+      for (const row of identities.rows) {
+        for (const value of Object.values(row)) assert.ok(!html.includes(value), 'Public HTML omits private identity fields');
+      }
+    }
+    await sitePage('/unknownfixture', 404);
+    for (const slug of ['ab', 'InvalidSlug', 'invalid%3Ctag%3E', 'assets']) {
+      await sitePage(`/${slug}`, 404);
+      await sitePage(`/${slug}/admin`, 404);
+    }
+    // Even a structurally valid Site must not become public before the
+    // provisioning operation is complete.
+    await runtime.pool.query("UPDATE account_provisioning SET completed_at=NULL WHERE username='fixturegamma'");
+    try { await sitePage('/fixturegamma', 404); }
+    finally { await runtime.pool.query("UPDATE account_provisioning SET completed_at=now() WHERE username='fixturegamma'"); }
+  });
+  await t.test('slug admin is owner-only, read-only and grant-aware without administrator escalation', async () => {
+    const a = await sitePage('/fixturealpha/admin', 200, alpha);
+    const b = await sitePage('/fixturebeta/admin', 200, beta);
+    for (const html of [a, b]) {
+      assert.match(html, /data-site-admin="true"/);
+      assert.doesNotMatch(html, /<form\b|<input\b|<textarea\b|<button\b|href="\/admin(?:\/|")/i);
+    }
+    assert.match(a, /高级拍立得（已授权）/);
+    assert.match(b, /尚未授权/);
+    assert.ok(!a.includes('fixturebeta')); assert.ok(!b.includes('fixturealpha'));
+    for (const slug of ['fixturealpha', 'fixturebeta']) await sitePage(`/${slug}/admin`, 401);
+    const deniedAlpha = await sitePage('/fixturealpha/admin', 403, beta);
+    const deniedBeta = await sitePage('/fixturebeta/admin', 403, alpha);
+    const deniedUnknown = await sitePage('/unknownfixture/admin', 403, alpha);
+    assert.equal(deniedAlpha, deniedBeta); assert.equal(deniedAlpha, deniedUnknown);
+    assert.doesNotMatch(deniedAlpha, /fixturealpha|fixturebeta|@accounts\.example|premium-polaroid/);
+    const roles = await runtime.pool.query('SELECT role FROM "user" WHERE username=ANY($1)', [['fixturealpha', 'fixturebeta']]);
+    assert.ok(roles.rows.every(row => row.role === 'user'));
+  });
+  await t.test('Site HTML rejects identity query injection and escapes stored user text', async () => {
+    for (const suffix of [`?siteId=${siteId}`, '?owner=fixturebeta']) {
+      await sitePage(`/fixturealpha${suffix}`, 400, alpha);
+      await sitePage(`/fixturealpha/admin${suffix}`, 400, alpha);
+    }
+    const hostile = '<script>alert("fixture")</script>&';
+    const user = (await runtime.pool.query('UPDATE "user" SET username=$1 WHERE username=$2 RETURNING id', [hostile, 'fixturealpha'])).rows[0];
+    try {
+      const html = await sitePage('/fixturealpha/admin', 200, alpha);
+      assert.ok(!html.includes(hostile));
+      assert.match(html, /&lt;script&gt;alert\(&quot;fixture&quot;\)&lt;\/script&gt;&amp;/);
+    } finally { await runtime.pool.query('UPDATE "user" SET username=$1 WHERE id=$2', ['fixturealpha', user.id]); }
+  });
   await t.test('registration variants and operator endpoints cannot create accounts', async () => {
     const before = (await runtime.pool.query('SELECT count(*)::int AS n FROM "user"')).rows[0].n;
     for (const path of ['/api/auth/sign-up/email','/api/auth/sign-up/email/','/api/auth/sign-up/%65mail','/api/auth/admin/create-user','/api/auth/admin/set-role','/api/auth/admin/impersonate-user']) {
@@ -161,15 +237,19 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 180000 }, 
   await t.test('logout and revocation invalidate previously issued cookies', async () => {
     assert.equal((await request('/api/auth/sign-out', { cookie: beta, body: {} })).status, 200);
     assert.equal((await request('/api/account/site', { cookie: beta })).status, 401);
+    await sitePage('/fixturebeta/admin', 401, beta);
     const second = await login('fixturealpha');
     assert.equal((await request('/api/auth/revoke-sessions', { cookie: alpha, body: {} })).status, 200);
     assert.equal((await request('/api/account/site', { cookie: second })).status, 401);
     assert.equal((await request('/api/account/site', { cookie: alpha })).status, 401);
+    await sitePage('/fixturealpha/admin', 401, second);
+    await sitePage('/fixturealpha/admin', 401, alpha);
   });
   await t.test('expired database session is rejected without a cookie-cache grace period', async () => {
     const cookie = await login('fixturebeta');
     await runtime.pool.query('UPDATE "session" SET expires_at=now()-interval \'1 minute\' WHERE user_id=(SELECT id FROM "user" WHERE username=$1)', ['fixturebeta']);
     assert.equal((await request('/api/account/site', { cookie })).status, 401);
+    await sitePage('/fixturebeta/admin', 401, cookie);
   });
   await t.test('server restart preserves accounts and Site relations', async () => {
     await stopServer(); await startServer();

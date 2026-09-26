@@ -24,19 +24,24 @@ export function accountJson(body, status = 200) {
 }
 export const BASIC_TEMPLATES = Object.freeze(['cinematic-light','neon-hud','film-rail','manga-panels','prism-liquid','orbital-portal','archive-os','editorial-duet','polaroid-field','character-select','museum-depth']);
 
-export async function readOwnedSite(runtime, headers, requestedId = null) {
+export async function readOwnedSite(runtime, headers, requestedId = null, requestedSlug = null) {
   const session = await runtime.auth.api.getSession({ headers });
   if (!session) return null;
+  return readSiteForPrincipal(runtime, session.user, requestedId, requestedSlug);
+}
+
+export async function readSiteForPrincipal(runtime, user, requestedId = null, requestedSlug = null) {
   const result = await runtime.pool.query(`SELECT s.id, s.slug, p.id AS portfolio_user_id,
     COALESCE(array_agg(g.product) FILTER (WHERE g.product IS NOT NULL), '{}') AS premium
     FROM sites s JOIN portfolio_users p ON p.id=s.owner_id
     JOIN account_provisioning op ON op.id=p.provisioning_id AND op.completed_at IS NOT NULL
     LEFT JOIN site_template_grants g ON g.site_id=s.id
     WHERE p.auth_user_id=$1 AND ($2::uuid IS NULL OR s.id=$2::uuid)
-    GROUP BY s.id,p.id`, [session.user.id, requestedId]);
+      AND ($3::text IS NULL OR s.slug=$3::text)
+    GROUP BY s.id,p.id`, [user.id, requestedId, requestedSlug]);
   if (!result.rows.length) return null;
   const site = result.rows[0];
-  return { user: { username: session.user.username, email: session.user.email, emailVerified: session.user.emailVerified, role: session.user.role }, site: { id: site.id, slug: site.slug }, templates: { basic: BASIC_TEMPLATES, premium: site.premium } };
+  return { user: { username: user.username, email: user.email, emailVerified: user.emailVerified, role: user.role }, site: { id: site.id, slug: site.slug }, templates: { basic: BASIC_TEMPLATES, premium: site.premium } };
 }
 
 export async function handleAuthRequest(request) {

@@ -53,7 +53,7 @@ const totalCss = assetFiles
 // the public-page aggregate that protects visitors. Standard Next remains the
 // default production lane and has its own route-aware budget gate.
 const adminEntryFiles = new Set(Object.entries(manifest)
-  .filter(([source]) => source.startsWith("app/admin/"))
+  .filter(([source]) => source.startsWith("app/admin/") || source.startsWith("app/test/admin/"))
   .map(([, entry]) => entry.file));
 const publicJs = assetFiles
   .filter((file) => extname(file) === ".js" && !adminEntryFiles.has(file))
@@ -63,7 +63,7 @@ const adminJs = [...adminEntryFiles]
 
 if (publicJs > MAX_PUBLIC_JS) violations.push(`public client JS is ${publicJs} bytes`);
 if (adminJs > MAX_ADMIN_JS) violations.push(`Admin dynamic JS is ${adminJs} bytes`);
-for (const [source, entry] of Object.entries(manifest).filter(([source]) => source.startsWith("app/admin/"))) {
+for (const [source, entry] of Object.entries(manifest).filter(([source]) => source.startsWith("app/admin/") || source.startsWith("app/test/admin/"))) {
   const bytes = fileBytes(entry.file);
   if (bytes > MAX_ADMIN_ENTRY_JS) violations.push(`${source} lazy JS is ${bytes} bytes`);
 }

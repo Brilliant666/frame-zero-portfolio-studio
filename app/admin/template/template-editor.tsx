@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { isTemplateId, templateCatalog, type TemplateId } from "../../site-config";
 import {
@@ -24,6 +24,7 @@ const mobileModeLabels: Record<TemplateMaterialProfile["mobileBehavior"]["mode"]
 
 export default function TemplateEditor() {
   const router = useRouter();
+  const pathname = usePathname();
   const { content, savedContent, setContent } = useAdmin();
   const [inspectedOverride, setInspectedOverride] = useState<TemplateId | null>(null);
   const inspectedId = inspectedOverride ?? content.activeTemplate;
@@ -41,7 +42,7 @@ export default function TemplateEditor() {
     if (content.activeTemplate !== templateId) {
       setContent((current) => ({ ...current, activeTemplate: templateId }));
     }
-    router.push("/admin/layout");
+    router.push(pathname.startsWith("/test/admin") ? "/test/admin/layout" : "/admin/layout");
   };
 
   const detailState = inspectedIsDraft
