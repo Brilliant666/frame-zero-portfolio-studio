@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { createAccountRuntime } from './runtime.mjs';
+import { isSiteSlug } from './site-slug.mjs';
 
-const reserved = new Set(['admin','test','preview','api','login','logout','auth','_next','public','photos','fonts','favicon','assets','health','robots','sitemap','static','template-structure-previews']);
 export function normalizeProvisionInput(input) {
   const username = String(input.username ?? '').trim().toLowerCase();
   const slug = String(input.slug ?? '').trim().toLowerCase();
   const email = String(input.email ?? '').trim().toLowerCase();
-  if (![username,slug].every(v => /^[a-z][a-z0-9_-]{2,29}$/.test(v) && !reserved.has(v))) throw new Error('INVALID_USERNAME_OR_SLUG');
+  if (![username,slug].every(isSiteSlug)) throw new Error('INVALID_USERNAME_OR_SLUG');
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('INVALID_EMAIL');
   if (typeof input.password !== 'string' || input.password.length < 12 || input.password.length > 128) throw new Error('INVALID_PASSWORD_LENGTH');
   return { username, slug, email, password: input.password, premium: input.premium === true };

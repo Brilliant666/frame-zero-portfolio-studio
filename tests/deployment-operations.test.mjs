@@ -79,7 +79,7 @@ test("runbook covers every operation while governance remains externally gated",
     assert.match(document, /NOT_ONLINE_PREVIEW/);
     assert.doesNotMatch(document, /Stage status:\s*(?:`)?COMPLETE/);
   }
-  assert.match(status, /Stage status: IN_PROGRESS/);
+  assert.match(status, /Remote deployment: FROZEN \/ NOT_AUTHORIZED/);
   assert.match(status, /REPO_SIDE_BOOTSTRAP_READY/);
   assert.match(stage, /CI_TLS_EVIDENCE/);
   assert.match(stage, /REAL_PRODUCTION_HTTPS_EVIDENCE/);

@@ -1,10 +1,10 @@
 # Portfolio Platform North Star
 
 > - Status: `CURRENT_SOURCE_OF_TRUTH`
-> - Effective date: 2026-08-10
-> - Baseline: `main@3342589c48ba6bdd437fb763eff51fae385f48b5`
+> - Effective date: 2026-09-26 / `PRODUCT_DELIVERY_MISSION_02`
+> - Baseline and active head: [CURRENT_STATUS.md](CURRENT_STATUS.md)
 > - Current phase: `SELF_HOSTED_V1`
-> - Current stage: `STAGE_A_RUNTIME`
+> - Execution: product milestones M1–M5; remote deployment remains separately frozen
 
 This document is the highest project-level constraint for the current product
 goal, V1 scope, and launch priority. It does not silently override an Accepted
@@ -170,8 +170,31 @@ Semantics:
 | `/login` | Authentication |
 | `/:siteSlug` | Public Published portfolio |
 | `/:siteSlug/admin` | Site-scoped Admin |
+| `/test` | Internal legacy eleven-template development reference |
+| `/test/admin` | Internal legacy Admin development reference |
 
 The platform landing page must not later be redefined as the `star` portfolio.
+Keep `/preview` functional until the new Site content is truly usable, then
+make an explicit compatibility redirect. Never map arbitrary slugs to global
+record 2601 or use a fake star/session. Database failure must fail closed.
+Login and editing converge on the same application/origin; 3003/3004 are
+validation ports, not permanent product services.
+
+### Independent template business spaces
+
+The eleven basic templates are free and retain their general Admin. Each paid
+template may have a complete dedicated editor. Basic and each paid space own
+their profile, introduction, packages, contact and configuration independently,
+with independent versions/concurrency. Similar fields do not justify mandatory
+shared `profile/packages/contact`. Optional explicit initial copying is a
+snapshot, never ongoing synchronization.
+
+Within one Site, spaces reuse the same Asset pool without copying files; their
+collections, covers, ordering and composition may differ. Cross-Site private
+assets are never shared. Removing a reference is not deleting an asset; deletion
+requires all-space reference checks. Reuse authentication, Site authorization
+and storage infrastructure. A premium template grant is not an admin role.
+Preserve accepted polaroid design, three compositions, themes, motion and viewer.
 
 ## 5. Identity model
 
@@ -249,8 +272,10 @@ Requirements:
 
 ## 9. Authentication target
 
-Better Auth is the `PRIMARY_ADOPT_CANDIDATE`, not yet the approved production
-integration. It must first pass:
+Reuse the real local Better Auth + Standard Next Node + PostgreSQL foundation
+in Draft PR #28 (verification at the current head is tracked in CURRENT_STATUS).
+Do not repeat its POC or treat CI verification as local star provisioning or
+production acceptance. The historical research mapping is:
 
 ```text
 REUSE-01B
@@ -372,11 +397,9 @@ asset backup, restore drills, and application rollback rehearsal. It does not
 require Kubernetes, a service mesh, multiple app instances, object storage, or
 blue/green deployment.
 
-Deployment begins before feature completion. After standard Next.js Node
-parity, `Stage A2 / DEPLOYMENT_BOOTSTRAP` establishes the minimum production
-shell. Stage D then makes `/` and `/star` continuously available as
-`ONLINE_PREVIEW`. Stage J hardens an environment that has already been online;
-it is not the first production deployment.
+After separate remote authorization, Stage A2 establishes the production shell
+and Stage D enables `ONLINE_PREVIEW`. These remain online maturity gates; they
+are not prerequisites for local product implementation or PostgreSQL CI tests.
 
 ## 13. V1 required
 
@@ -457,9 +480,13 @@ launch without a newly demonstrated V1 blocker.
 - full technical-namespace rename
 - new templates added only to expand the catalog
 
-## 15. Launch-first governance
+## 15. Product delivery governance
 
-**Deploy early, harden continuously.**
+Deliver the invited photographer's complete Site workflow. M1–M5 authorize
+routes and identity wiring, independent template content/editor adaptation,
+Site resources, Save/Publish and controlled upload implementation and isolation
+tests. Existing Stage numbers map technical/launch acceptance, not sequential
+permission requests. Remote deployment remains separately frozen.
 
 The real Linux server becomes a continuing validation environment as soon as
 `ONLINE_PREVIEW` is established. From that point onward:
@@ -474,18 +501,26 @@ The real Linux server becomes a continuing validation environment as soon as
 - `ONLINE_PREVIEW` must never be presented to clients as a formal product
   launch.
 
-Every proposed task must first answer:
+Each slice answers:
 
 ```text
-Does this block V1 launch?
+1. What new user capability does it deliver?
+2. Which existing capabilities does it depend on?
+3. What can be genuinely verified now?
+4. What needs user data, local environment recovery or extra authority?
 ```
 
-If the answer is no, the default destination is `POST_V1_BACKLOG`.
+Work adding neither user capability nor resolving a concrete product blocker
+does not enter the critical path. Known Docker failure stays one local gap;
+no repeated restart or system installation. Real PostgreSQL CI is valid evidence,
+not local verification or real-star onboarding. Track IMPLEMENTED,
+VERIFIED_IN_CI, VERIFIED_LOCALLY and VERIFIED_WITH_REAL_STAR separately.
 
 Additional rules:
 
-1. A PR must focus on one verifiable stage goal. It must not combine Runtime,
-   PostgreSQL, Auth, routes, and assets into one implementation.
+1. A PR focuses on one verifiable product slice. Keep PR #28 account-foundation
+   scoped; reuse it through explicitly based topic/stacked branches, never copy
+   Auth into a second implementation. At most two pending review layers.
 2. UI and visual improvements may continue only when they resolve a verified
    current-stage or V1 blocker. They do not pre-empt the launch critical path.
 3. Infrastructure requires evidence. Do not introduce systems because they may
@@ -493,7 +528,9 @@ Additional rules:
 4. Preserve the eleven templates, Admin V2, SiteDocumentV1, stable IDs, legacy
    adapter, current photo workflow, and Composition planner unless a concrete
    blocker is demonstrated.
-5. A task must not silently cross into a later stage.
+5. M1–M5 branch work is authorized even before these documents merge. Commits,
+   push and Draft PRs may continue safe work; merge/approve/auto-merge are not
+   authorized. Stop dependent work at the two-layer review limit.
 
 Before a Codex development task begins, it must check:
 
@@ -506,11 +543,12 @@ Before a Codex development task begins, it must check:
 6. Does it affect existing templates, Admin, or SiteDocument?
 ```
 
-If the task does not advance the current Stage, stop and report:
-
-```text
-OUT_OF_CURRENT_NORTH_STAR
-```
+Out-of-Mission work or changing an Accepted invariant needs a separate decision.
+Real data cutover, destructive actions, system setup and remote operations also
+need explicit authority. Preserve existing usable entries; before migration,
+back up record 1, record 2601 and assets, rehearse against an isolated target,
+retain old sources, and avoid dual writes. Missing historical snapshots remain
+explicit gaps. Do not expose Draft to make an incomplete Site look populated.
 
 ## 16. Architecture invariants
 
@@ -628,19 +666,7 @@ Known conflicts resolved by this document:
 
 ## 20. Current execution pointer
 
-```text
-Current phase: SELF_HOSTED_V1
-Current stage: STAGE_A_RUNTIME
-V1 status: NOT_LAUNCHED
-Online status: NOT_ONLINE_PREVIEW
-Next milestone: STANDARD_NEXT_NODE_PARITY
-Next online milestone: DEPLOYMENT_BOOTSTRAP_READY
-PR #16: KEEP_DRAFT
-```
-
-The exact recommended next development task is:
-
-```text
-STAGE A / RUNTIME-01
-Standard Next.js Node Parity
-```
+Read [CURRENT_STATUS.md](CURRENT_STATUS.md) for the sole active slice/head,
+evidence and local blockers, and the roadmap for M1–M5. Historical Stage A and
+PR24/25 records are not current resume conditions. Report actual work only;
+long-term authority does not imply unattended execution after a session ends.

@@ -32,7 +32,7 @@ function readJson(filePath) {
 
 function readPageClientManifest(filePath) {
   const source = readFileSync(filePath, "utf8");
-  const match = source.match(/globalThis\.__RSC_MANIFEST\["\/page"\] = (\{.*\});\s*$/s);
+  const match = source.match(/globalThis\.__RSC_MANIFEST\["[^"\n]+"\] = (\{.*\});\s*$/s);
   if (!match) throw new Error("Next.js page client reference manifest has an unknown shape.");
   return JSON.parse(match[1]);
 }
@@ -72,8 +72,9 @@ export function inspectNextBuild(projectRoot = process.cwd()) {
   const chunksRoot = path.join(nextRoot, "static", "chunks");
   const buildManifestPath = path.join(nextRoot, "build-manifest.json");
   const pageManifestPath = path.join(nextRoot, "server", "app", "page_client-reference-manifest.js");
+  const testManifestPath = path.join(nextRoot, "server", "app", "test", "page_client-reference-manifest.js");
   const standaloneServerPath = path.join(nextRoot, "standalone", "server.js");
-  const required = [buildManifestPath, pageManifestPath, standaloneServerPath];
+  const required = [buildManifestPath, pageManifestPath, testManifestPath, standaloneServerPath];
   const missing = required.filter((filePath) => !existsSync(filePath));
   if (missing.length > 0) {
     throw new Error("Standard Next.js artifact is missing. Run `npm run build` before the bundle budget check.");
@@ -82,8 +83,15 @@ export function inspectNextBuild(projectRoot = process.cwd()) {
   const violations = [];
   const buildManifest = readJson(buildManifestPath);
   const pageManifest = readPageClientManifest(pageManifestPath);
-  const pageEntryJs = pageManifest.entryJSFiles?.["[project]/app/page"] ?? [];
-  const pageEntryCss = (pageManifest.entryCSSFiles?.["[project]/app/page"] ?? [])
+  const testManifest = readPageClientManifest(testManifestPath);
+  // The original eleven-template entry now lives at /test. Count both routes
+  // without relaxing any budget or dropping the template lazy-chunk checks.
+  const pageEntryJs = unique([
+    ...(pageManifest.entryJSFiles?.["[project]/app/page"] ?? []),
+    ...(testManifest.entryJSFiles?.["[project]/app/test/page"] ?? []),
+  ]);
+  const pageEntryCss = [...(pageManifest.entryCSSFiles?.["[project]/app/page"] ?? []),
+    ...(testManifest.entryCSSFiles?.["[project]/app/test/page"] ?? [])]
     .map((entry) => entry.path);
 
   if (pageEntryJs.length === 0) violations.push("public page has no client JS entry");

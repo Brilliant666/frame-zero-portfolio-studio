@@ -26,19 +26,17 @@ async function render() {
   );
 }
 
-test("server-renders the finished photography portfolio", async () => {
+test("server-renders the platform landing rather than a photographer portfolio", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>FRAME\/\/ZERO｜上海 · 杭州可约 Cosplay 摄影师<\/title>/);
-  assert.match(html, /id="archive"/);
-  assert.match(html, /id="services"/);
-  assert.match(html, /id="booking"/);
-  assert.match(html, /漫展场照/);
-  assert.match(html, /¥399 起/);
-  assert.match(html, /FRAMEZERO_DEMO/);
+  assert.match(html, /<title>摄影作品集平台<\/title>/);
+  assert.match(html, /href="\/login"/);
+  assert.match(html, /href="\/test"/);
+  assert.match(html, /href="\/preview"/);
+  assert.doesNotMatch(html, /id="archive"|FRAMEZERO_DEMO/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|Codex is working/i);
 });
 
@@ -47,7 +45,7 @@ test("keeps editable content and eleven lazy template choices in one configurati
     readFile(new URL("../app/site-config.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/templates/catalog.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/templates/template-renderer.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/test/legacy-home.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/client-visible-title.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/photo-fallback-controller.tsx", import.meta.url), "utf8"),

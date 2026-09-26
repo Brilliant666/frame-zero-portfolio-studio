@@ -7,6 +7,7 @@ const config = readAccountConfig();
 const test = process.argv.includes('--test');
 if (process.argv.slice(2).some(arg => arg !== '--test') || config.isTest !== test) throw new Error('Account runner target mismatch.');
 process.env.FRAME_ZERO_ACCOUNT_NODE_RUNTIME = '1';
+process.env.FRAME_ZERO_INTERNAL_TEST_AREA = '1';
 process.env.FRAME_ZERO_NEXT_NODE_PARITY_BUILD = '1';
 process.env.NODE_ENV = 'production';
 const { default: next } = await import('next');

@@ -117,7 +117,7 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   );
   assert.match(continueHandler, /content\.activeTemplate !== templateId/);
   assert.match(continueHandler, /activeTemplate: templateId/);
-  assert.match(continueHandler, /router\.push\("\/admin\/layout"\)/);
+  assert.match(continueHandler, /router\.push\(pathname\.startsWith\("\/test\/admin"\) \? "\/test\/admin\/layout" : "\/admin\/layout"\)/);
   assert.doesNotMatch(continueHandler, /save|fetch\(|method:\s*"PUT"|applyTemplateCompositionPreview|templateWorks/);
   assert.match(template, /onChange=\{\(event\) => inspectTemplate\(event\.target\.value\)\}/);
   assert.match(template, /当前草稿/);
@@ -617,7 +617,9 @@ test("responsive CSS exposes a mobile section switcher and single-column layout 
     source("app/admin/admin-v2.module.css"),
   ]);
   assert.match(shell, /ADMIN_SECTIONS\.map/);
-  assert.match(shell, /<select value=\{current\.href\}/);
+  assert.match(shell, /<select value=\{sectionHref\(current\.href\)\}/);
+  assert.match(shell, /pathname\.startsWith\("\/test\/admin"\)/);
+  assert.match(shell, /<option value=\{sectionHref\(section\.href\)\}/);
   assert.match(shell, /data-admin-title="true"/);
   assert.doesNotMatch(shell, /FRAME\/\/ZERO/);
   assert.match(shell, /"正在保存修改"/);

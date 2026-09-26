@@ -562,7 +562,7 @@ test("delegated secondary works anchors unhide, focus, and update only the publi
 test("public and Admin renderers pass a stable lightbox closer through the optional template callback", async () => {
   const [typesText, ...ownerTexts] = await Promise.all([
     source("app/templates/types.ts"),
-    source("app/page.tsx"),
+    source("app/test/legacy-home.tsx"),
     source("app/admin/template-preview-dialog.tsx"),
   ]);
   const types = parseSource(typesText, "types.ts", ts.ScriptKind.TS);

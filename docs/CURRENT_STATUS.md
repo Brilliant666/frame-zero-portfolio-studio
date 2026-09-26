@@ -1,185 +1,125 @@
 # Portfolio Platform Current Status
 
-## 2026-09-26 本机账号基础有限解冻
+Updated: 2026-09-26. This is the single current execution checkpoint; older PR
+reports record historical acceptance, not today's authorization gate.
 
-用户授权 `LOCAL_ACCOUNT_FOUNDATION_01`：本地 PostgreSQL、Better Auth、运营开户、
-`/login`、PortfolioUser/Site 与最小模板授权。进度与验证见
-[本轮记录](LOCAL_ACCOUNT_FOUNDATION.md)。本授权覆盖下文历史本机 Auth/PG 冻结描述，
-不解除 `ENGINEERING_LAUNCH_LINE` 的远程部署冻结，不代表生产 Auth、Stage 全部完成或 V1 上线。
-内容迁移与两套后台接线尚未开始；免费和付费业务内容独立，同 Site 作品资源未来共享。
-
-> - Updated: 2026-08-24
-> - Baseline: `main@dc471795139dc47649368bb37c0178fb77188fea`
+## Current execution checkpoint
 
 ```text
-Current phase: SELF_HOSTED_V1
-Current stage: STAGE_A2_DEPLOYMENT_BOOTSTRAP
-Stage status: IN_PROGRESS
+Mission: PRODUCT_DELIVERY_MISSION_02
+Product priority: invited photographer -> own Site Admin -> independent template content -> Publish
+Current slice: M1 / target routes and real Site authorization entry
+Slice status: IMPLEMENTED_AND_VERIFIED_IN_CI / WAITING_FOR_REVIEW_CAPACITY
+Main baseline: 92a81ee274ab9d7df829c7437219f0f42c273390
+Account foundation: Draft PR #28 / feat/local-account-site-foundation
+Account head: 3263d4d917b3d59c623b420cb1537cb5a8ff99ff
+Active branch: codex/site-route-entry (stacked on the verified PR #28 head)
+M1 implementation head: 8318e06
+M1 Draft PR: #29 (base: feat/local-account-site-foundation)
+Remote deployment: FROZEN / NOT_AUTHORIZED
+External deployment gate: EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED
 V1 status: NOT_LAUNCHED
 Online status: NOT_ONLINE_PREVIEW
-Engineering launch line: FROZEN_AT_REPO_SIDE_BOOTSTRAP_READY
-Repo-side bootstrap ready: ACCEPTED
-Deployment bootstrap ready: NOT_REACHED
-Current active priority: PRE_LAUNCH_PRODUCT_POLISH
-Current product priority: LOCAL_PRODUCT_EXPERIENCE
-Product experience foundation: ACCEPTED
-Automated visual QA baseline: ACCEPTED
-Pre-launch product polish: IN_PROGRESS
-Human-directed product polish: IN_PROGRESS
-PR #25 workspace: HUMAN_DIRECTED_PRODUCT_POLISH_WORKSPACE
-Eleven-template human visual approval: PENDING
-Human-approved templates: 0 / 11
-PR #24 closure mode: FINAL_HUMAN_ACCEPTANCE + MERGE
-PR #24 feature freeze: TRUE
-PR #24 product baseline: ACCEPTED
-PR #24 limited baseline acceptance: ACCEPTED
-PR #25 workspace status: FEATURE_FROZEN
-PR #25 mode: FINAL_HUMAN_ACCEPTANCE + MERGE
-PR #25 accepted batch: HR25-001..013 — ACCEPTED_AS_STAGE_BASELINE
-PR #25 next request: HR25-014 — NOT_STARTED
-PR #25 feature freeze: TRUE
-PR #25 HR25-001..013: ACCEPTED_AS_STAGE_BASELINE
-PR #25 limited baseline: ACCEPTED
-PR #25 stage review: ACCEPTED
-PR #25 hand-off: READY_AND_SQUASH_MERGE_AUTHORIZED
-Platform card local-only: ACCEPTED_FOR_LOCAL_PRODUCT_EXPERIENCE
-Platform card public render fail-safe: CLOSED
-Platform card hosted resolution pending: P1_PRE_DEPLOYMENT
-External operations: NOT_AUTHORIZED
-Completed milestone: STANDARD_NEXT_NODE_PARITY
-Next milestone: DEPLOYMENT_BOOTSTRAP_READY
-Next online milestone: DEPLOYMENT_BOOTSTRAP_READY
 ```
 
-## Current source of truth
+M1 is delivered in [Draft PR #29](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/29),
+depending on [Draft PR #28](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/28).
+Neither dependency is merged into main. This reaches the two-layer pending review
+limit. Stop dependent M2 work here; after review capacity becomes available,
+continue M2 under the existing Mission authority without a new resume request.
+Do not merge either PR without explicit authorization.
 
-- Product scope and governance:
-  [PORTFOLIO_PLATFORM_NORTH_STAR.md](PORTFOLIO_PLATFORM_NORTH_STAR.md)
-- Execution order and Stage gates:
-  [SELF_HOSTED_V1_ROADMAP.md](SELF_HOSTED_V1_ROADMAP.md)
-- Accepted technical invariants:
-  [ADR-0002](adr/0002-site-tenant-boundary.md) and
-  [ADR-0003](adr/0003-adaptive-composition-variant-boundary.md)
+## Capability and verification levels
 
-## Current product state
+| Capability | IMPLEMENTED | VERIFIED_IN_CI | VERIFIED_LOCALLY | VERIFIED_WITH_REAL_STAR |
+| --- | --- | --- | --- | --- |
+| PR #28 migration, Better Auth, operator provisioning, independent AuthUser/PortfolioUser/Site IDs and template grants | Yes | Five CI checks; 12 real PostgreSQL integration tests at account head above | Partial: build, login HTTP and anonymous denial; no local PostgreSQL readback | No |
+| Eleven templates, Admin V2, legacy content/local photos and accepted polaroid preview | Yes | Existing baseline | Existing local experience retained | Not target migration evidence |
+| M1 target routes and authorized Site Admin shell | Yes | Five checks pass; real PostgreSQL HTTP suite 16/16 at implementation head | Next build/budget, lint/types; legacy HTTP 38/38; route status checks below; no local PG | No |
+| M2 independent content, M3 Site assets, M4 publication, M5 second photographer | Not delivered | Pending | Pending | No |
 
-Available today:
+Reuse the account foundation, not a new Auth POC. Commands and evidence:
+[LOCAL_ACCOUNT_FOUNDATION.md](LOCAL_ACCOUNT_FOUNDATION.md).
 
-- Standard Next.js standalone as the default production build/start artifact,
-  with real HTTP route/template smoke and a Next-aware bundle gate;
-- minimal liveness and readiness HTTP contracts for future deployment
-  supervision, without runtime or environment disclosure;
-- reviewed non-root Linux container packaging for the Standard Next standalone
-  artifact, with a default-deny build context and real Linux CI smoke;
-- eleven formal templates;
-- Admin V2 six-section workbench;
-- current legacy SiteContent save path;
-- local Photo Library and loopback ingest;
-- frozen SiteDocumentV1;
-- stable Site/Asset ID migration planning;
-- strict legacy adapter;
-- pure Adaptive Composition contract and planner.
+## Local gaps, not global development blockers
 
-Not yet available:
+- Docker remains unavailable after the previous ordinary restart. No repeat
+  restart/inspection without new evidence; no reset, volume deletion, WSL/service
+  change or native PostgreSQL installation. This blocks local database readback
+  and full acceptance, not routes, authorization, content, migration dry-run,
+  publication or real PostgreSQL CI work.
+- Real `star` is **not created**. Real email and non-echoed password must be
+  entered locally using the existing provisioning flow when PostgreSQL is
+  available. CI fixtures are not real users or customer onboarding evidence.
+- Windows legacy bundle baseline was 6 bytes over budget; M1 is 563638 bytes,
+  438 bytes over the unchanged 550 KiB threshold. CI passes the same threshold.
+  Preserve the threshold; allow one bounded reproducible investigation, not a global blocker.
+  The recorded 337.4ms long frame remains a known accepted performance boundary
+  unless a new reproducible regression is demonstrated.
 
-- PostgreSQL production persistence;
-- approved production Better Auth integration;
-- platform/public/Admin route split;
-- Site-scoped production ownership;
-- Draft/Revision/Publish persistence;
-- Published SSR from the target repository;
-- hosted filesystem upload and AssetResolver;
-- `star` target-model migration;
-- target Linux execution of the reviewed Compose/Caddy shell, real public ACME
-  HTTPS, and target-server deploy/update/rollback evidence;
-- `ONLINE_PREVIEW`;
-- `CLOSED_BETA_READY` invited-client capability;
-- final production hardening and `V1_LAUNCHED`.
+## Observable M1 delivery and next step
 
-## Current research PR
+- `/` is a minimal platform introduction. Old templates are at `/test`; the
+  six-section real legacy editor is reused at `/test/admin`. Both internal test
+  entries fail closed outside development or the explicit local runner.
+- `/login` links to the authenticated account's own `/:siteSlug/admin` on the
+  same origin. The shell uses session subject AND slug in the ownership SQL.
+  It shows granted products, but has no unconnected Save/Publish buttons.
+- Existing completed Sites show an explicit unpublished public page. Unknown
+  Sites are 404; anonymous Admin is 401; wrong owner is 403; unavailable database
+  is 503. No global 1/2601, default star or Draft content fallback exists.
+- Local Node runner remains `npm run accounts:start`, port 3003; no new service
+  or port was introduced. Verified `/`, `/login`, `/test`, `/test/admin/template`
+  = 200, anonymous `/example/admin` = 401, unavailable `/example` = 503.
+- Legacy dev remains `npm run dev`, port 3001. Verified `/`, `/test`,
+  `/test/admin/template`, `/preview`, `/preview/admin` = 200. `/admin` remains a
+  temporary compatibility entry; old global APIs are not claimed Site-secured.
+- No real content, SQLite, photo, manifest or platform-card writes or migration
+  were performed. No new design, composition, theme or motion changes.
+- Next product slice is M2: adapt the two existing editors to independent
+  Site/content-space drafts and version checks, without touching real sources
+  or exposing drafts publicly. It waits on review capacity, not Docker repair.
 
-```text
-PR #16: research: validate Better Auth on Cloudflare D1
-Status: OPEN + DRAFT
-Disposition: KEEP_DRAFT
-Head: 709b23a6415296755e534ae1c65416d25a68ebd9
-```
+## Product development authority
 
-PR #16 is historical Auth research evidence. It is not the self-hosted
-production baseline, and current implementation work must not start from its
-branch.
+M1–M5 authorize non-destructive code, isolated database fixtures, explicit
+migrations/dry-runs, Site-scoped content/assets, independent editors,
+Save/Publish, controlled uploads, tests, commits, push and Draft PRs. Continue
+safe independent work after CI or a Draft PR; local environment failure or an
+unmerged Mission document does not revoke branch development authority.
 
-## Current execution rule
+PR #28 stays account-foundation scoped. Subsequent work uses topic branches;
+stacked Draft PRs name exact dependency/base. At most **two pending review
+layers**; at the limit, report the review list once and stop dependent work.
+Merge, approve, auto-merge, protected-branch changes, deleting branches/other
+PRs, remote deployment and new external spending are not authorized.
 
-Stage A and `STANDARD_NEXT_NODE_PARITY` are complete by human Gate approval.
-Only work that directly advances `STAGE_A2_DEPLOYMENT_BOOTSTRAP` belongs in the
-current production-development lane. This status does not authorize Stage B,
-later product stages, or real infrastructure operations.
+Real data import/cutover, overwrite/deletion or replacing a usable entry with
+unverified login requires approval. Before migration, back up record 1, record
+2601 and asset sources; never invent a historical snapshot, dual-write, or guess
+ownership. `public/photos` remains private and must never be committed.
 
-Human-accepted completed Stage A2 capabilities are:
+## Remote deployment and eventual V1 acceptance
 
-```text
-PRODUCTION_HEALTH_CONTRACT
-NON_ROOT_LINUX_CONTAINER_PACKAGING
-SERVER_ONLY_DEPLOYMENT_CONFIG
-MINIMAL_COMPOSE_CADDY_TOPOLOGY
-PUBLIC_PRIVATE_PROXY_BOUNDARY
-BASIC_APPLICATION_PROXY_LOGGING
-DEPLOY_UPDATE_ROLLBACK_SMOKE
-REPO_SIDE_BOOTSTRAP_READY
-```
+`STANDARD_NEXT_NODE_PARITY` and `REPO_SIDE_BOOTSTRAP_READY` remain accepted.
+Real Linux/DNS/TLS/deploy/update/rollback evidence still needs authorization.
+`DEPLOYMENT_BOOTSTRAP_READY`, `ONLINE_PREVIEW`, `CLOSED_BETA_READY` and
+`V1_LAUNCHED` are not claimed. These deployment/launch gates do not prohibit
+local M1–M5 branch development.
 
-The current stop gate is:
+Product rules: [North Star](PORTFOLIO_PLATFORM_NORTH_STAR.md). Milestones and
+old Stage mapping: [Roadmap](SELF_HOSTED_V1_ROADMAP.md). Accepted invariants:
+[ADR-0002](adr/0002-site-tenant-boundary.md) and
+[ADR-0003](adr/0003-adaptive-composition-variant-boundary.md). None is superseded.
 
-```text
-EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED
-```
+## Historical acceptance (not current workspaces or resume gates)
 
-`REPO_SIDE_BOOTSTRAP_READY` is accepted repository-side evidence; it is not
-`DEPLOYMENT_BOOTSTRAP_READY`. The latter still requires approved target Linux,
-real 80/443, DNS, public ACME HTTPS, and target-server deploy/update/rollback
-smoke. `DEPLOYMENT_BOOTSTRAP_READY` is also not `ONLINE_PREVIEW`. Stage A2
-therefore stays `IN_PROGRESS`, the online status stays `NOT_ONLINE_PREVIEW`,
-and no external operation is authorized before the current stop gate is
-explicitly cleared.
-
-Human priority has temporarily frozen the engineering launch line at
-`REPO_SIDE_BOOTSTRAP_READY` and activated `PRE_LAUNCH_PRODUCT_POLISH`. This is
-a local product-experience lane, not a new architecture Stage. Work proceeds
-through photo import, template material guidance, read-only real-library
-composition previews, explicit layout application, and eleven-template visual
-QA. It does not authorize target-server preflight, deployment, Stage B,
-PostgreSQL, production Auth, hosted upload, DNS, TLS, or production data.
-
-Human review has accepted the product-experience foundation, its automated
-visual-QA baseline, and PR #24 as the limited product-polish baseline. Ready
-and squash merge are authorized for that exact accepted head. This does not
-close
-`PRE_LAUNCH_PRODUCT_POLISH`, complete the eleven-template visual review, or
-claim V1 product-experience completion. No formal template has
-`HUMAN_APPROVED` status (`0 / 11`); all eleven remain ready for human recheck or
-continued template-by-template polish in a later explicitly authorized
-workspace.
-
-PR #25 is feature-frozen after HR25-013. Human review has accepted HR25-001
-through HR25-013 and the limited stage review as the second human-directed
-product-polish stage baseline. Ready and squash merge are authorized for the
-exact accepted head after its final CI succeeds. This stage acceptance does not
-complete pre-launch or human-directed product polish and does not mark any
-formal template `HUMAN_APPROVED`; all eleven remain ready for human recheck.
-The closure audit mapped every pre-closure commit and production change to
-Bootstrap or an explicit HR request. Its only product-code closure change makes
-uploaded local platform cards fail visually safe when their loopback companion,
-asset, or route is unavailable; account text and safe HTTPS links remain usable.
-The feature is still a Legacy/local SiteContent extension, while hosted platform
-card resolution remains `P1_PRE_DEPLOYMENT`. See
-[pr25-stage-review.md](pr25-stage-review.md) for the audit matrices and frozen
-architecture boundaries.
-
-See [stage-a2-deployment-bootstrap.md](stage-a2-deployment-bootstrap.md) for
-the current Definition of Done matrix and explicit external-operation boundary.
-See [pre-launch-product-polish.md](pre-launch-product-polish.md) for the active
-product-experience batch and its architecture boundaries.
-See [human-directed-product-polish.md](human-directed-product-polish.md) for
-the limited-closure ledger, template review matrix, and human-review stop
-protocol.
+- PR #24: accepted limited human-directed polish baseline.
+- PR #25: HR25-001–013 accepted stage baseline; HR25-014 frozen. This was not
+  full eleven-template visual approval. See [review](pr25-stage-review.md).
+- Accepted polaroid design, three compositions, themes, motion and viewer remain
+  the visual baseline; no redesign without a new human request.
+- PR #16: historical Draft Auth research, not the implementation base; no
+  authority to close it or replace PostgreSQL with its D1-only implementation.
+- Stage A2 packaging and polish ledgers remain historical evidence; their old
+  local Auth/database/Stage freezes no longer govern Mission development.

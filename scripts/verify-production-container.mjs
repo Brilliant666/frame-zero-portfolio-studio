@@ -236,7 +236,7 @@ try {
   const license = await fetch(`${origin}/fonts/noto-serif-sc-900/OFL.txt`);
   assert.equal(license.status, 200);
   assert.equal(await license.text(), await readFile(new URL("../public/fonts/noto-serif-sc-900/OFL.txt", import.meta.url), "utf8"));
-  for (const route of ["/preview", "/preview/admin", "/api/preview/site-content"]) {
+  for (const route of ["/preview", "/preview/admin", "/api/preview/site-content", "/test", "/test/admin/template", "/login", "/star/admin"]) {
     assert.equal((await fetch(`${origin}${route}`)).status, 404, `${route} must remain closed`);
   }
 

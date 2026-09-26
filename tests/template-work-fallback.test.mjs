@@ -171,7 +171,7 @@ test("the four saved templates without explicit layouts fail safe when legacy pa
 
 test("public and draft previews share the read-only fallback gate", async () => {
   const [page, draftPreview, hook] = await Promise.all([
-    fs.readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/test/legacy-home.tsx", import.meta.url), "utf8"),
     fs.readFile(new URL("../app/admin/draft-preview-dialog.tsx", import.meta.url), "utf8"),
     fs.readFile(new URL("../app/templates/shared/use-template-works.ts", import.meta.url), "utf8"),
   ]);

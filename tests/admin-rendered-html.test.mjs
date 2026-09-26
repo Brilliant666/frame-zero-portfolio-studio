@@ -47,6 +47,43 @@ function renderAdmin(pathname, options, photoImportOrigin) {
   });
 }
 
+test("internal test area is closed by default and rejects remote hosts even when enabled", async () => {
+  const previous = process.env.FRAME_ZERO_INTERNAL_TEST_AREA;
+  try {
+    delete process.env.FRAME_ZERO_INTERNAL_TEST_AREA;
+    for (const route of ["/test", "/test/admin/template"]) {
+      assert.equal((await requestAdmin(route)).status, 404, route);
+    }
+    process.env.FRAME_ZERO_INTERNAL_TEST_AREA = "1";
+    assert.equal((await requestAdmin("/test", { host: "portfolio.example" })).status, 404);
+    assert.equal((await requestAdmin("/test/admin/template", { host: "portfolio.example", authenticated: true })).status, 404);
+  } finally {
+    if (previous === undefined) delete process.env.FRAME_ZERO_INTERNAL_TEST_AREA;
+    else process.env.FRAME_ZERO_INTERNAL_TEST_AREA = previous;
+  }
+});
+
+test("enabled loopback test area retains all six real editor sections and local navigation", async () => {
+  const previous = process.env.FRAME_ZERO_INTERNAL_TEST_AREA;
+  process.env.FRAME_ZERO_INTERNAL_TEST_AREA = "1";
+  try {
+    const home = await requestAdmin("/test");
+    assert.equal(home.status, 200);
+    assert.match(await home.text(), /id="archive"/);
+    for (const section of ["template", "profile", "packages", "layout", "contact", "advanced"]) {
+      const response = await requestAdmin(`/test/admin/${section}`);
+      assert.equal(response.status, 200, section);
+      const html = await response.text();
+      assert.match(html, new RegExp(`data-admin-section="${section}"`));
+      assert.match(html, /href="\/test\/admin\/template"/);
+      assert.match(html, /aria-label="保存修改"/);
+    }
+  } finally {
+    if (previous === undefined) delete process.env.FRAME_ZERO_INTERNAL_TEST_AREA;
+    else process.env.FRAME_ZERO_INTERNAL_TEST_AREA = previous;
+  }
+});
+
 test("/admin has an explicit template default", async () => {
   const response = await requestAdmin("/admin");
   assert.ok([307, 308].includes(response.status));

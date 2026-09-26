@@ -1,123 +1,25 @@
-"use client";
+import type { Metadata } from "next";
+import Link from "next/link";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { getClientVisiblePortfolioTitle } from "./client-visible-title";
-import { isTemplateId, normalizeSiteContent, siteConfig, type SiteContent, type TemplateId } from "./site-config";
-import Lightbox from "./templates/shared/lightbox";
-import { useTemplateWorks } from "./templates/shared/use-template-works";
-import { useTemplateInteractions } from "./templates/shared/use-template-interactions";
-import TemplateRenderer from "./templates/template-renderer";
+export const metadata: Metadata = {
+  title: "摄影作品集平台",
+  description: "为摄影师建立独立的作品集与服务展示空间。",
+  openGraph: { title: "摄影作品集平台", description: "为摄影师建立独立的作品集与服务展示空间。", siteName: "摄影作品集平台" },
+  twitter: { title: "摄影作品集平台", description: "为摄影师建立独立的作品集与服务展示空间。" },
+};
 
-export default function Home() {
-  const [content, setContent] = useState<SiteContent>(siteConfig);
-  const [previewTemplate, setPreviewTemplate] = useState<TemplateId | null>(null);
-  const [booted, setBooted] = useState(false);
-  const templateId = previewTemplate ?? content.activeTemplate;
-  const { works } = useTemplateWorks(content, templateId);
-  const {
-    activeWork,
-    closeButtonRef,
-    copiedKey,
-    copyText,
-    lightboxRef,
-    lightboxWorks,
-    moveActiveWork,
-    openWork,
-    setActiveWork,
-  } = useTemplateInteractions(works);
-  const closeActiveWork = useCallback(() => setActiveWork(null), [setActiveWork]);
-  const packages = useMemo(() => content.packages.filter((item) => item.enabled), [content.packages]);
-  const bookingTemplate = useMemo(
-    () => ["【约拍任务申请】", ...content.bookingFields].join("\n"),
-    [content.bookingFields],
-  );
-
-  useEffect(() => {
-    const candidate = new URLSearchParams(window.location.search).get("template");
-    const previewTimer = isTemplateId(candidate)
-      ? window.setTimeout(() => setPreviewTemplate(candidate), 0)
-      : undefined;
-    const controller = new AbortController();
-
-    fetch("/api/site-content", { cache: "no-store", signal: controller.signal })
-      .then((response) => response.ok ? response.json() : null)
-      .then((result: { content?: unknown } | null) => {
-        if (!result?.content) return;
-        const nextContent = normalizeSiteContent(result.content);
-        setContent(nextContent);
-        document.title = getClientVisiblePortfolioTitle(nextContent.profile);
-        setActiveWork(null);
-      })
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-      });
-
-    return () => {
-      if (previewTimer !== undefined) window.clearTimeout(previewTimer);
-      controller.abort();
-    };
-  }, [setActiveWork]);
-
-  useEffect(() => {
-    let skipBoot = window.matchMedia("(max-width: 560px)").matches;
-
-    try {
-      skipBoot ||= window.sessionStorage.getItem("framezero-booted") === "1";
-    } catch {
-      // Session storage can be unavailable in private browsing contexts.
-    }
-
-    if (skipBoot) {
-      const skipTimer = window.setTimeout(() => setBooted(true), 0);
-      return () => window.clearTimeout(skipTimer);
-    }
-
-    const timer = window.setTimeout(() => {
-      setBooted(true);
-      try {
-        window.sessionStorage.setItem("framezero-booted", "1");
-      } catch {
-        // The visual intro still completes when storage is unavailable.
-      }
-    }, 360);
-
-    return () => window.clearTimeout(timer);
-  }, []);
-
+export default function PlatformHome() {
   return (
-    <>
-      {previewTemplate && (
-        <div className="template-preview-ribbon" role="status">
-          <span>模板预览模式 · 不会修改主页设置</span>
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a href="/">退出预览 ×</a>
-        </div>
-      )}
-      <TemplateRenderer
-        key={templateId}
-        templateId={templateId}
-        content={content}
-        works={works}
-        packages={packages}
-        bookingTemplate={bookingTemplate}
-        booted={booted}
-        copiedKey={copiedKey}
-        isPreview={previewTemplate !== null}
-        onCopy={copyText}
-        onBeforeViewChange={closeActiveWork}
-        onOpenWork={openWork}
-      />
-      {activeWork && (
-        <Lightbox
-          work={activeWork}
-          works={[...lightboxWorks]}
-          theme={templateId === "polaroid-field" ? "light" : "dark"}
-          frameRef={lightboxRef}
-          closeButtonRef={closeButtonRef}
-          onMove={moveActiveWork}
-          onClose={() => setActiveWork(null)}
-        />
-      )}
-    </>
+    <main style={{ maxWidth: 760, margin: "80px auto", padding: 24 }}>
+      <p>摄影作品集平台</p>
+      <h1>让作品拥有自己的空间</h1>
+      <p>建立摄影师主页，展示作品、拍摄套餐与联系方式。账号与独立站点基础正在本地验证。</p>
+      <nav aria-label="平台入口" style={{ display: "flex", gap: 24, flexWrap: "wrap", marginTop: 32 }}>
+        <Link href="/login">账号登录</Link>
+        <Link href="/test">内部模板测试区</Link>
+        <Link href="/preview">新版摄影作品集预览</Link>
+      </nav>
+      <p>测试与预览入口仅供本地内部验证，不代表已上线的用户服务。</p>
+    </main>
   );
 }
