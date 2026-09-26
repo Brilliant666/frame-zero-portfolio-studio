@@ -486,7 +486,10 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   // may be exposed through NEXT_PUBLIC_ (including another use of this key).
   const disabledPreviewDefine = /"process\.env\.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW"\s*:\s*JSON\.stringify\("0"\)/g;
   assert.equal((viteConfig.match(disabledPreviewDefine) ?? []).length, 1);
-  assert.doesNotMatch(viteConfig.replace(disabledPreviewDefine, ""), /CLOUDFLARE_INCLUDE_PROCESS_ENV|NEXT_PUBLIC_|VITE_FRAME_ZERO/);
+  // This second literal disables the Node-only Site adapter; it exposes no env value.
+  const disabledSiteEditorDefine = /"process\.env\.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR"\s*:\s*JSON\.stringify\("0"\)/g;
+  assert.equal((viteConfig.match(disabledSiteEditorDefine) ?? []).length, 1);
+  assert.doesNotMatch(viteConfig.replace(disabledPreviewDefine, "").replace(disabledSiteEditorDefine, ""), /CLOUDFLARE_INCLUDE_PROCESS_ENV|NEXT_PUBLIC_|VITE_FRAME_ZERO/);
   assert.match(css, /\.libraryStats\s*\{/);
   assert.match(css, /\.photoImportProgress\s*,/);
   assert.match(css, /\.photoImportActions\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/s);

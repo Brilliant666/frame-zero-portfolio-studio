@@ -52,8 +52,15 @@ M3 Site 选片、上传、资源解析、平台卡尚未接入。Site 模式不�
 
 - IMPLEMENTED：真实编辑器、独立内容 API、显式迁移、CAS 和受保护预览。
 - VERIFIED_LOCALLY：Next 正式构建、原预算、TypeScript、ESLint、编辑器及 schema 行为测试。无本机 PG 或完整真实登录保存验收。
-- VERIFIED_IN_CI：初始 head `c04ea3f` 和修订 `33824f9` 的真实 PostgreSQL HTTP 链路均 21/21 通过（runs 36242808037 / 36243017371）；包括双空间保存、跨 Site 拒绝、并发 200/409、重启读取。Quality 先发现旧导航源码断言，再发现高级预览错误进入 legacy 打包图谱。已修正断言，正在隔离 Node 专用预览并验证最终 head 五项 CI；未提高任何预算。
+- VERIFIED_IN_CI：真实 PostgreSQL HTTP 链路在 `c04ea3f`、`33824f9`、`792b7ed` 均 21/21 通过（runs 36242808037 / 36243017371 / 36244336660）；包括双空间保存、跨 Site 拒绝、并发 200/409、重启读取。`792b7ed` 实际测试 merge SHA 为 `6de3031d79f9b52c655a320ed5240f55d066a1fd`。Quality 曾发现旧导航源码断言、高级预览错误进入 legacy 打包图谱及编译开关白名单断言；已隔离 Node 专用预览，只允许显式常量 0 的禁用开关，禁止环境值泄露的断言仍保留。最终 head 五项结果记录在 PR 评论；未提高任何预算。
 - VERIFIED_WITH_REAL_STAR：NO。
+
+### Windows legacy 同环境对照
+
+使用已验证 main 的独立 worktree、同一个 Node 24 与同一套依赖执行一次对照：
+main `9bdd45d` 为 563638 bytes（超原阈值 438 bytes）；`792b7ed` 为
+563734 bytes（超原阈值 534 bytes），新增 96 bytes。两次本机 legacy 检查均为
+FAIL，不写成 PASS；此新增量正在收口，不自动继承 PR28/29 的例外。
 
 REAL_STAR_PROVISIONING = NOT_CREATED
 
