@@ -14,6 +14,7 @@ import "./motion-fonts.css";
 import { entryPhotoSource, prepareEntryPhoto, revealEntryImage } from "./entry-photos";
 import GlassSegments from "../../preview-workspace/glass-segments";
 import { observePhotoUpgrades, type PhotoUpgrade } from "./photo-upgrade";
+import {createMotionActivity} from "./motion-diagnostic";
 
 type Props = { cards: readonly SceneCard[]; sceneId: string; title?: string; description?: string;
   active?: boolean; focusId?: string | null; coverId?: string | null; entranceSource?: CollectionEntranceSource; onBack: () => void; onOpen: (id: string) => void; onAssetUnavailable: (id: string) => void };
@@ -30,6 +31,7 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
   const [lines, setLines] = useState(true);
   const [photoSources,setPhotoSources]=useState<Record<string,PhotoUpgrade>>({});
   const upgradeAfter=useRef<number|null>(null);
+  const activity=useRef<ReturnType<typeof createMotionActivity>|null>(null);
   const [size, setSize] = useState({ width: 1280, height: 800, top: 110, nav: 80 });
   const [overlays, setOverlays] = useState<ComposerBounds[]>([]);
   const cameraOptions = useMemo(() => ({mode:preference.mode,overlays}),[preference.mode,overlays]);
@@ -71,6 +73,12 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
   useLayoutEffect(()=>()=>{cancelEntrance();entranceStarted.current=false;},[cancelEntrance]);
   const cancelAnimations=useCallback(()=>{animations.current.forEach(animation=>animation.cancel());animations.current.clear();},[]);
   useLayoutEffect(()=>{
+    if(!worldRef.current)return;
+    activity.current=createMotionActivity(worldRef.current);
+    return()=>{activity.current?.dispose();activity.current=null;};
+  },[]);
+  const onActivity=useCallback((active:boolean)=>activity.current?.activity(active),[]);
+  useLayoutEffect(()=>{
     const media=matchMedia("(prefers-reduced-motion: reduce)"),change=()=>{if(media.matches)cancelAnimations();};
     media.addEventListener("change",change);
     return ()=>{cancelAnimations();media.removeEventListener("change",change);};
@@ -103,7 +111,7 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
     return observePhotoUpgrades(world,assets,{allowed:()=>entranceStarted.current,protectedUntil:upgradeAfter.current,
       update:(id,value)=>setPhotoSources(old=>old[id]?.base===value.base&&old[id].tier>=value.tier?old:{...old,[id]:{...value,previous:old[id]?.base===value.base?old[id]:undefined}})});
   },[cards,active,entranceSource]);
-  const motion=useComposerMotion(viewRef,commit,!compact,constrain);
+  const motion=useComposerMotion(viewRef,commit,!compact,constrain,onActivity);
   useLayoutEffect(()=>{
     if(compact && worldRef.current)worldRef.current.style.transform="none";
     else commit(viewRef.current);

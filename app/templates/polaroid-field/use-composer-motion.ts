@@ -8,11 +8,12 @@ type Job={kind:"move";from:ComposerView;to:ComposerView;start:number;duration:nu
   |{kind:"inertia";velocity:{x:number;y:number};start:number;last:number};
 
 /** Runs only during an interaction, never a permanent scene render loop. */
-export function useComposerMotion(view:MutableRefObject<ComposerView>,commit:(next:ComposerView)=>void,enabled:boolean,constrain:(value:ComposerView)=>ComposerView){
+export function useComposerMotion(view:MutableRefObject<ComposerView>,commit:(next:ComposerView)=>void,enabled:boolean,constrain:(value:ComposerView)=>ComposerView,onActivity?:(active:boolean)=>void){
   const frame=useRef<number|null>(null),job=useRef<Job|null>(null),reduced=useRef(false),active=useRef(enabled);
-  const stop=useCallback(()=>{if(frame.current!==null)cancelAnimationFrame(frame.current);frame.current=null;job.current=null;},[]);
+  const stop=useCallback(()=>{if(frame.current!==null)cancelAnimationFrame(frame.current);frame.current=null;job.current=null;onActivity?.(false);},[onActivity]);
   const run=useCallback(()=>{
     if(frame.current!==null)return;
+    onActivity?.(true);
     const tick=(now:number)=>{
       frame.current=null;
       const current=job.current;
@@ -34,10 +35,10 @@ export function useComposerMotion(view:MutableRefObject<ComposerView>,commit:(ne
         commit(outside?composerSpringStep(next.view,target,dt):next.view);
         if((!outside && Math.abs(next.velocity.x)+Math.abs(next.velocity.y)<.005) || now-current.start>=1400){commit(constrain(view.current));job.current=null;}
       }
-      if(job.current)frame.current=requestAnimationFrame(tick);
+      if(job.current)frame.current=requestAnimationFrame(tick);else onActivity?.(false);
     };
     frame.current=requestAnimationFrame(tick);
-  },[commit,view,constrain]);
+  },[commit,view,constrain,onActivity]);
   const move=useCallback((destination:ComposerView,duration=850)=>{
     const to=constrain(destination);
     stop();
