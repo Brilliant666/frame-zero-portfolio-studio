@@ -164,6 +164,9 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
         await shot('04-premium-mobile');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 2), false, `Premium editor overflow at ${width}`);
         await page.goto(`${origin}/${a}/admin/preview/premium-polaroid`);
+        // Mobile home is a normal vertical document: the identity precedes
+        // covers. Scroll to the real cover before asserting visible pixels.
+        await page.getByRole('button', { name: /进入图集：Anonymous/ }).scrollIntoViewIfNeeded();
         await images(); await shot('04-preview-mobile');
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 2);
         assert.equal(overflow, false, `No page-level overflow at ${width}`);
@@ -176,7 +179,9 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
       const reread = await read('premium-polaroid');
       assert.equal(reread.revision, premiumSaved.revision);
       assert.deepEqual(reread.content, premiumSaved.content);
-      await page.goto(`${origin}/${a}/admin/preview/premium-polaroid`); await images(); await shot('05-restart');
+      await page.goto(`${origin}/${a}/admin/preview/premium-polaroid`);
+      await page.getByRole('button', { name: /进入图集：Anonymous/ }).scrollIntoViewIfNeeded();
+      await images(); await shot('05-restart');
     });
     await step('06 other photographer and anonymous cannot read drafts or photos / no global requests', async () => {
       const other = await browser.newContext(); const p = await other.newPage();
