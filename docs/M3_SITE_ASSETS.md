@@ -127,3 +127,30 @@ final M3 pass; the subsequent final-head record belongs in PR31.
 No real star import, local phototest login acceptance, 3001 cutover or deployment
 is claimed. Next local prerequisite is a usable existing PostgreSQL and user-
 entered real star credentials if the account is absent, not renewed Docker work.
+
+### Completed implementation acceptance
+
+At implementation head `d40b2b623621ee2fd004ba67464925b3040132c2`, all five
+pull-request checks passed against test merge
+`85c09ef19299fc030fd92f4851cb98e2b422ab25` and unchanged PR30 base `0984a1c9`:
+
+- Quality: 36325508187
+- Public repository safety: 36325508091
+- Container: 36325508197
+- Deployment Bootstrap: 36325508110
+- Local Account PostgreSQL Integration: 36325508100
+
+The browser completed all 12 existing editor stages and all 6 asset stages:
+actual anonymous uploads and selection, shared asset references with independent
+saved content, three compositions/two themes/lightbox, 1440/390/320 viewports,
+service restart persistence, and other-owner/anonymous denial. All are isolated
+CI evidence, not a local phototest or real-star claim. Source recheck still found
+records 1/2601 unchanged and 141/141 files byte-identical. Final documentation-
+head CI and artifact links are recorded in PR31 instead of recursively changing
+the checkpoint solely to embed its own final SHA.
+
+`M3_ASSET_FLOW = IMPLEMENTED / VERIFIED_IN_CI`; local end-to-end acceptance remains
+pending. Real import also requires confirmed original-file mappings: the current
+manifest-only operator report is `PARTIAL_SOURCE`, and apply is blocked before
+target writes. The original-source gap must not be hidden by the passing
+derivative-copy fixture tests. PR31 stays OPEN + DRAFT; no further slice started.

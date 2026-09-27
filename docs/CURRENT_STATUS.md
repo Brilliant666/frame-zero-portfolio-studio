@@ -9,7 +9,7 @@ reports record historical acceptance, not today's authorization gate.
 Mission: PRODUCT_DELIVERY_MISSION_02
 Product priority: invited photographer -> own Site Admin -> independent template content -> Publish
 Current slice: M3 / Site-owned private assets, independent editor references and controlled legacy import
-Slice status: IMPLEMENTED / FINAL_VERIFICATION_IN_PROGRESS / LOCAL_DATABASE_UNAVAILABLE
+Slice status: IMPLEMENTED / VERIFIED_IN_CI / LOCAL_DATABASE_UNAVAILABLE / DRAFT_REVIEW
 Main baseline: 9bdd45daf326d65def222b20033ff2774decbfc1
 Account foundation: PR #28 accepted and Squash merged
 Account head: 3263d4d917b3d59c623b420cb1537cb5a8ff99ff
@@ -45,7 +45,7 @@ See [M3 implementation and local cutover checkpoint](M3_SITE_ASSETS.md) and the
 | Eleven templates, Admin V2, legacy content/local photos and accepted polaroid preview | Yes | Existing baseline | Existing local experience retained | Not target migration evidence |
 | M1 target routes and authorized Site Admin shell | Yes | Five checks pass; real PostgreSQL HTTP suite 16/16 at implementation head | Next build/budget, lint/types; legacy HTTP 38/38; route status checks below; no local PG | No |
 | M2 independent content/editor integration | Implemented in PR30 | Real PostgreSQL plus actual Chromium editor acceptance: 12/12 stages at f4171dc; five checks successful. New policy final-head run mapping in PR30 acceptance comment | Windows full npm test, both builds/checks, lint/types and budget behavior tests pass under the new policy; legacy size WARNING; no local PG | No |
-| M3 Site assets and controlled import | Implemented; final verification in progress | Pending new M3 head; do not reuse PR30 results | Unit/type/lint checks; actual local PG refused connection; no local account/import/cutover acceptance | No |
+| M3 Site assets and controlled import | Implemented; real import additionally blocks unresolved originals | Five checks pass at d40b2b6; isolated PostgreSQL and 12 existing + 6 asset browser stages; final documentation-head run mapping in PR31 | Unit/type/lint and legacy checks; actual local PG refused connection; no local account/import/cutover acceptance | No |
 | M4 publication and M5 second real photographer | Not delivered | Pending | Pending | No |
 
 Reuse the account foundation, not a new Auth POC. Commands and evidence:
