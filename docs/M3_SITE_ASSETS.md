@@ -4,7 +4,7 @@ Date: 2026-09-27. Scope: `M3_SITE_ASSETS_STAR_PRESERVATION_AND_LOCAL_3001_CUTOVE
 Base: PR30, `codex/site-content-editor-integration`,
 `0984a1c9b410821d6f8c38ed6fc7a845d75f24f4`. Main remains
 `9bdd45daf326d65def222b20033ff2774decbfc1`. Branch:
-`feat/site-assets-and-local-3001-cutover`. Merge/Ready/deployment not authorized.
+`feat/site-assets-and-local-3001-cutover`, [Draft PR31](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/31). Merge/Ready/deployment not authorized.
 
 ## Product slice
 

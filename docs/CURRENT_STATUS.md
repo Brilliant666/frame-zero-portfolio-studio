@@ -17,7 +17,7 @@ Active branch: feat/site-assets-and-local-3001-cutover (stacked on PR30 head 098
 M1 implementation head: 8318e06
 M1 PR: #29 accepted and Squash merged into main
 M2 Draft PR: #30 (base: main; merge not authorized)
-M3 Draft PR: pending creation; base codex/site-content-editor-integration
+M3 Draft PR: #31; base codex/site-content-editor-integration; merge not authorized
 Remote deployment: FROZEN / NOT_AUTHORIZED
 External deployment gate: EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED
 V1 status: NOT_LAUNCHED
