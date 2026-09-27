@@ -43,6 +43,9 @@
   left: .75rem;
   padding: .75rem 1rem;
   translate: 0 -160%;
+  /* Keep the unfocused link clipped inside View Transition snapshots too.
+     Off-screen translation alone still leaves painted pixels in the layer. */
+  clip-path: inset(50%);
   border: 2px solid var(--ink);
   background: var(--paper);
   box-shadow: 4px 4px 0 var(--ink);
@@ -52,6 +55,7 @@
 
 .skipLink:focus {
   translate: 0;
+  clip-path: none;
 }
 
 .topbar {
