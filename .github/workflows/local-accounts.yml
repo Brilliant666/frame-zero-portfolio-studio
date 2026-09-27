@@ -12,7 +12,7 @@ concurrency:
 jobs:
   postgres-integration:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:17.6-alpine
@@ -31,6 +31,8 @@ jobs:
           node-version: 22.13.1
           cache: npm
       - run: npm ci
+      - name: Install isolated Chromium for editor acceptance
+        run: npx playwright install --with-deps chromium
       # Build intentionally receives no account configuration or database secrets.
       - run: npm run build
       - name: Real PostgreSQL and Standard Next identity tests
@@ -40,3 +42,12 @@ jobs:
           FRAME_ZERO_ACCOUNT_DATABASE_URL: postgresql://account_test:isolated-ci-test-only@127.0.0.1:55433/frame_zero_accounts_test
           FRAME_ZERO_ACCOUNT_SECRET: isolated-ci-account-test-secret-never-used-outside-tests-2026
           FRAME_ZERO_ACCOUNT_ORIGIN: http://127.0.0.1:3004
+          FRAME_ZERO_EDITOR_BROWSER_SMOKE: '1'
+      - name: Anonymous browser acceptance evidence (no traces or credentials)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-editor-browser-${{ github.run_id }}-${{ github.run_attempt }}
+          path: outputs/site-editor-browser/
+          if-no-files-found: warn
+          retention-days: 14

@@ -98,7 +98,7 @@ async function saveDraft(slug, space, cookie, content, expectedRevision) {
   return request(draftPath(slug, space), { cookie, method: 'PUT', body: { content, expectedRevision } });
 }
 
-test('real PostgreSQL and Standard Next account boundary', { timeout: 180000 }, async t => {
+test('real PostgreSQL and Standard Next account boundary', { timeout: 720000 }, async t => {
   t.after(async () => { await stopServer(); await runtime.pool.end(); });
   await migrateAccounts(config);
   await cleanTestTables();
@@ -381,6 +381,21 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 180000 }, 
     assert.match(publicHtml, /data-site-state="unpublished"/);
     assert.doesNotMatch(publicHtml, /Alpha basic photographer|Alpha premium photographer/);
   });
+  if (process.env.FRAME_ZERO_EDITOR_BROWSER_SMOKE === '1') {
+    await t.test('real browser editor acceptance on isolated PostgreSQL', { timeout: 540000 }, async () => {
+      await provisionAccount(runtime, input('smokefixturea', true));
+      await provisionAccount(runtime, input('smokefixtureb'));
+      const { siteEditorBrowserSmoke } = await import('./site-editor-browser-smoke.mjs');
+      await siteEditorBrowserSmoke({
+        origin: config.origin, password,
+        restart: async () => { await stopServer(); await startServer(); },
+        expire: async username => {
+          assert.ok(['smokefixturea', 'smokefixtureb'].includes(username));
+          await runtime.pool.query('UPDATE "session" SET expires_at=now()-interval \'1 minute\' WHERE user_id=(SELECT id FROM "user" WHERE username=$1)', [username]);
+        },
+      });
+    });
+  }
   await t.test('incorrect and unknown credentials share errors; attempts are limited', async () => {
     const wrong = await request('/api/auth/sign-in/username', { body: { username: 'fixturealpha', password: 'incorrect-password' } });
     const unknown = await request('/api/auth/sign-in/username', { body: { username: 'unknownfixture', password: 'incorrect-password' } });
