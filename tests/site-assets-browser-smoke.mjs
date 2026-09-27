@@ -119,8 +119,8 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
       await page.getByText('从共享素材库添加照片', { exact: true }).click();
       await page.getByRole('button', { name: '加入图集', exact: true }).first().waitFor();
       for (let i = 0; i < 3; i++) await page.getByRole('button', { name: '加入图集', exact: true }).first().click();
-      await page.getByLabel('独立封面', { exact: true }).selectOption(assets.find(a => a.orientation === 'landscape').id);
-      await page.getByLabel('星图重点照片', { exact: true }).selectOption(assets.find(a => a.orientation === 'portrait').id);
+      await page.getByRole('combobox', { name: '独立封面', exact: true }).selectOption(assets.find(a => a.orientation === 'landscape').id);
+      await page.getByRole('combobox', { name: '星图重点照片', exact: true }).selectOption(assets.find(a => a.orientation === 'portrait').id);
       premiumSaved = await save('premium-polaroid');
       assert.deepEqual([...premiumSaved.content.collections[0].assetIds].sort(), assets.map(a => a.id).sort());
       assert.equal(premiumSaved.content.profile.photographer, 'Premium asset photographer');
