@@ -1,11 +1,14 @@
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { readAccountConfig } from './lib/account-config.mjs';
+import { blocksLegacySource } from './lib/local-platform-boundary.mjs';
 
 // Same Next application, explicit Node lane. No D1 binding or content migration.
+const args = process.argv.slice(2);
+if (args.includes('--daily')) process.env.FRAME_ZERO_ACCOUNT_ORIGIN = 'http://127.0.0.1:3001';
 const config = readAccountConfig();
 const test = process.argv.includes('--test');
-if (process.argv.slice(2).some(arg => arg !== '--test') || config.isTest !== test) throw new Error('Account runner target mismatch.');
+if (args.some(arg => !['--test', '--daily'].includes(arg)) || (args.includes('--daily') && test) || config.isTest !== test) throw new Error('Account runner target mismatch.');
 process.env.FRAME_ZERO_ACCOUNT_NODE_RUNTIME = '1';
 process.env.FRAME_ZERO_INTERNAL_TEST_AREA = '1';
 process.env.FRAME_ZERO_NEXT_NODE_PARITY_BUILD = '1';
@@ -24,6 +27,9 @@ const server = createServer((request,response) => {
   // Reject, never trust, browser-supplied proxy identity. The local runner has no proxy.
   if (['forwarded','x-forwarded-for','x-forwarded-host','x-forwarded-proto','x-real-ip'].some(key => key in request.headers)) {
     response.writeHead(403); response.end(); return;
+  }
+  if (blocksLegacySource(request.url ?? '')) {
+    response.writeHead(404, { 'Cache-Control': 'no-store, private' }); response.end('Not available.'); return;
   }
   // Next itself adds forwarding headers; mark requests after socket validation.
   delete request.headers['x-account-local-proof'];

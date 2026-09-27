@@ -8,15 +8,16 @@ reports record historical acceptance, not today's authorization gate.
 ```text
 Mission: PRODUCT_DELIVERY_MISSION_02
 Product priority: invited photographer -> own Site Admin -> independent template content -> Publish
-Current slice: M2 / real editors and independent Site content-space drafts
-Slice status: PR30_BUDGET_POLICY_IMPLEMENTED / HUMAN_ACCEPTANCE_PENDING
+Current slice: M3 / Site-owned private assets, independent editor references and controlled legacy import
+Slice status: IMPLEMENTED / FINAL_VERIFICATION_IN_PROGRESS / LOCAL_DATABASE_UNAVAILABLE
 Main baseline: 9bdd45daf326d65def222b20033ff2774decbfc1
 Account foundation: PR #28 accepted and Squash merged
 Account head: 3263d4d917b3d59c623b420cb1537cb5a8ff99ff
-Active branch: codex/site-content-editor-integration (based on verified main)
+Active branch: feat/site-assets-and-local-3001-cutover (stacked on PR30 head 0984a1c9b410821d6f8c38ed6fc7a845d75f24f4)
 M1 implementation head: 8318e06
 M1 PR: #29 accepted and Squash merged into main
 M2 Draft PR: #30 (base: main; merge not authorized)
+M3 Draft PR: pending creation; base codex/site-content-editor-integration
 Remote deployment: FROZEN / NOT_AUTHORIZED
 External deployment gate: EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED
 V1 status: NOT_LAUNCHED
@@ -30,6 +31,12 @@ merge. See [merge evidence and M2 scope](M2_SITE_CONTENT_EDITOR.md) for exact SH
 run IDs and exceptions. No branches deleted, real data migrated or deployment.
 M2 proceeds now; its new Draft PR does NOT inherit merge authorization.
 
+The user subsequently authorized M3 in `M3_SITE_ASSETS_STAR_PRESERVATION_AND_LOCAL_3001_CUTOVER`.
+This supersedes the previous M2-only stopping point, not its merge gate. M3 is a
+separate dependent branch; PR30 and M3 together fill the two-layer review limit.
+See [M3 implementation and local cutover checkpoint](M3_SITE_ASSETS.md) and the
+[controlled import procedure](M3_LOCAL_IMPORT.md). No Docker recovery is authorized.
+
 ## Capability and verification levels
 
 | Capability | IMPLEMENTED | VERIFIED_IN_CI | VERIFIED_LOCALLY | VERIFIED_WITH_REAL_STAR |
@@ -38,7 +45,8 @@ M2 proceeds now; its new Draft PR does NOT inherit merge authorization.
 | Eleven templates, Admin V2, legacy content/local photos and accepted polaroid preview | Yes | Existing baseline | Existing local experience retained | Not target migration evidence |
 | M1 target routes and authorized Site Admin shell | Yes | Five checks pass; real PostgreSQL HTTP suite 16/16 at implementation head | Next build/budget, lint/types; legacy HTTP 38/38; route status checks below; no local PG | No |
 | M2 independent content/editor integration | Implemented in PR30 | Real PostgreSQL plus actual Chromium editor acceptance: 12/12 stages at f4171dc; five checks successful. New policy final-head run mapping in PR30 acceptance comment | Windows full npm test, both builds/checks, lint/types and budget behavior tests pass under the new policy; legacy size WARNING; no local PG | No |
-| M3 Site assets, M4 publication, M5 second photographer | Not delivered | Pending | Pending | No |
+| M3 Site assets and controlled import | Implemented; final verification in progress | Pending new M3 head; do not reuse PR30 results | Unit/type/lint checks; actual local PG refused connection; no local account/import/cutover acceptance | No |
+| M4 publication and M5 second real photographer | Not delivered | Pending | Pending | No |
 
 Reuse the account foundation, not a new Auth POC. Commands and evidence:
 [LOCAL_ACCOUNT_FOUNDATION.md](LOCAL_ACCOUNT_FOUNDATION.md).
@@ -86,8 +94,8 @@ legacy local editor's behavior is unchanged. The private preview notice/return
 link is kept above template layers. Final exact head, CI and anonymous artifacts
 are recorded in the PR30 acceptance comment; earlier runs are not substituted.
 
-PR30 remains OPEN + DRAFT. Human acceptance is pending and this turn stops after
-handoff. M3 assets are NOT_IMPLEMENTED_IN_THIS_PR. Real star is NOT_CREATED;
+PR30 remains OPEN + DRAFT. Human acceptance is pending. M3 assets remain
+NOT_IMPLEMENTED_IN_PR30; they are implemented on the separate M3 branch. Real star is NOT_CREATED by this task;
 remote deployment NOT_AUTHORIZED; V1_LAUNCHED = NO. No real-source migration,
 Docker recovery or account installation occurred. The local records 1/2601 and
 manifest were read-only and their logical hashes matched the start baseline.
