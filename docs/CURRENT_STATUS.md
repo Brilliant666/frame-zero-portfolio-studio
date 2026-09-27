@@ -1,6 +1,6 @@
 # Portfolio Platform Current Status
 
-Updated: 2026-09-27. This is the single current execution checkpoint; older PR
+Updated: 2026-09-28. This is the single current execution checkpoint; older PR
 reports record historical acceptance, not today's authorization gate.
 
 ## Current execution checkpoint
@@ -9,7 +9,7 @@ reports record historical acceptance, not today's authorization gate.
 Mission: PRODUCT_DELIVERY_MISSION_02
 Product priority: invited photographer -> own Site Admin -> independent template content -> Publish
 Current slice: M3 / Site-owned private assets, independent editor references and controlled legacy import
-Slice status: IMPLEMENTED / VERIFIED_IN_CI / LOCAL_DATABASE_UNAVAILABLE / DRAFT_REVIEW
+Slice status: LOCAL_M3_HANDS_ON_ACCEPTANCE_01 / VERIFIED_LOCALLY / READY_FOR_HUMAN_REVIEW / DRAFT_REVIEW
 Main baseline: 9bdd45daf326d65def222b20033ff2774decbfc1
 Account foundation: PR #28 accepted and Squash merged
 Account head: 3263d4d917b3d59c623b420cb1537cb5a8ff99ff
@@ -37,6 +37,39 @@ separate dependent branch; PR30 and M3 together fill the two-layer review limit.
 See [M3 implementation and local cutover checkpoint](M3_SITE_ASSETS.md) and the
 [controlled import procedure](M3_LOCAL_IMPORT.md). No Docker recovery is authorized.
 
+## Latest local acceptance authority (supersedes historical local gaps below)
+
+`LOCAL_M3_HANDS_ON_ACCEPTANCE_01` authorizes a dedicated PostgreSQL user process
+and PR31 on port 3003, while preserving old 3001. The user then explicitly
+confirmed all local accounts are simulations and authorized operator-created
+`star` with a reserved QA email and random locally protected password. This is
+not real-customer provisioning or a verified customer email.
+
+PostgreSQL 17.11 now runs on loopback in a user-owned directory, without Docker,
+system services or global configuration changes. Daily/test databases and roles
+are separate. `phototest` has completed actual headed-Chrome upload, independent
+editor save, shared asset reuse, preview, mobile and ownership-denial checks.
+
+The existing source snapshot matched records 1/2601 and 141 file fingerprints.
+After detecting 9 top-level basic references whose 18 old files no longer exist,
+the user explicitly approved omitting only those exact references in the new
+target draft. Raw source and backups are unchanged; full approved work objects,
+indexes and digests are retained in the local plan and database receipt.
+Display-only import has preserved 71 template-specific works, 3 collections,
+25 collection members, 2 platform cards, 41 private assets and 123 byte-identical
+variants. Both drafts are revision 1; repeat apply is idempotent.
+
+Database and application restart, star's three collection previews and two
+editors, phototest persistence, 11 actual template selections and cross-account
+denials have passed in headed Chrome at 1440/390/320. No automatic star draft
+writes were made during browser verification. The dedicated runtime is left
+running for human acceptance; credentials and runbook remain local-only.
+
+Original archival remains INCOMPLETE. Publishing, remote deployment, PR merges
+and old 3001 cutover were not performed. Final running Head, browser readback,
+restart verification and final-head CI are recorded in
+[local acceptance](LOCAL_M3_HANDS_ON_ACCEPTANCE.md) and PR31's acceptance comment.
+
 ## Capability and verification levels
 
 | Capability | IMPLEMENTED | VERIFIED_IN_CI | VERIFIED_LOCALLY | VERIFIED_WITH_REAL_STAR |
@@ -51,7 +84,7 @@ See [M3 implementation and local cutover checkpoint](M3_SITE_ASSETS.md) and the
 Reuse the account foundation, not a new Auth POC. Commands and evidence:
 [LOCAL_ACCOUNT_FOUNDATION.md](LOCAL_ACCOUNT_FOUNDATION.md).
 
-## Local gaps, not global development blockers
+## Historical local gaps (before LOCAL_M3_HANDS_ON_ACCEPTANCE_01)
 
 - Docker remains unavailable after the previous ordinary restart. No repeat
   restart/inspection without new evidence; no reset, volume deletion, WSL/service
