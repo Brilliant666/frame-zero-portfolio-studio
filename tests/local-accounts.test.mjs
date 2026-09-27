@@ -382,12 +382,12 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 720000 }, 
     assert.doesNotMatch(publicHtml, /Alpha basic photographer|Alpha premium photographer/);
   });
   if (process.env.FRAME_ZERO_EDITOR_BROWSER_SMOKE === '1') {
-    await t.test('real browser editor acceptance on isolated PostgreSQL', { timeout: 540000 }, async () => {
+    await t.test('real browser editor acceptance on isolated PostgreSQL', { timeout: 540000 }, async browserTest => {
       await provisionAccount(runtime, input('smokefixturea', true));
       await provisionAccount(runtime, input('smokefixtureb'));
       const { siteEditorBrowserSmoke } = await import('./site-editor-browser-smoke.mjs');
       await siteEditorBrowserSmoke({
-        origin: config.origin, password,
+        origin: config.origin, password, signal: browserTest.signal,
         restart: async () => { await stopServer(); await startServer(); },
         expire: async username => {
           assert.ok(['smokefixturea', 'smokefixtureb'].includes(username));

@@ -6,18 +6,42 @@ import { chromium } from 'playwright';
 
 // A single bounded acceptance scenario, not a new E2E framework. All edits use
 // the real forms and real API. Never capture traces, cookies, headers or bodies.
-export async function siteEditorBrowserSmoke({ origin, password, restart, expire }) {
+export async function siteEditorBrowserSmoke({ origin, password, restart, expire, signal }) {
   assert.equal(origin, 'http://127.0.0.1:3004');
   const output = join(process.cwd(), 'outputs', 'site-editor-browser');
   await mkdir(output, { recursive: true });
   const browser = await chromium.launch({ headless: true });
+  let stopped = false, activeStage = '';
+  const releases = new Set();
   const network = [], checkpoints = [], screenshots = [];
   const report = { origin, build: 'Standard Next production / isolated PostgreSQL', browser: browser.version(), head: process.env.GITHUB_SHA ?? 'local', checkpoints, screenshots, network };
+  const persist = () => writeFile(join(output, 'acceptance.json'), JSON.stringify(report, null, 2));
+  async function stop(reason) {
+    if (stopped) return;
+    stopped = true;
+    checkpoints.push({ name: activeStage || 'browser lifecycle', result: 'FAIL', error: reason });
+    for (const release of releases) release();
+    await persist();
+    await browser.close();
+  }
+  const abort = () => { void stop('Node test aborted; browser closed and unfinished items are not verified'); };
+  signal?.addEventListener('abort', abort, { once: true });
+  const overallTimer = setTimeout(() => { void stop('Browser acceptance exceeded its 480 second bound'); }, 480000);
+  async function bounded(promise, label, milliseconds = 15000) {
+    let timer;
+    try {
+      return await Promise.race([promise, new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} exceeded ${milliseconds}ms`)), milliseconds);
+      })]);
+    } finally { clearTimeout(timer); }
+  }
   const forbidden = /^(?:\/api\/(?:site-content|preview\/site-content|local-photos|photo-import|platform-qr)|\/photos\/|\/platform-qr\/|\/(?:health|import|library)(?:\/|$))/;
   const a = 'smokefixturea', b = 'smokefixtureb';
   const path = (space, slug = a) => `/api/sites/${slug}/drafts/${space}`;
   const basic = `/${a}/admin/basic`, premium = `/${a}/admin/premium-polaroid`;
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
+  context.setDefaultTimeout(15000);
+  context.setDefaultNavigationTimeout(15000);
   function watch(ctx) {
     ctx.on('page', p => p.on('dialog', dialog => { if (dialog.type() === 'beforeunload') void dialog.accept(); }));
     ctx.on('response', response => {
@@ -44,12 +68,21 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
     screenshots.push({ file, viewport, path: new URL(p.url()).pathname });
   }
   async function stage(name, run) {
-    try { await run(); checkpoints.push({ name, result: 'PASS' }); }
+    if (stopped) { checkpoints.push({ name, result: 'NOT_VERIFIED', error: 'Browser stopped after a bounded failure' }); return; }
+    activeStage = name;
+    console.log(`[browser] START ${name}`);
+    try { await bounded(run(), `Stage ${name}`, 45000); checkpoints.push({ name, result: 'PASS' }); console.log(`[browser] PASS ${name}`); }
     catch (error) {
       checkpoints.push({ name, result: 'FAIL', error: error instanceof Error ? error.message.split(password).join('[redacted]') : 'Unknown error' });
-      if (await page.locator('input[type=password]').count() === 0) await snapshot(page, 'failure').catch(() => {});
-      await page.unrouteAll({ behavior: 'ignoreErrors' });
+      console.log(`[browser] FAIL ${name}; details in sanitized acceptance.json`);
+      for (const release of releases) release();
+      if (error instanceof Error && error.message.startsWith('Stage ')) await stop('Stage deadline reached; old stage cancelled by closing browser');
+      if (!stopped) {
+        if (await page.locator('input[type=password]').count() === 0) await bounded(snapshot(page, `failure-${name.slice(0, 2)}`), 'Failure screenshot', 5000).catch(() => {});
+        await page.unrouteAll({ behavior: 'ignoreErrors' });
+      }
     }
+    finally { await persist(); }
   }
   async function login(p, username) {
     await p.goto(`${origin}/login`);
@@ -61,7 +94,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
   }
   async function openEditor(p, url) {
     const loaded = p.waitForResponse(r => r.request().method() === 'GET' && r.url().includes('/api/sites/') && r.status() === 200);
-    await p.goto(`${origin}${url}`); await loaded;
+    await Promise.all([p.goto(`${origin}${url}`), loaded]);
     await field(p, '摄影师名称').waitFor();
     await p.waitForFunction(() => !document.querySelector('input')?.disabled && !document.querySelector('fieldset')?.disabled);
   }
@@ -73,16 +106,15 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
   }
   async function saved(p, space, shortcut = false, status = 200) {
     const result = p.waitForResponse(r => new URL(r.url()).pathname === path(space) && r.request().method() === 'PUT');
-    if (shortcut) await p.keyboard.press('Control+s');
-    else await p.getByRole('button', { name: space === 'basic' ? '保存修改' : '保存新版修改', exact: true }).click();
-    const response = await result;
+    const action = shortcut ? p.keyboard.press('Control+s') : p.getByRole('button', { name: space === 'basic' ? '保存修改' : '保存新版修改', exact: true }).click();
+    const [response] = await Promise.all([result, action]);
     assert.equal(response.status(), status);
     const body = await response.json();
     await p.waitForTimeout(80);
     return body;
   }
   async function read(space, ctx = context, slug = a) {
-    const response = await ctx.request.get(`${origin}${path(space, slug)}`);
+    const response = await ctx.request.get(`${origin}${path(space, slug)}`, { timeout: 15000 });
     assert.equal(response.status(), 200);
     return response.json();
   }
@@ -150,23 +182,28 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
         await field(page, '摄影师名称').fill(first);
         let release;
         const gate = new Promise(resolve => { release = resolve; });
+        releases.add(release);
         let written;
         const serverWritten = new Promise(resolve => { written = resolve; });
         await page.route(`**${path(space)}`, async route => {
           if (route.request().method() !== 'PUT') return route.continue();
-          const realResponse = await route.fetch(); // Real PostgreSQL CAS completes first.
-          written(); await gate; await route.fulfill({ response: realResponse });
+          try {
+            const realResponse = await route.fetch({ timeout: 15000 }); // Real PostgreSQL CAS completes first.
+            written({}); await bounded(gate, 'Delayed save response release'); await route.fulfill({ response: realResponse });
+          } catch (error) { written({ error }); await route.abort().catch(() => {}); }
         });
         const saving = saved(page, space);
-        await serverWritten;
+        void saving.catch(error => written({ error }));
         let editFailure;
         try {
+          const result = await bounded(serverWritten, 'Real save request');
+          if (result.error) throw result.error;
           await snapshot(page, `04-${space}-saving`);
           assert.equal(await field(page, '摄影师名称').isEnabled(), true, 'Saving must not disable further Site edits');
           await field(page, '摄影师名称').fill(second);
         } catch (error) { editFailure = error; }
-        finally { release(); }
-        await saving; await page.unroute(`**${path(space)}`);
+        finally { release(); releases.delete(release); }
+        await bounded(saving, 'Real save response'); await page.unroute(`**${path(space)}`);
         if (editFailure) throw editFailure;
         assert.equal(await field(page, '摄影师名称').inputValue(), second);
         assert.equal((await read(space)).content.profile.photographer, first);
@@ -280,28 +317,31 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
       await field(page, '摄影师名称').fill('A delayed response before identity switch');
       let release, written, finished;
       const gate = new Promise(resolve => { release = resolve; });
+      releases.add(release);
       const serverWritten = new Promise(resolve => { written = resolve; });
       const routeFinished = new Promise(resolve => { finished = resolve; });
       await page.route(`**${path('basic')}`, async route => {
         if (route.request().method() !== 'PUT') return route.continue();
         try {
-          const response = await route.fetch();
+          const response = await route.fetch({ timeout: 15000 });
           assert.equal(response.status(), 200);
-          written(); await gate;
+          written({}); await bounded(gate, 'Account switch response release', 30000);
           // Navigating away is allowed to cancel this pending response. It is
           // not substituted or forged; the database write already completed.
           await route.fulfill({ response }).catch(() => {});
-        } finally { finished(); }
+        } catch (error) { written({ error }); await route.abort().catch(() => {}); }
+        finally { finished(); }
       });
       await page.keyboard.press('Control+s');
-      await serverWritten;
       try {
+        const result = await bounded(serverWritten, 'Account switch real save request');
+        if (result.error) throw result.error;
         await loginPage.goto(`${origin}/login`);
         await loginPage.getByRole('button', { name: '退出登录', exact: true }).click();
         await login(loginPage, b);
         await openEditor(page, `/${b}/admin/basic/profile`);
-      } finally { release(); }
-      await routeFinished; await page.unroute(`**${path('basic')}`);
+      } finally { release(); releases.delete(release); }
+      await bounded(routeFinished, 'Account switch route completion'); await page.unroute(`**${path('basic')}`);
       assert.equal(await field(page, '摄影师名称').inputValue(), '');
       assert.equal((await read('basic', context, b)).revision, 0);
       await snapshot(page, '09-delayed-A-response-cannot-enter-B');
@@ -348,7 +388,10 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
     assert.equal(checkpoints.filter(item => item.result === 'FAIL').length, 0, `Browser acceptance failed: ${checkpoints.filter(item => item.result === 'FAIL').map(item => item.name).join('; ')}. See sanitized acceptance.json.`);
   } finally {
     // Whitelisted metadata only. No response bodies, auth headers or sessions.
-    await writeFile(join(output, 'acceptance.json'), JSON.stringify(report, null, 2));
+    clearTimeout(overallTimer);
+    signal?.removeEventListener('abort', abort);
+    for (const release of releases) release();
+    await persist();
     await browser.close();
   }
 }
