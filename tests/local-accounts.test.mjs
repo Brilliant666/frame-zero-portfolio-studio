@@ -173,7 +173,14 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1080000 },
     assert.doesNotMatch(html, /data-site-state=|data-site-admin=/);
     // The dedicated local runner explicitly enables this internal area. The
     // normal production runner's disabled case is covered by runtime tests.
-    assert.equal((await request('/test')).status, 200);
+    const laboratory = await request('/test?template=neon-hud');
+    assert.equal(laboratory.status, 200);
+    const laboratoryHtml = await laboratory.text();
+    assert.match(laboratoryHtml, /模板实验室/);
+    assert.match(laboratoryHtml, /不是摄影师 Site/);
+    assert.equal((laboratoryHtml.match(/<option\b/g) ?? []).length, 11);
+    assert.match(laboratoryHtml, /value="neon-hud" selected=""/);
+    assert.doesNotMatch(laboratoryHtml, /<img[^>]+src="\/photos\//);
     assert.equal((await request('/test/admin')).status, 200);
   });
   await t.test('public Sites are unpublished and expose no private identity or grants', async () => {
@@ -370,7 +377,7 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1080000 },
   });
   await t.test('expired database session is rejected without a cookie-cache grace period', async () => {
     const cookie = await login('fixturebeta');
-    await runtime.pool.query('UPDATE "session" SET expires_at=now()-interval \'1 minute\' WHERE user_id=(SELECT id FROM "user" WHERE username=$1)', ['fixturebeta']);
+    await runtime.pool.query('UPDATE "session" SET expires_at=timezone(\'UTC\',now())-interval \'1 minute\' WHERE user_id=(SELECT id FROM "user" WHERE username=$1)', ['fixturebeta']);
     assert.equal((await request('/api/account/site', { cookie })).status, 401);
     await sitePage('/fixturebeta/admin', 401, cookie);
     assert.equal((await request(draftPath('fixturebeta'), { cookie })).status, 401);
@@ -397,7 +404,7 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1080000 },
         restart: async () => { await stopServer(); await startServer(); },
         expire: async username => {
           assert.ok(['smokefixturea', 'smokefixtureb'].includes(username));
-          await runtime.pool.query('UPDATE "session" SET expires_at=now()-interval \'1 minute\' WHERE user_id=(SELECT id FROM "user" WHERE username=$1)', [username]);
+          await runtime.pool.query('UPDATE "session" SET expires_at=timezone(\'UTC\',now())-interval \'1 minute\' WHERE user_id=(SELECT id FROM "user" WHERE username=$1)', [username]);
         },
       });
     });
@@ -415,6 +422,24 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1080000 },
   await t.test('legacy import preserves bytes and semantics with idempotent recovery', { timeout: 180000 }, async () => {
     const { siteLegacyImportIntegration } = await import('./site-legacy-import-integration.mjs');
     await siteLegacyImportIntegration({ runtime, config, password, root: assetRoot, restart: async () => { await stopServer(); await startServer(); } });
+  });
+  await t.test('local acceptance shortcuts require owner, grant and explicit runtime switch', async () => {
+    const previous = process.env.FRAME_ZERO_LOCAL_ACCEPTANCE;
+    const raw = (route, cookie) => fetch(`${config.origin}${route}`, { redirect: 'manual', headers: cookie ? { cookie } : {}, signal: AbortSignal.timeout(10000) });
+    try {
+      process.env.FRAME_ZERO_LOCAL_ACCEPTANCE = '1'; await stopServer(); await startServer();
+      const a = await login('fixturealpha'), b = await login('fixturebeta');
+      for (const [route, cookie, location] of [['/fixturealpha', a, '/fixturealpha/admin/preview/premium-polaroid'], ['/test/admin', a, '/fixturealpha/admin/basic/profile'], ['/test/admin', b, '/fixturebeta/admin/basic/profile'], ['/test/admin', undefined, '/login']]) {
+        const response = await raw(route, cookie); assert.equal(response.status, 307); assert.equal(response.headers.get('location'), location); assert.match(response.headers.get('cache-control'), /no-store/); assert.ok(response.headers.get('vary')?.split(',').some(value => value.trim().toLowerCase() === 'cookie'));
+      }
+      for (const [route, cookie] of [['/fixturealpha', undefined], ['/fixturealpha', b], ['/fixturebeta', b]]) {
+        const response = await raw(route, cookie); assert.equal(response.status, 200); assert.match(await response.text(), /unpublished/);
+      }
+      assert.equal((await raw('/test', a)).status, 200);
+      assert.ok((await raw('/api/site-content', a)).status >= 400);
+      process.env.FRAME_ZERO_LOCAL_ACCEPTANCE = '0'; await stopServer(); await startServer();
+      assert.equal((await raw('/fixturealpha', await login('fixturealpha'))).status, 200);
+    } finally { if (previous === undefined) delete process.env.FRAME_ZERO_LOCAL_ACCEPTANCE; else process.env.FRAME_ZERO_LOCAL_ACCEPTANCE = previous; await stopServer(); await startServer(); }
   });
   await t.test('incorrect and unknown credentials share errors; attempts are limited', async () => {
     const wrong = await request('/api/auth/sign-in/username', { body: { username: 'fixturealpha', password: 'incorrect-password' } });

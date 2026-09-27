@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { readAccountConfig } from './lib/account-config.mjs';
 import { blocksLegacySource } from './lib/local-platform-boundary.mjs';
+import { handleLocalAdminShortcut } from '../db/accounts/local-acceptance.mjs';
 
 // Same Next application, explicit Node lane. No D1 binding or content migration.
 const args = process.argv.slice(2);
@@ -20,7 +21,7 @@ process.env.FRAME_ZERO_ACCOUNT_REQUEST_PROOF = proof;
 const app = next({ dev: false, hostname: '127.0.0.1', port });
 await app.prepare();
 const handle = app.getRequestHandler();
-const server = createServer((request,response) => {
+const server = createServer(async (request,response) => {
   if (!['127.0.0.1','::ffff:127.0.0.1'].includes(request.socket.remoteAddress ?? '') || request.headers.host !== `127.0.0.1:${port}`) {
     response.writeHead(403); response.end(); return;
   }
@@ -34,6 +35,12 @@ const server = createServer((request,response) => {
   // Next itself adds forwarding headers; mark requests after socket validation.
   delete request.headers['x-account-local-proof'];
   request.headers['x-account-local-proof'] = proof;
+  if (request.url === '/test/admin' && process.env.FRAME_ZERO_LOCAL_ACCEPTANCE === '1') {
+    try {
+      const shortcut = await handleLocalAdminShortcut(new Request(`${config.origin}/test/admin`, { method: request.method, headers: request.headers }));
+      if (shortcut) { response.writeHead(shortcut.status, Object.fromEntries(shortcut.headers)); response.end(); return; }
+    } catch { response.writeHead(503, { 'Cache-Control': 'no-store, private' }); response.end('Acceptance service unavailable.'); return; }
+  }
   void handle(request,response);
 });
 server.listen(port,'127.0.0.1',() => console.log(`Local account Node validation: ${config.origin}/login`));

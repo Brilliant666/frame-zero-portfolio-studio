@@ -51,6 +51,6 @@ export async function siteAssetsIntegration({ runtime, origin, password, restart
   for (const space of ['basic', 'premium-polaroid']) { const r = await req(`/fixtureasseta/admin/preview/${space}`, a); assert.equal(r.status, 200); }
   const publicHtml = await (await req('/fixtureasseta')).text(); assert.match(publicHtml, /unpublished/); assert.doesNotMatch(publicHtml, /Shared photos|Shared asset|api\/sites\/fixtureasseta\/assets/);
   await restart(); a = await login('fixtureasseta'); assert.deepEqual((await draft('basic')).content, basic); assert.deepEqual((await draft('premium-polaroid')).content, premium); assert.deepEqual((await (await req(endpoint, a)).json()).assets, before.assets);
-  await runtime.pool.query('UPDATE "session" SET expires_at=now()-interval \'1 minute\' WHERE user_id=(SELECT id FROM "user" WHERE username=$1)', ['fixtureasseta']);
+  await runtime.pool.query('UPDATE "session" SET expires_at=timezone(\'UTC\',now())-interval \'1 minute\' WHERE user_id=(SELECT id FROM "user" WHERE username=$1)', ['fixtureasseta']);
   assert.equal((await req(endpoint, a)).status, 401); assert.equal((await req(uploads[0].asset.variants.full.src, a, { method: 'HEAD' })).status, 401); assert.equal((await upload(uploads[0].bytes)).status, 401);
 }
