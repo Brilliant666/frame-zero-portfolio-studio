@@ -103,6 +103,12 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
     await field(p, '摄影师名称').waitFor();
     await p.waitForFunction(() => !document.querySelector('input')?.disabled && !document.querySelector('fieldset')?.disabled);
   }
+  async function logout(p) {
+    const response = p.waitForResponse(r => new URL(r.url()).pathname === '/api/auth/sign-out' && r.request().method() === 'POST');
+    const [result] = await Promise.all([response, p.getByRole('button', { name: '退出登录', exact: true }).click()]);
+    assert.equal(result.status(), 200);
+    await p.getByText('请使用受邀账号登录', { exact: true }).waitFor();
+  }
   async function nav(p, section) {
     const href = `${basic}/${section}`;
     if (p.viewportSize().width < 768) await p.getByLabel('切换后台分区').selectOption(href);
@@ -333,8 +339,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
       const loginPage = await context.newPage(); await login(loginPage, a);
       await openEditor(page, `${basic}/profile`);
       await field(page, '摄影师名称').fill('Old owner unsaved');
-      await loginPage.getByRole('button', { name: '退出登录', exact: true }).click();
-      await loginPage.getByText('请使用受邀账号登录', { exact: true }).waitFor();
+      await logout(loginPage);
       await saved(page, 'basic', true, 401);
       await login(loginPage, b);
       await field(page, '摄影师名称').fill('Old owner after switch');
@@ -344,7 +349,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
       assert.equal((await read('basic', context, b)).revision, 0);
       await loginPage.goBack();
       assert.doesNotMatch(await loginPage.locator('body').innerText(), /Old owner after switch|Old owner unsaved/);
-      await loginPage.goto(`${origin}/login`); await loginPage.getByRole('button', { name: '退出登录', exact: true }).click();
+      await loginPage.goto(`${origin}/login`); await logout(loginPage);
       await login(page, a);
 
       // A's authorized write finishes in PostgreSQL, but its real response is
@@ -374,7 +379,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
         const result = await bounded(serverWritten, 'Account switch real save request');
         if (result.error) throw result.error;
         await loginPage.goto(`${origin}/login`);
-        await loginPage.getByRole('button', { name: '退出登录', exact: true }).click();
+        await logout(loginPage);
         await login(loginPage, b);
         await openEditor(page, `/${b}/admin/basic/profile`);
       } finally { release(); releases.delete(release); }
@@ -382,7 +387,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
       assert.equal(await field(page, '摄影师名称').inputValue(), '');
       assert.equal((await read('basic', context, b)).revision, 0);
       await snapshot(page, '09-delayed-A-response-cannot-enter-B');
-      await loginPage.getByRole('button', { name: '退出登录', exact: true }).click();
+      await logout(loginPage);
       await login(page, a);
       assert.equal((await read('basic')).content.profile.photographer, 'A delayed response before identity switch');
       await loginPage.close();
