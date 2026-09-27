@@ -9,7 +9,7 @@ reports record historical acceptance, not today's authorization gate.
 Mission: PRODUCT_DELIVERY_MISSION_02
 Product priority: invited photographer -> own Site Admin -> independent template content -> Publish
 Current slice: M2 / real editors and independent Site content-space drafts
-Slice status: PR30_REVIEW_WITH_OPEN_ITEMS / HUMAN_ACCEPTANCE_PENDING
+Slice status: PR30_BUDGET_POLICY_IMPLEMENTED / HUMAN_ACCEPTANCE_PENDING
 Main baseline: 9bdd45daf326d65def222b20033ff2774decbfc1
 Account foundation: PR #28 accepted and Squash merged
 Account head: 3263d4d917b3d59c623b420cb1537cb5a8ff99ff
@@ -37,7 +37,7 @@ M2 proceeds now; its new Draft PR does NOT inherit merge authorization.
 | PR #28 migration, Better Auth, operator provisioning, independent AuthUser/PortfolioUser/Site IDs and template grants | Yes | Five CI checks; 12 real PostgreSQL integration tests at account head above | Partial: build, login HTTP and anonymous denial; no local PostgreSQL readback | No |
 | Eleven templates, Admin V2, legacy content/local photos and accepted polaroid preview | Yes | Existing baseline | Existing local experience retained | Not target migration evidence |
 | M1 target routes and authorized Site Admin shell | Yes | Five checks pass; real PostgreSQL HTTP suite 16/16 at implementation head | Next build/budget, lint/types; legacy HTTP 38/38; route status checks below; no local PG | No |
-| M2 independent content/editor integration | Implemented in PR30 | Real PostgreSQL plus actual Chromium editor acceptance: 12/12 stages at fd6601c; five checks successful. Final-head run mapping in PR30 acceptance comment | Next build/budget, lint/types, focused and legacy runtime tests; Windows legacy budget FAIL; no local PG | No |
+| M2 independent content/editor integration | Implemented in PR30 | Real PostgreSQL plus actual Chromium editor acceptance: 12/12 stages at f4171dc; five checks successful. New policy final-head run mapping in PR30 acceptance comment | Windows full npm test, both builds/checks, lint/types and budget behavior tests pass under the new policy; legacy size WARNING; no local PG | No |
 | M3 Site assets, M4 publication, M5 second photographer | Not delivered | Pending | Pending | No |
 
 Reuse the account foundation, not a new Auth POC. Commands and evidence:
@@ -53,18 +53,30 @@ Reuse the account foundation, not a new Auth POC. Commands and evidence:
 - Real `star` is **not created**. Real email and non-echoed password must be
   entered locally using the existing provisioning flow when PostgreSQL is
   available. CI fixtures are not real users or customer onboarding evidence.
-- Windows legacy bundle baseline was 6 bytes over budget; M1 is 563638 bytes,
-  438 bytes over the unchanged 550 KiB threshold. CI passes the same threshold.
-  Preserve the threshold; allow one bounded reproducible investigation, not a global blocker.
+- Historical Windows legacy bundle baseline was 6 bytes over budget; M1 is
+  563638 bytes, 438 bytes over the unchanged 550 KiB reference. The user now
+  explicitly authorizes aggregate-size warnings rather than blocking failures;
+  retain the reference and historical FAIL, not byte-reduction experiments.
   The recorded 337.4ms long frame remains a known accepted performance boundary
   unless a new reproducible regression is demonstrated.
 - PR30 bounded Windows comparison: base 563638, initial head 563734 (+96).
   The Site save-editability correction gives 563772 (+134 versus base), 572 bytes
-  above the unchanged 563200 threshold. Result C: new regression remains OPEN;
-  no new budget exception accepted. One ineffective optimization was reverted;
-  do not resume byte chasing as the next product slice.
+  above the unchanged 563200 reference. This was FAIL under the old policy.
+  PR30_BUDGET_POLICY_ALIGNMENT_AND_FINAL_REVIEW supersedes that size-only gate:
+  the +134 bytes no longer independently blocks progress. Integrity, safety and
+  exact structural checks still fail closed. No product code is changed to save bytes.
 
 ## PR30 limited closure and human review
+
+Budget policy is IMPLEMENTED under explicit user authority. Legacy size-only
+references and Next cross-route aggregate references warn; missing/unreadable
+artifacts, invalid paths/mapping and lazy-template structure still fail. The
+Next single-template 64 KiB hard constraint remains. Windows fresh builds retain
+legacy public JS 563772 bytes (reference 563200; +134 versus main 9bdd45d).
+Full npm test exits 0 and continues beyond that warning through legacy runtime
+and Standard Next tests. See M2 record for raw metrics, route estimates and
+NOT_MEASURED scope. Final-head CI evidence belongs to the PR30 review comment;
+the earlier head's green checks do not validate the new policy changes.
 
 The actual browser exercised both existing editors against isolated PostgreSQL
 at the same Standard Next production origin (3004), including independent saves,

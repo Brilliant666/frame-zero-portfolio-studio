@@ -41,7 +41,7 @@
     "test:deployment-bootstrap": "node --test tests/deployment-bootstrap.test.mjs",
     "test:deployment-operations": "node --test tests/deployment-operations.test.mjs",
     "test:legacy-runtime": "npm run build:legacy && npm run check:bundle:legacy && node --test tests/rendered-html.test.mjs tests/admin-rendered-html.test.mjs tests/site-content-api.test.mjs",
-    "test:node-runtime": "npm run build && npm run check:bundle && node --test tests/next-node-runtime.test.mjs tests/legacy-build-budget.test.mjs",
+    "test:node-runtime": "npm run build && npm run check:bundle && node --test tests/next-node-runtime.test.mjs tests/legacy-build-budget.test.mjs tests/next-build-budget.test.mjs",
     "photos:import": "node scripts/import-photo-library.mjs",
     "photos:serve": "node scripts/photo-import-server.mjs",
     "templates:generate-structure-previews": "node scripts/generate-template-structure-previews.mjs",

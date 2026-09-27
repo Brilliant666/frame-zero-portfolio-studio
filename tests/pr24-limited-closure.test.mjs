@@ -93,24 +93,18 @@ test("template inspection and selection cannot automatically Apply or save a lay
   );
 });
 
-test("legacy budget split cannot widen the public gate or replace the Standard Next gate", async () => {
-  const [legacyGate, nextGate] = await Promise.all([
-    source("scripts/check-build-budget.mjs"),
-    source("scripts/check-next-build-budget.mjs"),
+test("budget policy preserves historical references and separate production lanes", async () => {
+  const [{ LEGACY_REFERENCES }, { NEXT_BUILD_BUDGETS }] = await Promise.all([
+    import("../scripts/check-build-budget.mjs"),
+    import("../scripts/check-next-build-budget.mjs"),
   ]);
-
-  assert.match(legacyGate, /const MAX_PUBLIC_JS = 550 \* 1024/);
-  assert.match(legacyGate, /const MAX_ADMIN_JS = 160 \* 1024/);
-  assert.match(legacyGate, /const MAX_ADMIN_ENTRY_JS = 80 \* 1024/);
-  assert.match(legacyGate, /if \(publicJs > MAX_PUBLIC_JS\)/);
-  assert.match(legacyGate, /if \(adminJs > MAX_ADMIN_JS\)/);
-  assert.match(legacyGate, /if \(bytes > MAX_ADMIN_ENTRY_JS\)/);
-  assert.doesNotMatch(legacyGate, /MAX_PUBLIC_JS\s*=\s*(?:5[6-9]\d|[6-9]\d\d) \* 1024/);
-
-  assert.match(nextGate, /applicationJs: 550 \* 1024/);
-  assert.match(nextGate, /bootstrapJs: 700 \* 1024/);
-  assert.match(nextGate, /publicCss: 300 \* 1024/);
-  assert.match(nextGate, /templateJs: 64 \* 1024/);
-  assert.match(nextGate, /applicationJsBytes > NEXT_BUILD_BUDGETS\.applicationJs/);
-  assert.match(nextGate, /publicCssBytes > NEXT_BUILD_BUDGETS\.publicCss/);
+  // Warning/error and CLI behavior are covered with anonymous artifacts in
+  // legacy-build-budget.test.mjs and next-build-budget.test.mjs, not source regexes.
+  assert.deepEqual(LEGACY_REFERENCES, {
+    publicJs: 563200, adminJs: 163840, adminEntryJs: 81920,
+    totalCss: 307200, templateJs: 65536, templateCss: 65536,
+  });
+  assert.deepEqual(NEXT_BUILD_BUDGETS, {
+    applicationJs: 563200, bootstrapJs: 716800, publicCss: 307200, templateJs: 65536,
+  });
 });

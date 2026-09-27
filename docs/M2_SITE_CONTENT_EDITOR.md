@@ -1,6 +1,6 @@
 # M2：Site 独立内容编辑与草稿保存
 
-日期：2026-09-27。状态：PR30_REVIEW_WITH_OPEN_ITEMS / HUMAN_ACCEPTANCE_PENDING。
+日期：2026-09-27。状态：PR30_BUDGET_POLICY_IMPLEMENTED / HUMAN_ACCEPTANCE_PENDING。
 
 分支：`codex/site-content-editor-integration`；[Draft PR #30](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/30)。最终 head 的 CI 结果在 PR 验收评论记录，避免把早期 head 结果替代最终验证。
 
@@ -131,10 +131,69 @@ legacy 渲染/API 38/38、Next 正式构建/预算和运行时 3/3、编辑器 f
 更新时间仍为 2026-09-27 01:24:01（旧 API 不提供 revision），记录2601 revision=7，
 updatedAt=2026-09-24T09:58:05.181Z。快照留本机仓库外，不提交私人数据。
 
-PR 保持 Open + Draft；新增预算差异待人工决策，未自动接受。下一阶段 M3 的
+PR 保持 Open + Draft；以上是旧政策的历史结果，后续明确批准的政策见下节。下一阶段 M3 的
 产品目标是本人 Site 的选片、上传和资源归属校验；本轮不开始实现，不导入真实资料。
 
 HUMAN_ACCEPTANCE = PENDING
+
+### PR30 预算政策对齐（2026-09-27）
+
+用户通过 `PR30_BUDGET_POLICY_ALIGNMENT_AND_FINAL_REVIEW` 明确批准：legacy
+纯体积阈值以及 Next 跨路由 application/bootstrap/CSS 总量改为可见告警，
+保留原参考值。Next 单模板局部硬限制不变；manifest/资源缺失、不可读、
+路径越界、无效结构、十一模板懒加载映射损坏仍为错误，非零退出。
+只有告警时命令成功不代表全部指标达标；未知或失败计量标记 NOT_MEASURED。
+
+历史 563772 > 563200 的 FAIL 不被改写。相同 Windows 基线的 +134 bytes
+不再是单独压缩阻塞，不删除产品文案、校验或保存保护。本轮只改检查器、
+匿名 fixture 行为测试、命令接线和交付记录；不改 M2 业务或安全门禁。
+
+指标为未压缩原始产物字节。Next 的 `/` 与 `/test` 静态入口估计分别包含
+可追踪入口和共享 bootstrap，每路由内部去重；联合总量跨路由再次去重。
+模板懒加载集合不是首页首次下载。它们都不是 gzip/br、实际网络请求或执行耗时。
+`/login`、Site 编辑器与完整 Published 摄影页本轮 NOT_MEASURED；未发布空页
+不能作为未来摄影主页基线，也不因这些缺口新增 M3 门禁。
+
+基线只沿用上述明确 commit、Windows/Node24.19.0/npm9.8.1/构建方式的历史记录，
+不自动覆盖、不跨操作系统相减。无可比数据时 BASELINE_NOT_COMPARABLE。
+体积告警仍需人工审查，不表示任意增长获批，也不授予 PR 合并权限。
+
+本轮起始 head `f4171dc64e908abd8641e4c3faae9c8b470d04a5`，base/main
+`9bdd45daf326d65def222b20033ff2774decbfc1`，没有后续未知产品差异。
+Windows / Node 24.19.0 / npm 9.8.1，未改变依赖或构建方式，重新执行完整
+`npm test`（含两种构建/检查及后续运行时测试）退出 0；legacy 告警后继续完成
+38 项 legacy 渲染/API 和 33 项 Next runtime/预算行为测试。独立 focused 检查
+34/34（legacy 10 + Next 21 + 历史兼容 3），lint、tsc --noEmit、diff --check、
+public safety 通过。未操作 Docker 或本机真实数据库。
+
+| 新构建 Windows 原始产物指标 | bytes | 参考值 bytes | 新政策结果 |
+| --- | ---: | ---: | --- |
+| Legacy public/client 跨路由 JS | 563772 | 563200 | WARNING，超 572 |
+| Legacy Admin JS | 114639 | 163840 | WITHIN_REFERENCE |
+| Legacy 全路由 JS | 678411 | 无独立历史参考值 | METRICS，不新增任意门槛 |
+| Legacy 总 CSS | 277095 | 307200 | WITHIN_REFERENCE |
+| Next 跨路由 application JS（入口 + 11 懒模板） | 278709 | 563200 | WITHIN_REFERENCE |
+| Next 跨路由 bootstrap JS | 604582 | 716800 | WITHIN_REFERENCE |
+| Next 跨路由 public CSS | 307190 | 307200 | WITHIN_REFERENCE |
+| Next 最大单模板 JS | 44143 | 65536（硬约束） | PASS |
+
+Legacy public JS 与起始 f4171dc 相同，相对同环境 main 历史基线 563638
+仍为 +134；本次没有产品体积优化，也没有把旧 FAIL 改写成旧规则 PASS。
+Next 没有本轮 main 同口径对照，增量 BASELINE_NOT_COMPARABLE，不以 Linux 相减。
+
+| 路由静态入口估计（每路由共享文件去重，不含懒模板） | JS bytes | CSS bytes |
+| --- | ---: | ---: |
+| `/` | 575957 | 59072 |
+| `/test` | 595714 | 178553 |
+
+实现与本机验证成立；最终提交五项 CI 的 event/run/attempt/head/实际测试 merge
+SHA 写入 PR30 最终评论，不复用 f4171dc 结果。现有 22 项 PostgreSQL 与十二阶段
+浏览器断言保持原样，随最终 CI 执行；不额外手工重跑编辑器验收。
+
+BUDGET_POLICY = IMPLEMENTED；ARTIFACT_INTEGRITY = PASS（本机产物）；
+AGGREGATE_SIZE = WARNING（legacy）；WINDOWS_VERIFICATION = FULL_NPM_TEST_PASS_WITH_SIZE_WARNING；
+M2_FUNCTIONAL_BASELINE = PRESERVED。最终阶段送审状态以最终 head CI 核对后的 PR 评论为准。
+真实 star 仍未创建；本机 PG 未验收；M3_ASSETS = NOT_STARTED_IN_THIS_TASK。
 
 M3_ASSETS = NOT_IMPLEMENTED_IN_THIS_PR
 
