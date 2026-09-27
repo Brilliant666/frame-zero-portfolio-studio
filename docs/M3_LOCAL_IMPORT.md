@@ -43,6 +43,15 @@ as an original. Any original files/catalog outside the manifest remain in the
 old source and require separately confirmed original mappings before claiming
 full-original migration. No old file is deleted.
 
+This is a hard gate for the real operator: if any planned resource remains
+`legacy-derived-only` or lacks an original mapping, `dry-run` reports
+`PARTIAL_SOURCE` with `UNRESOLVED_ORIGINALS_NOT_IN_MANIFEST` in `unresolved`.
+It does not claim `DRY_RUN_VERIFIED`. Real `apply` stops before any target file
+or draft writes; there is no ignore/override switch. The current manifest-only
+export therefore cannot authorize full real-star import. Confirming and adding
+the external original mappings requires follow-up work; existing sources stay
+untouched in the meantime.
+
 `snapshot.json` is written last: an export without it is incomplete. The bundle
 contains the standalone readable SQLite backup, raw source content/manifest,
 resource evidence and byte-verified files. An export directory is never reused
@@ -75,3 +84,6 @@ Anonymous coverage: `tests/legacy-site-import.test.mjs` and
 `tests/site-legacy-import-integration.mjs`. Real PostgreSQL coverage includes a
 failure after draft insertion, rollback, byte-identical retry, idempotence and
 preservation of later edits. These are not real-star migration evidence.
+Those library-level fixtures deliberately verify derivative-copy semantics;
+they do not bypass the separate real-operator original-source gate, covered by
+`tests/legacy-import-source-gate.test.mjs`.

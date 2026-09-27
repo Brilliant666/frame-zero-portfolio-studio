@@ -2,6 +2,7 @@ import { readFile, writeFile, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { readAccountConfig } from './lib/account-config.mjs';
 import { loadSiteContentSchema } from './lib/load-site-schema.mjs';
+import { legacyImportSourceGate, assertLegacyOperatorApplyAllowed } from './lib/legacy-import-source-gate.mjs';
 import { createAccountRuntime } from '../db/accounts/runtime.mjs';
 import { assetRoot } from '../db/accounts/assets.mjs';
 import { exportLegacySnapshot, planLegacyImport, applyLegacyImport, verifyLegacySourceUnchanged, preflightLegacyImport } from '../db/accounts/legacy-import.mjs';
@@ -37,15 +38,17 @@ try {
     let preflight, blocked;
     try { preflight = await preflightLegacyImport({ db: runtime.pool, plan, snapshotRoot: destination, validateContent: schema.parseSpaceContent }); }
     catch (error) { blocked = /^[A-Z_]+$/.test(error.message) ? error.message : 'PREFLIGHT_FAILED'; }
-    const report = { status: blocked ? 'BLOCKED_PREFLIGHT' : 'DRY_RUN_VERIFIED', sourceFingerprint: snapshot.fingerprint, siteId: plan.siteId, spaces: plan.sourceEvidence, mapping: plan.mapping, newAssets: preflight?.alreadyImported ? 0 : plan.assets.length, legacyDerivedOnly: plan.assets.filter(a => a.provenance === 'legacy-derived-only').length, originalSourceStatus: 'UNRESOLVED_ORIGINALS_NOT_IN_MANIFEST', missingOriginals: 'No originals claimed; only existing derivatives verified byte for byte. Confirm external original catalog before claiming complete original preservation.', unresolved: blocked ? [blocked] : [] };
+    const sourceGate = legacyImportSourceGate(plan);
+    const report = { status: blocked ? 'BLOCKED_PREFLIGHT' : sourceGate.complete ? 'DRY_RUN_VERIFIED' : 'PARTIAL_SOURCE', sourceFingerprint: snapshot.fingerprint, siteId: plan.siteId, spaces: plan.sourceEvidence, mapping: plan.mapping, newAssets: preflight?.alreadyImported ? 0 : plan.assets.length, legacyDerivedOnly: plan.assets.filter(a => a.provenance === 'legacy-derived-only').length, originalSourceStatus: sourceGate.originalSourceStatus, missingOriginals: sourceGate.complete ? 'Originals mapped in plan; preflight validates their evidence.' : 'No originals claimed; only existing derivatives verified byte for byte. Real apply is blocked until external original mappings are confirmed.', unresolved: [...(blocked ? [blocked] : []), ...sourceGate.unresolved] };
     await writeFile(path.join(destination, `report-${Date.now()}.json`), JSON.stringify(report, null, 2), { flag: 'wx', mode: 0o600 });
     if (blocked) throw new Error('PREFLIGHT_BLOCKED');
     if (operation === 'apply') {
+      assertLegacyOperatorApplyAllowed(sourceGate);
       // Never apply an outdated snapshot while the old editor has moved on.
       await verifyLegacySourceUnchanged({ ...config, snapshot });
       const result = await applyLegacyImport({ pool: runtime.pool, plan, snapshotRoot: destination, privateRoot: assetRoot(), validateContent: schema.parseSpaceContent });
       console.log(`接入结果：${result.status}；仅保存私人草稿，未发布，旧源未修改。`);
-    } else console.log('dry-run 已验证；映射与报告已保存在本机备份目录，尚未写入内容或资源。');
+    } else console.log(sourceGate.complete ? 'dry-run 已验证；映射与报告已保存在本机备份目录，尚未写入内容或资源。' : 'dry-run 为 PARTIAL_SOURCE：原图映射尚未确认，真实 apply 已阻断；部分来源报告已保存在本机备份目录，尚未写入内容或资源。');
   }
 } catch {
   // Upstream DB/filesystem messages may contain credentials or private paths.

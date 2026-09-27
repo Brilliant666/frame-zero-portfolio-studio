@@ -113,6 +113,17 @@ Anonymous browser evidence stays under the existing CI artifact directory.
 Final head, five run IDs, actual checkout SHA and outcomes must be recorded in
 the new Draft PR; PR30's previous green checks are not M3 validation.
 
+Local Windows focused suites, lint/types, legacy build and 38 legacy HTTP checks
+passed. Legacy JS was 567,887 bytes (reference 563,200; +4,115 versus PR30), a
+size warning under the accepted policy, not a product regression by itself.
+The isolated M3 checkout's local Next build was not verified after a stale native
+CSS dependency/cache failure. The running legacy and PR30 build trees were not
+touched. Linux CI at `6a0a0a2` passed Quality (including the complete Next build),
+Container, public safety and bootstrap. Its real PostgreSQL resource and import
+tests passed, while browser assertions required correction for the restored
+homepage field and offscreen lazy images. This intermediate result is not the
+final M3 pass; the subsequent final-head record belongs in PR31.
+
 No real star import, local phototest login acceptance, 3001 cutover or deployment
 is claimed. Next local prerequisite is a usable existing PostgreSQL and user-
 entered real star credentials if the account is absent, not renewed Docker work.
