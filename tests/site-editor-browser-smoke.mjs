@@ -13,9 +13,14 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
   const browser = await chromium.launch({ headless: true });
   let stopped = false, activeStage = '';
   const releases = new Set();
-  const network = [], checkpoints = [], screenshots = [];
-  const report = { origin, build: 'Standard Next production / isolated PostgreSQL', browser: browser.version(), head: process.env.GITHUB_SHA ?? 'local', checkpoints, screenshots, network };
+  const network = [], checkpoints = [], screenshots = [], steps = [];
+  const report = { origin, build: 'Standard Next production / isolated PostgreSQL', browser: browser.version(), head: process.env.GITHUB_SHA ?? 'local', checkpoints, screenshots, network, steps };
   const persist = () => writeFile(join(output, 'acceptance.json'), JSON.stringify(report, null, 2));
+  async function step(label) {
+    steps.push({ stage: activeStage, label });
+    console.log(`[browser] STEP ${label}`);
+    await persist();
+  }
   async function stop(reason) {
     if (stopped) return;
     stopped = true;
@@ -105,18 +110,25 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
     await p.waitForURL(`**${href}`);
   }
   async function saved(p, space, shortcut = false, status = 200) {
+    await step(`${space} save action starts (expected ${status})`);
     const result = p.waitForResponse(r => new URL(r.url()).pathname === path(space) && r.request().method() === 'PUT');
     const action = shortcut ? p.keyboard.press('Control+s') : p.getByRole('button', { name: space === 'basic' ? '保存修改' : '保存新版修改', exact: true }).click();
-    const [response] = await Promise.all([result, action]);
+    const [response] = await bounded(Promise.all([result, action]), `Save ${space} headers/action`);
     assert.equal(response.status(), status);
-    const body = await response.json();
-    await p.waitForTimeout(80);
+    await step(`${space} save HTTP ${status} received`);
+    // Error JSON contracts are checked by the existing HTTP suite. This UI
+    // check verifies the real HTTP status plus the rendered error and draft.
+    const body = status === 200 ? await bounded(response.json(), `Save ${space} JSON body`) : null;
+    await step(`${space} save response consumed`);
+    await bounded(p.waitForFunction(() => !document.querySelector('[data-save-state="saving"]')
+      && ![...document.querySelectorAll('header p')].some(el => el.textContent.includes(' · 保存中'))), `${space} save UI settles`);
+    await step(`${space} save UI settled`);
     return body;
   }
   async function read(space, ctx = context, slug = a) {
     const response = await ctx.request.get(`${origin}${path(space, slug)}`, { timeout: 15000 });
     assert.equal(response.status(), 200);
-    return response.json();
+    return bounded(response.json(), `Read ${space} JSON body`);
   }
   let basicSaved, premiumSaved;
   try {
@@ -216,6 +228,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
     });
     await stage('05 two tabs CAS conflict / retained draft / export / discard warning', async () => {
       for (const space of ['basic', 'premium-polaroid']) {
+        await step(`${space} conflict open tabs`);
         const url = space === 'basic' ? `${basic}/profile` : premium;
         await openEditor(page, url);
         const other = await context.newPage(); await openEditor(other, url);
@@ -223,9 +236,15 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
         await field(other, '摄影师名称').fill(`${space} retained conflict`);
         const result = await saved(page, space);
         await saved(other, space, true, 409);
-        assert.equal(await field(other, '摄影师名称').inputValue(), `${space} retained conflict`);
-        assert.match(await other.locator('body').innerText(), /版本冲突/);
+        await step(`${space} conflict check retained UI`);
+        assert.equal(await bounded(field(other, '摄影师名称').inputValue(), 'Conflict input read'), `${space} retained conflict`);
+        await step(`${space} conflict input retained`);
+        assert.match(await bounded(other.locator('body').innerText(), 'Conflict visible text'), /版本冲突/);
+        await step(`${space} conflict message visible; read winner`);
         assert.deepEqual(await read(space), result);
+        await step(`${space} winner read matches; capture conflict`);
+        await bounded(snapshot(other, `05-${space}-conflict-before-reload`), `${space} conflict screenshot`, 10000);
+        await step(`${space} conflict retained and server winner verified`);
         if (space === 'premium-polaroid') {
           const download = other.waitForEvent('download');
           await other.getByRole('button', { name: '导出当前草稿', exact: true }).click();
@@ -233,12 +252,30 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
           const exported = JSON.parse(await readFile(file, 'utf8'));
           assert.ok(JSON.stringify(exported).includes(`${space} retained conflict`));
         }
-        const dialog = other.waitForEvent('dialog');
-        const click = other.getByRole('button', { name: '重新读取', exact: true }).click();
-        const warning = await dialog; assert.match(warning.message(), /未保存草稿|未保存/); await warning.dismiss(); await click;
+        await step(`${space} reload confirmation click`);
+        let confirmMessage = '';
+        let handled;
+        const dismissed = new Promise(resolve => { handled = resolve; });
+        const onDialog = async dialog => {
+          if (dialog.type() !== 'confirm') return;
+          confirmMessage = dialog.message();
+          try { await dialog.dismiss(); handled({}); }
+          catch (error) { handled({ error }); }
+        };
+        other.on('dialog', onDialog);
+        try {
+          const [outcome] = await bounded(Promise.all([
+            dismissed,
+            other.getByRole('button', { name: '重新读取', exact: true }).click(),
+          ]), `${space} reload confirm dismiss`, 10000);
+          if (outcome.error) throw outcome.error;
+          assert.match(confirmMessage, /未保存草稿|未保存/);
+        } finally { other.off('dialog', onDialog); }
+        await step(`${space} reload warning dismissed`);
         assert.equal(await field(other, '摄影师名称').inputValue(), `${space} retained conflict`);
-        await snapshot(other, `05-${space}-conflict`);
-        other.on('dialog', d => d.accept()); await other.close();
+        await bounded(snapshot(other, `05-${space}-conflict`), `${space} dismissed conflict screenshot`, 10000);
+        await bounded(other.close(), `${space} conflict tab close`, 5000);
+        await step(`${space} conflict complete`);
         if (space === 'basic') basicSaved = result; else premiumSaved = result;
       }
     });
