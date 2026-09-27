@@ -5,14 +5,15 @@ import { loadSiteContentSchema } from './lib/load-site-schema.mjs';
 import { legacyImportSourceGate, assertLegacyOperatorApplyAllowed } from './lib/legacy-import-source-gate.mjs';
 import { createAccountRuntime } from '../db/accounts/runtime.mjs';
 import { assetRoot } from '../db/accounts/assets.mjs';
-import { exportLegacySnapshot, planLegacyImport, applyLegacyImport, verifyLegacySourceUnchanged, preflightLegacyImport } from '../db/accounts/legacy-import.mjs';
+import { exportLegacySnapshot, planLegacyImport, applyLegacyImport, verifyLegacySourceUnchanged, preflightLegacyImport, verifyApprovedOmissionsMissing } from '../db/accounts/legacy-import.mjs';
 
 // Config and reports contain private paths/content. Keep both outside Git.
-// node --env-file=.env.accounts.local scripts/site-legacy-import.mjs <export|dry-run|apply> <local-config.json>
+// node --env-file=.env.accounts.local scripts/site-legacy-import.mjs <export|dry-run|apply> <local-config.json> [--mode=display-acceptance]
 let runtime, schema;
 try {
-  const [operation, filename, ...extra] = process.argv.slice(2);
-  if (!['export', 'dry-run', 'apply'].includes(operation) || !filename || extra.length) throw new Error('INVALID_ARGUMENTS');
+  const [operation, filename, option, ...extra] = process.argv.slice(2);
+  if (!['export', 'dry-run', 'apply'].includes(operation) || !filename || extra.length || (option !== undefined && !['--mode=complete', '--mode=display-acceptance'].includes(option))) throw new Error('INVALID_ARGUMENTS');
+  const mode = option?.slice('--mode='.length) ?? 'complete';
   const config = JSON.parse(await readFile(filename, 'utf8'));
   if (config.siteSlug !== 'star' || config.confirmSourceOwner !== 'star' || !path.isAbsolute(config.snapshotRoot)) throw new Error('EXPLICIT_STAR_SOURCE_REQUIRED');
   const repository = await realpath(new URL('..', import.meta.url));
@@ -32,23 +33,28 @@ try {
     const planFile = path.join(destination, 'import-plan.json');
     let previousPlan;
     try { previousPlan = JSON.parse(await readFile(planFile, 'utf8')); } catch (error) { if (error.code !== 'ENOENT') throw error; }
-    const plan = planLegacyImport({ snapshot, siteId: config.siteId, siteSlug: 'star', previousPlan });
+    if (config.approvedBasicOmissions && mode !== 'display-acceptance') throw new Error('OMISSIONS_REQUIRE_DISPLAY_ACCEPTANCE');
+    const plan = planLegacyImport({ snapshot, siteId: config.siteId, siteSlug: 'star', previousPlan, approvedBasicOmissions: config.approvedBasicOmissions });
+    await verifyApprovedOmissionsMissing({ plan, photosRoot: config.photosRoot });
     if (!previousPlan) await writeFile(planFile, JSON.stringify(plan, null, 2), { flag: 'wx', mode: 0o600 });
     schema = await loadSiteContentSchema();
     let preflight, blocked;
     try { preflight = await preflightLegacyImport({ db: runtime.pool, plan, snapshotRoot: destination, validateContent: schema.parseSpaceContent }); }
     catch (error) { blocked = /^[A-Z_]+$/.test(error.message) ? error.message : 'PREFLIGHT_FAILED'; }
-    const sourceGate = legacyImportSourceGate(plan);
-    const report = { status: blocked ? 'BLOCKED_PREFLIGHT' : sourceGate.complete ? 'DRY_RUN_VERIFIED' : 'PARTIAL_SOURCE', sourceFingerprint: snapshot.fingerprint, siteId: plan.siteId, spaces: plan.sourceEvidence, mapping: plan.mapping, newAssets: preflight?.alreadyImported ? 0 : plan.assets.length, legacyDerivedOnly: plan.assets.filter(a => a.provenance === 'legacy-derived-only').length, originalSourceStatus: sourceGate.originalSourceStatus, missingOriginals: sourceGate.complete ? 'Originals mapped in plan; preflight validates their evidence.' : 'No originals claimed; only existing derivatives verified byte for byte. Real apply is blocked until external original mappings are confirmed.', unresolved: [...(blocked ? [blocked] : []), ...sourceGate.unresolved] };
+    const sourceGate = legacyImportSourceGate(plan, mode);
+    const displayVerified = mode === 'display-acceptance' && sourceGate.displayReady;
+    const status = blocked ? 'BLOCKED_PREFLIGHT' : displayVerified ? 'DISPLAY_DRY_RUN_VERIFIED' : sourceGate.complete ? 'DRY_RUN_VERIFIED' : 'PARTIAL_SOURCE';
+    const report = { status, mode, originalArchive: sourceGate.originalArchive, sourceFingerprint: snapshot.fingerprint, siteId: plan.siteId, spaces: plan.sourceEvidence, mapping: plan.mapping, newAssets: preflight?.alreadyImported ? 0 : plan.assets.length, legacyDerivedOnly: plan.assets.filter(a => a.provenance === 'legacy-derived-only').length, originalSourceStatus: sourceGate.originalSourceStatus, missingOriginals: sourceGate.complete ? 'Originals mapped in plan; preflight validates their evidence.' : displayVerified ? 'Display derivatives only; originals unavailable/not-mapped and original archive INCOMPLETE. No original is synthesized.' : 'No originals claimed; complete-mode apply is blocked until external original mappings are confirmed.', unresolved: [...(blocked ? [blocked] : []), ...sourceGate.unresolved] };
+    report.approvedBasicOmissions = plan.approvedBasicOmissions ?? [];
     await writeFile(path.join(destination, `report-${Date.now()}.json`), JSON.stringify(report, null, 2), { flag: 'wx', mode: 0o600 });
     if (blocked) throw new Error('PREFLIGHT_BLOCKED');
     if (operation === 'apply') {
       assertLegacyOperatorApplyAllowed(sourceGate);
       // Never apply an outdated snapshot while the old editor has moved on.
       await verifyLegacySourceUnchanged({ ...config, snapshot });
-      const result = await applyLegacyImport({ pool: runtime.pool, plan, snapshotRoot: destination, privateRoot: assetRoot(), validateContent: schema.parseSpaceContent });
-      console.log(`接入结果：${result.status}；仅保存私人草稿，未发布，旧源未修改。`);
-    } else console.log(sourceGate.complete ? 'dry-run 已验证；映射与报告已保存在本机备份目录，尚未写入内容或资源。' : 'dry-run 为 PARTIAL_SOURCE：原图映射尚未确认，真实 apply 已阻断；部分来源报告已保存在本机备份目录，尚未写入内容或资源。');
+      const result = await applyLegacyImport({ pool: runtime.pool, plan, snapshotRoot: destination, privateRoot: assetRoot(), validateContent: schema.parseSpaceContent, operatorMode: mode });
+      console.log(`接入结果：${result.status}；模式 ${mode}；原图归档 ${sourceGate.originalArchive}；仅保存私人草稿，未发布，旧源未修改。`);
+    } else console.log(displayVerified ? '展示资源 dry-run 已验证；原图归档仍为 INCOMPLETE（如有缺失）；所有权、空目标及文件验证均已执行，尚未写入内容或资源。' : sourceGate.complete ? 'dry-run 已验证；映射与报告已保存在本机备份目录，尚未写入内容或资源。' : 'dry-run 为 PARTIAL_SOURCE：原图映射尚未确认，完整模式 apply 已阻断；部分来源报告已保存在本机备份目录，尚未写入内容或资源。');
   }
 } catch {
   // Upstream DB/filesystem messages may contain credentials or private paths.

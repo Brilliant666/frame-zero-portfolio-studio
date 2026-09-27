@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { createLegacyImportFixture } from './fixtures/legacy-import-fixture.mjs';
-import { exportLegacySnapshot, planLegacyImport, applyLegacyImport, verifyLegacySourceUnchanged, preflightLegacyImport, planFingerprint } from '../db/accounts/legacy-import.mjs';
+import { exportLegacySnapshot, planLegacyImport, applyLegacyImport, verifyLegacySourceUnchanged, preflightLegacyImport, planFingerprint, snapshotFingerprint, verifyApprovedOmissionsMissing } from '../db/accounts/legacy-import.mjs';
 import { loadSiteContentSchema } from '../scripts/lib/load-site-schema.mjs';
 
 async function fixture(t) {
@@ -49,7 +49,7 @@ test('occupied target rejects before files or draft writes and rolls back', asyn
   const plan = planLegacyImport({ snapshot, siteId: randomUUID(), siteSlug: 'fixture-owner' });
   const sql = [];
   const client = { async query(q) { sql.push(q); return q.startsWith('SELECT s.id') ? { rowCount: 1, rows: [{ id: plan.siteId }] } : q.includes('FROM site_content_drafts') ? { rowCount: 1, rows: [{}] } : { rowCount: 0, rows: [] }; }, release() {} };
-  await assert.rejects(applyLegacyImport({ pool: { connect: async () => client }, plan, snapshotRoot: outputDirectory, privateRoot: path.join(root, 'target'), validateContent: (_space, c) => c }), /TARGET_CONTENT_NOT_EMPTY/);
+  await assert.rejects(applyLegacyImport({ pool: { connect: async () => client }, plan, snapshotRoot: outputDirectory, privateRoot: path.join(root, 'target'), validateContent: (_space, c) => c, operatorMode: 'display-acceptance' }), /TARGET_CONTENT_NOT_EMPTY/);
   assert.equal(sql.at(-1), 'ROLLBACK'); assert.equal(sql.some(q => q.startsWith('INSERT')), false);
 });
 test('changed source bytes abort before committing target drafts', async t => {
@@ -57,7 +57,7 @@ test('changed source bytes abort before committing target drafts', async t => {
   const plan = planLegacyImport({ snapshot, siteId: randomUUID(), siteSlug: 'fixture-owner' });
   await writeFile(path.join(outputDirectory, snapshot.assets[0].variants.full.file), 'corrupted');
   const sql = []; const client = { async query(q) { sql.push(q); return q.startsWith('SELECT s.id') ? { rowCount: 1, rows: [{}] } : { rowCount: 0, rows: [] }; }, release() {} };
-  await assert.rejects(applyLegacyImport({ pool: { connect: async () => client }, plan, snapshotRoot: outputDirectory, privateRoot: path.join(root, 'target'), validateContent: (_space, c) => c }), /SNAPSHOT_FILE_CHANGED/);
+  await assert.rejects(applyLegacyImport({ pool: { connect: async () => client }, plan, snapshotRoot: outputDirectory, privateRoot: path.join(root, 'target'), validateContent: (_space, c) => c, operatorMode: 'display-acceptance' }), /SNAPSHOT_FILE_CHANGED/);
   assert.equal(sql.at(-1), 'ROLLBACK'); assert.equal(sql.some(q => q.includes('INSERT INTO site_content_drafts')), false);
 });
 test('source changing after export blocks cutover comparison without modifying backup', async t => {
@@ -91,7 +91,30 @@ test('tampered valid-fingerprint plans cannot cross Site scope or reference fore
     [p => { p.contents.basic.templateWorks['cinematic-light'][0].assetId = randomUUID(); }, /CONTENT_ASSET_NOT_OWNED/],
   ]) {
     const plan = structuredClone(base); change(plan); plan.fingerprint = planFingerprint(plan);
-    await assert.rejects(applyLegacyImport({ pool: { connect: async () => client }, plan, snapshotRoot: outputDirectory, privateRoot: path.join(root, 'target'), validateContent: (_space, c) => c }), error);
+    await assert.rejects(applyLegacyImport({ pool: { connect: async () => client }, plan, snapshotRoot: outputDirectory, privateRoot: path.join(root, 'target'), validateContent: (_space, c) => c, operatorMode: 'display-acceptance' }), error);
   }
   assert.equal(statements.some(q => q.startsWith('INSERT')), false);
+});
+test('only fingerprint-bound explicitly approved missing top-level works are omitted', async t => {
+  const { snapshot, source } = await fixture(t);
+  const invalid = Array.from({ length: 9 }, (_, index) => ({ ...source.basic.works[0], assetId: undefined, code: `OLD-${index}`, image: `/photos/photo-${index}-full.webp`, preview: `/photos/photo-${index}-card.webp` }));
+  // JSON persistence has no undefined keys.
+  snapshot.records.basic.content.works = JSON.parse(JSON.stringify(invalid));
+  snapshot.fingerprint = snapshotFingerprint(snapshot);
+  const scope = { snapshot, siteId: randomUUID(), siteSlug: 'fixture-owner' };
+  assert.throws(() => planLegacyImport(scope), /WORK_WITHOUT_ASSET_ID/);
+  const approval = { sourceFingerprint: snapshot.fingerprint, workDigests: snapshot.records.basic.content.works.map(w => createHash('sha256').update(JSON.stringify(w)).digest('hex')) };
+  const plan = planLegacyImport({ ...scope, approvedBasicOmissions: approval });
+  assert.equal(plan.contents.basic.works.length, 0);
+  assert.equal(plan.approvedBasicOmissions.length, 9);
+  assert.deepEqual(plan.approvedBasicOmissions.map(x => x.work), snapshot.records.basic.content.works);
+  assert.equal(plan.contents.basic.templateWorks['cinematic-light'].length, 1);
+  assert.equal(plan.contents['premium-polaroid'].collections.length, 1);
+  assert.equal(plan.contents['premium-polaroid'].collections[0].id, source.premium.collections[0].id);
+  assert.throws(() => planLegacyImport({ ...scope, approvedBasicOmissions: { ...approval, sourceFingerprint: 'wrong' } }), /APPROVAL_MISMATCH/);
+  assert.throws(() => planLegacyImport({ ...scope, approvedBasicOmissions: { ...approval, workDigests: approval.workDigests.slice(1) } }), /WORK_WITHOUT_ASSET_ID/);
+  assert.throws(() => planLegacyImport({ ...scope, previousPlan: plan }), /PLAN_CONFLICT/);
+  await verifyApprovedOmissionsMissing({ plan, photosRoot: source.photosRoot });
+  await writeFile(path.join(source.photosRoot, 'photo-0-full.webp'), 'returned-source');
+  await assert.rejects(verifyApprovedOmissionsMissing({ plan, photosRoot: source.photosRoot }), /OMITTED_SOURCE_NOW_EXISTS/);
 });

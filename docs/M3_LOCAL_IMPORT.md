@@ -43,14 +43,57 @@ as an original. Any original files/catalog outside the manifest remain in the
 old source and require separately confirmed original mappings before claiming
 full-original migration. No old file is deleted.
 
-This is a hard gate for the real operator: if any planned resource remains
+The default `complete` mode retains its hard original-source gate: if a resource remains
 `legacy-derived-only` or lacks an original mapping, `dry-run` reports
 `PARTIAL_SOURCE` with `UNRESOLVED_ORIGINALS_NOT_IN_MANIFEST` in `unresolved`.
 It does not claim `DRY_RUN_VERIFIED`. Real `apply` stops before any target file
-or draft writes; there is no ignore/override switch. The current manifest-only
+or draft writes. The current manifest-only
 export therefore cannot authorize full real-star import. Confirming and adding
 the external original mappings requires follow-up work; existing sources stay
 untouched in the meantime.
+
+## Local display acceptance (explicit operator mode)
+
+`LOCAL_M3_HANDS_ON_ACCEPTANCE_01` separately authorizes verified existing display
+resources to enter the confirmed real star's private drafts without waiting for
+original archival. Use the same exported snapshot and persisted plan (do not
+generate new IDs or discard an earlier plan):
+
+```text
+node --env-file=.env.accounts.local scripts/site-legacy-import.mjs dry-run <config.json> --mode=display-acceptance
+node --env-file=.env.accounts.local scripts/site-legacy-import.mjs apply <config.json> --mode=display-acceptance
+```
+
+This is not a force/ignore-errors mode. All three display variants must be
+present and pass the same actual-file hash, path and metadata checks. The real
+star owner, premium grant, empty target, strict lossless document validation,
+source freshness and per-Site reference checks are unchanged. Missing variants,
+tampered bytes, foreign resources and occupied target content still block.
+
+Reports distinguish `DISPLAY_DRY_RUN_VERIFIED` from complete-source verification;
+`originalArchive=INCOMPLETE` and original-source unresolved evidence remain when
+originals are absent. The database import receipt records
+`operatorMode=display-acceptance`, per-resource `provenance=legacy-derived-only`
+and `originalStatus=unavailable/not-mapped`. No original variant is generated,
+no upload behavior changes, and an original request returns 404 instead of
+falling back to full. Both independent drafts remain unpublished.
+
+Omitting the mode or using `--mode=complete` keeps the original blocking rule.
+Display acceptance is only a local operator command, not a browser flag or
+public migration endpoint. Post-import repeats remain idempotent and preserve
+later edits. Original archival is a separate incomplete milestone.
+
+An independently user-approved omission of broken legacy top-level basic works
+can be expressed in the private operator config as `approvedBasicOmissions`:
+`{ "sourceFingerprint": "<snapshot fingerprint>", "workDigests": ["<SHA-256 of JSON.stringify(exact source work)>"] }`.
+Every approved digest must identify exactly one source work without an asset ID,
+whose old `photo-N-full.webp` / `photo-N-card.webp` references are still absent.
+Unknown/duplicate approvals, changed source fingerprints and recovered source
+files block. This is only available in display acceptance, never an automatic
+missing-file filter. Only approved top-level `basic.works` entries are omitted
+in the target; templateWorks and premium collections cannot be omitted this way.
+The immutable raw backup retains all source fields, and plan, local report and
+database receipt retain each exact original work, index, digest and reason.
 
 `snapshot.json` is written last: an export without it is incomplete. The bundle
 contains the standalone readable SQLite backup, raw source content/manifest,

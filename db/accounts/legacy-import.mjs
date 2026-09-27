@@ -5,6 +5,7 @@ import { mkdir, readFile, realpath, stat, copyFile, writeFile, link, rm } from '
 import path from 'node:path';
 import sharp from 'sharp';
 import { assetPath, insertPreparedAsset, UUID } from './assets.mjs';
+import { legacyImportSourceGate, assertLegacyOperatorApplyAllowed } from '../../scripts/lib/legacy-import-source-gate.mjs';
 
 const hash = value => createHash('sha256').update(value).digest('hex');
 const jsonHash = value => hash(JSON.stringify(value));
@@ -129,11 +130,20 @@ export async function verifyLegacySourceUnchanged({ snapshot, sqlitePath, photos
 /** Dry-run is pure: it generates no target files or database writes. Persist the
  * returned plan once before apply; random IDs never derive from content hashes.
  */
-export function planLegacyImport({ snapshot, siteId, siteSlug, previousPlan }) {
+export function planLegacyImport({ snapshot, siteId, siteSlug, previousPlan, approvedBasicOmissions }) {
   if (!UUID.test(siteId) || !/^[a-z][a-z0-9-]{2,31}$/.test(siteSlug)) fail('INVALID_TARGET');
   if (snapshot.version !== 1 || snapshot.fingerprint !== snapshotFingerprint(snapshot)) fail('SNAPSHOT_CHANGED');
+  const omissions = [];
+  if (approvedBasicOmissions !== undefined) {
+    if (approvedBasicOmissions.sourceFingerprint !== snapshot.fingerprint || !Array.isArray(approvedBasicOmissions.workDigests) || !approvedBasicOmissions.workDigests.length || new Set(approvedBasicOmissions.workDigests).size !== approvedBasicOmissions.workDigests.length) fail('OMISSION_APPROVAL_MISMATCH');
+    for (const digest of approvedBasicOmissions.workDigests) {
+      const matches = snapshot.records.basic.content.works.flatMap((work, index) => jsonHash(work) === digest ? [{ index, work }] : []);
+      if (matches.length !== 1 || matches[0].work.assetId || !/^\/photos\/photo-\d+-full\.webp$/.test(matches[0].work.image) || !/^\/photos\/photo-\d+-card\.webp$/.test(matches[0].work.preview)) fail('OMISSION_APPROVAL_MISMATCH');
+      omissions.push({ digest, ...structuredClone(matches[0]), reason: 'USER_APPROVED_MISSING_LEGACY_BASIC_REFERENCE' });
+    }
+  }
   if (previousPlan) {
-    if (previousPlan.siteId !== siteId || previousPlan.siteSlug !== siteSlug || previousPlan.sourceFingerprint !== snapshot.fingerprint || previousPlan.fingerprint !== planFingerprint(previousPlan)) fail('PLAN_CONFLICT');
+    if (previousPlan.siteId !== siteId || previousPlan.siteSlug !== siteSlug || previousPlan.sourceFingerprint !== snapshot.fingerprint || previousPlan.fingerprint !== planFingerprint(previousPlan) || jsonHash(previousPlan.approvedBasicOmissions ?? []) !== jsonHash(omissions)) fail('PLAN_CONFLICT');
     return structuredClone(previousPlan);
   }
   const mapping = {}, assets = [], byDigest = new Map();
@@ -165,7 +175,8 @@ export function planLegacyImport({ snapshot, siteId, siteSlug, previousPlan }) {
     // Resolved URLs belong to the authorized asset DTO, not stored content.
     return { ...work, assetId: id, image: '', preview: '' };
   };
-  contents.basic.works = contents.basic.works.map(mapWork);
+  const omittedIndexes = new Set(omissions.map(item => item.index));
+  contents.basic.works = contents.basic.works.filter((_work, index) => !omittedIndexes.has(index)).map(mapWork);
   contents.basic.templateWorks = Object.fromEntries(Object.entries(contents.basic.templateWorks).map(([key, works]) => [key, works.map(mapWork)]));
   for (const collection of contents['premium-polaroid'].collections) {
     collection.assetIds = collection.assetIds.map(id => mapped(id));
@@ -173,10 +184,18 @@ export function planLegacyImport({ snapshot, siteId, siteSlug, previousPlan }) {
     collection.focusAssetId = mapped(collection.focusAssetId);
   }
   for (const content of Object.values(contents)) for (const social of content.social) if (social.qrAssetId) social.qrAssetId = mapped(social.qrAssetId, 'qr');
-  const plan = { version: 1, id: randomUUID(), siteId, siteSlug, sourceFingerprint: snapshot.fingerprint, mapping, assets, contents,
+  const plan = { version: 1, id: randomUUID(), siteId, siteSlug, sourceFingerprint: snapshot.fingerprint, mapping, assets, contents, approvedBasicOmissions: omissions,
     sourceEvidence: Object.fromEntries(Object.entries(snapshot.records).map(([space, r]) => [space, { sourceId: r.sourceId, revision: r.revision, updatedAt: r.updatedAt }])) };
   plan.fingerprint = planFingerprint(plan);
   return plan;
+}
+export async function verifyApprovedOmissionsMissing({ plan, photosRoot }) {
+  for (const item of plan.approvedBasicOmissions ?? []) for (const src of [item.work.image, item.work.preview]) {
+    if (!/^\/photos\/photo-\d+-(?:full|card)\.webp$/.test(src)) fail('OMISSION_SOURCE_PATH');
+    try { await stat(path.join(photosRoot, src.slice('/photos/'.length))); }
+    catch (error) { if (error.code === 'ENOENT') continue; throw error; }
+    fail('OMITTED_SOURCE_NOW_EXISTS');
+  }
 }
 export function planFingerprint(plan) {
   const value = { ...plan }; delete value.fingerprint;
@@ -256,7 +275,9 @@ export async function preflightLegacyImport({ db, plan, snapshotRoot, validateCo
  * Files remain on transaction failure for an exact-plan retry. No recursive
  * cleanup is performed and sources are never deleted or recompressed.
  */
-export async function applyLegacyImport({ pool, plan, snapshotRoot, privateRoot, validateContent }) {
+export async function applyLegacyImport({ pool, plan, snapshotRoot, privateRoot, validateContent, operatorMode = null }) {
+  if (operatorMode !== null && !['complete', 'display-acceptance'].includes(operatorMode)) fail('INVALID_IMPORT_MODE');
+  if (operatorMode !== null) assertLegacyOperatorApplyAllowed(legacyImportSourceGate(plan, operatorMode));
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -292,7 +313,7 @@ export async function applyLegacyImport({ pool, plan, snapshotRoot, privateRoot,
     }
     await assertOwnedReferences(client, plan.siteId, ids);
     for (const [space, content] of Object.entries(contents)) await client.query('INSERT INTO site_content_drafts(site_id,space,content,revision) VALUES($1,$2,$3::jsonb,1)', [plan.siteId, space, JSON.stringify(content)]);
-    await client.query('INSERT INTO site_legacy_imports(id,site_id,fingerprint,evidence) VALUES($1,$2,$3,$4::jsonb)', [plan.id, plan.siteId, plan.fingerprint, JSON.stringify({ sourceFingerprint: plan.sourceFingerprint, mapping: plan.mapping, sourceEvidence: plan.sourceEvidence, assets: plan.assets.map(a => ({ id: a.id, provenance: a.provenance, variants: a.sourceVariants })) })]);
+    await client.query('INSERT INTO site_legacy_imports(id,site_id,fingerprint,evidence) VALUES($1,$2,$3,$4::jsonb)', [plan.id, plan.siteId, plan.fingerprint, JSON.stringify({ operatorMode, approvedBasicOmissions: plan.approvedBasicOmissions ?? [], sourceFingerprint: plan.sourceFingerprint, mapping: plan.mapping, sourceEvidence: plan.sourceEvidence, assets: plan.assets.map(a => ({ id: a.id, provenance: a.provenance, originalStatus: a.sourceVariants.original ? 'mapped' : 'unavailable/not-mapped', variants: a.sourceVariants })) })]);
     await client.query('COMMIT');
     return { status: 'IMPORTED', mapping: plan.mapping };
   } catch (error) { await client.query('ROLLBACK').catch(() => {}); throw error; }

@@ -4,7 +4,8 @@ import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { provisionAccount } from '../db/accounts/provision.mjs';
 import { exportLegacySnapshot, planLegacyImport, applyLegacyImport, planFingerprint } from '../db/accounts/legacy-import.mjs';
-import { insertPreparedAsset } from '../db/accounts/assets.mjs';
+import { insertPreparedAsset, readAssetVariant } from '../db/accounts/assets.mjs';
+import { legacyImportSourceGate, assertLegacyOperatorApplyAllowed } from '../scripts/lib/legacy-import-source-gate.mjs';
 import { loadSiteContentSchema } from '../scripts/lib/load-site-schema.mjs';
 import { createLegacyImportFixture } from './fixtures/legacy-import-fixture.mjs';
 
@@ -19,7 +20,9 @@ export async function siteLegacyImportIntegration({ runtime, root, password }) {
     const snapshotRoot = path.join(directory, 'backup');
     const snapshot = await exportLegacySnapshot({ ...source, outputDirectory: snapshotRoot });
     const plan = planLegacyImport({ snapshot, siteId: target.siteId, siteSlug: slug });
-    const options = { pool: runtime.pool, plan, snapshotRoot, privateRoot: path.join(directory, 'private-assets'), validateContent: schema.parseSpaceContent };
+    assert.throws(() => assertLegacyOperatorApplyAllowed(legacyImportSourceGate(plan)), /PARTIAL_SOURCE_APPLY_BLOCKED/);
+    assert.doesNotThrow(() => assertLegacyOperatorApplyAllowed(legacyImportSourceGate(plan, 'display-acceptance')));
+    const options = { pool: runtime.pool, plan, snapshotRoot, privateRoot: path.join(directory, 'private-assets'), validateContent: schema.parseSpaceContent, operatorMode: 'display-acceptance' };
     const originalRows = source.db.prepare('SELECT * FROM site_settings ORDER BY id').all();
     const otherSlug = `other-${randomUUID().slice(0, 8)}`;
     const other = await provisionAccount(runtime, { username: otherSlug, slug: otherSlug, email: `${otherSlug}@example.invalid`, password: password ?? `Fixture-${randomUUID()}`, premium: true });
@@ -54,6 +57,10 @@ export async function siteLegacyImportIntegration({ runtime, root, password }) {
     assert.equal(basic.social[0].qrAssetId, premium.social[0].qrAssetId);
     const assets = (await runtime.pool.query('SELECT * FROM site_assets WHERE site_id=$1', [target.siteId])).rows;
     assert.equal(assets.length, 2);
+    const receipt = (await runtime.pool.query('SELECT evidence FROM site_legacy_imports WHERE site_id=$1', [target.siteId])).rows[0].evidence;
+    assert.equal(receipt.operatorMode, 'display-acceptance');
+    assert.ok(receipt.assets.every(a => a.provenance === 'legacy-derived-only' && a.originalStatus === 'unavailable/not-mapped'));
+    for (const asset of assets) await assert.rejects(readAssetVariant(asset, 'original', options.privateRoot), error => error.status === 404);
     for (const asset of assets) for (const [name, variant] of Object.entries(asset.variants)) {
       const expected = plan.assets.find(a => a.id === asset.id).sourceVariants[name];
       assert.deepEqual(await readFile(path.join(options.privateRoot, variant.key)), await readFile(path.join(snapshotRoot, expected.file)));
