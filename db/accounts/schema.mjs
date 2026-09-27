@@ -41,3 +41,18 @@ export const contentDrafts = pgTable('site_content_drafts', {
 }, table => [primaryKey({ columns: [table.siteId, table.space] }),
   check('known_content_space', sql`${table.space} IN ('basic', 'premium-polaroid')`),
   check('positive_draft_revision', sql`${table.revision} > 0`)]);
+
+export const siteAssets = pgTable('site_assets', {
+  id: uuid('id').primaryKey(), siteId: uuid('site_id').notNull().references(() => sites.id),
+  digest: text('digest').notNull(), originalType: text('original_type').notNull(),
+  width: integer('width').notNull(), height: integer('height').notNull(),
+  variants: jsonb('variants').notNull(), createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, table => [uniqueIndex('site_assets_site_digest_unique').on(table.siteId, table.digest),
+  check('asset_digest_sha256', sql`${table.digest} ~ '^[a-f0-9]{64}$'`),
+  check('asset_width_positive', sql`${table.width} > 0`), check('asset_height_positive', sql`${table.height} > 0`)]);
+
+export const siteLegacyImports = pgTable('site_legacy_imports', {
+  id: uuid('id').primaryKey(), siteId: uuid('site_id').notNull().references(() => sites.id),
+  fingerprint: text('fingerprint').notNull(), evidence: jsonb('evidence').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, table => [uniqueIndex('site_legacy_import_unique').on(table.siteId, table.fingerprint)]);

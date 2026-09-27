@@ -5,13 +5,14 @@ import type { PreviewPortfolioDocumentV1 } from "./document";
 import type { SiteContent, Work } from "../site-config";
 import { getClientVisiblePortfolioTitle } from "../client-visible-title";
 import Lightbox from "../templates/shared/lightbox";
+import type { PhotoAsset } from "../photo-library";
 import { useTemplateInteractions } from "../templates/shared/use-template-interactions";
 import { PreviewLoading } from "./preview-loading";
 
 // Keep local-only design assets out of both production runtime artifacts.
-const StarMotionShell = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? lazy(() => import("./star-motion-shell")) : Fragment;
-const StarThemeToggle = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? lazy(() => import("./star-motion-shell").then(module => ({ default: module.StarThemeToggle }))) : () => null;
-const StarNavigation = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? lazy(() => import("./star-motion-shell").then(module => ({ default: module.StarNavigation }))) : () => null;
+const StarMotionShell = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? lazy(() => import("./star-motion-shell")) : Fragment;
+const StarThemeToggle = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? lazy(() => import("./star-motion-shell").then(module => ({ default: module.StarThemeToggle }))) : () => null;
+const StarNavigation = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? lazy(() => import("./star-motion-shell").then(module => ({ default: module.StarNavigation }))) : () => null;
 
 const PolaroidFieldTemplate = lazy(() => import("../templates/polaroid-field/template"));
 
@@ -22,9 +23,9 @@ export function previewDisplayContent(document: PreviewPortfolioDocumentV1): Sit
     activeTemplate: "polaroid-field", works: [], templateWorks: {} };
 }
 
-export const PreviewPortfolioView = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? PreviewPortfolioExperience : () => null;
+export const PreviewPortfolioView = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? PreviewPortfolioExperience : () => null;
 
-function PreviewPortfolioExperience({ document, embedded = false, initialCollectionId }: { document: PreviewPortfolioDocumentV1; embedded?: boolean; initialCollectionId?: string }) {
+export function PreviewPortfolioExperience({ document, embedded = false, initialCollectionId, assets }: { document: PreviewPortfolioDocumentV1; embedded?: boolean; initialCollectionId?: string; assets?: readonly PhotoAsset[] }) {
   const content = useMemo(() => previewDisplayContent(document), [document]);
   const interactions = useTemplateInteractions(content.works);
   const { setActiveWork } = interactions;
@@ -44,7 +45,7 @@ function PreviewPortfolioExperience({ document, embedded = false, initialCollect
       packages={content.packages.filter(p => p.enabled)} bookingTemplate={["【约拍任务申请】", ...content.bookingFields].join("\n")}
       booted copiedKey={interactions.copiedKey} isPreview={embedded} onCopy={interactions.copyText}
       onOpenWork={openWork} onBeforeViewChange={close}
-      collectionWorkspace={{ collections: document.collections, initialCollectionId, headerAccessory: <StarThemeToggle />, Navigation:embedded?undefined:StarNavigation }} /></Suspense>
+      collectionWorkspace={{ collections: document.collections, initialCollectionId, assets, headerAccessory: <StarThemeToggle />, Navigation:embedded?undefined:StarNavigation }} /></Suspense>
     {interactions.activeWork && <Lightbox theme="light" safeMissingImage separateControls motionOrigin={origin} work={interactions.activeWork} works={[...interactions.lightboxWorks]}
       frameRef={interactions.lightboxRef} closeButtonRef={interactions.closeButtonRef} onMove={interactions.moveActiveWork} onClose={close} />}
   </StarMotionShell></Suspense>;

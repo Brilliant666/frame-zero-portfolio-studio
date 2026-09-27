@@ -64,17 +64,28 @@ test('Site schemas reject unknown fields, malformed fields and unsupported templ
   }
 });
 
-test('all persisted asset channels are rejected until Site-scoped M3 ownership is connected', async t => {
+test('Site asset structure is strict and every reference channel is collected for ownership validation', async t => {
   const m = await schema(t);
   for (const change of [d => d.works.push({ assetId: 'global-photo' }), d => d.templateWorks['cinematic-light'].push({ image: '/photos/global.webp' }), d => d.social.push({ label: 'card', handle: '', qrAssetId: 'a'.repeat(64) })]) {
     const copy = m.createEmptyBasicContent(); change(copy);
-    assert.throws(() => m.parseSpaceContent('basic', copy), m.UnconnectedAssetError);
+    assert.throws(() => m.parseSpaceContent('basic', copy));
   }
   const emptyCollection = { id: '11111111-1111-4111-8111-111111111111', name: 'Empty own collection', description: '', visible: true, coverAssetId: null, coverFit: 'natural', coverFocusX: 50, coverFocusY: 50, assetIds: [], focusAssetId: null };
   const premium = m.createEmptyPreviewDocument(); premium.collections = [emptyCollection];
   assert.deepEqual(m.parseSpaceContent('premium-polaroid', premium), premium);
   for (const change of [d => d.collections[0].assetIds.push('global-photo'), d => d.collections[0].coverAssetId = 'global-photo', d => { d.collections[0].assetIds = ['global-photo']; d.collections[0].focusAssetId = 'global-photo'; }, d => d.social.push({ label: 'card', handle: '', qrAssetId: 'b'.repeat(64) })]) {
     const copy = structuredClone(premium); change(copy);
-    assert.throws(() => m.parseSpaceContent('premium-polaroid', copy), m.UnconnectedAssetError);
+    assert.throws(() => m.parseSpaceContent('premium-polaroid', copy));
   }
+  const ids = ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333'];
+  premium.collections[0] = { ...emptyCollection, assetIds: [ids[0], ids[1]], coverAssetId: ids[0], focusAssetId: ids[1] };
+  premium.social = [{ label: 'Card', handle: '', qrAssetId: ids[2] }];
+  assert.deepEqual(m.parseSpaceContent('premium-polaroid', premium), premium);
+  assert.deepEqual(m.contentAssetIds('premium-polaroid', premium).sort(), ids);
+  const basic = m.createEmptyBasicContent();
+  const work = { assetId: ids[0], code: '', title: '', subtitle: '', image: `/api/sites/fixture/assets/${ids[0]}/full`, preview: '', position: '50% 50%', previewWidth: 100, previewHeight: 100, fullWidth: 100, enabled: true };
+  basic.works = [work]; basic.templateWorks['cinematic-light'] = [{ ...work, assetId: ids[1], image: '' }]; basic.social = [{ label: 'Card', handle: '', qrAssetId: ids[2] }];
+  const parsed = m.parseSpaceContent('basic', basic);
+  assert.equal(parsed.works[0].image, '', 'Only stable identity, not resolved URL, persists');
+  assert.deepEqual(m.contentAssetIds('basic', parsed).sort(), ids);
 });

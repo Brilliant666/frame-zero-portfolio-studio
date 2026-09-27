@@ -1,4 +1,4 @@
-import { isTemplateId, templateCatalog, type SiteContent } from "../site-config";
+import { isTemplateId, templateCatalog, type SiteContent, type Work } from "../site-config";
 import { parsePreviewDocument, type PreviewPortfolioDocumentV1 } from "../preview-workspace/document";
 
 export type ContentSpace = "basic" | "premium-polaroid";
@@ -33,16 +33,46 @@ function basicList(value: unknown, max: number): unknown[] {
   if (!Array.isArray(value) || value.length > max) throw new Error("基础列表字段不合法");
   return value;
 }
-function assertNoAssets(document: PreviewPortfolioDocumentV1) {
-  if (document.social.some(s => s.qrAssetId) || document.collections.some(c => c.assetIds.length || c.coverAssetId || c.focusAssetId)) {
-    throw new UnconnectedAssetError("Site 素材尚未接线，不能保存未经归属验证的素材引用。");
+const SITE_ASSET = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+function siteAsset(value: unknown): string {
+  if (typeof value !== "string" || !SITE_ASSET.test(value)) throw new Error("Site 资源身份不合法");
+  return value;
+}
+export function parseSitePremiumDocument(value: unknown): PreviewPortfolioDocumentV1 {
+  // Reuse the unchanged legacy structure parser, but validate Site card IDs
+  // separately. Do not teach the global legacy parser to accept hosted URLs.
+  const raw = value as PreviewPortfolioDocumentV1;
+  if (!raw || !Array.isArray(raw.social)) throw new Error("平台卡格式错误");
+  const social = raw.social.map(s => {
+    if (s.qrAssetId !== undefined) siteAsset(s.qrAssetId);
+    return s;
+  });
+  const parsed = parsePreviewDocument({ ...raw, social: social.map(s => ({ ...s, ...(s.qrAssetId ? { qrAssetId: "0".repeat(64) } : {}) })) });
+  parsed.social = parsed.social.map((s, i) => ({ ...s, ...(social[i].qrAssetId ? { qrAssetId: social[i].qrAssetId } : {}) }));
+  for (const c of parsed.collections) for (const id of [...c.assetIds, c.coverAssetId, c.focusAssetId]) if (id) siteAsset(id);
+  return parsed;
+}
+function parseWork(value: unknown): Work {
+  const w = basicRecord(value, ["assetId", "slotIndex", "locked", "code", "title", "subtitle", "image", "preview", "position", "previewWidth", "previewHeight", "fullWidth", "enabled"], ["slotIndex", "locked"]);
+  const assetId = siteAsset(w.assetId);
+  for (const k of ["previewWidth", "previewHeight", "fullWidth"] as const) if (!Number.isSafeInteger(w[k]) || (w[k] as number) < 1 || (w[k] as number) > 100000) throw new Error("作品尺寸不合法");
+  if (typeof w.enabled !== "boolean" || (w.locked !== undefined && typeof w.locked !== "boolean") || (w.slotIndex !== undefined && (!Number.isSafeInteger(w.slotIndex) || (w.slotIndex as number) < 0 || (w.slotIndex as number) > 1000))) throw new Error("作品配置不合法");
+  for (const k of ["image", "preview"] as const) {
+    if (typeof w[k] !== "string" || (w[k] !== "" && !new RegExp(`^/api/sites/[a-z0-9-]+/assets/${assetId}/(?:thumbnail|card|full)$`).test(w[k] as string))) throw new Error("作品地址不合法");
   }
+  return { assetId, ...(w.slotIndex !== undefined ? { slotIndex: w.slotIndex as number } : {}), ...(w.locked !== undefined ? { locked: w.locked as boolean } : {}),
+    code: basicText(w.code), title: basicText(w.title), subtitle: basicText(w.subtitle), position: basicText(w.position, 100),
+    image: "", preview: "", previewWidth: w.previewWidth as number, previewHeight: w.previewHeight as number, fullWidth: w.fullWidth as number, enabled: w.enabled };
+}
+export function contentAssetIds(space: ContentSpace, content: SiteContent | PreviewPortfolioDocumentV1): string[] {
+  const ids = content.social.flatMap(s => s.qrAssetId ? [s.qrAssetId] : []);
+  if (space === "premium-polaroid") for (const c of (content as PreviewPortfolioDocumentV1).collections) ids.push(...c.assetIds, ...[c.coverAssetId,c.focusAssetId].filter((v): v is string => Boolean(v)));
+  else { const c = content as SiteContent; for (const w of [...c.works, ...Object.values(c.templateWorks ?? {}).flat()]) if (w.assetId) ids.push(w.assetId); }
+  return [...new Set(ids)];
 }
 export function parseSpaceContent(space: ContentSpace, value: unknown): SiteContent | PreviewPortfolioDocumentV1 {
   if (space === "premium-polaroid") {
-    const document = parsePreviewDocument(value);
-    assertNoAssets(document);
-    return document;
+    return parseSitePremiumDocument(value);
   }
   const raw = basicRecord(value, ["activeTemplate", "profile", "hero", "trustItems", "works", "templateWorks", "packages", "contact", "social", "bookingFields", "statement"]);
   const { activeTemplate, works, templateWorks } = raw;
@@ -50,11 +80,10 @@ export function parseSpaceContent(space: ContentSpace, value: unknown): SiteCont
   if (!Array.isArray(works) || !templateWorks || typeof templateWorks !== "object" || Array.isArray(templateWorks)) throw new Error("基础作品格式错误");
   for (const [id, entries] of Object.entries(templateWorks)) {
     if (!isTemplateId(id) || !Array.isArray(entries)) throw new Error("模板作品格式错误");
-    if (entries.length) throw new UnconnectedAssetError("Site 素材尚未接线");
+    basicList(entries, 500);
   }
-  if (works.length) throw new UnconnectedAssetError("Site 素材尚未接线");
   const content: SiteContent = {
-    activeTemplate, works: [], templateWorks: structuredClone(templateWorks) as SiteContent["templateWorks"],
+    activeTemplate, works: basicList(works, 500).map(parseWork), templateWorks: Object.fromEntries(Object.entries(templateWorks).map(([id, entries]) => [id, (entries as unknown[]).map(parseWork)])),
     profile: basicFields(raw.profile, ["brand", "mark", "photographer", "role", "city", "availability", "intro"]),
     hero: basicFields(raw.hero, ["eyebrow", "title", "services"]),
     contact: basicFields(raw.contact, ["wechat", "email", "note"]),
@@ -68,10 +97,9 @@ export function parseSpaceContent(space: ContentSpace, value: unknown): SiteCont
     social: basicList(raw.social, 20).map(item => {
       const s = basicRecord(item, ["label", "handle", "qrAssetId"], ["qrAssetId"]);
       if (s.qrAssetId !== undefined) {
-        if (typeof s.qrAssetId !== "string" || !/^[a-f0-9]{64}$/.test(s.qrAssetId)) throw new Error("基础平台卡字段不合法");
-        throw new UnconnectedAssetError("Site 素材尚未接线");
+        siteAsset(s.qrAssetId);
       }
-      return { label: basicText(s.label, 100), handle: basicText(s.handle) };
+      return { label: basicText(s.label, 100), handle: basicText(s.handle), ...(s.qrAssetId ? { qrAssetId: s.qrAssetId as string } : {}) };
     }),
     bookingFields: basicList(raw.bookingFields, 40).map(v => basicText(v, 200)),
   };

@@ -14,6 +14,7 @@ import {
 } from "react";
 import { cloneSiteContent, siteConfig, type SiteContent } from "../site-config";
 import type { SiteEditorScope } from "../site-editor/scope";
+import { hydrateConfirmedSiteWorks, hydrateSiteWorks, loadSiteAssets } from "../site-editor/assets-client";
 import {
   canSubmitAdminSave,
   hasAdminChanges,
@@ -129,7 +130,10 @@ export function AdminProvider({
       if (request !== loadRequestRef.current) return false;
       if (scoped && draftVersion.current !== startVersion) throw new Error("读取期间有新修改，草稿已保留；请确认后重新读取。");
       if (scoped && (!Number.isSafeInteger(result.revision) || result.revision! < 0 || !result.content || result.warning)) throw new Error("站点草稿响应无效，草稿已保留");
-      const loaded = cloneSiteContent(result.content);
+      const loaded = siteScope
+        ? hydrateSiteWorks(cloneSiteContent(result.content), (await loadSiteAssets(siteScope.assetsEndpoint)).assets)
+        : cloneSiteContent(result.content);
+      if (request !== loadRequestRef.current || scoped && draftVersion.current !== startVersion) return false;
       replaceContent(loaded);
       setSavedContent(cloneSiteContent(loaded));
       setUpdatedAt(result.updatedAt);
@@ -146,7 +150,7 @@ export function AdminProvider({
       setMessage(error instanceof Error ? error.message : "读取失败");
       return false;
     }
-  }, [endpoint, replaceContent, scoped]);
+  }, [endpoint, replaceContent, scoped, siteScope]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => void reload(), 0);
@@ -187,7 +191,9 @@ export function AdminProvider({
       if (!response.ok || !result.content) throw new Error(result.error ?? "保存失败");
       if (siteScope && (!Number.isSafeInteger(result.revision) || result.revision! <= revision)) throw new Error("保存确认版本无效，草稿已保留");
 
-      const saved = cloneSiteContent(result.content);
+      const saved = siteScope
+        ? hydrateConfirmedSiteWorks(cloneSiteContent(result.content), siteScope.assetsEndpoint)
+        : cloneSiteContent(result.content);
       const reconciled = reconcileAdminSave(submitted, contentRef.current, saved);
       replaceContent(cloneSiteContent(reconciled.draft));
       setSavedContent(cloneSiteContent(saved));

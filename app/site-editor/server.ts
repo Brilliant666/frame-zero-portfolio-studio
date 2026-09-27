@@ -1,7 +1,7 @@
 import { accountRequestAllowed, accountJson, getAccountRuntime, readSiteForPrincipal } from "../../db/accounts/http.mjs";
 import { isSiteSlug } from "../../db/accounts/site-slug.mjs";
 import { createEmptyPreviewDocument } from "../preview-workspace/document";
-import { createEmptyBasicContent, isContentSpace, parseSpaceContent, UnconnectedAssetError, type ContentSpace } from "./content-schema";
+import { createEmptyBasicContent, isContentSpace, parseSpaceContent, contentAssetIds, UnconnectedAssetError, type ContentSpace } from "./content-schema";
 
 export async function authorizeEditor(request: Request, slug: string, space: string) {
   if (!isSiteSlug(slug) || !isContentSpace(space)) return { denied: 404 as const };
@@ -51,6 +51,11 @@ export async function handleDraftRequest(request: Request, slug: string, space: 
       return accountJson({ error: error instanceof UnconnectedAssetError ? error.message : "内容或版本不合法，未保存" }, error instanceof UnconnectedAssetError ? 422 : 400);
     }
     const expected = payload.expectedRevision;
+    const ids = contentAssetIds(auth.space, content);
+    if (ids.length) {
+      const owned = await runtime.pool.query("SELECT id FROM site_assets WHERE site_id=$1 AND id=ANY($2::uuid[])", [account.site.id, ids]);
+      if (owned.rowCount !== ids.length) return accountJson({ error: "资源不存在或不属于当前站点，未保存" }, 422);
+    }
     const result = expected === 0
       ? await runtime.pool.query(`INSERT INTO site_content_drafts(site_id,space,content,revision)
           SELECT $1::uuid,$2,$4::jsonb,1 WHERE ${ownership}

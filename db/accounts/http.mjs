@@ -17,7 +17,7 @@ export function accountRequestAllowed(request, config) {
   if (!proof || request.headers.get('x-account-local-proof') !== proof) return false;
   if (request.headers.get('sec-fetch-site') === 'cross-site') return false;
   const origin = request.headers.get('origin');
-  return request.method === 'GET' ? !origin || origin === config.origin : origin === config.origin;
+  return ['GET', 'HEAD'].includes(request.method) ? !origin || origin === config.origin : origin === config.origin;
 }
 export function accountJson(body, status = 200) {
   return Response.json(body, { status, headers: { 'Cache-Control': 'no-store, private' } });

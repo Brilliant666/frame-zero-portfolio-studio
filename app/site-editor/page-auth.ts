@@ -16,6 +16,7 @@ export async function requireEditor(slug: string, space: ContentSpace) {
     endpoint: `/api/sites/${encodeURIComponent(slug)}/drafts/${space}`,
     adminBasePath: `/${encodeURIComponent(slug)}/admin/${space}`,
     previewHref: `/${encodeURIComponent(slug)}/admin/preview/${space}`,
-    assetsMode: "unconnected" as const,
+    assetsMode: "site" as const,
+    assetsEndpoint: `/api/sites/${encodeURIComponent(slug)}/assets`,
   } };
 }

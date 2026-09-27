@@ -34,6 +34,8 @@ import {
   getTemplateMaterialPlanSummary,
 } from "../../templates/material-profiles";
 import { AdminSection } from "../admin-form";
+import { loadSiteAssets } from "../../site-editor/assets-client";
+import SiteAssetUpload from "../../site-editor/asset-upload";
 import { useAdmin } from "../admin-provider";
 import styles from "../admin-v2.module.css";
 import { LayoutCompositionPreview } from "../template/template-composition-preview";
@@ -243,15 +245,17 @@ export default function LayoutWorkspace() {
   }, []);
 
   const loadLibrary = useCallback(async () => {
-    if (siteScope) {
-      setLibraryItems([]);
-      setLibraryState("empty");
-      setLibraryMessage("本站作品库为空；M3 站点素材选择、上传与资源解析尚未接线。不会读取本机共享图库。");
-      return 0;
-    }
     const request = libraryRequestRef.current + 1;
     libraryRequestRef.current = request;
     try {
+      if (siteScope) {
+        const manifest = await loadSiteAssets(siteScope.assetsEndpoint);
+        if (request !== libraryRequestRef.current) return null;
+        setLibraryItems(manifest.assets.map(unmanagedLibraryItem));
+        setLibraryState(manifest.assets.length ? "ready" : "empty");
+        setLibraryMessage(`本站可用素材 ${manifest.assets.length} 张；基础与高级后台共享资源，内容独立保存。`);
+        return manifest.assets.length;
+      }
       if (localPhotoImportState === "configured" && localPhotoImportOrigin) {
         const snapshot = await loadLocalPhotoLibrary(localPhotoImportOrigin);
         if (request !== libraryRequestRef.current) return null;
@@ -480,7 +484,7 @@ export default function LayoutWorkspace() {
         </div>
       </div>
 
-      {siteScope ? <p role="status">{libraryMessage}</p> : <PhotoImportPanel
+      {siteScope ? <><SiteAssetUpload endpoint={siteScope.assetsEndpoint} onUploaded={refreshLibrary} /><p role="status">{libraryMessage}</p></> : <PhotoImportPanel
         importing={isImporting}
         libraryMessage={libraryMessage}
         libraryState={libraryState}

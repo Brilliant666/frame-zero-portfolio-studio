@@ -16,7 +16,8 @@ import type { MouseEvent } from "react";
 type Theme = "paper" | "night";
 const themeEvent="preview:theme-change";
 const subscribeTheme=(notify:()=>void)=>{window.addEventListener(themeEvent,notify);return ()=>window.removeEventListener(themeEvent,notify);};
-const currentTheme=():Theme|"disabled"=>!/^\/preview\/?$/.test(location.pathname)?"disabled":document.documentElement.dataset.previewTheme==="night"?"night":"paper";
+const themeRoute=()=>/^\/preview\/?$/.test(location.pathname) || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" && /^\/[a-z0-9-]+\/admin\/(?:preview\/)?premium-polaroid\/?$/.test(location.pathname);
+const currentTheme=():Theme|"disabled"=>!themeRoute()?"disabled":document.documentElement.dataset.previewTheme==="night"?"night":"paper";
 const serverTheme=()=>"disabled" as const;
 const ThemeContext = createContext<{ theme: Theme; enabled:boolean; change: (theme: Theme, origin:{x:number;y:number}) => void }>({ theme: "paper", enabled:false, change: () => {} });
 export function StarNavigation({active,onNavigate}:{active:PolaroidView;onNavigate:(event:MouseEvent<HTMLElement>,view:PolaroidView)=>void}) {
@@ -38,7 +39,7 @@ export default function StarMotionShell({ children }: { children: ReactNode }) {
   const transition=useRef<ViewTransition|null>(null),reveal=useRef<Animation|null>(null);
   const mounted=useRef(false);
   useLayoutEffect(() => {
-    if(!/^\/preview\/?$/.test(location.pathname))return;
+    if(!themeRoute())return;
     mounted.current=true;
     const root=document.documentElement;
     let next:Theme=root.dataset.previewTheme==="night"?"night":"paper";
@@ -54,7 +55,7 @@ export default function StarMotionShell({ children }: { children: ReactNode }) {
   const change = (next: Theme,origin:{x:number;y:number}) => {
     const root=document.documentElement;
     reveal.current?.cancel();transition.current?.skipTransition();
-    const apply=()=>{if(!mounted.current || !/^\/preview\/?$/.test(location.pathname))return;root.dataset.previewTheme=next;root.dataset.starTheme=next;window.dispatchEvent(new Event(themeEvent));try{localStorage.setItem(PREVIEW_THEME_KEY,next);}catch{/* Per-visit fallback. */}};
+    const apply=()=>{if(!mounted.current || !themeRoute())return;root.dataset.previewTheme=next;root.dataset.starTheme=next;window.dispatchEvent(new Event(themeEvent));try{localStorage.setItem(PREVIEW_THEME_KEY,next);}catch{/* Per-visit fallback. */}};
     if(!document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches){apply();return;}
     let current:ViewTransition;
     try{current=document.startViewTransition(()=>flushSync(apply));}catch{apply();return;}
@@ -69,7 +70,7 @@ export default function StarMotionShell({ children }: { children: ReactNode }) {
   };
   // Keep the preview subtree mounted while restoring the initial theme; rebuilding
   // it here would replay/consume the first-visit entrance before it can be seen.
-  const localPaper=typeof window!=="undefined" && !/^\/preview\/?$/.test(location.pathname);
+  const localPaper=typeof window!=="undefined" && !themeRoute();
   return <ThemeContext.Provider value={{theme, enabled, change}}><div className={`${styles.shell}${localPaper?"":` ${sections.sections}`}`} data-preview-local-theme={localPaper?"paper":undefined} data-star-theme={localPaper?"paper":undefined}>
     <StarSky active={theme === "night"} className={styles.stars} />
     {children}
