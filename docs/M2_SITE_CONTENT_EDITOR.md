@@ -1,6 +1,6 @@
 # M2：Site 独立内容编辑与草稿保存
 
-日期：2026-09-26。状态：IMPLEMENTED / FINAL_CI_PENDING。
+日期：2026-09-27。状态：PR30_REVIEW_WITH_OPEN_ITEMS / HUMAN_ACCEPTANCE_PENDING。
 
 分支：`codex/site-content-editor-integration`；[Draft PR #30](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/30)。最终 head 的 CI 结果在 PR 验收评论记录，避免把早期 head 结果替代最终验证。
 
@@ -52,7 +52,7 @@ M3 Site 选片、上传、资源解析、平台卡尚未接入。Site 模式不�
 
 - IMPLEMENTED：真实编辑器、独立内容 API、显式迁移、CAS 和受保护预览。
 - VERIFIED_LOCALLY：Next 正式构建、原预算、TypeScript、ESLint、编辑器及 schema 行为测试。无本机 PG 或完整真实登录保存验收。
-- VERIFIED_IN_CI：真实 PostgreSQL HTTP 链路在 `c04ea3f`、`33824f9`、`792b7ed` 均 21/21 通过（runs 36242808037 / 36243017371 / 36244336660）；包括双空间保存、跨 Site 拒绝、并发 200/409、重启读取。`792b7ed` 实际测试 merge SHA 为 `6de3031d79f9b52c655a320ed5240f55d066a1fd`。Quality 曾发现旧导航源码断言、高级预览错误进入 legacy 打包图谱及编译开关白名单断言；已隔离 Node 专用预览，只允许显式常量 0 的禁用开关，禁止环境值泄露的断言仍保留。最终 head 五项结果记录在 PR 评论；未提高任何预算。
+- VERIFIED_IN_CI：历史真实 PostgreSQL HTTP 链路在 `c04ea3f`、`33824f9`、`792b7ed` 均 21/21 通过（runs 36242808037 / 36243017371 / 36244336660）。本轮在 `fd6601c` 增加实际 Chromium 操作，12/12 浏览器阶段通过，保留原 HTTP 检查；五项 CI 成功。详见下方验收记录，最终 head 的结果以 PR 验收评论为准，不复用旧 head 绿灯。Quality 历史接线问题已修复，未提高预算。
 - VERIFIED_WITH_REAL_STAR：NO。
 
 ### Windows legacy 同环境对照
@@ -60,7 +60,83 @@ M3 Site 选片、上传、资源解析、平台卡尚未接入。Site 模式不�
 使用已验证 main 的独立 worktree、同一个 Node 24 与同一套依赖执行一次对照：
 main `9bdd45d` 为 563638 bytes（超原阈值 438 bytes）；`792b7ed` 为
 563734 bytes（超原阈值 534 bytes），新增 96 bytes。两次本机 legacy 检查均为
-FAIL，不写成 PASS；此新增量正在收口，不自动继承 PR28/29 的例外。
+FAIL，不写成 PASS；此新增量不自动继承 PR28/29 的例外。
+
+### PR30 有限收口：Windows 同条件复核（2026-09-27）
+
+固定 base `9bdd45d` 与起始 head `df253cf`，Windows、Node 24.19.0、npm
+9.8.1、相同 lockfile 和 vinext/Vite 版本；标准构建清理各自生成目录，未清理
+真实运行目录或 `.wrangler`。公共 JS 分别为 563638 / 563734 bytes，增量仍为
+96 bytes。模块数量相同，没有新增公开模块或重复引入 composer。
+
+增量按入口归属：preview-workspace/admin +61、polaroid-field/template +31、
+虚拟浏览器入口 +4 bytes；来自禁用 Site adapter 后的参数、Hook 常量依赖和绑定
+残留。一次恢复模块 endpoint / 去除组件别名的小尝试得到 563738 bytes，反而
+增加 4 bytes，已完整撤回。没有进行无依据的第二轮尝试，没有修改阈值或统计口径。
+
+本项结果 C：**新增回归仍待决**；Windows 绝对预算 **FAIL**（原阈值 563200）。
+此结论不阻止独立的真实编辑器验收，也不表示接受新增例外。
+
+保存可编辑修复后同条件复测 `e5b6f2a`：563772 bytes，相对 base **+134**，
+绝对超限 **572**。额外 38 bytes 属于必要编辑器修复，不隐藏、不豁免。
+后续仅测试、Node 专用预览提示与文档改动；最终构建结果在 PR 验收评论列明。
+
+### 实际编辑器验收与有限修复
+
+新增精确版本 `playwright@1.63.0` 开发测试依赖，仅用于既有 PostgreSQL CI；
+浏览器用隔离匿名 A/B，正式 Next 构建，同源 `http://127.0.0.1:3004`，
+Chromium 153.0.8010.12。不是本机 PostgreSQL或真实 star 验收。
+
+首轮暴露基础版保存时 fieldset 禁用，已仅对 Site 模式修复；保存按钮仍锁定，
+旧响应继续由原协调逻辑保护新编辑。测试自身手写等待无界/冲突交互等待问题已
+改为有界等待、明确处理确认框、逐阶段落盘及实际 UI 状态等待；未放宽业务断言。
+人工看图另发现受保护预览提示被固定顶栏覆盖，已只修 Site 预览提示与返回链接，
+追加每个验收尺寸的可点击检查，不改原模板。
+
+| 实操项目 | fd6601c 浏览器结果 |
+| --- | --- |
+| 真实登录，经后台入口进入，六分区未保存草稿与焦点 | 通过 |
+| 基础/高级不同资料、套餐、联系保存与刷新，两边独立版本 | 通过 |
+| 空图集创建、改名、排序、保存 | 通过 |
+| 两空间延迟真实 PUT 响应，继续编辑不被覆盖 | 通过 |
+| 双标签页 200/409、保留草稿、导出、丢弃提醒 | 通过 |
+| 未保存内存预览与受保护已保存预览 | 通过（内存预览沿用高级后台现有能力） |
+| Ctrl/Cmd+S 每次仅写活动空间一次 | 通过 |
+| B/匿名/过期会话拒绝 A，基础身份拒绝高级 | 通过 |
+| 退出/换号拒绝旧页写入，延迟 A 响应不进入 B | 通过 |
+| 公开仍未发布，重启后两份草稿不变 | 通过 |
+| 1440x900、390x844、320x844 表单和预览 | 通过；预览提示遮挡在截图复核后另修 |
+| 不请求旧内容、manifest、平台卡和导入路径 | 通过 |
+
+代码验收 head `fd6601cb35688295ec64ceef9d9cc0f958d861a5`，event=pull_request，
+attempt=1，实际测试 merge SHA `619db93bb38e2507aedb657165a710fc209b993f`：
+
+| 检查 | Run（success） |
+| --- | --- |
+| Quality | 36290312097 |
+| Public repository safety | 36290312081 |
+| Container | 36290312091 |
+| Deployment Bootstrap | 36290312079 |
+| Local Account PostgreSQL Integration / postgres-integration | 36290312121 |
+
+浏览器证据为该 run 的 `site-editor-browser-36290312121-1` artifact：
+`acceptance.json`、28 张匿名截图、请求路径和状态（不含凭据、header、trace）。
+文档与预览提示提交后的最终 head 另跑五项检查，精确映射写在 PR30 最终评论。
+
+本机完整 npm test 执行至 legacy 预算失败，不能写为本机全通过；随后单独执行
+legacy 渲染/API 38/38、Next 正式构建/预算和运行时 3/3、编辑器 focused 26/26，
+以及 lint/type/public safety。Linux Quality 的完整 npm test 通过，不替代 Windows。
+
+数据保护：本轮开始与收口只读比较记录1、2601及素材清单逻辑哈希一致；记录1
+更新时间仍为 2026-09-27 01:24:01（旧 API 不提供 revision），记录2601 revision=7，
+updatedAt=2026-09-24T09:58:05.181Z。快照留本机仓库外，不提交私人数据。
+
+PR 保持 Open + Draft；新增预算差异待人工决策，未自动接受。下一阶段 M3 的
+产品目标是本人 Site 的选片、上传和资源归属校验；本轮不开始实现，不导入真实资料。
+
+HUMAN_ACCEPTANCE = PENDING
+
+M3_ASSETS = NOT_IMPLEMENTED_IN_THIS_PR
 
 REAL_STAR_PROVISIONING = NOT_CREATED
 

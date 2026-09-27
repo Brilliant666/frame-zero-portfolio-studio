@@ -415,6 +415,12 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
           assert.ok(width.scroll <= width.inner + 1, `${label} form overflows at ${viewport.width}: ${width.scroll}`);
           await page.goto(`${origin}/${a}/admin/preview/${label === 'basic' ? 'basic' : 'premium-polaroid'}`);
           await page.waitForTimeout(200);
+          const returnLink = page.locator('[data-site-preview-notice] a');
+          await returnLink.click({ trial: true });
+          assert.ok(await returnLink.evaluate(el => {
+            const r = el.getBoundingClientRect();
+            return r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight;
+          }), 'Private preview return link must stay visible and unobstructed');
           await snapshot(page, `11-${label}-preview`);
         }
       }

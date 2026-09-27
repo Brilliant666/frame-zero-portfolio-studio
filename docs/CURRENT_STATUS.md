@@ -1,6 +1,6 @@
 # Portfolio Platform Current Status
 
-Updated: 2026-09-26. This is the single current execution checkpoint; older PR
+Updated: 2026-09-27. This is the single current execution checkpoint; older PR
 reports record historical acceptance, not today's authorization gate.
 
 ## Current execution checkpoint
@@ -9,7 +9,7 @@ reports record historical acceptance, not today's authorization gate.
 Mission: PRODUCT_DELIVERY_MISSION_02
 Product priority: invited photographer -> own Site Admin -> independent template content -> Publish
 Current slice: M2 / real editors and independent Site content-space drafts
-Slice status: IN_PROGRESS / IMPLEMENTED / CI_PENDING
+Slice status: PR30_REVIEW_WITH_OPEN_ITEMS / HUMAN_ACCEPTANCE_PENDING
 Main baseline: 9bdd45daf326d65def222b20033ff2774decbfc1
 Account foundation: PR #28 accepted and Squash merged
 Account head: 3263d4d917b3d59c623b420cb1537cb5a8ff99ff
@@ -37,7 +37,7 @@ M2 proceeds now; its new Draft PR does NOT inherit merge authorization.
 | PR #28 migration, Better Auth, operator provisioning, independent AuthUser/PortfolioUser/Site IDs and template grants | Yes | Five CI checks; 12 real PostgreSQL integration tests at account head above | Partial: build, login HTTP and anonymous denial; no local PostgreSQL readback | No |
 | Eleven templates, Admin V2, legacy content/local photos and accepted polaroid preview | Yes | Existing baseline | Existing local experience retained | Not target migration evidence |
 | M1 target routes and authorized Site Admin shell | Yes | Five checks pass; real PostgreSQL HTTP suite 16/16 at implementation head | Next build/budget, lint/types; legacy HTTP 38/38; route status checks below; no local PG | No |
-| M2 independent content/editor integration | Implemented in current branch | Pending final five checks / real PostgreSQL HTTP chain | Build, original Next budget, lint/types and unit tests; no local PG | No |
+| M2 independent content/editor integration | Implemented in PR30 | Real PostgreSQL plus actual Chromium editor acceptance: 12/12 stages at fd6601c; five checks successful. Final-head run mapping in PR30 acceptance comment | Next build/budget, lint/types, focused and legacy runtime tests; Windows legacy budget FAIL; no local PG | No |
 | M3 Site assets, M4 publication, M5 second photographer | Not delivered | Pending | Pending | No |
 
 Reuse the account foundation, not a new Auth POC. Commands and evidence:
@@ -58,6 +58,27 @@ Reuse the account foundation, not a new Auth POC. Commands and evidence:
   Preserve the threshold; allow one bounded reproducible investigation, not a global blocker.
   The recorded 337.4ms long frame remains a known accepted performance boundary
   unless a new reproducible regression is demonstrated.
+- PR30 bounded Windows comparison: base 563638, initial head 563734 (+96).
+  The Site save-editability correction gives 563772 (+134 versus base), 572 bytes
+  above the unchanged 563200 threshold. Result C: new regression remains OPEN;
+  no new budget exception accepted. One ineffective optimization was reverted;
+  do not resume byte chasing as the next product slice.
+
+## PR30 limited closure and human review
+
+The actual browser exercised both existing editors against isolated PostgreSQL
+at the same Standard Next production origin (3004), including independent saves,
+in-flight edits, CAS conflicts, previews, identity changes, restart persistence,
+and 1440/390/320 viewports. Basic Site fields no longer lock during save; the
+legacy local editor's behavior is unchanged. The private preview notice/return
+link is kept above template layers. Final exact head, CI and anonymous artifacts
+are recorded in the PR30 acceptance comment; earlier runs are not substituted.
+
+PR30 remains OPEN + DRAFT. Human acceptance is pending and this turn stops after
+handoff. M3 assets are NOT_IMPLEMENTED_IN_THIS_PR. Real star is NOT_CREATED;
+remote deployment NOT_AUTHORIZED; V1_LAUNCHED = NO. No real-source migration,
+Docker recovery or account installation occurred. The local records 1/2601 and
+manifest were read-only and their logical hashes matched the start baseline.
 
 ## Observable M1 delivery and next step
 
