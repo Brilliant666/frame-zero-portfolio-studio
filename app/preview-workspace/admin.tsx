@@ -32,7 +32,7 @@ function readEnvelope(value: unknown, siteMode = false): Envelope {
   return { content: raw.content === null ? null : siteMode ? parseSitePremiumDocument(raw.content) : parsePreviewDocument(raw.content), revision: raw.revision as number, updatedAt: raw.updatedAt };
 }
 
-export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorScope; SitePreview?: ComponentType<{ document: PreviewPortfolioDocumentV1; embedded?: boolean; initialCollectionId?: string; assets?: readonly PhotoAsset[] }> }) {
+export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorScope; PublicationControls?: ComponentType<{ revision: number; dirty: boolean; disabled: boolean }>; SitePreview?: ComponentType<{ document: PreviewPortfolioDocumentV1; embedded?: boolean; initialCollectionId?: string; assets?: readonly PhotoAsset[] }> }) {
   // Site routes exist only in Standard Next Node; omit their adapter from rollback builds.
   const siteScope = process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? props?.siteScope : undefined;
   const endpoint = siteScope?.endpoint ?? "/api/preview/site-content";
@@ -187,6 +187,7 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
       <button type="button" disabled={saving || loadState === "loading"} onClick={() => { if ((!dirty && !conflict) || confirm("重新读取将替换当前未保存草稿。若有冲突，请先导出留存，确认继续？")) void reload(); }}>重新读取</button>
       <button className={styles.primary} type="button" onClick={() => void save()} disabled={loadState !== "ready" || saving || !dirty || conflict}>保存新版修改</button>
     </div></header>
+    {siteMode && props?.PublicationControls && <props.PublicationControls revision={revision} dirty={dirty} disabled={loadState !== "ready" || saving || conflict} />}
     <div className={styles.body}>
       <p className={styles.notice} role="status">{message}{updatedAt && <><br /><small>服务端更新时间：{updatedAt}</small></>}</p>
       <div className={styles.row}>{siteMode ? <><a href={siteScope?.adminBasePath.replace(/\/premium-polaroid$/, "")} onClick={(event) => { if (dirty && !window.confirm("当前草稿尚未保存，确认返回内容空间选择？")) event.preventDefault(); }}>返回本站后台</a><span className={styles.hint}>两套内容独立保存；本站素材共享引用。</span></> : <><a href="/admin" target="_blank" rel="noreferrer">原版后台 ↗</a><a href="/" target="_blank" rel="noreferrer">原版十一模板主页 ↗</a><span className={styles.hint}>新旧内容独立保存，素材库共用。</span></>}<button type="button" onClick={exportDraft}>导出当前草稿</button></div>

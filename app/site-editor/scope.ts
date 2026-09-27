@@ -4,4 +4,6 @@ export type SiteEditorScope = Readonly<{
   previewHref: string;
   assetsMode: "site";
   assetsEndpoint: string;
+  publicationEndpoint?: string;
+  publicHref?: string;
 }>;

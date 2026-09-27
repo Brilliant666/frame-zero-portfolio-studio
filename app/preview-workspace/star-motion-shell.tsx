@@ -16,7 +16,7 @@ import type { MouseEvent } from "react";
 type Theme = "paper" | "night";
 const themeEvent="preview:theme-change";
 const subscribeTheme=(notify:()=>void)=>{window.addEventListener(themeEvent,notify);return ()=>window.removeEventListener(themeEvent,notify);};
-const themeRoute=()=>/^\/preview\/?$/.test(location.pathname) || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" && /^\/[a-z0-9-]+\/admin\/(?:preview\/)?premium-polaroid\/?$/.test(location.pathname);
+const themeRoute=()=>/^\/preview\/?$/.test(location.pathname) || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" && (/^\/[a-z0-9-]+\/admin\/(?:preview\/)?premium-polaroid\/?$/.test(location.pathname) || /^\/[a-z0-9-]+\/?$/.test(location.pathname) && document.documentElement.dataset.publicPortfolio === "premium-polaroid");
 const currentTheme=():Theme|"disabled"=>!themeRoute()?"disabled":document.documentElement.dataset.previewTheme==="night"?"night":"paper";
 const serverTheme=()=>"disabled" as const;
 const ThemeContext = createContext<{ theme: Theme; enabled:boolean; change: (theme: Theme, origin:{x:number;y:number}) => void }>({ theme: "paper", enabled:false, change: () => {} });
@@ -50,7 +50,7 @@ export default function StarMotionShell({ children }: { children: ReactNode }) {
     const stop=()=>{reveal.current?.cancel();reveal.current=null;transition.current?.skipTransition();transition.current=null;};
     const onReduced=()=>{if(reduced.matches)stop();};
     reduced.addEventListener("change",onReduced);
-    return ()=>{mounted.current=false;stop();reduced.removeEventListener("change",onReduced);delete root.dataset.previewTheme;delete root.dataset.starTheme;};
+    return ()=>{mounted.current=false;stop();reduced.removeEventListener("change",onReduced);delete root.dataset.previewTheme;delete root.dataset.starTheme;delete root.dataset.publicPortfolio;};
   }, []);
   const change = (next: Theme,origin:{x:number;y:number}) => {
     const root=document.documentElement;

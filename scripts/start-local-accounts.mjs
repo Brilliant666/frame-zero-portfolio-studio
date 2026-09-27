@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { readAccountConfig } from './lib/account-config.mjs';
 import { blocksLegacySource } from './lib/local-platform-boundary.mjs';
 import { handleLocalAdminShortcut } from '../db/accounts/local-acceptance.mjs';
+import { publicSiteGate } from '../db/accounts/public-site-gate.mjs';
 
 // Same Next application, explicit Node lane. No D1 binding or content migration.
 const args = process.argv.slice(2);
@@ -35,6 +36,11 @@ const server = createServer(async (request,response) => {
   // Next itself adds forwarding headers; mark requests after socket validation.
   delete request.headers['x-account-local-proof'];
   request.headers['x-account-local-proof'] = proof;
+  const sitePath = new URL(request.url ?? '/', config.origin).pathname.match(/^\/([^/.]+)\/?$/);
+  if (sitePath && !['login', 'logout', 'test', 'preview', 'admin', 'api', 'auth', '_next'].includes(sitePath[1]) && ['GET', 'HEAD'].includes(request.method)) {
+    const gate = await publicSiteGate(new Request(`${config.origin}${request.url}`, { method: request.method, headers: request.headers }), sitePath[1]);
+    if (gate) { response.writeHead(gate.status, Object.fromEntries(gate.headers)); response.end(request.method === 'HEAD' ? undefined : await gate.text()); return; }
+  }
   if (request.url === '/test/admin' && process.env.FRAME_ZERO_LOCAL_ACCEPTANCE === '1') {
     try {
       const shortcut = await handleLocalAdminShortcut(new Request(`${config.origin}/test/admin`, { method: request.method, headers: request.headers }));

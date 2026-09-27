@@ -7,7 +7,7 @@ export function entryPhotoSource(asset: PhotoAsset, width = 600) {
   const source=asset.variants.card.width>=Math.min(tier,asset.variants.full.width)?asset.variants.card:asset.variants.full;
   // Authorized Site variants already have bounded sizes and must never be
   // forwarded through the legacy, public-path-only image helper.
-  if (/^\/api\/sites\/[a-z0-9-]+\/assets\/[a-f0-9-]+\/(?:card|full)$/.test(source.src)) return source.src;
+  if (/^\/api\/(?:sites|public-sites)\/[a-z0-9-]+\/assets\/[a-f0-9-]+\/(?:card|full)$/.test(source.src)) return source.src;
   return `/__local-preview-photo?src=${encodeURIComponent(source.src)}&w=${tier}`;
 }
 export function prepareEntryPhoto(src: string): Promise<boolean> {

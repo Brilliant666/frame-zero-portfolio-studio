@@ -29,7 +29,7 @@ async function cleanTestTables() {
     const database = (await client.query('SELECT current_database() AS name')).rows[0].name;
     assert.equal(database, 'frame_zero_accounts_test', 'Refuse cleanup outside the dedicated test database');
     // Explicit list, no CASCADE: newly introduced referencing data must fail safely.
-    await client.query('TRUNCATE TABLE site_legacy_imports, site_assets, site_content_drafts, site_template_grants, sites, portfolio_users, "session", account, verification, "user", account_provisioning');
+    await client.query('TRUNCATE TABLE site_publications, site_publication_revisions, site_legacy_imports, site_assets, site_content_drafts, site_template_grants, sites, portfolio_users, "session", account, verification, "user", account_provisioning');
   } finally { client.release(); }
 }
 
@@ -422,6 +422,10 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1080000 },
   await t.test('legacy import preserves bytes and semantics with idempotent recovery', { timeout: 180000 }, async () => {
     const { siteLegacyImportIntegration } = await import('./site-legacy-import-integration.mjs');
     await siteLegacyImportIntegration({ runtime, config, password, root: assetRoot, restart: async () => { await stopServer(); await startServer(); } });
+  });
+  await t.test('publication snapshots, rollback and Site boundaries', { timeout: 180000 }, async () => {
+    const { publicationIntegration } = await import('./site-publication-integration.mjs');
+    await publicationIntegration({ runtime, origin: config.origin, password, restart: async () => { await stopServer(); await startServer(); } });
   });
   await t.test('local acceptance shortcuts require owner, grant and explicit runtime switch', async () => {
     const previous = process.env.FRAME_ZERO_LOCAL_ACCEPTANCE;

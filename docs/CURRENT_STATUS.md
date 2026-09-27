@@ -8,8 +8,8 @@ reports record historical acceptance, not today's authorization gate.
 ```text
 Mission: PRODUCT_DELIVERY_MISSION_02
 Product priority: invited photographer -> own Site Admin -> independent template content -> Publish
-Current slice: M3 / Site-owned private assets, independent editor references and controlled legacy import
-Slice status: LOCAL_M3_HANDS_ON_ACCEPTANCE_01 / VERIFIED_LOCALLY / READY_FOR_HUMAN_REVIEW / DRAFT_REVIEW
+Current slice: M4 first slice / premium-polaroid immutable publication and public portfolio
+Slice status: IMPLEMENTED / VERIFIED_LOCALLY / DRAFT_REVIEW (new changes not yet CI-verified)
 Main baseline: 9bdd45daf326d65def222b20033ff2774decbfc1
 Account foundation: PR #28 accepted and Squash merged
 Account head: 3263d4d917b3d59c623b420cb1537cb5a8ff99ff
@@ -23,6 +23,19 @@ External deployment gate: EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED
 V1 status: NOT_LAUNCHED
 Online status: NOT_ONLINE_PREVIEW
 ```
+
+On 2026-09-28 the user explicitly authorized extending existing PR31 with
+publication instead of adding a third review layer. This is a bounded exception
+for this slice, not merge/deployment authority. The keyboard skip link remains;
+its hidden state is clipped to protect theme-transition snapshots.
+
+The local simulated `star` saved premium draft revision 1 is now explicitly
+published. Anonymous `/star` reuses the accepted polaroid experience and reads
+only the immutable Published snapshot; Save still does not Publish. Publishing
+and rollback require owner + premium grant + expected draft/pointer versions.
+Only currently published referenced display variants are public; private APIs,
+unreferenced assets and originals remain protected. Basic-template publication
+is not connected in this slice. See [publication acceptance](M4_PREMIUM_PUBLICATION.md).
 
 PR28_PR29 = MERGED_AND_MAIN_VERIFIED. Explicit user authorization accepted both
 stage baselines and their disclosed local exceptions. Both were made Ready and
@@ -65,8 +78,9 @@ denials have passed in headed Chrome at 1440/390/320. No automatic star draft
 writes were made during browser verification. The dedicated runtime is left
 running for human acceptance; credentials and runbook remain local-only.
 
-Original archival remains INCOMPLETE. Publishing, remote deployment, PR merges
-and old 3001 cutover were not performed. Final running Head, browser readback,
+Original archival remains INCOMPLETE. At that M3 checkpoint, publishing, remote deployment, PR merges
+and old 3001 cutover were not performed; the newer publication slice above supersedes
+only the local publishing status. Final running Head, browser readback,
 restart verification and final-head CI are recorded in
 [local acceptance](LOCAL_M3_HANDS_ON_ACCEPTANCE.md) and PR31's acceptance comment.
 
