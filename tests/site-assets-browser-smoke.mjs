@@ -54,11 +54,27 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
     await page.screenshot({ path: join(output, file) });
     screenshots.push({ file, path: new URL(page.url()).pathname });
   }
-  async function images() {
-    await page.waitForFunction(() => {
-      const imgs = [...document.querySelectorAll('img[src*="/api/sites/"]')].filter(i => i.getBoundingClientRect().width > 0);
-      return imgs.length > 0 && imgs.every(i => i.complete && i.naturalWidth > 0);
-    });
+  async function images({ editor = false } = {}) {
+    // Editors have long forms and lazy recommendation thumbnails. Bring a real
+    // asset into view rather than requiring every offscreen lazy image to load.
+    if (editor) await page.locator('img[src*="/api/sites/"]').first().scrollIntoViewIfNeeded();
+    try {
+      await page.waitForFunction(() => {
+        const imgs = [...document.querySelectorAll('img[src*="/api/sites/"]')].filter(i => {
+          const r = i.getBoundingClientRect();
+          return i.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }) &&
+            r.width > 0 && r.height > 0 && r.right > 0 && r.bottom > 0 && r.left < innerWidth && r.top < innerHeight;
+        });
+        return imgs.length > 0 && imgs.every(i => i.complete && i.naturalWidth > 0);
+      });
+    } catch (error) {
+      report.imageFailure = await page.locator('img[src*="/api/sites/"]').evaluateAll(imgs => imgs.map(i => {
+        const r = i.getBoundingClientRect();
+        return { src: i.getAttribute('src'), loading: i.loading, complete: i.complete, naturalWidth: i.naturalWidth,
+          rect: { x: r.x, y: r.y, width: r.width, height: r.height } };
+      }));
+      throw error;
+    }
   }
   async function step(name, run) {
     console.log(`[m3-browser] START ${name}`);
@@ -92,7 +108,7 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
       const chosen = Object.values(basicSaved.content.templateWorks).flat();
       assert.ok(chosen.some(w => w.assetId === assets.find(a => a.orientation === 'landscape').id));
       assert.equal(basicSaved.content.profile.photographer, 'Basic asset photographer');
-      await images(); await shot('01-basic-upload-select');
+      await images({ editor: true }); await shot('01-basic-upload-select');
     });
     await step('02 premium existing editor reuses uploaded assets / independent saved fields', async () => {
       await page.goto(`${origin}${premium}`);
@@ -139,7 +155,7 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
         await page.setViewportSize({ width, height: 844 });
         await page.goto(`${origin}${basic}/layout`);
         await page.getByLabel('上传本站照片', { exact: true }).waitFor();
-        await images(); await shot('04-basic-mobile');
+        await images({ editor: true }); await shot('04-basic-mobile');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 2), false, `Basic editor overflow at ${width}`);
         await page.goto(`${origin}${premium}`);
         await page.getByRole('button', { name: '图集管理', exact: true }).click();
