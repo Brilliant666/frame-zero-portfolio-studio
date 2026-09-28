@@ -255,6 +255,7 @@ export function AdminProvider({
     const handleKeyboardSave = (event: KeyboardEvent) => {
       if (!isAdminSaveShortcut(event)) return;
       event.preventDefault();
+      if (Array.from(document.querySelectorAll('[aria-modal="true"], dialog[open]')).some(element => element.getClientRects().length > 0)) return;
       void save();
     };
     window.addEventListener("keydown", handleKeyboardSave);

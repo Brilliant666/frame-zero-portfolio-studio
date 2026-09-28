@@ -26,7 +26,7 @@ export default function ProfileEditor() {
           </div>
         </FormGroup>
 
-        <FormGroup title="首页 Hero" description="主页首屏的眉题、标题与服务摘要。">
+        <FormGroup title="首页文案" description="主页首屏的眉题、标题与服务摘要。">
           <div className={styles.formGrid}>
             <div className={styles.fullSpan}>
               <AdminField label="首页英文眉题" value={content.hero.eyebrow} onChange={(value) => setContent((current) => ({ ...current, hero: { ...current.hero, eyebrow: value } }))} />
@@ -72,7 +72,7 @@ export default function ProfileEditor() {
               </div>
             </FormGroup>
 
-            <FormGroup title="品牌 Statement（可选）" description="主页底部的品牌宣言。">
+            <FormGroup title="品牌宣言（可选）" description="主页底部的品牌宣言。">
               <div className={styles.formGrid}>
                 <div className={styles.fullSpan}>
                   <AdminField label="英文眉题" value={content.statement.eyebrow} onChange={(value) => setContent((current) => ({ ...current, statement: { ...current.statement, eyebrow: value } }))} />

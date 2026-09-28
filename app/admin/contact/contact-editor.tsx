@@ -127,7 +127,7 @@ export default function ContactEditor() {
     <AdminSection
       eyebrow="CONTACT"
       title="联系约拍"
-      description="集中管理联系渠道、社交账号与客户需要填写的约拍信息。"
+      description="集中管理联系渠道、社交账号与主页可复制的约拍清单。"
     >
       <div className={styles.groupStack}>
         <FormGroup title="联系方式" description="主页公开展示的约拍入口。">
@@ -159,6 +159,9 @@ export default function ContactEditor() {
               const uploading = uploadingIndex === index;
               return (
               <div className={styles.pairRow} key={index} aria-busy={uploading}>
+                <details className={styles.socialFields} open={!siteScope || undefined}>
+                  <summary>{item.label || `平台 ${index + 1}`} · {item.handle || "未填写账号或网址"} · 编辑账号</summary>
+                  <div>
                 <AdminField label={`平台 ${index + 1}`} value={item.label} onChange={(value) => setContent((current) => ({
                   ...current,
                   social: current.social.map((entry, itemIndex) => itemIndex === index ? { ...entry, label: value } : entry),
@@ -171,6 +174,7 @@ export default function ContactEditor() {
                   onChange={(value) => updateSocialHandle(index, value)}
                   onBlur={(value) => normalizeSocialHandle(index, value)}
                 />
+                </div></details>
                 {siteScope ? <SiteContactCard assetsEndpoint={siteScope.assetsEndpoint} assetId={item.qrAssetId} targetKey={item} onChange={assetId => setContent(current => {
                   const social = setContactCardReference(current.social, item, assetId);
                   return social === current.social ? current : { ...current, social };
@@ -226,7 +230,7 @@ export default function ContactEditor() {
           </button>
         </FormGroup>
 
-        <FormGroup title="约拍表单字段" description="主页复制的约拍清单顺序；可使用键盘完成编辑和排序。">
+        <FormGroup title="约拍清单" description="主页复制的约拍清单顺序；可使用键盘完成编辑和排序。">
           <ol className={styles.bookingList}>
             {content.bookingFields.map((item, index) => (
               <li key={index}>

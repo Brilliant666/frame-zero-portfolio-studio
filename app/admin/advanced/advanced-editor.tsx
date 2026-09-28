@@ -37,7 +37,7 @@ export default function AdvancedEditor() {
   return (
     <AdminSection
       eyebrow="ADVANCED"
-      title="高级设置"
+      title={siteScope ? "兼容内容与工具" : "高级设置"}
       description="兼容数据与危险操作集中在这里；日常编辑通常不需要进入本分区。"
     >
       <div className={styles.advancedStack}>

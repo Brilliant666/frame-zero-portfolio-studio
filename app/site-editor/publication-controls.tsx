@@ -1,17 +1,20 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { editorJson, type DraftSaveOptions, type DraftSaveReceipt } from "./draft-save";
 import type { ContentSpace } from "./content-schema";
 import { publicationMatches as matches, publicationSynced, type PublicationSummary as Publication, type PendingPublication } from "./publication-state";
+import { templateCatalog } from "../templates/catalog";
+import { useEditorActionVisibility } from "./use-editor-action-visibility";
 import styles from "./publication-controls.module.css";
 
 export type PublicationEditorProps = {
   revision: number; dirty: boolean; disabled: boolean; templateId: string;
+  draftAction?: ReactNode; tools?: ReactNode; draftStatus?: string;
   saveDraft: (options?: DraftSaveOptions) => Promise<DraftSaveReceipt | null>;
 };
 type PublicationState = { current: Publication | null; history: Publication[] };
 const spaceName = (space: ContentSpace) => space === "basic" ? "基础版" : "高级拍立得";
-const title = (value: Publication) => `${spaceName(value.space)} · ${value.templateId} · v${value.draftRevision}`;
+const title = (value: Publication) => `${spaceName(value.space)}${value.space === "basic" ? ` · ${templateCatalog.find(item => item.id === value.templateId)?.name ?? value.templateId}` : ""} · v${value.draftRevision}`;
 function parseState(value: unknown): PublicationState {
   if (!value || typeof value !== "object" || !("history" in value) || !Array.isArray(value.history) || !("current" in value)) throw new Error("发布状态响应无效");
   const valid = (item: unknown): item is Publication => !!item && typeof item === "object" && "id" in item && typeof item.id === "string" && "space" in item && ["basic", "premium-polaroid"].includes(String(item.space)) && "templateId" in item && typeof item.templateId === "string" && "draftRevision" in item && Number.isSafeInteger(item.draftRevision) && "publishedAt" in item && typeof item.publishedAt === "string";
@@ -19,7 +22,7 @@ function parseState(value: unknown): PublicationState {
   return value as PublicationState;
 }
 
-export default function PublicationControls({ endpoint, publicHref, space, revision, templateId, dirty, disabled, saveDraft }: PublicationEditorProps & { endpoint: string; publicHref: string; space: ContentSpace }) {
+export default function PublicationControls({ endpoint, publicHref, space, revision, templateId, dirty, disabled, saveDraft, draftAction, tools, draftStatus }: PublicationEditorProps & { endpoint: string; publicHref: string; space: ContentSpace }) {
   const [state, setState] = useState<PublicationState | null>(null);
   const [busy, setBusy] = useState(false), [message, setMessage] = useState("");
   const [pending, setPending] = useState<PendingPublication | null>(null);
@@ -87,15 +90,19 @@ export default function PublicationControls({ endpoint, publicHref, space, revis
       } catch { if (!signal.aborted) setMessage("发布结果待确认，暂时无法读取公开状态。请稍后检查；不会自动重试写入。"); }
     } finally { lock.current = false; if (!signal.aborted) setBusy(false); }
   }
+  const { modalOpen, keyboardOpen } = useEditorActionVisibility();
   const synced = publicationSynced(state?.current ?? null, space, templateId, revision, dirty);
   const status = pending ? "结果待确认" : !state ? "发布状态暂不可用" : dirty ? "有修改待保存发布" : synced ? "已同步" : state.current ? "当前编辑尚未发布" : "尚未发布";
   return <section className={styles.panel} aria-label="公开发布"><div className={styles.row}>
-    <div className={styles.overview}><div className={styles.versions}><strong>{spaceName(space)}草稿 v{revision}</strong><span>{state?.current ? `公开：${title(state.current)}` : "暂无公开版本"}</span><span className={synced ? styles.synced : styles.status}>{status}</span></div>
-      <p className={styles.hint}>保存并发布会更新本站公开主页；仅保存草稿和 Ctrl/Cmd+S 不会发布。</p>
-      <details className={styles.history}><summary>发布历史与回退 {state?.history.length ?? 0}</summary><div className={styles.historyContent}>
-        <button className={styles.refresh} type="button" disabled={busy} onClick={() => void refresh()}>{pending ? "检查发布结果" : "刷新发布状态"}</button>
-        {!!state?.history.length && <ul>{state.history.map(item => <li key={item.id}><span>{title(item)} · {new Date(item.publishedAt).toLocaleString()}</span>{state.current?.id === item.id ? <span className={styles.current}>当前公开</span> : <button className={styles.secondary} type="button" disabled={busy || disabled || !!pending} onClick={() => void publish(item)}>恢复此公开版本</button>}</li>)}</ul>}
-      </div></details>
-    </div><div className={styles.actions}><a className={styles.secondary} href={publicHref} target="_blank" rel="noreferrer">查看公开主页 ↗</a><button className={styles.primary} type="button" disabled={!state || busy || disabled || !!pending || !dirty && revision === 0} onClick={() => void publish()}>{busy ? "正在处理…" : "保存并发布"}</button></div>
-  </div>{message && <p className={styles.message} role="status">{message}</p>}</section>;
+    <div className={styles.overview}><div className={styles.versions}><strong>{spaceName(space)}草稿 v{revision} · {draftStatus ?? (dirty ? "未保存修改" : "已保存")}</strong><span>{!state ? "公开状态待确认" : state.current ? `公开：${title(state.current)}` : "暂无公开版本"}</span><span className={synced ? styles.synced : styles.status}>{status}</span></div>
+    </div><div className={styles.actions} data-editor-save-actions="true" data-keyboard-open={keyboardOpen || undefined} data-modal-open={modalOpen || undefined} inert={modalOpen || undefined}>
+      {draftAction}<button className={styles.primary} type="button" disabled={!state || busy || disabled || !!pending || !dirty && revision === 0} onClick={() => void publish()}>{busy ? "正在处理…" : "保存并发布"}</button>
+    </div>
+  </div><div className={styles.tools} aria-label="预览与草稿工具">{tools}<a className={styles.secondary} href={publicHref} target="_blank" rel="noreferrer">查看公开主页 ↗</a>
+    <details className={styles.history}><summary>发布历史与回退 {state?.history.length ?? 0}</summary><div className={styles.historyContent}>
+      <button className={styles.refresh} type="button" disabled={busy} onClick={() => void refresh()}>刷新发布状态</button>
+      {!!state?.history.length && <ul>{state.history.map(item => <li key={item.id}><span>{title(item)} · {new Date(item.publishedAt).toLocaleString()}</span>{state.current?.id === item.id ? <span className={styles.current}>当前公开</span> : <button className={styles.secondary} type="button" disabled={busy || disabled || !!pending} onClick={() => void publish(item)}>恢复此公开版本</button>}</li>)}</ul>}
+    </div></details>
+
+  </div>{(pending || !state || message) && <button className={styles.refresh} type="button" disabled={busy} onClick={() => void refresh()}>{pending ? "检查发布结果" : "刷新发布状态"}</button>}{message && <p className={styles.message} role="status">{message}</p>}</section>;
 }

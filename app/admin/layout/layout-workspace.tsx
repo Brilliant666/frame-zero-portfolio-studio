@@ -105,6 +105,7 @@ export default function LayoutWorkspace() {
   const [libraryBatches, setLibraryBatches] = useState<LocalPhotoLibraryBatch[]>([]);
   const [libraryRevision, setLibraryRevision] = useState<number | null>(null);
   const [libraryState, setLibraryState] = useState<LibraryState>("loading");
+  const [libraryTruncated, setLibraryTruncated] = useState(false);
   const [libraryMessage, setLibraryMessage] = useState("正在读取本地素材库…");
   const [isImporting, setIsImporting] = useState(false);
   const [filter, setFilter] = useState<LibraryFilter>("all");
@@ -258,6 +259,7 @@ export default function LayoutWorkspace() {
         setBatchFilter("all");
         setLibraryRevision(null);
         setLibraryState(manifest.assets.length ? "ready" : "empty");
+        setLibraryTruncated(Boolean(manifest.truncated));
         setLibraryMessage(`${manifest.truncated ? `当前仅载入前 ${manifest.assets.length} 张，查找、筛选与排序只覆盖已载入部分。` : `本站可用素材 ${manifest.assets.length} 张。`} 基础与高级后台共享资源，内容独立保存。`);
         return manifest.assets.length;
       }
@@ -484,31 +486,10 @@ export default function LayoutWorkspace() {
           <small>{formatTemplateMaterialDirectionSummary(materialPlan)}</small>
         </div>
         <div><span>排版状态</span><strong>{layoutConfigured ? `${selectedBySlot.size} / ${template.photoSlots} 已排版` : "沿用旧版作品"}</strong><small>正在编辑槽位 {String(activeSlot + 1).padStart(2, "0")}</small></div>
-        <div className={styles.layoutActions}>
-          <button type="button" onClick={resetLayout}>清空本模板</button>
-        </div>
       </div>
 
-      {siteScope ? <><SiteAssetUpload endpoint={siteScope.assetsEndpoint} onUploaded={refreshLibrary} /><p role="status">{libraryMessage}</p></> : <PhotoImportPanel
-        importing={isImporting}
-        libraryMessage={libraryMessage}
-        libraryState={libraryState}
-        localPhotoImportOrigin={localPhotoImportOrigin}
-        localPhotoImportState={localPhotoImportState}
-        onImportingChange={setIsImporting}
-        onRefresh={refreshLibrary}
-        stats={libraryStats}
-      />}
-
-      <LayoutCompositionPreview
-        templateId={content.activeTemplate}
-        assets={assets}
-        libraryState={libraryState}
-        libraryMessage={libraryMessage}
-        busy={isImporting}
-        onRefresh={refreshLibrary}
-      />
-
+      {siteScope && libraryTruncated && libraryState !== "error" && <p className={styles.libraryManagementMessage} role="status">{libraryMessage}</p>}
+      {libraryState === "error" && <p role="alert">{libraryMessage}<button type="button" onClick={() => void refreshLibrary()}>重新读取素材</button></p>}
       <div className={styles.layoutWorkspace}>
         <section className={styles.slotPane} aria-labelledby="slot-list-heading">
           <div className={styles.paneHeading}>
@@ -721,7 +702,7 @@ export default function LayoutWorkspace() {
                   ? "移入回收站的素材会保留原文件和现有排版引用，并可随时恢复。"
                   : activeItems.length === 0
                 ? localPhotoImportState === "configured"
-                    ? "使用上方“添加素材”把照片或文件夹加入素材库。"
+                    ? "使用下方“上传素材与排版建议”把照片或文件夹加入素材库。"
                     : localPhotoImportState === "missing"
                       ? "本地照片导入服务未启动；请使用 npm run dev 启动完整编辑环境。"
                       : "当前没有可用的素材。"
@@ -730,6 +711,29 @@ export default function LayoutWorkspace() {
           )}
         </section>
       </div>
+      <details className={styles.layoutSecondaryTools}><summary>上传素材与排版建议</summary>
+        <button type="button" onClick={resetLayout}>清空本模板</button>
+      {siteScope ? <><SiteAssetUpload endpoint={siteScope.assetsEndpoint} onUploaded={refreshLibrary} /><p role="status">{libraryMessage}</p></> : <PhotoImportPanel
+        importing={isImporting}
+        libraryMessage={libraryMessage}
+        libraryState={libraryState}
+        localPhotoImportOrigin={localPhotoImportOrigin}
+        localPhotoImportState={localPhotoImportState}
+        onImportingChange={setIsImporting}
+        onRefresh={refreshLibrary}
+        stats={libraryStats}
+      />}
+
+      <LayoutCompositionPreview
+        templateId={content.activeTemplate}
+        assets={assets}
+        libraryState={libraryState}
+        libraryMessage={libraryMessage}
+        busy={isImporting}
+        onRefresh={refreshLibrary}
+      />
+
+      </details>
     </AdminSection>
   );
 }

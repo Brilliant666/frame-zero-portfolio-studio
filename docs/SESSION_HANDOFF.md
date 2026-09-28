@@ -1,7 +1,7 @@
 # 会话交接
 
 更新：2026-09-28。先读 [AGENTS](../AGENTS.md)、[CURRENT_STATUS](CURRENT_STATUS.md)，
-再读 [PR33 当前收口记录](PR33_FUNCTIONAL_CLOSURE.md)。按任务需要读取 North Star、路线图和相关 Accepted ADR；
+再读 [PR33 后台体验当前记录](PR33_ADMIN_UX.md)，前次功能基线见 [收口记录](PR33_FUNCTIONAL_CLOSURE.md)。按任务需要读取 North Star、路线图和相关 Accepted ADR；
 不要求重读旧聊天、历史审计或 Docker 恢复。
 
 ## 本轮产品决定
@@ -51,10 +51,10 @@ createdAt 仅代表加入本站时间；10000 条截断仍只支持已载入部�
 - PR33 独立开发工作区与日常 3001 目录不同；不在运行目录切分支或覆盖构建。
 - 私有运维入口：`%LOCALAPPDATA%/PortfolioPlatform/local-m3/SESSION_HANDOFF.local.md`。
   本机命令、环境位置、备份与运行版本以该文件和现场证据为准；不输出凭据。
-- 3001 为日常；3003 候选可能同连业务库；3004 与 `frame_zero_accounts_test` 才是本轮写入隔离环境。
+- 3001 为日常，前次授权已更新 ea76e48；本次 3003 候选连接独立 PG55435，仅此隔离环境用于写回归。3004 原验收环境受保护。
   star、phototest 是用户维护的本机模拟内容，不是可任意改写的测试 fixture，也不是实际客户验证。
 - 新迁移 `0004_basic_publications.sql` 只放宽发布空间约束，保留旧高级历史和不可变保护。
-  已在隔离库备份后验证空库与含历史升级；日常库未迁移。合并验收时仍须另行授权，先备份后显式迁移，
+  前次已获授权、备份后迁移日常库，现状见本机交接；本轮没有迁移。后续切换与迁移仍须另行授权，先备份后显式迁移，
   不能靠启动候选偷偷迁移业务库，也不能回退数据库快照覆盖用户后续编辑。
 - Windows 服务操作分开执行：只读核对 → 停止 → 确认退出 → 启动 → 独立健康检查。
   只在确需切换时重启；不放宽 origin、Host、Cookie、CSRF 来跨端口登录。

@@ -1499,3 +1499,37 @@
   .shell[data-site-editor="basic"] .sectionHeader h2 { font-size: 1.25rem; }
   .shell[data-site-editor="basic"] .errorSummary { align-items: stretch; flex-direction: column; gap: .65rem; overflow-wrap: anywhere; }
 }
+
+/* Site tools and version states are in the flow toolbar, never a taller fixed header. */
+.shell[data-site-editor="basic"] { --admin-v2-topbar-height: 3.5rem; }
+.shell[data-site-editor="basic"] .topbarActions { display: none; }
+.shell[data-site-editor="basic"] .topbar { grid-template-columns: 14.5rem minmax(0, 1fr); }
+.shell[data-site-editor="basic"] .saveButtonFull { display: inline; }
+.shell[data-site-editor="basic"] .saveButtonCompact { display: none; }
+@media (max-width: 900px) {
+  .shell[data-site-editor="basic"] .topbar { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (min-width: 601px) {
+  .shell[data-site-editor="basic"] .currentSection { padding-right: 290px; }
+}
+.layoutSecondaryTools { margin-top:16px; border:1px solid var(--admin-v2-line); border-radius:8px; padding:12px; }
+.layoutSecondaryTools > summary { cursor:pointer; font-size:14px; }
+.layoutSecondaryTools[open] > :not(summary) { margin-top:16px; }
+@media(max-width:720px) {
+ .layoutSummary { grid-template-columns:1fr 1fr; }
+ .layoutSummary > div { padding:8px; }
+ .layoutSummary small,.mobileLayoutNote { display:none; }
+ .layoutSummary .layoutActions { grid-column:1/-1; padding:4px 8px; }
+ .slotList { display:flex; overflow-x:auto; max-width:100%; }
+ .slotListButton { flex:0 0 130px; padding:6px; grid-template-columns:24px 1fr; gap:4px; }
+ .slotListButton .slotThumb { display:none; }
+ .slotPane { min-width:0; }
+}
+
+.siteSectionHint { padding: 10px 20px; border-bottom: 1px solid #dedad2; }
+.siteSectionHint p { margin: 0; font-size: 13px; line-height: 1.5; color: #706960; }
+.socialFields { grid-column: 1 / -1; min-width: 0; }
+.socialFields > summary { min-height: 44px; padding: 10px 0; cursor: pointer; overflow-wrap: anywhere; }
+.socialFields > div { display: grid; gap: 14px; padding: 12px 0; }
+.layoutSummary { grid-template-columns:1fr 1fr; }

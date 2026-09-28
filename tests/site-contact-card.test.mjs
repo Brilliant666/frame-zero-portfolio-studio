@@ -106,6 +106,9 @@ test("Site contact card does not turn a malformed existing reference into a glob
   }));
   assert.doesNotMatch(html, /<img|https:\/\/example.com/);
   assert.match(html, /移除卡片引用/);
+  assert.match(html, /role="alert"/);
+  assert.match(html, /<details[^>]*open=""/);
+  assert.ok(html.indexOf('role="alert"') < html.indexOf("<details"), "Invalid-reference warning remains outside disclosure and recovery tools open");
 });
 
 test("Site library uses registration timestamps, stable same-time IDs and unknown times last without changing input order", () => {

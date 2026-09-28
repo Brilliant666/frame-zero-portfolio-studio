@@ -60,14 +60,18 @@ export default function SiteContactCard({ assetsEndpoint, assetId, targetKey, on
   const currentPage = Math.min(page, pageCount - 1);
 
   return <section className={styles.editor} aria-label="可选联系卡">
-    <p>联系卡可留空，文字账号和网址可独立使用。选用只修改当前空间草稿，保存与发布另行操作。</p>
+    <p className={styles.caption}>可选联系卡 · 文字账号和网址可独立使用。</p>
     {src && failedPreview !== src && <a className={styles.preview} href={src} target="_blank" rel="noopener noreferrer" aria-label="查看联系卡大图"><img src={src} alt="当前联系卡" onError={() => setFailedPreview(src)} /></a>}
+    {assetId && !validId && <p role="alert">联系卡引用无效；原引用已保留，可重新选卡或移除引用。</p>}
     {src && failedPreview === src && <p role="status">卡片暂不可用；原引用、文字账号和网址已保留。</p>}
-    <div className={styles.actions}>
+    <details className={styles.tools} open={Boolean(assetId && (!validId || failedPreview === src)) || undefined}>
+      <summary>联系卡选用与管理{assetId ? " · 已引用" : " · 未设置"}</summary>
+      <div className={styles.actions}>
       <button type="button" onClick={open}>{assetId ? "替换联系卡" : "选择或上传联系卡"}</button>
       {assetId && <button type="button" onClick={() => { close(); onChange(undefined); }}>移除卡片引用</button>}
     </div>
     {assetId && <small>移除或替换只改变当前草稿引用，原资源保留。</small>}
+    </details>
     {opened && <div className={styles.picker}>
       <h4>从本站素材选用联系卡</h4>
       <p>上传成功只表示资源已入库。请在列表中点击“选用此卡片”确认，不会自动替换原卡片。</p>

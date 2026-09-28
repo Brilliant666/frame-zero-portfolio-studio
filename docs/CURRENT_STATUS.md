@@ -1,7 +1,7 @@
 # 当前检查点
 
 更新：2026-09-28。[AGENTS](../AGENTS.md) → 本页 → [SESSION_HANDOFF](SESSION_HANDOFF.md)。
-当前任务：**PR33_UNATTENDED_FUNCTIONAL_CLOSURE**，范围和切片证据统一记在
+当前任务：**PR33_ADMIN_UX_A_B_C**，实施与未完成验收见 [后台体验记录](PR33_ADMIN_UX.md)。前次任务：**PR33_UNATTENDED_FUNCTIONAL_CLOSURE**，范围和切片证据统一记在
 [PR33 功能收口记录](PR33_FUNCTIONAL_CLOSURE.md)。旧交接的“只做选片／逐项等待”已由用户本轮授权替代。
 
 ## 当前研发状态
@@ -26,10 +26,9 @@
 
 ## 日常与授权边界
 
-日常 3001 仍是已接受的 main `69f0c6be64a961f9af96481f54f6e98f8b192af6`，
-不使用 PR33 开发目录构建替换。3003 若连接业务库就不是写入沙盒。
-本轮所有写入验证仅用隔离 PostgreSQL `frame_zero_accounts_test`、3004、匿名合成素材。
-`0004_basic_publications` 仅在隔离库验证，日常业务库没有迁移。
+日常 3001 已经前次明确授权更新到 PR33 `ea76e48`，备份后应用 0004；本次保持不变。
+本次 3003 使用独立构建副本、独立 PG 55435 和匿名测试素材。原 3004 与日常业务库均受保护。
+后台体验 A/B/C 已实现；75 项相关测试和独立 API 回归通过，同数据截图已完成。真实手机软键盘、基础跨空间确认框后的浏览器路径仍待人工验收，不能算全部通过。
 
 用户已授权本 PR 内连续实现、测试、提交、推送和更新描述；
 **未授权 Ready、Approve、Merge、auto-merge、main 修改、日常切换、真实迁移或远程部署。**

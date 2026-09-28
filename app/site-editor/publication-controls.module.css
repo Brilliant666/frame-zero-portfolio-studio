@@ -68,3 +68,28 @@
   .panel.panel .actions .secondary { font-size: 12px; }
   .panel.panel .primary { padding-inline: 10px; font-size: 12px; }
 }
+
+/* Version details stay in flow; only the two save actions stay on screen. */
+.panel { padding: 12px 16px; }
+.tools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; margin-top: 10px; }
+.tools :is(a, button, summary) { font: inherit; min-height: 32px; color: #435b77; }
+.tools button { border: 1px solid #cdd6e2; background: #fff; border-radius: 6px; padding: 5px 9px; }
+.tools details > div { display: flex; gap: 8px; flex-wrap: wrap; padding: 8px 0; }
+.panel .actions { gap: 8px; }
+.panel .actions > button { min-height: 44px; padding: 8px 14px; border: 1px solid #b9c5d4; border-radius: 8px; background: white; color: #344b66; font: inherit; }
+.panel.panel .actions .primary { min-height: 44px; }
+.actions[data-modal-open] { visibility: hidden; }
+.history { font-size: 12px; }
+@media (max-width: 600px) {
+  .panel { padding: 10px 12px; }
+  .versions { gap: 4px 8px; font-size: 12px; }
+  .tools { gap: 4px 12px; }
+  .panel .actions { position: fixed; z-index: 45; bottom: 0; inset-inline: 0; width: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: #fffffff5; border-top: 1px solid #d5dce5; box-shadow: 0 -3px 15px #24344910; }
+  .panel .actions[data-keyboard-open], .panel .actions[data-modal-open] { visibility: hidden; pointer-events: none; }
+  :global(body):has(.panel) { padding-bottom: calc(76px + env(safe-area-inset-bottom)); scroll-padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
+  :global(body):has(.panel) :is(input, textarea, select, button, a) { scroll-margin-bottom: 90px; }
+}
+
+@media (min-width: 601px) {
+  .panel .actions { position: fixed; top: 6px; right: 24px; z-index: 55; flex-wrap: nowrap; }
+}
