@@ -17,25 +17,24 @@ server, HTTPS or Docker-repair prerequisite is imposed on local product code.
 
 ## 1. Current state
 
-The repository currently has:
+2026-09-28：账号、Site 路由、独立内容和资源已在 Standard Next Node + PostgreSQL
+实现并经 CI、本机模拟账号验证。基础十一模板使用六分区后台，高级拍立得使用独立
+四分区后台；同 Site 共享资源，不强制同步业务资料。高级发布/历史/回退已实现，
+基础发布尚未接线。PR32 是已接受的第一轮后台与入口 UI 整理，不是完整体验收尾。
 
-- eleven formal, lazy-loaded photography templates;
-- Admin V2 with six focused editing sections;
-- local photo ingestion and a real local photo library;
-- legacy `SiteContent` stored in `site_settings(id = 1)` through D1;
-- a frozen `SiteDocumentV1` contract;
-- stable Site/Asset ID migration planning;
-- a strict legacy adapter;
-- a pure Adaptive Composition contract and planner;
-- Cloudflare/vinext runtime wiring that is not the accepted self-hosted
-  production target.
+| 里程碑 | 当前已验证范围 | 剩余 |
+| --- | --- | --- |
+| M1 | 登录、真实 Site 路由、owner/grant 拒绝 | 无新的入口研发任务自动启动 |
+| M2 | 双空间真实编辑器、独立草稿/CAS/受保护预览/重启持久化 | 预览呈现一致性仍可改进 |
+| M3 | Site 资源、上传夹具、归属、展示变体接入 | 大库工作流、分享卡替换、回收与原图归档 |
+| M4 | 高级拍立得不可变发布、历史、回退、Published-only 公开读取 | 基础模板发布 |
+| M5 | 本机 star/phototest 模拟验收与隔离测试 | 不等于真实客户验收或公网部署 |
 
-Standard Next Node parity and repository deployment packaging are accepted.
-PR #28 implements PostgreSQL migrations, real Better Auth, operator provisioning,
-AuthUser → PortfolioUser → Site and grants, verified against real PostgreSQL in
-CI. Local PostgreSQL readback and real star provisioning remain incomplete.
-Site routes, independent content, publication and Site assets are the product
-delivery path; target Linux deployment is separately unauthorized.
+旧 D1 记录 1/2601 和本地图库保留为 legacy/迁移来源，不作为新 Site fallback。
+冻结的 SiteDocumentV1、严格 legacy adapter、Adaptive Composition 契约继续保留。
+Cloudflare/vinext 是历史兼容路径，不是当前日常账号运行方式。
+完整交接及当前授权以 [CURRENT_STATUS](CURRENT_STATUS.md) 和
+[SESSION_HANDOFF](SESSION_HANDOFF.md) 为准：本轮交接后等待用户选择，不自动继续 M1–M5。
 
 PR #16 remains `KEEP_DRAFT`. It is Auth research evidence for
 Better Auth + vinext + workerd + D1, not a self-hosted production baseline.
@@ -50,7 +49,7 @@ Better Auth + vinext + workerd + D1, not a self-hosted production baseline.
 | M4 | Save Draft only; explicit Publish immutable snapshot/pointer; public page and metadata read same Published version; rollback preserves history; template changes retain other spaces | G |
 | M5 | Second anonymous fixture photographer uses operator provisioning and own uploads/editors; grants/session expiry/logout/cross-Site rejection proven; real second account only on user input | E/F/H end-to-end |
 
-Preserve `/preview` and current edits until new content is usable. All product
+Preserve legacy sources and current edits; the account runner isolates `/preview` and `/admin`. All product
 login/editing belongs to one Standard Next application/origin; test ports do not
 become permanent module services. No star hardcode, fake session or global 2601
 fallback. M2 adapts SiteContent and PreviewPortfolioDocumentV1 without rewriting
@@ -63,8 +62,8 @@ checks. Do not repeatedly run full research for text-only changes or weaken
 budgets/tests/design. Track implementation, CI, local and real-star evidence
 independently.
 
-PR #28 remains foundation-only. Topic branches may stack on its verified head;
-state real base/dependency, with at most two pending review layers. Delivery or
+PR #28 is merged foundation history, not an active dependency branch. Future topic branches must
+state their actual base/dependency, with at most two pending review layers. Delivery or
 green CI is not an automatic stop; at capacity, stop dependent work and present
 one review list. Merge/approve/auto-merge and remote actions need separate consent.
 

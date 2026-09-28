@@ -1,5 +1,9 @@
 # M2：Site 独立内容编辑与草稿保存
 
+> 历史阶段记录：保留当时范围、失败与验收事实；当前能力、合并、运行及授权
+> 以 [CURRENT_STATUS](CURRENT_STATUS.md) 和 [SESSION_HANDOFF](SESSION_HANDOFF.md) 为准。
+> 下文当时的 Draft、环境缺口或“未完成”不自动构成当前阻塞。
+
 日期：2026-09-27。状态：PR30_BUDGET_POLICY_IMPLEMENTED / HUMAN_ACCEPTANCE_PENDING。
 
 分支：`codex/site-content-editor-integration`；[Draft PR #30](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/30)。最终 head 的 CI 结果在 PR 验收评论记录，避免把早期 head 结果替代最终验证。
