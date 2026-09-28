@@ -2,6 +2,13 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
 
+// Open the actual disclosure before editing; never force visibility or bypass UI.
+async function expandControl(page, control) {
+  const disclosure = page.locator('details').filter({ has: control }).last();
+  if (await disclosure.getAttribute('open') === null) await disclosure.locator(':scope > summary').click();
+  await control.waitFor({ state: 'visible' });
+}
+
 // Imported only by the isolated publication browser fixture. Every template is
 // selected and published through its actual editor; reads verify the result.
 export async function siteTemplateBrowserMatrix({ page, publicPage, context, origin, slug, basic, premium, stage, nav, ready, template, publish, draft, publication, screenshot, recordTiming }) {
@@ -173,6 +180,7 @@ export async function siteTemplateBrowserMatrix({ page, publicPage, context, ori
       await page.setViewportSize({ width: 1440, height: 900 });
       await nav('contact');
       const saved = await draft(), pointer = (await publication()).current.id;
+      await expandControl(page, page.getByLabel(/^账号、主页链接或分享文案 1/));
       await page.getByLabel(/^账号、主页链接或分享文案 1/).fill('UNSAVED-CONTACT-FIXTURE');
       await page.getByRole('button', { name: '预览当前编辑', exact: true }).click();
       const root = currentDialog().locator(`[data-template="${saved.content.activeTemplate}"]`);
@@ -194,8 +202,10 @@ export async function siteTemplateBrowserMatrix({ page, publicPage, context, ori
       assert.ok(sharedCardId);
       await page.getByRole('button', { name: '联系约拍', exact: true }).click();
       await page.getByRole('button', { name: '添加平台账号', exact: true }).click();
+      await expandControl(page, page.getByLabel('平台 1 · 名称', { exact: true }));
       await page.getByLabel('平台 1 · 名称', { exact: true }).fill('Premium fixture contact');
       await page.getByLabel('平台 1 · 账号或主页链接', { exact: true }).fill('https://example.com/fixture');
+      await expandControl(page, page.getByRole('button', { name: '选择或上传联系卡', exact: true }));
       await page.getByRole('button', { name: '选择或上传联系卡', exact: true }).click();
       await page.locator('article').filter({ has: page.locator('code', { hasText: sharedCardId }) }).getByRole('button', { name: '选用此卡片', exact: true }).click();
       assert.ok((await page.getByAltText('当前联系卡', { exact: true }).getAttribute('src')).includes(sharedCardId));
@@ -203,6 +213,7 @@ export async function siteTemplateBrowserMatrix({ page, publicPage, context, ori
       await page.getByRole('button', { name: '图集管理', exact: true }).click();
       for (let index = 1; index <= 4; index++) {
         await page.getByRole('button', { name: '新建图集', exact: true }).click();
+        await expandControl(page, page.getByLabel('图集名称', { exact: true }));
         await page.getByLabel('图集名称', { exact: true }).fill(`Premium browser matrix ${index}`);
         await page.getByRole('button', { name: '从本站图库选片', exact: true }).click();
         const picker = page.getByRole('dialog', { name: '从本站图库选片', exact: true });

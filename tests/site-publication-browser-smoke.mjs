@@ -7,6 +7,13 @@ import { chromium } from 'playwright';
 import { provisionAccount } from '../db/accounts/provision.mjs';
 import { siteTemplateBrowserMatrix } from './site-template-browser-matrix.mjs';
 
+// Open the actual disclosure before editing; never force visibility or bypass UI.
+async function expandControl(page, control) {
+  const disclosure = page.locator('details').filter({ has: control }).last();
+  if (await disclosure.getAttribute('open') === null) await disclosure.locator(':scope > summary').click();
+  await control.waitFor({ state: 'visible' });
+}
+
 // Writes use the real UI against a provisioned anonymous fixture only. The caller
 // owns database/server start, backup and shutdown; this module never starts them.
 export async function sitePublicationBrowserSmoke({ runtime, origin, password, signal }) {
@@ -151,12 +158,15 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
       await page.getByLabel('品牌名', { exact: true }).fill('PUBLICATION FIXTURE');
       await step('profile filled, navigate layout');
       await nav('layout');
+      await expandControl(page, page.getByLabel('上传本站照片', { exact: true }));
       photoAssets = [await upload(await makeFile('landscape', 900, 600, '#557799')), await upload(await makeFile('landscape-second', 960, 640, '#997755')), await upload(await makeFile('portrait', 600, 900, '#667755'))];
       await nav('contact');
       await step('contact section ready');
       await page.getByRole('button', { name: '添加平台账号', exact: true }).click();
+      await expandControl(page, page.getByLabel('平台 1', { exact: true }));
       await page.getByLabel('平台 1', { exact: true }).fill('Fixture contact');
       await page.getByLabel(/^账号、主页链接或分享文案 1/).fill('https://example.com/fixture');
+      await expandControl(page, page.getByRole('button', { name: '选择或上传联系卡', exact: true }));
       await page.getByRole('button', { name: '选择或上传联系卡', exact: true }).click();
       originalCard = await upload(await makeFile('contact-card', 480, 640, '#f0e0d0'));
       await step('contact card uploaded, explicit selection');
@@ -172,9 +182,11 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
     });
     await stage('02 card cancellation and failed replacement keep old reference', async () => {
       const before = await draft(), pointer = (await publication()).current.id;
+      await expandControl(page, page.getByRole('button', { name: '替换联系卡', exact: true }));
       await page.getByRole('button', { name: '替换联系卡', exact: true }).click();
       await page.getByRole('button', { name: '取消选卡', exact: true }).click();
       assert.ok((await page.getByAltText('当前联系卡', { exact: true }).getAttribute('src')).includes(originalCard.id));
+      await expandControl(page, page.getByRole('button', { name: '替换联系卡', exact: true }));
       await page.getByRole('button', { name: '替换联系卡', exact: true }).click();
       await page.route(`**${assetsPath}`, route => route.request().method() === 'POST' ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Synthetic upload unavailable' }) }) : route.continue());
       await page.getByLabel('上传本站照片', { exact: true }).setInputFiles(await makeFile('failed-card', 320, 480, '#123456'));
@@ -205,8 +217,8 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
       const premiumBefore = await draft('premium-polaroid');
       await page.goto(`${origin}${basic}/profile`); await ready();
       await publish(); assert.deepEqual(await draft('premium-polaroid'), premiumBefore);
-      await publicationRegion().locator('summary').click();
-      const previous = publicationRegion().locator('li').filter({ hasText: '基础版 · cinematic-light · v1' });
+      await publicationRegion().locator('summary').filter({ hasText: /^发布历史与回退 / }).click();
+      const previous = publicationRegion().locator('li').filter({ hasText: '基础版 · 明亮电影感 · v1' });
       const response = page.waitForResponse(r => new URL(r.url()).pathname === publicationPath('basic') && r.request().method() === 'POST');
       await previous.getByRole('button', { name: '恢复此公开版本', exact: true }).click();
       assert.equal((await response).status(), 200);
@@ -281,7 +293,8 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
       await publicationRegion().getByRole('button', { name: '保存并发布', exact: true }).click();
       await publicationRegion().getByRole('status').filter({ hasText: /发布结果待确认；当前公开版本与目标不同/ }).waitFor();
       assert.equal(await publicationRegion().getByRole('button', { name: '保存并发布', exact: true }).isDisabled(), true);
-      if (!(await publicationRegion().locator('details').evaluate(element => element.open))) await publicationRegion().locator('summary').click();
+      // Recovery remains available without expanding publication history.
+      await publicationRegion().getByRole('button', { name: '检查发布结果', exact: true }).waitFor({ state: 'visible' });
       await publicationRegion().getByRole('button', { name: '检查发布结果', exact: true }).click();
       await publicationRegion().getByRole('status').filter({ hasText: '发布结果仍待确认' }).waitFor();
       assert.equal(writes('POST', publicationPath('basic')) - beforePost, 1); assert.equal((await publication()).current.id, pointer);

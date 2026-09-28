@@ -435,7 +435,7 @@ test("contact Admin keeps WeChat, Email, and note while normalizing safe platfor
   assert.ok(!editor.includes("findQqContact"));
   assert.ok(!editor.includes("isQqSocialEntry"));
   assert.ok(!editor.includes("updateQqContact"));
-  assert.ok(!editor.includes("<details"), "shared contact fields are not hidden behind template-specific UI");
+  assert.ok(!contactFields.includes("<details"), "primary shared contact fields remain directly available; optional platform entries may use disclosures");
   assert.ok(!editor.includes("其他模板兼容内容"));
 
   assert.ok(editor.includes("const MAX_SOCIAL_LINKS = 8"));

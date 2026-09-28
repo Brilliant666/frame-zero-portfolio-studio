@@ -31,6 +31,13 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
     if (url.pathname.startsWith(`/api/sites/${a}/assets`)) network.push({ path: url.pathname, method: response.request().method(), status: response.status() });
   });
   const page = await context.newPage();
+  async function expandTools(title) {
+    const summary = page.getByText(title, { exact: true });
+    // Read the native disclosure state and use its visible control, as a user does.
+    const details = summary.locator('..');
+    if (await details.getAttribute('open') === null) await summary.click();
+  }
+
   async function login(p, username) {
     await p.goto(`${origin}/login`);
     await p.getByLabel('用户名', { exact: true }).fill(username);
@@ -97,6 +104,7 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
       for (const [name, width, height, background] of [['landscape', 900, 600, '#476aa3'], ['portrait', 600, 900, '#70a284'], ['square', 700, 700, '#d2ad65']]) {
         files.push({ name: `${name}.png`, mimeType: 'image/png', buffer: await sharp({ create: { width, height, channels: 3, background } }).png().toBuffer() });
       }
+      await expandTools('上传素材与排版建议');
       await page.getByLabel('上传本站照片', { exact: true }).setInputFiles(files);
       await page.getByText('已上传 3 张；本站两套后台可引用同一资源，无需重复上传。', { exact: true }).waitFor();
       const list = await context.request.get(`${origin}/api/sites/${a}/assets`);
@@ -115,6 +123,7 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
       await page.getByLabel('摄影师名称', { exact: true }).fill('Premium asset photographer');
       await page.getByRole('button', { name: '图集管理', exact: true }).click();
       await page.getByRole('button', { name: '新建图集', exact: true }).click();
+      await expandTools('图集名称、简介与显示顺序');
       await page.getByLabel('图集名称', { exact: true }).fill('Anonymous landscape portrait square');
       await page.getByRole('button', { name: '从本站图库选片', exact: true }).click();
       const picker = page.getByRole('dialog', { name: '从本站图库选片', exact: true });
@@ -156,11 +165,13 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
       for (const width of [390, 320]) {
         await page.setViewportSize({ width, height: 844 });
         await page.goto(`${origin}${basic}/layout`);
+        await expandTools('上传素材与排版建议');
         await page.getByLabel('上传本站照片', { exact: true }).waitFor();
         await images({ editor: true }); await shot('04-basic-mobile');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 2), false, `Basic editor overflow at ${width}`);
         await page.goto(`${origin}${premium}`);
         await page.getByRole('button', { name: '图集管理', exact: true }).click();
+        await expandTools('图集名称、简介与显示顺序');
         await page.getByLabel('图集名称', { exact: true }).waitFor();
         assert.equal(await page.getByLabel('图集名称', { exact: true }).inputValue(), 'Anonymous landscape portrait square');
         await shot('04-premium-mobile');

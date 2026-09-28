@@ -40,6 +40,13 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
   context.setDefaultTimeout(15000);
   const page = await context.newPage();
+  async function expandTools(title) {
+    const summary = page.getByText(title, { exact: true });
+    // Read the native disclosure state and use its visible control, as a user does.
+    const details = summary.locator('..');
+    if (await details.getAttribute('open') === null) await summary.click();
+  }
+
   const abort = () => { void browser.close(); };
   signal?.addEventListener('abort', abort, { once: true });
   const endpoint = `/api/sites/${slug}/drafts/premium-polaroid`;
@@ -91,6 +98,7 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
       await page.goto(`${origin}/${slug}/admin/premium-polaroid`);
       await page.getByRole('button', { name: '图集管理', exact: true }).click();
       await page.getByRole('button', { name: '新建图集', exact: true }).click();
+      await expandTools('图集名称、简介与显示顺序');
       await page.getByLabel('图集名称', { exact: true }).fill('Anonymous picker collection');
       await open();
       await picker.waitFor();
@@ -156,6 +164,7 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
       assert.deepEqual((await idsOnPage()).sort(), [...selected].sort());
       await picker.getByRole('button', { name: '加入当前图集（3 张）', exact: true }).click();
       await page.getByRole('heading', { name: '成员与顺序 · 3 张', exact: true }).waitFor();
+      await page.getByRole('button', { name: '成员 3 选择操作', exact: true }).click();
       page.once('dialog', dialog => dialog.accept('1'));
       await page.getByRole('button', { name: '成员 3 移到指定位置', exact: true }).click();
       selected = [selected[2], selected[0], selected[1]];
@@ -184,6 +193,7 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
       await page.setViewportSize({ width: 1440, height: 900 });
       const otherSave = await context.request.put(`${origin}${endpoint}`, { headers: { origin }, data: { content: saved.content, expectedRevision: saved.revision } });
       assert.equal(otherSave.status(), 200);
+      await expandTools('图集名称、简介与显示顺序');
       await page.getByLabel('图集名称', { exact: true }).fill('Unsaved conflict retained');
       await save(409);
       await page.getByText(/版本冲突：其他标签页已保存新版本/).waitFor();
