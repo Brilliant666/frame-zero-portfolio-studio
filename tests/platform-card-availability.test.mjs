@@ -79,3 +79,21 @@ test("JPEG and WebP cards are accepted only on controlled Site variant routes", 
   }
   for (const type of ["image/svg+xml", "text/html", "application/octet-stream"]) assert.equal(await probePlatformCardAvailability(site, { fetchImpl: async () => new Response(null, { headers: { "content-type": type } }) }), false);
 });
+
+test("published contact cards accept only public display variants and still fail closed for revoked access", async (t) => {
+  const { probePlatformCardAvailability } = await loadAvailabilityProbe(t);
+  const base = "/api/public-sites/owner-a/assets/12345678-1234-4234-8234-123456789abc";
+  for (const type of ["image/jpeg", "image/webp"]) {
+    const fetchImpl = async () => new Response(null, { headers: { "content-type": type } });
+    for (const variant of ["card", "full"]) assert.equal(await probePlatformCardAvailability(`${base}/${variant}`, { fetchImpl }), true);
+    for (const url of [`${base}/original`, `${base}/thumbnail`, `${base}/full?other=1`, `https://example.com${base}/full`, "/api/public-sites/owner-a/assets/external/full"]) {
+      assert.equal(await probePlatformCardAvailability(url, { fetchImpl }), false, url);
+    }
+    for (const status of [401, 403, 404, 503]) {
+      assert.equal(await probePlatformCardAvailability(`${base}/full`, { fetchImpl: async () => new Response(null, { status, headers: { "content-type": type } }) }), false);
+    }
+  }
+  for (const type of ["image/svg+xml", "text/html", "application/octet-stream"]) {
+    assert.equal(await probePlatformCardAvailability(`${base}/full`, { fetchImpl: async () => new Response(null, { headers: { "content-type": type } }) }), false);
+  }
+});

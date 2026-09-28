@@ -9,6 +9,7 @@ import CollectionScene, { type SceneCard } from "./collection-scene";
 import type { ViewState } from "./viewport-fit";
 import type { CollectionEntranceSource } from "./collection-entrance";
 import { PreviewLoading } from "../../preview-workspace/preview-loading";
+import { collectionCameraKey, collectionScrollTarget, collectionScrollTop } from "./collection-scroll";
 import styles from "./scene.module.css";
 
 type Props = Pick<TemplateProps, "content" | "onOpenWork" | "onBeforeViewChange" | "isPreview"> & {
@@ -20,10 +21,14 @@ let preparedComposer: typeof import("./composer-scene").default | undefined;
 const loadComposer = () => import("./composer-scene").then(module => {preparedComposer=module.default;return module;});
 const ComposerScene = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? lazy(loadComposer) : null;
 const MotionHome = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? lazy(() => import("./motion-home")) : null;
-const cameraKey = (id: string) => `${id}:${window.innerWidth < 600 ? "mobile" : "desktop"}`;
 const assetLabel = (asset: PhotoAsset, index: number) => `素材 ${String(index + 1).padStart(2, "0")} · ${asset.aspectRatio > 1.05 ? "横幅" : asset.aspectRatio < .95 ? "竖幅" : "方幅"}`;
 
 export default function CollectionExperience({ content, isPreview, homeRequest, isActive, savedCollections, initialCollectionId, suppliedAssets: providedAssets, onOpenWork, onBeforeViewChange }: Props) {
+  const experienceRef = useRef<HTMLDivElement>(null);
+  const cameraKey = useCallback((id: string) => collectionCameraKey(experienceRef.current, id, savedCollections ? 768 : 600), [savedCollections]);
+  const restoreScroll = useCallback((top: number) => {
+    requestAnimationFrame(() => { if (experienceRef.current) collectionScrollTarget(experienceRef.current).scrollTo({ top, behavior: "instant" }); });
+  }, []);
   const suppliedAssets = process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? providedAssets : undefined;
   const [collections, setCollections] = useState<Collection[]>(() => savedCollections ? structuredClone([...savedCollections]) : initialCollections.map((item) => ({ ...item, assetIds: [] })));
   const [assets, setAssets] = useState<PhotoAsset[]>(() => suppliedAssets ? [...suppliedAssets] : []);
@@ -54,11 +59,12 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
   const ReadyScene=ComposerScene ? preparedComposer ?? ComposerScene : null;
   useEffect(() => {
     if (!isActive) return;
-    const remember = () => scrollPositions.current.set(cameraKey(sceneId), scrollY);
-    addEventListener("scroll", remember, { passive: true });
-    return () => removeEventListener("scroll", remember);
-  }, [isActive, sceneId]);
-  const rememberCamera = useCallback((view: ViewState) => { cameras.current.set(cameraKey(sceneId), view); }, [sceneId]);
+    const target = collectionScrollTarget(experienceRef.current);
+    const remember = () => scrollPositions.current.set(cameraKey(sceneId), collectionScrollTop(target));
+    target.addEventListener("scroll", remember, { passive: true });
+    return () => target.removeEventListener("scroll", remember);
+  }, [isActive, sceneId, cameraKey]);
+  const rememberCamera = useCallback((view: ViewState) => { cameras.current.set(cameraKey(sceneId), view); }, [sceneId, cameraKey]);
   const homeCards = useMemo<SceneCard[]>(() => visible.map((item) => ({ id: item.id, asset: collectionCover(item, assetMap), title: item.name || "未命名图集",
     subtitle: `${uniqueAvailableAssetIds(item, new Set(assetMap.keys())).length} 张照片`, fit: item.coverFit, focusX: item.coverFocusX, focusY: item.coverFocusY,
   })), [visible, assetMap]);
@@ -92,8 +98,8 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
     const scrollTop = scrollPositions.current.get(cameraKey("home")) ?? 0;
     onBeforeViewChange?.(); setRestoredView(cameras.current.get(cameraKey("home"))); setSelectedId(null);
     if (push && !isPreview) window.history.pushState(null, "", "#polaroid-top");
-    requestAnimationFrame(() => window.scrollTo({ top: scrollTop, behavior: "instant" }));
-  }, [isPreview, onBeforeViewChange]);
+    restoreScroll(scrollTop);
+  }, [isPreview, onBeforeViewChange, cameraKey, restoreScroll]);
   useEffect(() => {
     if (homeRequest === priorHomeRequest.current) return;
     priorHomeRequest.current = homeRequest;
@@ -109,12 +115,12 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
       const next = visible.some((item) => item.id === id) ? id : null;
       const scrollTop = scrollPositions.current.get(cameraKey(next ?? "home")) ?? 0;
       onBeforeViewChange?.(); setRestoredView(cameras.current.get(cameraKey(next ?? "home"))); setSelectedId(next);
-      requestAnimationFrame(() => window.scrollTo({ top: scrollTop, behavior: "instant" }));
+      restoreScroll(scrollTop);
       if (id && !next) history.replaceState(null, "", "#polaroid-top");
     };
     sync(); addEventListener("popstate", sync); addEventListener("hashchange", sync);
     return () => { removeEventListener("popstate", sync); removeEventListener("hashchange", sync); };
-  }, [isPreview, visible, onBeforeViewChange]);
+  }, [isPreview, visible, onBeforeViewChange, cameraKey, restoreScroll]);
   useEffect(() => {
     if (!selectedId || selected) return;
     const frame = requestAnimationFrame(() => returnHome(false));
@@ -149,14 +155,14 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
         });
       }
       const scrollTop = scrollPositions.current.get(cameraKey(id)) ?? 0;
-      scrollPositions.current.set(cameraKey("home"), scrollY); setLastSelected(id); setRestoredView(cameras.current.get(cameraKey(id)));
+      scrollPositions.current.set(cameraKey("home"), collectionScrollTop(collectionScrollTarget(experienceRef.current))); setLastSelected(id); setRestoredView(cameras.current.get(cameraKey(id)));
       setSelectedId(id);
-      requestAnimationFrame(() => window.scrollTo({ top: scrollTop, behavior: "instant" }));
+      restoreScroll(scrollTop);
       if (!isPreview) history.pushState(null, "", `${hashPrefix}${id}`);
     }
   };
 
-  return <div className={styles.experience} data-collection-proof={savedCollections ? undefined : "local-only"}>
+  return <div ref={experienceRef} className={styles.experience} data-collection-proof={savedCollections ? undefined : "local-only"}>
     {libraryError && <p role="alert">{libraryState}</p>}
     {savedCollections && MotionHome && (!selected || homeExiting) && <div style={homeExiting ? {position:"absolute",inset:"0 0 auto",zIndex:10,pointerEvents:"none"} : undefined} aria-hidden={homeExiting || undefined} inert={homeExiting || undefined}><Suspense fallback={<PreviewLoading />}><MotionHome cards={homeCards} content={content} active={isActive} onWarm={loadComposer} onPrepare={prepare} onOpen={openCard} restoreFocusId={homeExiting ? null : lastSelected} /></Suspense></div>}
     {savedCollections && !selected && MotionHome ? null : savedCollections && selected && ReadyScene ? <Suspense fallback={null}><ReadyScene key={sceneId} cards={cards} sceneId={sceneId} title={selected.name} description={selected.description}

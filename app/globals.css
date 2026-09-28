@@ -84,7 +84,8 @@ dialog[data-template-real-preview] main[data-template]:is(
   [data-template="character-select"],
   [data-template="museum-depth"]
 ) > header {
-  top: 4rem !important;
+  /* The preview artwork viewport already starts below its separate toolbar. */
+  top: 0 !important;
 }
 
 @media (max-width: 1080px) {

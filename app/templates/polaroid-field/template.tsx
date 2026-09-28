@@ -434,16 +434,16 @@ export default function PolaroidFieldTemplate({
             通过微信或邮箱发送，就可以开始一起搭建画面。
           </p>
 
-          <button type="button" onClick={() => void onCopy(content.contact.wechat, "polaroid-wechat")}>
+          {content.contact.wechat.trim() && (<button type="button" onClick={() => void onCopy(content.contact.wechat, "polaroid-wechat")}>
             <span>WECHAT / 点击复制</span>
             <strong>{content.contact.wechat}</strong>
             <b aria-live="polite">{copiedKey === "polaroid-wechat" ? "已复制 ✓" : "COPY ↗"}</b>
-          </button>
-          <a href={`mailto:${content.contact.email}`}>
+          </button>)}
+          {content.contact.email.trim() && (<a href={`mailto:${content.contact.email}`}>
             <span>EMAIL / 写一封信</span>
             <strong>{content.contact.email}</strong>
             <b>OPEN ↗</b>
-          </a>
+          </a>)}
           <p className={styles.contactNote}>{content.contact.note}</p>
         </div>
 
@@ -474,9 +474,9 @@ export default function PolaroidFieldTemplate({
       </section>
 
       <div className={styles.mobileCta} aria-label="快速约拍">
-        <button type="button" onClick={() => void onCopy(content.contact.wechat, "polaroid-mobile")}>
+        {content.contact.wechat.trim() && (<button type="button" onClick={() => void onCopy(content.contact.wechat, "polaroid-mobile")}>
           {copiedKey === "polaroid-mobile" ? "微信已复制 ✓" : "复制微信"}
-        </button>
+        </button>)}
         <a
           href="#polaroid-booking"
           onClick={(event) => handleViewLink(event, "booking", "#polaroid-booking", true)}

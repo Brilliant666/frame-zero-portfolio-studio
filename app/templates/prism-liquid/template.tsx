@@ -212,10 +212,10 @@ export default function PrismLiquidTemplate({ content, works, packages, bookingT
           <h2>{content.statement.lineOne}<br />{content.statement.lineTwo}</h2>
           <p>告诉我角色、时间和你想抵达的世界，我会把它变成一组完整影像。</p>
           <div className={styles.contactActions}>
-            <button type="button" onClick={() => void onCopy(content.contact.wechat, "prism-wechat")}>
+            {content.contact.wechat.trim() && (<button type="button" onClick={() => void onCopy(content.contact.wechat, "prism-wechat")}>
               <span>WECHAT</span><strong>{copiedKey === "prism-wechat" ? "已复制 ✓" : content.contact.wechat}</strong>
-            </button>
-            <a href={`mailto:${content.contact.email}`}><span>EMAIL</span><strong>{content.contact.email}</strong></a>
+            </button>)}
+            {content.contact.email.trim() && (<a href={`mailto:${content.contact.email}`}><span>EMAIL</span><strong>{content.contact.email}</strong></a>)}
           </div>
           <PlatformAccounts accounts={content.social} tone="light" />
         </div>

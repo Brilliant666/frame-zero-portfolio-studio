@@ -310,16 +310,16 @@ export default function FilmRailTemplate({
           <h2 id="booking-heading">下一卷电影，<br />由你的角色主演。</h2>
           <span>{content.profile.availability} · {content.profile.city}</span>
           <div className={styles.contactCards}>
-            <button type="button" onClick={() => void onCopy(content.contact.wechat, "film-wechat")}>
+            {content.contact.wechat.trim() && (<button type="button" onClick={() => void onCopy(content.contact.wechat, "film-wechat")}>
               <small>WECHAT / 点击复制</small>
               <strong>{content.contact.wechat}</strong>
               <span aria-live="polite">{copiedKey === "film-wechat" ? "已复制 ✓" : "COPY ↗"}</span>
-            </button>
-            <a href={`mailto:${content.contact.email}`}>
+            </button>)}
+            {content.contact.email.trim() && (<a href={`mailto:${content.contact.email}`}>
               <small>EMAIL / 发送企划</small>
               <strong>{content.contact.email}</strong>
               <span>WRITE ↗</span>
-            </a>
+            </a>)}
           </div>
           <p className={styles.contactNote}>{content.contact.note}</p>
           <PlatformAccounts accounts={content.social} tone="dark" />

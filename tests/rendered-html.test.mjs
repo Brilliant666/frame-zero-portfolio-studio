@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { register } from "node:module";
 import test from "node:test";
+import ts from "typescript";
 
 register(new URL("./cloudflare-loader.mjs", import.meta.url));
 
@@ -38,6 +39,8 @@ test("server-renders the platform landing rather than a photographer portfolio",
   assert.match(html, /href="\/preview"/);
   assert.doesNotMatch(html, /id="archive"|FRAMEZERO_DEMO/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|Codex is working/i);
+  assert.doesNotMatch(html, /data-admin-draft-preview-trigger|data-admin-draft-preview-dialog|保存并发布|仅保存草稿/,
+    "the public platform landing must not render private editor actions");
 });
 
 test("keeps editable content and eleven lazy template choices in one configuration", async () => {
@@ -87,7 +90,23 @@ test("keeps editable content and eleven lazy template choices in one configurati
   assert.match(adminShell, /data-admin-title="true"/);
   assert.match(adminShell, /<strong>\{siteScope \? "基础版空间" : "ADMIN"\}<\/strong>/);
   assert.doesNotMatch(adminShell, /FRAME\/\/ZERO/);
-  assert.doesNotMatch(adminShell, /预览当前草稿|DraftTemplatePreviewTrigger|data-admin-draft-preview-trigger/);
+  const parsedShell = ts.createSourceFile("admin-shell.tsx", adminShell, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const previewTriggers = [];
+  const visit = node => {
+    if (ts.isJsxSelfClosingElement(node) && node.tagName.getText(parsedShell) === "DraftTemplatePreviewTrigger") previewTriggers.push(node);
+    ts.forEachChild(node, visit);
+  };
+  visit(parsedShell);
+  assert.equal(previewTriggers.length, 1, "the Site editor restores one current-memory preview entry");
+  let ancestor = previewTriggers[0].parent, siteScoped = false;
+  while (ancestor) {
+    if (ts.isBinaryExpression(ancestor) && ancestor.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken && ancestor.left.getText(parsedShell) === "siteScope") siteScoped = true;
+    ancestor = ancestor.parent;
+  }
+  assert.equal(siteScoped, true, "the restored preview entry must stay inside the Site-only editor branch");
+  assert.match(previewTriggers[0].getText(parsedShell), /templateId=\{content\.activeTemplate\} scope="admin" label="预览当前编辑"/);
+  assert.doesNotMatch(page, /DraftTemplatePreviewTrigger|data-admin-draft-preview-trigger|<AdminShell|<PublicationControls/,
+    "legacy portfolio rendering must not acquire private editor controls");
   assert.match(adminShell, /"保存修改"/);
   assert.match(adminShell, /ADMIN_SECTIONS\.map/);
   assert.match(api, /onConflictDoUpdate/);

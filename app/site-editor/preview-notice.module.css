@@ -1,15 +1,34 @@
+.frame {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100dvh;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Fixed template navigation and lightboxes belong to the artwork viewport.
+   The inner scrollport scrolls without moving this containing block. */
+.canvas {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  contain: layout paint;
+  overflow: hidden;
+}
+
+.scrollport { height: 100%; overflow: auto; overscroll-behavior: contain; }
+
 .notice {
-  position: fixed;
-  z-index: 1000;
-  left: 12px;
-  bottom: calc(5rem + env(safe-area-inset-bottom));
-  max-width: calc(100vw - 24px);
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
   margin: 0;
   padding: 8px 12px;
   border: 1px solid #d9d3cc;
   background: #fff;
   color: #1b1714;
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .notice a {

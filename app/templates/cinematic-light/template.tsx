@@ -332,16 +332,16 @@ export default function CinematicLightTemplate({
             <p className="booking-intro">告诉我角色、日期和你脑中的那一幕。复制约拍清单后，通过微信或邮箱发送即可完成首次沟通。</p>
 
             <div className="quick-contact">
-              <button type="button" onClick={() => void onCopy(content.contact.wechat, "wechat")}>
+              {content.contact.wechat.trim() && (<button type="button" onClick={() => void onCopy(content.contact.wechat, "wechat")}>
                 <small>WECHAT / 点击复制</small>
                 <strong>{content.contact.wechat}</strong>
                 <span aria-live="polite">{copiedKey === "wechat" ? "已复制 ✓" : "COPY ↗"}</span>
-              </button>
-              <a href={`mailto:${content.contact.email}`}>
+              </button>)}
+              {content.contact.email.trim() && (<a href={`mailto:${content.contact.email}`}>
                 <small>EMAIL / 示例邮箱</small>
                 <strong>{content.contact.email}</strong>
                 <span>OPEN ↗</span>
-              </a>
+              </a>)}
             </div>
             <p className="demo-note">{content.contact.note}</p>
             <PlatformAccounts accounts={content.social} tone="light" />
@@ -368,9 +368,9 @@ export default function CinematicLightTemplate({
       </section>
 
       <div className="mobile-booking-bar" aria-label="快速约拍">
-        <button type="button" onClick={() => void onCopy(content.contact.wechat, "mobile-wechat")}>
+        {content.contact.wechat.trim() && (<button type="button" onClick={() => void onCopy(content.contact.wechat, "mobile-wechat")}>
           {copiedKey === "mobile-wechat" ? "微信号已复制 ✓" : "复制微信号"}
-        </button>
+        </button>)}
         <a href="#booking">查看套餐并约拍 ↗</a>
       </div>
 

@@ -292,7 +292,7 @@ export default function MangaPanelsTemplate({
             </div>
             <p className={styles.contactIntro}>{content.contact.note}</p>
 
-            <button
+            {content.contact.wechat.trim() && (<button
               type="button"
               className={styles.contactAction}
               onClick={() => void onCopy(content.contact.wechat, "manga-wechat")}
@@ -300,8 +300,8 @@ export default function MangaPanelsTemplate({
               <span>微信 / WECHAT</span>
               <strong>{content.contact.wechat}</strong>
               <b aria-live="polite">{copiedKey === "manga-wechat" ? "已复制 ✓" : "复制 ↗"}</b>
-            </button>
-            <button
+            </button>)}
+            {content.contact.email.trim() && (<button
               type="button"
               className={styles.contactAction}
               onClick={() => void onCopy(content.contact.email, "manga-email")}
@@ -309,7 +309,7 @@ export default function MangaPanelsTemplate({
               <span>邮箱 / EMAIL</span>
               <strong>{content.contact.email}</strong>
               <b aria-live="polite">{copiedKey === "manga-email" ? "已复制 ✓" : "复制 ↗"}</b>
-            </button>
+            </button>)}
           </div>
 
           <div className={styles.requestPanel}>
@@ -345,9 +345,9 @@ export default function MangaPanelsTemplate({
       </section>
 
       <div className={styles.mobileCta} aria-label="快速约拍">
-        <button type="button" onClick={() => void onCopy(content.contact.wechat, "manga-mobile") }>
+        {content.contact.wechat.trim() && (<button type="button" onClick={() => void onCopy(content.contact.wechat, "manga-mobile") }>
           {copiedKey === "manga-mobile" ? "微信已复制 ✓" : "复制微信"}
-        </button>
+        </button>)}
         <a href="#manga-booking">进入下一话 ↗</a>
       </div>
     </main>

@@ -51,7 +51,7 @@ function contactRenderer() {
     return loadedModule.exports;
   }
   return {
-    render(templateId, collectionWorkspace) {
+    render(templateId, collectionWorkspace, overrides = {}) {
       sharedCalls = 0;
       const Template = load(path.resolve(`app/templates/${templateId}/template.tsx`)).default;
       const content = {
@@ -61,6 +61,7 @@ function contactRenderer() {
         contact: { wechat: "fixture", email: "fixture@portfolio.example", note: "测试联系" },
         statement: { eyebrow: "测试", lineOne: "预约", lineTwo: "摄影" },
         social: [{ label: "测试平台", handle: "https://example.com/profile" }],
+        ...overrides,
       };
       const html = renderToStaticMarkup(createElement(Template, {
         templateId, content, works: [], packages: [], bookingTemplate: "测试预约清单",
@@ -85,6 +86,40 @@ const templateIds = [
   "polaroid-field",
   "prism-liquid",
 ];
+
+test("all eleven templates omit empty direct contact actions while retaining independent social contacts", () => {
+  const renderer = contactRenderer();
+  for (const templateId of templateIds) {
+    for (const empty of ["", " \t "]) {
+      const { html, sharedCalls } = renderer.render(templateId, undefined, {
+        contact: { wechat: empty, email: empty, note: "保留联系说明" },
+      });
+      assert.doesNotMatch(html, /href="mailto:[^"]*"/, `${templateId}: blank email must not open a mail composer`);
+      const buttons = html.match(/<button\b[\s\S]*?<\/button>/g) ?? [];
+      assert.ok(buttons.every(button => !/WECHAT|EMAIL|复制微信号/i.test(button)), `${templateId}: blank direct contacts must not offer copy actions`);
+      assert.equal(sharedCalls, 1, `${templateId}: independent social rendering remains mounted`);
+      assert.match(html, /href="https:\/\/example.com\/profile"/, `${templateId}: social URL remains usable`);
+    }
+    const filled = renderer.render(templateId, undefined, {
+      contact: { wechat: "available_wechat", email: "available@portfolio.example", note: "" },
+    }).html;
+    assert.match(filled, /<button\b[^>]*>[\s\S]*?available_wechat[\s\S]*?<\/button>/, `${templateId}: nonempty WeChat copy action remains`);
+    if (templateId === "manga-panels") assert.match(filled, /<button\b[^>]*>[\s\S]*?available@portfolio\.example[\s\S]*?<\/button>/, "manga retains its intentional email-copy action");
+    else assert.match(filled, /href="mailto:available@portfolio\.example"/, `${templateId}: nonempty email keeps its original link`);
+    const cardOnly = renderer.render(templateId, undefined, {
+      contact: { wechat: "", email: "", note: "" },
+      social: [{ label: "独立联系卡", handle: "", qrAssetId: "b".repeat(64) }],
+    }).html;
+    assert.match(cardOnly, /aria-label="平台账号与分享卡片"/, `${templateId}: optional card region survives without direct contacts`);
+    assert.match(cardOnly, /独立联系卡/);
+  }
+  const premium = renderer.render("polaroid-field", { collections: [], Navigation: () => createElement("nav") }, {
+    contact: { wechat: "", email: "", note: "" },
+  }).html;
+  assert.doesNotMatch(premium, /href="mailto:[^"]*"/);
+  assert.ok((premium.match(/<button\b[\s\S]*?<\/button>/g) ?? []).every(button => !/WECHAT|EMAIL|复制微信号/i.test(button)), "premium collection mode also omits empty contact operations");
+  assert.match(premium, /href="https:\/\/example.com\/profile"/);
+});
 
 test("all eleven contact surfaces use exactly one shared platform account renderer", async () => {
   const renderer = contactRenderer();
