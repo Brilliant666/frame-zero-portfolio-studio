@@ -2,17 +2,17 @@ import { readAssetVariant } from './assets.mjs';
 export class PublicationError extends Error {
   constructor(message, status = 409) { super(message); this.status = status; }
 }
-const summary = row => ({ id: row.id, space: row.space, draftRevision: row.draft_revision, publishedAt: row.published_at });
+const summary = row => ({ id: row.id, space: row.space, templateId: row.space === 'basic' ? row.content.activeTemplate : 'premium-polaroid', draftRevision: row.draft_revision, publishedAt: row.published_at });
 async function validateAssets(client,siteId,ids) {
   const assets=await client.query('SELECT * FROM site_assets WHERE site_id=$1 AND id=ANY($2::uuid[]) FOR SHARE',[siteId,ids]);
   if(assets.rowCount!==ids.length)throw new PublicationError('发布资源不存在或不属于本站',422);
   try { for(const row of assets.rows)for(const variant of ['thumbnail','card','full'])await readAssetVariant(row,variant); }
   catch {throw new PublicationError('发布所需的展示图片不可读，未改变公开版本',422);}
 }
-export async function publicationHistory(pool, siteId) {
+export async function publicationHistory(pool, siteId, { allowPremium = false } = {}) {
   const rows = await pool.query(`SELECT r.*,p.revision_id AS current_id FROM site_publication_revisions r
     LEFT JOIN site_publications p ON p.site_id=r.site_id WHERE r.site_id=$1 ORDER BY r.published_at DESC,r.id DESC`, [siteId]);
-  return { current: rows.rows.find(r => r.id === r.current_id) ? summary(rows.rows.find(r => r.id === r.current_id)) : null, history: rows.rows.map(summary) };
+  return { current: rows.rows.find(r => r.id === r.current_id) ? summary(rows.rows.find(r => r.id === r.current_id)) : null, history: rows.rows.filter(row => row.space === 'basic' || allowPremium).map(summary) };
 }
 export async function readPublished(pool, slug) {
   const result = await pool.query(`SELECT r.*,s.slug FROM sites s JOIN site_publications p ON p.site_id=s.id
@@ -30,11 +30,16 @@ export async function changePublication(pool, {siteId,userId,space,payload,prepa
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    if (!['basic', 'premium-polaroid'].includes(space)) throw new PublicationError('内容空间不可发布',422);
+    if (!['publish', 'rollback'].includes(payload.action)) throw new PublicationError('发布操作无效',400);
     const owner = await client.query(`SELECT s.id FROM sites s JOIN portfolio_users u ON u.id=s.owner_id
       JOIN account_provisioning op ON op.id=u.provisioning_id AND op.completed_at IS NOT NULL
-      JOIN site_template_grants g ON g.site_id=s.id AND g.product=$3
-      WHERE s.id=$1 AND u.auth_user_id=$2 FOR UPDATE OF s FOR SHARE OF u,op,g`, [siteId,userId,space]);
-    if (!owner.rowCount) throw new PublicationError('站点或高级授权已变化',403);
+      WHERE s.id=$1 AND u.auth_user_id=$2 FOR UPDATE OF s FOR SHARE OF u,op`, [siteId,userId]);
+    if (!owner.rowCount) throw new PublicationError('站点授权已变化',403);
+    if (space === 'premium-polaroid') {
+      const grant = await client.query('SELECT id FROM site_template_grants WHERE site_id=$1 AND product=$2 FOR SHARE', [siteId,space]);
+      if (!grant.rowCount) throw new PublicationError('高级授权已变化',403);
+    }
     const pointer = await client.query('SELECT revision_id FROM site_publications WHERE site_id=$1',[siteId]);
     if ((pointer.rows[0]?.revision_id ?? null) !== payload.expectedPublicationId) throw new PublicationError('发布状态已变化，请重新读取后确认');
     let row;

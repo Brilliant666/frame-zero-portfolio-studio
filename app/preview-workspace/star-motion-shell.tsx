@@ -16,7 +16,7 @@ import type { MouseEvent } from "react";
 type Theme = "paper" | "night";
 const themeEvent="preview:theme-change";
 const subscribeTheme=(notify:()=>void)=>{window.addEventListener(themeEvent,notify);return ()=>window.removeEventListener(themeEvent,notify);};
-const themeRoute=()=>/^\/preview\/?$/.test(location.pathname) || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" && (/^\/[a-z0-9-]+\/admin\/(?:preview\/)?premium-polaroid\/?$/.test(location.pathname) || /^\/[a-z0-9-]+\/?$/.test(location.pathname) && document.documentElement.dataset.publicPortfolio === "premium-polaroid");
+const themeRoute=()=>/^\/preview\/?$/.test(location.pathname) || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" && (/^\/[a-z0-9-]+\/admin\/(?:preview\/)?premium-polaroid\/?$/.test(location.pathname) || /^\/[a-z0-9-]+\/?$/.test(location.pathname) && !!document.querySelector("[data-site-premium]"));
 const currentTheme=():Theme|"disabled"=>!themeRoute()?"disabled":document.documentElement.dataset.previewTheme==="night"?"night":"paper";
 const serverTheme=()=>"disabled" as const;
 const ThemeContext = createContext<{ theme: Theme; enabled:boolean; change: (theme: Theme, origin:{x:number;y:number}) => void }>({ theme: "paper", enabled:false, change: () => {} });

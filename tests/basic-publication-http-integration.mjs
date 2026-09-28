@@ -1,0 +1,93 @@
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import ts from 'typescript';
+import sharp from 'sharp';
+import { provisionAccount } from '../db/accounts/provision.mjs';
+import { readPublished } from '../db/accounts/publications.mjs';
+
+export async function basicPublicationHttpIntegration({ runtime, origin, password }) {
+  const source = await readFile(new URL('../app/templates/catalog.ts', import.meta.url), 'utf8');
+  const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext } }).outputText;
+  const { templateCatalog } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
+  assert.equal(templateCatalog.length, 11);
+  const slug = 'basicpublishfixture', other = 'basicpublishoutsider';
+  const provisioned = await provisionAccount(runtime, { username: slug, slug, email: `${slug}@example.invalid`, password, premium: false });
+  await provisionAccount(runtime, { username: other, slug: other, email: `${other}@example.invalid`, password, premium: false });
+  const request = (path, cookie, body, method = body === undefined ? 'GET' : 'POST') => fetch(`${origin}${path}`, { method, headers: { origin, ...(cookie ? { cookie } : {}), ...(body === undefined ? {} : { 'content-type': 'application/json' }) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(30000) });
+  const login = async username => { const r = await request('/api/auth/sign-in/username', null, { username, password }); assert.equal(r.status, 200); return r.headers.getSetCookie().map(c => c.split(';')[0]).join('; '); };
+  const cookie = await login(slug), outsider = await login(other);
+  const path = space => `/api/sites/${slug}/publications/${space}`;
+  const drafts = space => `/api/sites/${slug}/drafts/${space}`;
+  const basic = (await (await request(drafts('basic'), cookie)).json()).content;
+  const assets = [];
+  for (const color of ['#123451', '#123452', '#123453', '#123454']) {
+    const body = await sharp({ create: { width: 90, height: 60, channels: 3, background: color } }).png().toBuffer();
+    const response = await fetch(`${origin}/api/sites/${slug}/assets`, { method: 'POST', headers: { origin, cookie, 'content-type': 'image/png', 'x-file-name': 'publication-fixture.png' }, body });
+    assert.equal(response.status, 201); assets.push((await response.json()).asset.id);
+  }
+  const work = (assetId, slotIndex, enabled = true, title = 'Visible fixture') => ({ assetId, slotIndex, enabled, title, code: 'FIXTURE', subtitle: '', image: '', preview: '', position: '50% 50%', previewWidth: 90, previewHeight: 60, fullWidth: 90, locked: false });
+  let revision = 0, pointer = null;
+  const save = async () => { const r = await request(drafts('basic'), cookie, { content: basic, expectedRevision: revision }, 'PUT'); assert.equal(r.status, 200); revision = (await r.json()).revision; };
+  const publish = async (space = 'basic', expected = revision) => { const r = await request(path(space), cookie, { action: 'publish', expectedDraftRevision: expected, expectedPublicationId: pointer }); assert.equal(r.status, 200); const publication = (await r.json()).publication; pointer = publication.id; return publication; };
+  for (const actor of [undefined, outsider]) assert.equal((await request(path('basic'), actor, { action: 'publish', expectedDraftRevision: 1, expectedPublicationId: null })).status, actor ? 403 : 401);
+  assert.equal((await request(path('premium-polaroid'), cookie)).status, 403);
+  let first;
+  for (const template of templateCatalog) {
+    basic.activeTemplate = template.id;
+    basic.profile.brand = basic.profile.photographer = basic.hero.title = `Published fixture ${template.id}`;
+    basic.works = [work(assets[3], 0, true, 'LEGACY-FALLBACK-PRIVATE')];
+    basic.templateWorks = { [template.id]: [...Array.from({ length: template.photoSlots }, (_, slot) => work(assets[0], slot)), work(assets[1], 1, false, 'DISABLED-PRIVATE'), work(assets[2], template.photoSlots, true, 'OVERFLOW-PRIVATE')], [templateCatalog.find(t => t.id !== template.id).id]: [work(assets[3], 0, true, 'OTHER-TEMPLATE-PRIVATE')] };
+    basic.packages = [{ number: '', english: '', name: 'DISABLED-PACKAGE-PRIVATE', description: '', price: '', duration: '', deliverables: [], enabled: false }];
+    await save(); const published = await publish(); first ??= published;
+    assert.equal(published.space, 'basic'); assert.equal(published.templateId, template.id);
+    const snapshot = await readPublished(runtime.pool, slug);
+    assert.equal(snapshot.id, pointer); assert.equal(snapshot.templateId, template.id); assert.deepEqual(snapshot.assetIds, [assets[0]]);
+    const response = await request(`/${slug}`); assert.equal(response.status, 200);
+    const html = await response.text(); assert.ok(html.includes(`Published fixture ${template.id}`), `${template.id} renders its published profile`);
+    assert.doesNotMatch(html, /DISABLED-PRIVATE|OVERFLOW-PRIVATE|OTHER-TEMPLATE-PRIVATE|LEGACY-FALLBACK-PRIVATE|DISABLED-PACKAGE-PRIVATE/);
+    assert.equal((await request(`/api/public-sites/${slug}/assets/${assets[0]}/full`)).status, 200);
+    for (const id of assets.slice(1)) assert.equal((await request(`/api/public-sites/${slug}/assets/${id}/full`)).status, 404);
+  }
+  assert.equal((await runtime.pool.query('SELECT count(*)::int AS n FROM site_template_grants WHERE site_id=$1', [provisioned.siteId])).rows[0].n, 0, 'All eleven basic templates publish without a premium grant');
+  assert.equal((await request(`/api/sites/${other}/publications/basic`, outsider, { action: 'rollback', revisionId: first.id, expectedPublicationId: null })).status, 404, 'Another owner cannot use this Site history UUID');
+  basic.templateWorks[basic.activeTemplate] = [];
+  await save(); await publish();
+  assert.deepEqual((await readPublished(runtime.pool, slug)).assetIds, [], 'Explicit empty active-template list never falls back to legacy works');
+  for (const id of assets) assert.equal((await request(`/api/public-sites/${slug}/assets/${id}/full`)).status, 404);
+  assert.doesNotMatch(await (await request(`/${slug}`)).text(), /LEGACY-FALLBACK-PRIVATE|OTHER-TEMPLATE-PRIVATE/);
+  const basicBeforeSwitch = pointer;
+  await runtime.pool.query("INSERT INTO site_template_grants(id,site_id,product,source) VALUES($1,$2,'premium-polaroid','operator-test')", [randomUUID(), provisioned.siteId]);
+  const premium = (await (await request(drafts('premium-polaroid'), cookie)).json()).content;
+  premium.profile.brand = premium.profile.photographer = 'PREMIUM-SWITCH-FIXTURE';
+  premium.collections = [{ id: randomUUID(), name: 'Premium fixture', description: '', visible: true, assetIds: [assets[3]], coverAssetId: null, focusAssetId: null, coverFit: 'natural', coverFocusX: 50, coverFocusY: 50 }];
+  // Bring premium to the same numeric revision as basic: identity must include space.
+  for (let n = 0; n < revision; n++) assert.equal((await request(drafts('premium-polaroid'), cookie, { content: premium, expectedRevision: n }, 'PUT')).status, 200);
+  const premiumPublished = await publish('premium-polaroid', revision);
+  assert.equal(premiumPublished.draftRevision, revision); assert.equal(premiumPublished.templateId, 'premium-polaroid');
+  assert.match(await (await request(`/${slug}`)).text(), /PREMIUM-SWITCH-FIXTURE/);
+  assert.equal((await request(`/api/public-sites/${slug}/assets/${assets[3]}/full`)).status, 200);
+  assert.equal((await request(`/api/public-sites/${slug}/assets/${assets[0]}/full`)).status, 404);
+  const history = await (await request(path('basic'), cookie)).json();
+  assert.equal(history.current.id, pointer); assert.equal(history.current.space, 'premium-polaroid'); assert.equal(history.current.templateId, 'premium-polaroid');
+  assert.ok(history.history.some(row => row.id === basicBeforeSwitch && row.space === 'basic' && row.draftRevision === premiumPublished.draftRevision), 'Equal numeric revisions remain distinct content spaces');
+  assert.ok(history.history.some(row => row.id === first.id && row.templateId === templateCatalog[0].id));
+  await runtime.pool.query('DELETE FROM site_template_grants WHERE site_id=$1', [provisioned.siteId]);
+  const revokedHistory = await (await request(path('basic'), cookie)).json();
+  assert.equal(revokedHistory.current.id, premiumPublished.id); assert.equal(revokedHistory.current.templateId, 'premium-polaroid');
+  assert.ok(revokedHistory.history.every(row => row.space === 'basic')); assert.equal('content' in revokedHistory.current, false);
+  assert.equal((await request(path('premium-polaroid'), cookie, { action: 'rollback', revisionId: premiumPublished.id, expectedPublicationId: pointer })).status, 403);
+  await runtime.pool.query("INSERT INTO site_template_grants(id,site_id,product,source) VALUES($1,$2,'premium-polaroid','operator-test')", [randomUUID(), provisioned.siteId]);
+  assert.equal((await request(path('basic'), cookie, { action: 'rollback', revisionId: premiumPublished.id, expectedPublicationId: pointer })).status, 404);
+  const rollback = await request(path('basic'), cookie, { action: 'rollback', revisionId: first.id, expectedPublicationId: pointer }); assert.equal(rollback.status, 200); pointer = (await rollback.json()).publication.id;
+  assert.match(await (await request(`/${slug}`)).text(), /Published fixture cinematic-light/);
+  assert.equal((await (await request(drafts('basic'), cookie)).json()).revision, revision, 'Rollback retains current basic draft');
+  assert.equal((await (await request(drafts('premium-polaroid'), cookie)).json()).content.profile.photographer, 'PREMIUM-SWITCH-FIXTURE');
+  assert.equal((await request(path('basic'), cookie, { action: 'rollback', revisionId: basicBeforeSwitch, expectedPublicationId: premiumPublished.id })).status, 409);
+  await runtime.pool.query('DELETE FROM site_template_grants WHERE site_id=$1', [provisioned.siteId]);
+  const limited = await (await request(path('basic'), cookie)).json();
+  assert.ok(limited.history.every(row => row.space === 'basic'));
+  assert.equal((await request(path('premium-polaroid'), cookie, { action: 'rollback', revisionId: premiumPublished.id, expectedPublicationId: pointer })).status, 403);
+  assert.equal((await request(path('basic'), cookie, { action: 'rollback', revisionId: premiumPublished.id, expectedPublicationId: pointer })).status, 404);
+  assert.equal((await readPublished(runtime.pool, slug)).id, first.id);
+}
