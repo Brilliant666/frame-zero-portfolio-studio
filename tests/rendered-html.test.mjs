@@ -100,7 +100,7 @@ test("keeps editable content and eleven lazy template choices in one configurati
   assert.equal(previewTriggers.length, 1, "the Site editor restores one current-memory preview entry");
   let ancestor = previewTriggers[0].parent, siteScoped = false;
   while (ancestor) {
-    if (ts.isBinaryExpression(ancestor) && ancestor.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken && ancestor.left.getText(parsedShell) === "siteScope") siteScoped = true;
+    if (ts.isBinaryExpression(ancestor) && ancestor.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken && ["siteScope", "siteScope?.publicationEndpoint && siteScope.publicHref"].includes(ancestor.left.getText(parsedShell))) siteScoped = true;
     ancestor = ancestor.parent;
   }
   assert.equal(siteScoped, true, "the restored preview entry must stay inside the Site-only editor branch");
