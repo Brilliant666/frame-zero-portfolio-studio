@@ -62,5 +62,74 @@ base `69f0c6be64a961f9af96481f54f6e98f8b192af6`。
 所有写入验证仅用 `frame_zero_accounts_test`、3004 和匿名合成图片。
 私人照片、凭据、备份和会话不入 Git。历史 site-content-integration 未提交修改保留。
 
-后续完成保存并发布、联系卡与预览接线，运行完整 UI 操作链及 11 模板复检；
-最终更新此记录和单一检查点，不把局部通过标成全部完成。
+## 最终本机验收检查点
+
+2026-09-28 17:58 +08:00：本轮产品代码实现 SHA `6785bdfcbd39c834e3a660808b9f0796fb2975ec`。
+此后收口提交仅整理文档；最终远端 SHA 和五项 CI 以 PR 对应检查及最终报告为准。
+
+| 分组 | 项目 | 状态与证据 |
+| --- | --- | --- |
+| A | 基础 11 模板发布、两后台保存并发布、同地址基础／高级切换 | 完成并验证：真实 PG、UI 切换与回退、版本冲突、丢回执确认、权限与资源白名单 |
+| B | 已有高级选片 | 完成并验证：48 张分页、跨页暂选、成员顺序、500 上限、完整请求大小、409 保留编辑；人工选片体验待人工判断 |
+| C | 可选联系卡、三来源预览、真实加入时间排序 | 完成并验证：取消／失败保留原卡、两空间独立、无空操作、预览来源不混淆；图片完整比例与后台样式隔离 |
+| C | 11 基础模板与高级三构图 | 功能完成并验证；最终审美与真人操作体验待人工判断 |
+| D | 资源回收／永久删除、完整原图补档、公网部署、真实客户交付 | 未开始，按授权暂缓 |
+
+### 自动化和截图
+
+- 完整 `npm test` 596 项通过（包括 legacy 与 Standard Next 构建、运行和产物硬门禁），全库 lint 通过。
+- 隔离 PostgreSQL + 全部四组真实浏览器套件 31/31 通过；未使用 matrix-only 或续跑参数。
+- 发布浏览器 22 阶段全部通过：九阶段保存／发布／失败链、11 模板矩阵、三来源分离、高级三来源及切回基础。
+- 基础矩阵逐项覆盖 cinematic-light、neon-hud、film-rail、manga-panels、prism-liquid、orbital-portal、
+  archive-os、editorial-duet、polaroid-field、character-select、museum-depth。
+  每款均经真实后台发布，在当前编辑／已保存／公开三个来源验证 1440×900、390×844、联系卡和大图／焦点；
+  cinematic-light、archive-os、polaroid-field 另检查 320px，后台／选片与高级同样覆盖 320px。
+- 原资产浏览器保留星座／散落／跨页、双主题、大图和服务重启后读取；选片浏览器保留 500 张真实隔离资源。
+- 最终本机证据目录：私有运维根下 `pr33-publication-browser/2026-09-28T09-50-01-693Z`；
+  `acceptance.json` 标注实际测试 SHA、全部阶段、视口、网络路径及无凭据截图。
+- CI 中同样启用完整发布浏览器，并上传匿名证据。五项为 Quality、Public repository safety、Container、
+  Deployment Bootstrap、Local Account PostgreSQL Integration；最终 Head 全部成功才作为远端通过。
+
+### 原始产物体积
+
+字节为跨路由未压缩产物并集，不是首屏下载量。保持原告警政策，无资源完整性错误。
+
+| Next 指标 | 本轮 | main 69f0c6b 同机现有构建 | 增量 |
+| --- | ---: | ---: | ---: |
+| Application JS | 296217 | 290562 | +5655 |
+| Bootstrap JS | 615282 | 611570 | +3712 |
+| Public CSS | 317997 | 315517 | +2480 |
+
+CSS 超出既有 307200 字节参考仍记录告警；单模板 JS 硬上限均通过。
+本机 legacy：public JS 586151、admin JS 126674、total JS 712825、CSS 298695 字节。
+main CI（运行 36391025878）legacy 对应为 560768、115817、676585、289580；本机与 CI 环境不同，
+最终同 CI 环境增量见 PR 验收报告，不把该差异单独归因于产品代码。
+
+### 提交切片
+
+1. `8e7a4ac`：基础发布、兼容迁移、唯一公开指针与受控投影。
+2. `cc50198`：可选 Site 联系卡、基础图库真实时间。
+3. `7881edf`：准确保存回执、保存并发布、冲突及未知结果处理。
+4. `8ca39a9`：预览容器、公开联系卡和空联系方式修复。
+5. `6785bdf`：完整浏览器矩阵、后台祖先样式隔离、工作规则与交接整理。
+
+### 可操作的隔离验收环境
+
+- 地址 `http://127.0.0.1:3004/login`；测试库 `frame_zero_accounts_test`。
+- `review-a`：本站基础＋高级；`review-b`：仅基础；`review-c`：另一 Site 的基础＋高级。
+- 每站 12 张匿名合成图；review-a 初始公开为基础 cinematic-light，基础／高级内容各自独立。
+- 凭据仅位于本机私有运维根 `pr33-functional-closure/review/credentials.json`，不复制到仓库、PR 或报告。
+- 运行代码 SHA `6785bdf`，Build ID `EllWH6knXKEreMqmqYNlf`，启动时 PID 78052；PID 下次必须重查。
+- 日志、seed-report、health 和恢复脚本同在私有 `review` 目录。恢复需先确认 3004 空闲，使用 Node 24、
+  既有 `credentials/test.env`、`FRAME_ZERO_SITE_ASSET_ROOT=<私有 review/assets>`，启动
+  `scripts/start-local-accounts.mjs --test`。不重新跑清库的自动化套件覆盖人工验收内容。
+- 日常 3001 的原 PID 61904、main 69f0c6b 和 Build ID 保持；登录 HTTP 200。
+  业务库只读核对仍为 0000–0003，star 两空间 v2、公开高级 v2，phototest 两空间 v1、未发布。
+  本轮没有业务写入或迁移；没有本轮起点内容哈希，因此不额外声称完成全数据哈希前后对比。
+- `0004` 只在隔离库应用。未来业务迁移仍需新授权，先备份，再显式升级，不能以启动候选代替迁移审批。
+
+### 下一步
+
+人工第一步：登录隔离 review-a，分别编辑基础和高级；先仅保存观察公开页不变，再保存并发布观察同地址切换。
+体验选片顺序、联系卡移除及三种预览；以 review-b 复查纯基础路径。人工接受前保持 Draft。
+完成远端五项 CI 后本轮停止新增开发；不自动合并、迁移、切换日常或部署。
