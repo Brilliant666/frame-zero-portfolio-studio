@@ -8,21 +8,37 @@ reports record historical acceptance, not today's authorization gate.
 ```text
 Mission: PRODUCT_DELIVERY_MISSION_02
 Product priority: invited photographer -> own Site Admin -> independent template content -> Publish
-Current slice: M4 first slice / premium-polaroid immutable publication and public portfolio
-Slice status: IMPLEMENTED / VERIFIED_LOCALLY / DRAFT_REVIEW (new changes not yet CI-verified)
-Main baseline: 9bdd45daf326d65def222b20033ff2774decbfc1
+Current slice: Site admin workspace layout / first usability slice
+Slice status: IMPLEMENTED / VERIFIED_LOCALLY / AWAITING_HUMAN_REVIEW
+Main baseline: 20d87433eb140f3d48ecec5fa175f0d72895ee53
 Account foundation: PR #28 accepted and Squash merged
 Account head: 3263d4d917b3d59c623b420cb1537cb5a8ff99ff
-Active branch: feat/site-assets-and-local-3001-cutover (stacked on PR30 head 0984a1c9b410821d6f8c38ed6fc7a845d75f24f4)
+Active branch: codex/admin-workspace-layout (based on accepted main)
 M1 implementation head: 8318e06
 M1 PR: #29 accepted and Squash merged into main
-M2 Draft PR: #30 (base: main; merge not authorized)
-M3 Draft PR: #31; base codex/site-content-editor-integration; merge not authorized
+M2 PR: #30 accepted and Squash merged as 4abf530
+M3/M4 PR: #31 accepted and Squash merged as 20d8743
+New admin layout PR: Draft delivery only; merge not authorized
 Remote deployment: FROZEN / NOT_AUTHORIZED
 External deployment gate: EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED
 V1 status: NOT_LAUNCHED
 Online status: NOT_ONLINE_PREVIEW
 ```
+
+The user accepted the release closure and then explicitly authorized implementing
+the admin review recommendations. This slice changes Site editor presentation,
+navigation and operation hierarchy only; it does not change schemas, ownership,
+save/publish semantics or public portfolio design. See
+[admin workspace acceptance](ADMIN_WORKSPACE_LAYOUT.md).
+
+PR30 and PR31 were Squash merged sequentially; the final main push runs passed:
+Quality 36368039399, Public repository safety 36368039412, Container 36368039402,
+Deployment Bootstrap 36368039430, Local Account PostgreSQL Integration
+36368039417. Daily 3001 runs accepted main 20d8743. The new admin UI is evaluated
+separately on local 3003, with no automatic daily cutover or deployment.
+
+The following M2/M3/M4 paragraphs are historical context. The checkpoint above
+supersedes their earlier Draft and merge-gate descriptions.
 
 On 2026-09-28 the user explicitly authorized extending existing PR31 with
 publication instead of adding a third review layer. This is a bounded exception

@@ -34,22 +34,20 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
       : siteScope ? "保存仅更新本站基础版草稿，不会公开发布" : "保存后，主页刷新即显示最新内容";
 
   return (
-    <div className={styles.shell} data-admin-v2="true">
+    <div className={styles.shell} data-admin-v2="true" data-site-editor={siteScope ? "basic" : undefined}>
       <a className={styles.skipLink} href="#admin-main">跳到当前编辑区域</a>
       <header className={styles.topbar}>
         <div className={styles.adminTitleBlock} data-admin-title="true">
-          <strong>ADMIN</strong>
+          <strong>{siteScope ? "基础版空间" : "ADMIN"}</strong>
           <span>内容管理</span>
         </div>
 
         <div className={styles.currentSection}>
-          <span>当前分区</span>
+          <span>{siteScope ? "基础版 · 当前分区" : "当前分区"}</span>
           <h1>{current.label}</h1>
         </div>
 
         <div className={styles.topbarActions}>
-          {siteScope && <a href={siteScope.adminBasePath.replace(/\/basic$/, "")} onClick={(event) => { if (dirty && !window.confirm("当前基础版草稿尚未保存。离开后未保存修改会丢失，确认返回内容空间选择？")) event.preventDefault(); }}>切换内容空间</a>}
-          {siteScope && <Link href={siteScope.previewHref} target="_blank">预览已保存草稿</Link>}
           <div
             className={styles.saveStatus}
             data-tone={status.tone}
@@ -111,6 +109,18 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
         </aside>
 
         <main id="admin-main" className={styles.main} tabIndex={-1}>
+          {siteScope && (
+            <div className={styles.workspaceContext}>
+              <div>
+                <strong>基础版草稿</strong>
+                <p>十一套模板共用本空间内容，与高级版独立保存。保存不会公开发布。</p>
+              </div>
+              <nav aria-label="基础版空间操作">
+                <a href={siteScope.adminBasePath.replace(/\/basic$/, "")} onClick={(event) => { if (dirty && !window.confirm("当前基础版草稿尚未保存。离开后未保存修改会丢失，确认返回内容空间选择？")) event.preventDefault(); }}>切换内容空间</a>
+                <Link href={siteScope.previewHref} target="_blank">预览已保存草稿<span className={styles.newWindowHint}>（新窗口）</span></Link>
+              </nav>
+            </div>
+          )}
           {loadState === "error" || loadState === "degraded" || conflict ? (
             <div className={styles.errorSummary} role="alert">
               <span>{message}</span>

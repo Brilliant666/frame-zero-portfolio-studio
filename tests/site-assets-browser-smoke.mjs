@@ -10,7 +10,7 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
   assert.equal(origin, 'http://127.0.0.1:3004');
   const output = join(process.cwd(), 'outputs', 'site-editor-browser', 'm3-assets');
   await mkdir(output, { recursive: true });
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined });
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
   context.setDefaultTimeout(15000); context.setDefaultNavigationTimeout(20000);
   const a = 'assetsmokea', b = 'assetsmokeb';
@@ -44,7 +44,7 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
   }
   async function save(space) {
     const result = page.waitForResponse(r => r.request().method() === 'PUT' && new URL(r.url()).pathname === `/api/sites/${a}/drafts/${space}`);
-    await page.getByRole('button', { name: space === 'basic' ? '保存修改' : '保存新版修改', exact: true }).click();
+    await page.getByRole('button', { name: '保存修改', exact: true }).click();
     const response = await result; assert.equal(response.status(), 200);
     return response.json();
   }
@@ -119,6 +119,7 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
       await page.getByText('从共享素材库添加照片', { exact: true }).click();
       await page.getByRole('button', { name: '加入图集', exact: true }).first().waitFor();
       for (let i = 0; i < 3; i++) await page.getByRole('button', { name: '加入图集', exact: true }).first().click();
+      await page.getByText('封面与重点照片设置', { exact: true }).click();
       await page.getByRole('combobox', { name: '独立封面', exact: true }).selectOption(assets.find(a => a.orientation === 'landscape').id);
       await page.getByRole('combobox', { name: '星图重点照片', exact: true }).selectOption(assets.find(a => a.orientation === 'portrait').id);
       premiumSaved = await save('premium-polaroid');

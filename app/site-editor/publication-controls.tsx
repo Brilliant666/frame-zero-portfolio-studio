@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import styles from "../preview-workspace/admin.module.css";
+import styles from "./publication-controls.module.css";
 type Publication = { id: string; space: string; draftRevision: number; publishedAt: string };
 export default function PublicationControls({ endpoint, publicHref, revision, dirty, disabled }: { endpoint: string; publicHref: string; revision: number; dirty: boolean; disabled: boolean }) {
   const [state, setState] = useState<{ current: Publication | null; history: Publication[] } | null>(null);
@@ -25,13 +25,33 @@ export default function PublicationControls({ endpoint, publicHref, revision, di
     } catch (error) { setMessage(error instanceof Error ? error.message : "发布失败，请重试。"); }
     finally { setBusy(false); }
   }
-  return <section className={styles.panel} aria-label="公开发布"><div className={styles.row}>
-    <strong>{state?.current ? `公开版本 · 草稿 ${state.current.draftRevision}` : "尚未发布"}</strong>
-    <button type="button" disabled={!state || busy || disabled || dirty || revision === 0} onClick={() => void publish()}>发布已保存草稿</button>
-    <a href={publicHref} target="_blank" rel="noreferrer">查看公开主页 ↗</a>
-    <button type="button" disabled={busy} onClick={() => void reload().catch(error => setMessage(error.message))}>刷新发布状态</button>
-  </div><p className={styles.hint}>{dirty ? "请先保存当前修改，再发布。" : "保存与发布独立；仅发布此内容空间，不修改另一套草稿。"}</p>
-    <p role="status">{message}</p>
-    {!!state?.history.length && <details><summary>发布历史与回退</summary><ul>{state.history.map(item => <li key={item.id}>草稿 {item.draftRevision} · {new Date(item.publishedAt).toLocaleString()} {state.current?.id === item.id ? "（当前公开）" : <button type="button" disabled={busy || disabled || dirty} onClick={() => void publish(item.id)}>恢复此公开版本</button>}</li>)}</ul></details>}
+  const synced = !!state?.current && state.current.draftRevision === revision && !dirty;
+  const status = !state ? (message ? "发布状态暂不可用" : "正在读取发布状态…") : dirty ? "有修改待保存" : synced ? "已同步" : state.current ? "有未发布修改" : "尚未发布";
+  return <section className={styles.panel} aria-label="公开发布">
+    <div className={styles.row}>
+      <div className={styles.overview}>
+        <div className={styles.versions}>
+          <strong>已保存草稿 v{revision}</strong>
+          <span className={styles.separator} aria-hidden="true">/</span>
+          <span>{state ? state.current ? `公开 v${state.current.draftRevision}` : "暂无公开版本" : "公开版本读取中"}</span>
+          <span className={synced ? styles.synced : styles.status}>{status}</span>
+        </div>
+        <div className={styles.meta}>
+          <p className={styles.hint}>{dirty ? "请先保存当前修改，再发布。" : "保存不等于发布，仅发布当前内容空间。"}</p>
+          <details className={styles.history}>
+            <summary>{state?.history.length ? <>发布历史与回退 <span>{state.history.length}</span></> : "发布操作"}</summary>
+            <div className={styles.historyContent}>
+              <button className={styles.refresh} type="button" disabled={busy} onClick={() => void reload().catch(error => setMessage(error.message))}>刷新发布状态</button>
+              {!!state?.history.length && <ul>{state.history.map(item => <li key={item.id}><span>草稿 v{item.draftRevision} · {new Date(item.publishedAt).toLocaleString()}</span>{state.current?.id === item.id ? <span className={styles.current}>当前公开</span> : <button className={styles.secondary} type="button" disabled={busy || disabled || dirty} onClick={() => void publish(item.id)}>恢复此公开版本</button>}</li>)}</ul>}
+            </div>
+          </details>
+        </div>
+      </div>
+      <div className={styles.actions}>
+        <a className={styles.secondary} href={publicHref} target="_blank" rel="noreferrer">查看公开主页 ↗</a>
+        <button className={styles.primary} type="button" disabled={!state || busy || disabled || dirty || revision === 0} onClick={() => void publish()}>{busy ? "正在发布…" : "发布已保存草稿"}</button>
+      </div>
+    </div>
+    {message && <p className={styles.message} role="status">{message}</p>}
   </section>;
 }
