@@ -12,7 +12,7 @@ import styles from "../admin-v2.module.css";
 const MAX_SOCIAL_LINKS = 8;
 
 export default function ContactEditor() {
-  const { content, localPhotoImportOrigin, localPhotoImportState, setContent } = useAdmin();
+  const { content, localPhotoImportOrigin, localPhotoImportState, setContent, siteScope } = useAdmin();
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
   const [uploadMessages, setUploadMessages] = useState<Record<number, string>>({});
   const uploadAbortRef = useRef<AbortController | null>(null);
@@ -167,7 +167,7 @@ export default function ContactEditor() {
                   onChange={(value) => updateSocialHandle(index, value)}
                   onBlur={(value) => normalizeSocialHandle(index, value)}
                 />
-                <div className={styles.platformQrEditor} data-has-image={Boolean(qrSrc)}>
+                {siteScope ? <p>本站平台卡上传尚未接线（M3），当前可编辑账号与链接。</p> : <div className={styles.platformQrEditor} data-has-image={Boolean(qrSrc)}>
                   <div className={styles.platformQrPreview}>
                     {qrSrc ? (
                       <a href={qrSrc} target="_blank" rel="noopener noreferrer" aria-label={`查看${item.label || `平台 ${index + 1}`}二维码原图`}>
@@ -201,7 +201,7 @@ export default function ContactEditor() {
                     {qrSrc ? <p>移除只会解除主页引用，本机私有原文件会保留，避免误删其他草稿正在使用的图片。</p> : null}
                     {uploadMessages[index] ? <small role="status">{uploadMessages[index]}</small> : null}
                   </div>
-                </div>
+                </div>}
                 <div className={`${styles.rowActions} ${styles.socialRowActions}`}>
                   <button type="button" onClick={() => removeSocialItem(index)} disabled={uploadingIndex !== null} aria-label={`删除平台账号 ${index + 1}`}>删除平台</button>
                 </div>

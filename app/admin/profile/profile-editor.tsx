@@ -5,7 +5,7 @@ import { useAdmin } from "../admin-provider";
 import styles from "../admin-v2.module.css";
 
 export default function ProfileEditor() {
-  const { content, setContent } = useAdmin();
+  const { content, setContent, siteScope } = useAdmin();
 
   return (
     <AdminSection
@@ -48,9 +48,11 @@ export default function ProfileEditor() {
                   ...current,
                   trustItems: current.trustItems.map((entry, itemIndex) => itemIndex === index ? { ...entry, value } : entry),
                 }))} />
+                {siteScope && <button type="button" aria-label={`删除信息 ${index + 1}`} onClick={() => setContent((current) => ({ ...current, trustItems: current.trustItems.filter((_, itemIndex) => itemIndex !== index) }))}>删除信息</button>}
               </div>
             ))}
           </div>
+          {siteScope && <button type="button" className={styles.secondaryButton} disabled={content.trustItems.length >= 8} onClick={() => setContent((current) => current.trustItems.length >= 8 ? current : ({ ...current, trustItems: [...current.trustItems, { label: "", value: "" }] }))}>添加信任信息</button>}
         </FormGroup>
 
         <details className={styles.optionalDisclosure} data-optional-brand-content="true">

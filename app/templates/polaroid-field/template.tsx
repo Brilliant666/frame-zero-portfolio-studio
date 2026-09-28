@@ -19,6 +19,7 @@ import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/
 import PlatformAccounts from "../shared/platform-accounts";
 import { buildPolaroidFieldLayout } from "./field-layout";
 import CollectionExperience from "./collection-experience";
+import type { PhotoAsset } from "../../photo-library";
 import type { Collection } from "./collection-model";
 import { canOpenCollectionProof } from "./collection-proof-gate";
 import { selectPolaroidFocus } from "./hero-selection";
@@ -52,7 +53,7 @@ export default function PolaroidFieldTemplate({
   onBeforeViewChange,
   onOpenWork,
   collectionWorkspace,
-}: TemplateProps & { collectionWorkspace?: { collections: readonly Collection[]; initialCollectionId?: string; headerAccessory?: ReactNode; Navigation?: ComponentType<{active:PolaroidView;onNavigate:(event:ReactMouseEvent<HTMLElement>,view:PolaroidView)=>void}> } }) {
+}: TemplateProps & { collectionWorkspace?: { collections: readonly Collection[]; assets?: readonly PhotoAsset[]; initialCollectionId?: string; headerAccessory?: ReactNode; Navigation?: ComponentType<{active:PolaroidView;onNavigate:(event:ReactMouseEvent<HTMLElement>,view:PolaroidView)=>void}> } }) {
   const Navigation = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? collectionWorkspace?.Navigation : undefined;
   const fieldSlots = useMemo(
     () => buildPhotoSlots(works, POLAROID_RATIOS, { templateId: "polaroid-field" }),
@@ -209,7 +210,7 @@ export default function PolaroidFieldTemplate({
         hidden={activeView !== "field"}
         tabIndex={-1}
       >
-        {collectionProof ? <CollectionExperience key={collectionWorkspace ? JSON.stringify(collectionWorkspace.collections) : undefined} savedCollections={collectionWorkspace?.collections} initialCollectionId={collectionWorkspace?.initialCollectionId} content={content} isPreview={isPreview} isActive={activeView === "field"} homeRequest={homeRequest} onOpenWork={onOpenWork} onBeforeViewChange={onBeforeViewChange} /> :
+        {collectionProof ? <CollectionExperience key={collectionWorkspace ? JSON.stringify(collectionWorkspace.collections) : undefined} savedCollections={collectionWorkspace?.collections} {...(process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? { suppliedAssets: collectionWorkspace?.assets } : {})} initialCollectionId={collectionWorkspace?.initialCollectionId} content={content} isPreview={isPreview} isActive={activeView === "field"} homeRequest={homeRequest} onOpenWork={onOpenWork} onBeforeViewChange={onBeforeViewChange} /> :
         <div
           id="polaroid-field"
           ref={viewportRef}

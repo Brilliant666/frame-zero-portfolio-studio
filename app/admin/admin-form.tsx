@@ -15,7 +15,7 @@ export function AdminSection({
   description: string;
   children: ReactNode;
 }>) {
-  const { busy } = useAdmin();
+  const { busy, siteScope, loadState } = useAdmin();
   const headingId = `admin-${eyebrow.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-heading`;
 
   return (
@@ -32,7 +32,7 @@ export function AdminSection({
         </div>
         <p>{description}</p>
       </header>
-      <fieldset className={styles.sectionFieldset} disabled={busy}>
+      <fieldset className={styles.sectionFieldset} disabled={siteScope ? loadState !== "ready" : busy}>
         <legend className="sr-only">{title}</legend>
         {children}
       </fieldset>

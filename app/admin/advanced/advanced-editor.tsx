@@ -10,7 +10,7 @@ import styles from "../admin-v2.module.css";
 import ResetExampleDialog from "./reset-example-dialog";
 
 export default function AdvancedEditor() {
-  const { content, setContent } = useAdmin();
+  const { content, setContent, siteScope } = useAdmin();
   const [legacyOpen, setLegacyOpen] = useState(false);
   const visibleWorkCount = useMemo(
     () => content.works.filter((work) => work.enabled).length,
@@ -89,7 +89,7 @@ export default function AdvancedEditor() {
           </div>
         </section>
 
-        <section className={styles.dangerZone} aria-labelledby="danger-zone-title">
+        {!siteScope && <section className={styles.dangerZone} aria-labelledby="danger-zone-title">
           <div className={styles.dangerHeader}>
             <div>
               <span>DANGER ZONE</span>
@@ -98,7 +98,7 @@ export default function AdvancedEditor() {
             <p>仅替换当前浏览器中的草稿，不会立即保存。确认前请检查是否仍有需要保留的未保存修改。</p>
           </div>
           <ResetExampleDialog />
-        </section>
+        </section>}
       </div>
     </AdminSection>
   );

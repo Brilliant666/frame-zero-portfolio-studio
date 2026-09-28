@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, boolean, check, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, boolean, check, uniqueIndex, integer, jsonb, primaryKey } from 'drizzle-orm/pg-core';
 import { user } from './auth-schema.mjs';
 export * from './auth-schema.mjs';
 
@@ -31,3 +31,13 @@ export const templateGrants = pgTable('site_template_grants', {
   source: text('source').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, table => [uniqueIndex('site_product_unique').on(table.siteId, table.product), check('known_template_product', sql`${table.product} = 'premium-polaroid'`), check('known_grant_source', sql`${table.source} = 'operator-test'`)]);
+
+export const contentDrafts = pgTable('site_content_drafts', {
+  siteId: uuid('site_id').notNull().references(() => sites.id),
+  space: text('space').notNull(),
+  revision: integer('revision').notNull(),
+  content: jsonb('content').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, table => [primaryKey({ columns: [table.siteId, table.space] }),
+  check('known_content_space', sql`${table.space} IN ('basic', 'premium-polaroid')`),
+  check('positive_draft_revision', sql`${table.revision} > 0`)]);

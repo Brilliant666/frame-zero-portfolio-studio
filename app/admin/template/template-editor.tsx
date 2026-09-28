@@ -25,7 +25,7 @@ const mobileModeLabels: Record<TemplateMaterialProfile["mobileBehavior"]["mode"]
 export default function TemplateEditor() {
   const router = useRouter();
   const pathname = usePathname();
-  const { content, savedContent, setContent } = useAdmin();
+  const { content, savedContent, setContent, siteScope } = useAdmin();
   const [inspectedOverride, setInspectedOverride] = useState<TemplateId | null>(null);
   const inspectedId = inspectedOverride ?? content.activeTemplate;
   const inspectedTemplate = templateCatalog.find((template) => template.id === inspectedId) ?? templateCatalog[0];
@@ -42,7 +42,7 @@ export default function TemplateEditor() {
     if (content.activeTemplate !== templateId) {
       setContent((current) => ({ ...current, activeTemplate: templateId }));
     }
-    router.push(pathname.startsWith("/test/admin") ? "/test/admin/layout" : "/admin/layout");
+    router.push(siteScope ? `${siteScope.adminBasePath}/layout` : pathname.startsWith("/test/admin") ? "/test/admin/layout" : "/admin/layout");
   };
 
   const detailState = inspectedIsDraft
