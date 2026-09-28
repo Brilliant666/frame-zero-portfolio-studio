@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import type { TemplateId, Work } from "../site-config";
 import TemplateRenderer from "../templates/template-renderer";
 import Lightbox from "../templates/shared/lightbox";
@@ -95,7 +96,10 @@ export default function TemplatePreviewDialog({
     else onRequestClose();
   };
 
-  return (
+  // Native top-layer placement does not remove DOM ancestors. Mount outside
+  // the editor so its navigation/link styles cannot change preview content.
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <dialog
       ref={dialogRef}
       className={styles.dialog}
@@ -153,6 +157,7 @@ export default function TemplatePreviewDialog({
         </PlatformAssetContext.Provider>
         </div>
       </div>
-    </dialog>
+    </dialog>,
+    document.body,
   );
 }

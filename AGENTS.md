@@ -4,8 +4,11 @@
 [docs/SESSION_HANDOFF.md](docs/SESSION_HANDOFF.md)。之后仅按当前任务读取相关
 North Star、路线图、Accepted ADR 与模块记录，不重新审计整个历史。
 
-本次 PR32 交接之后，恢复上下文并等待用户选择下一项；
-`PRODUCT_DELIVERY_MISSION_02` 不授权自动实施交接候选或合并未来 PR。
+按当前用户明确授权和 CURRENT_STATUS 的检查点继续；交接候选本身不构成实施授权。
+`PRODUCT_DELIVERY_MISSION_02` 不自动授权合并、日常切换或远程部署。
+
+不需要每个小改动都要求全项目审计。验证应与变更影响相称；改按钮文字不重测整个发布系统。
+完成必要检查后，仅在新增修改、失败或未解决的疑点需要时扩大验证。
 
 保护未提交编辑和私人 `public/photos`（永不暂存），只 `git add` 具体路径。
 合并、破坏性操作、真实迁移和远程部署需要对应授权。

@@ -103,7 +103,7 @@ async function saveDraft(slug, space, cookie, content, expectedRevision) {
   return request(draftPath(slug, space), { cookie, method: 'PUT', body: { content, expectedRevision } });
 }
 
-test('real PostgreSQL and Standard Next account boundary', { timeout: 1080000 }, async t => {
+test('real PostgreSQL and Standard Next account boundary', { timeout: 1800000 }, async t => {
   assetRoot = await mkdtemp(path.join(tmpdir(), 'site-assets-integration-'));
   t.after(async () => { await stopServer(); await runtime.pool.end(); await rm(assetRoot, { recursive: true, force: true }); });
   await migrateAccounts(config);
@@ -423,6 +423,12 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1080000 },
     await t.test('real browser premium photo picker on 500 isolated Site assets', { timeout: 300000 }, async browserTest => {
       const { sitePhotoPickerBrowserSmoke } = await import('./site-photo-picker-browser-smoke.mjs');
       await sitePhotoPickerBrowserSmoke({ runtime, origin: config.origin, password, assetRoot, signal: browserTest.signal });
+    });
+  }
+  if (process.env.FRAME_ZERO_PUBLICATION_BROWSER_SMOKE === '1') {
+    await t.test('real browser publication flow, optional cards and eleven-template preview matrix', { timeout: 1600000 }, async browserTest => {
+      const { sitePublicationBrowserSmoke } = await import('./site-publication-browser-smoke.mjs');
+      await sitePublicationBrowserSmoke({ runtime, origin: config.origin, password, signal: browserTest.signal });
     });
   }
   await t.test('real PostgreSQL Site asset upload, access and reference boundaries', { timeout: 180000 }, async () => {
