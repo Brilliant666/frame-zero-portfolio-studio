@@ -1,5 +1,9 @@
 # LOCAL_ACCOUNT_FOUNDATION_01
 
+> 历史阶段记录：保留当时范围、失败与验收事实；当前能力、合并、运行及授权
+> 以 [CURRENT_STATUS](CURRENT_STATUS.md) 和 [SESSION_HANDOFF](SESSION_HANDOFF.md) 为准。
+> 下文当时的 Draft、环境缺口或“未完成”不自动构成当前阻塞。
+
 ## 授权与当前状态
 
 基线 `main@92a81ee274ab9d7df829c7437219f0f42c273390`；分支

@@ -85,7 +85,7 @@ test("keeps editable content and eleven lazy template choices in one configurati
   assert.doesNotMatch(clientTitle, /FRAME\/\/ZERO|Cosplay 摄影师|openGraph|twitter/u);
   assert.match(page, /useTemplateWorks\(content, templateId\)/);
   assert.match(adminShell, /data-admin-title="true"/);
-  assert.match(adminShell, /<strong>ADMIN<\/strong>/);
+  assert.match(adminShell, /<strong>\{siteScope \? "基础版空间" : "ADMIN"\}<\/strong>/);
   assert.doesNotMatch(adminShell, /FRAME\/\/ZERO/);
   assert.doesNotMatch(adminShell, /预览当前草稿|DraftTemplatePreviewTrigger|data-admin-draft-preview-trigger/);
   assert.match(adminShell, /"保存修改"/);

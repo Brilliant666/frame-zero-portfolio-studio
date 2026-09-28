@@ -47,6 +47,70 @@
 .previewBar p { margin: 0; }
 .previewBar button { padding: 10px 14px; border: 1px solid #aaa49b; background: white; color: #242321; font: 15px/1.4 Arial,sans-serif; cursor: pointer; }
 .qr { max-width: 160px; max-height: 210px; object-fit: contain; }
+/* hidden creates a non-scrolling ancestor and breaks sticky; scope to this editor. */
+:global(body:not(.is-locked)):has(.workspace[data-site-editor="premium"]) { overflow-x: clip; }
+.workspace[data-site-editor="premium"] { background: #f4f6f9; color: #233047; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+.workspace[data-site-editor="premium"] .topbar { padding: 16px 28px; background: #fff; border-color: #dde3ec; }
+.breadcrumb { font-size: 12px; color: #66758c; margin-bottom: 3px; }
+.saveStatus { font-size: 12px; color: #66758c; }
+.coverSettings { border-block: 1px solid #dde3ec; margin: 18px 0; }
+.coverSettings summary { cursor: pointer; padding: 14px 0; font-size: 14px; color: #395a88; }
+.coverSettings > div { padding: 0 0 16px; display: grid; gap: 14px; }
+.workspace[data-site-editor="premium"] .workArea { display: grid; grid-template-columns: 196px minmax(0,1fr); max-width: 1680px; margin: auto; }
+.sidebar { position: sticky; top: 88px; height: calc(100vh - 88px); padding: 24px 16px; border-right: 1px solid #dde3ec; display: flex; flex-direction: column; gap: 24px; }
+.siteBack { font-size: 13px; text-decoration: none; }
+.sidebar nav { display: grid; gap: 8px; }
+.sidebar nav button { text-align: left; display: flex; gap: 12px; background: transparent; border-color: transparent; }
+.sidebar nav button span { color: #8190a5; font-size: 12px; }
+.sidebar nav button[aria-pressed="true"] { background: #e7edf7; color: #213f6c; border-color: #cfdaeb; font-weight: 600; }
+.sidebar > p { margin-top: auto; color: #66758c; font-size: 13px; }
+.workspace[data-site-editor="premium"] .body { width: 100%; max-width: 1380px; padding: 20px 28px 80px; }
+.workspaceTools { display: flex; align-items: center; justify-content: flex-end; gap: 20px; margin-bottom: 12px; font-size: 13px; }
+.moreTools { position: relative; }
+.moreTools summary { cursor: pointer; padding: 8px; }
+.moreTools > div { position: absolute; right: 0; top: 100%; z-index: 25; padding: 12px; width: 240px; display: grid; gap: 10px; background: #fff; border: 1px solid #dde3ec; border-radius: 12px; box-shadow: 0 12px 30px #23304718; }
+.workspace[data-site-editor="premium"] button { border-radius: 8px; border-color: #cfd8e5; color: #233047; min-height: 40px; }
+.workspace[data-site-editor="premium"] .primary { background: #263e62; color: white; border-color: #263e62; }
+.workspace[data-site-editor="premium"] a { color: #395a88; }
+.workspace[data-site-editor="premium"] :focus-visible { outline-color: #5279ad; }
+.workspace[data-site-editor="premium"] .notice { padding: 8px 0; margin: 6px 0 18px; border: 0; background: transparent; color: #66758c; font-size: 13px; }
+.workspace[data-site-editor="premium"] .notice[data-problem="true"] { padding: 12px; background: #fff0ec; color: #9b3528; border-radius: 8px; }
+.workspace[data-site-editor="premium"] .panel { border-color: #dde3ec; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px #23304704; }
+.workspace[data-site-editor="premium"] .panel .panel { background: #f8fafc; box-shadow: none; padding: 18px; }
+.workspace[data-site-editor="premium"] .panel h2 { font-size: 19px; }
+.workspace[data-site-editor="premium"] .panel h3 { font-size: 16px; }
+.workspace[data-site-editor="premium"] .field input,.workspace[data-site-editor="premium"] .field textarea,.workspace[data-site-editor="premium"] .field select { border-color: #cfd8e5; border-radius: 7px; color: #233047; }
+.workspace[data-site-editor="premium"] .hint { color: #66758c; }
+.workspace[data-site-editor="premium"] .collections { grid-template-columns: 180px minmax(0,1fr); gap: 18px; }
+.workspace[data-site-editor="premium"] .list button { padding: 14px 12px; }
+.workspace[data-site-editor="premium"] .list button[aria-current="true"] { background: #e7edf7; border-color: #b7c8e0; }
+.workspace[data-site-editor="premium"] .memberList { grid-template-columns: repeat(auto-fill,minmax(150px,1fr)); gap: 12px; }
+.workspace[data-site-editor="premium"] .member { border-color: #dde3ec; border-radius: 9px; display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 6px; padding: 9px; }
+.workspace[data-site-editor="premium"] .member img { grid-column: 1/-1; width: 100%; height: 145px; background: #eef1f5; }
+.workspace[data-site-editor="premium"] .member span { grid-column: 1/-1; min-width: 0; }
+.workspace[data-site-editor="premium"] .member button { padding: 4px; }
+.workspace[data-site-editor="premium"] .library { border-color: #dde3ec; border-radius: 8px; }
+@media(max-width:900px) {
+  .workspace[data-site-editor="premium"] .workArea { grid-template-columns: 150px minmax(0,1fr); }
+  .workspace[data-site-editor="premium"] .body { padding: 16px; }
+  .workspace[data-site-editor="premium"] .collections { grid-template-columns: minmax(0,1fr); }
+  .workspace[data-site-editor="premium"] .list { flex-direction: row; overflow-x: auto; }
+  .workspace[data-site-editor="premium"] .list button { min-width: 150px; }
+}
+@media(max-width:600px) {
+  .workspace[data-site-editor="premium"] .topbar { padding: 10px 12px; }
+  .workspace[data-site-editor="premium"] .topbar .actions { width: 100%; }
+  .workspace[data-site-editor="premium"] .saveStatus { flex: 1; }
+  .workspace[data-site-editor="premium"] .workArea { display: block; }
+  .sidebar { position: static; height: auto; padding: 12px; gap: 12px; border-right: 0; border-bottom: 1px solid #dde3ec; }
+  .sidebar nav { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 4px; }
+  .sidebar nav button { justify-content: center; font-size: 12px; padding: 8px 3px; }
+  .sidebar nav button span,.sidebar > p { display: none; }
+  .workspace[data-site-editor="premium"] .body { padding: 12px 10px 40px; }
+  .workspace[data-site-editor="premium"] .panel { padding: 14px; }
+  .workspace[data-site-editor="premium"] .memberList { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+  .workspace[data-site-editor="premium"] .member img { height: 120px; }
+}
 @media(max-width:600px) {
   .topbar { padding: 10px 12px; gap: 8px; }
   .topbar h1 { font-size: 17px; }

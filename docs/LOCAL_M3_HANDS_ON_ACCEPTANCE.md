@@ -1,5 +1,9 @@
 # M3 本机人工验收交付
 
+> 历史阶段记录：保留当时范围、失败与验收事实；当前能力、合并、运行及授权
+> 以 [CURRENT_STATUS](CURRENT_STATUS.md) 和 [SESSION_HANDOFF](SESSION_HANDOFF.md) 为准。
+> 下文当时的 Draft、环境缺口或“未完成”不自动构成当前阻塞。
+
 日期：2026-09-28。分支 `feat/site-assets-and-local-3001-cutover`，PR31 保持 Open + Draft，依赖 PR30；无合并、发布或远程部署。
 
 ## 用户追加确认

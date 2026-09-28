@@ -5,6 +5,8 @@
 > - Baseline and active head: [CURRENT_STATUS.md](CURRENT_STATUS.md)
 > - Current phase: `SELF_HOSTED_V1`
 > - Execution: product milestones M1–M5; remote deployment remains separately frozen
+> - 2026-09-28 checkpoint: M1/M2、M3 本机资源及高级 M4 已实现；PR32 交接后等待用户选择。
+>   具体未完成范围见 CURRENT_STATUS 与 SESSION_HANDOFF，不将目标当成上线事实。
 
 This document is the highest project-level constraint for the current product
 goal, V1 scope, and launch priority. It does not silently override an Accepted
@@ -273,7 +275,7 @@ Requirements:
 ## 9. Authentication target
 
 Reuse the real local Better Auth + Standard Next Node + PostgreSQL foundation
-in Draft PR #28 (verification at the current head is tracked in CURRENT_STATUS).
+from merged PR #28 (verification and later delivery are tracked in CURRENT_STATUS).
 Do not repeat its POC or treat CI verification as local star provisioning or
 production acceptance. The historical research mapping is:
 

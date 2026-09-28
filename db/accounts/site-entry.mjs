@@ -1,11 +1,13 @@
 import { accountRequestAllowed, getAccountRuntime, readSiteForPrincipal } from './http.mjs';
 import { isSiteSlug } from './site-slug.mjs';
 import { unpublishedAcceptanceRedirect } from './local-acceptance.mjs';
+import { siteEntryStyle } from './site-entry-style.mjs';
 
 const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
 function page(title, body, status = 200) {
-  return new Response(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${escape(title)}｜摄影作品集平台</title><style>body{margin:0;background:#f6f7f9;color:#202632;font:16px/1.7 system-ui,sans-serif}main{max-width:760px;margin:10vh auto;padding:28px}section{padding:24px;background:white;border:1px solid #dce0e7;border-radius:16px;margin:24px 0}a{color:#254fa4;text-underline-offset:4px}nav{display:flex;gap:24px;flex-wrap:wrap}h1{line-height:1.3}p{overflow-wrap:anywhere}</style></head><body><main><nav><a href="/">摄影作品集平台</a><a href="/login">账号与登录</a></nav><h1>${escape(title)}</h1>${body}</main></body></html>`, {
+  const content = title === '站点后台' ? body : `<div class="message">${body}</div>`;
+  return new Response(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${escape(title)}｜摄影作品集平台</title><style>${siteEntryStyle}</style></head><body><header class="top"><nav class="top-inner" aria-label="平台导航"><a class="brand" href="/">✦ 摄影作品集平台</a><a href="/login">账号与登录</a></nav></header><main><p class="eyebrow">PORTFOLIO WORKSPACE</p><h1>${escape(title)}</h1>${content}</main></body></html>`, {
     status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, private', 'X-Content-Type-Options': 'nosniff', 'X-Robots-Tag': 'noindex, nofollow' },
   });
 }
@@ -24,7 +26,7 @@ export async function handleSiteEntry(request, slug, admin = false) {
       // load another owner's Site and check its identity afterward.
       const account = await readSiteForPrincipal(runtime, session.user, null, slug);
       if (!account) return page('无权访问此后台', '<p>请从账号页面进入自己拥有的站点。</p>', 403);
-      return page('站点后台', `<section data-site-admin="true"><h2>${escape(account.site.slug)}</h2><p>当前账号：${escape(account.user.username)}</p><p>站点归属已验证。</p><p>基础模板：${account.templates.basic.length} 套</p><p>高级模板：${account.templates.premium.includes('premium-polaroid') ? '高级拍立得（已授权）' : '尚未授权'}</p><nav><a href="/${escape(slug)}/admin/basic/profile">编辑基础版草稿</a>${account.templates.premium.includes('premium-polaroid') ? `<a href="/${escape(slug)}/admin/premium-polaroid">编辑高级拍立得草稿</a>` : ''}</nav><p>两套内容独立保存。保存只更新私人草稿，不会发布或同步到另一套内容。</p><p>本站私有素材可在两套后台复用，业务草稿各自保存；不会自动读取或导入旧版全局照片。</p><a href="/${escape(slug)}">查看站点公开状态</a></section>`);
+      return page('站点后台', `<p class="lead">选择你要编辑的作品集。这里是本站的工作台；登录用于确认身份，工作台用于管理属于你的内容。</p><section class="dashboard" data-site-admin="true"><div class="workspace-heading"><div><h2>${escape(account.site.slug)} 的作品集</h2><p>当前账号：${escape(account.user.username)} · 站点归属已验证</p></div><a class="button" href="/${escape(slug)}">查看站点公开状态 <span aria-hidden="true">↗</span></a></div><div class="spaces"><article class="space"><div class="space-top"><span class="space-number">01 / BASIC</span><span class="badge">基础模板：${account.templates.basic.length} 套</span></div><h2>基础版作品集</h2><p>使用基础模板与对应的素材排版，管理这套作品集自己的内容。</p><ul><li>摄影师资料、模板与素材排版</li><li>拍摄套餐、联系方式与页面文案</li><li>独立保存基础版草稿</li></ul><a class="button primary" href="/${escape(slug)}/admin/basic/profile">编辑基础版草稿 <span aria-hidden="true">→</span></a></article><article class="space"><div class="space-top"><span class="space-number">02 / POLAROID</span><span class="badge${account.templates.premium.includes('premium-polaroid') ? '' : ' muted'}">${account.templates.premium.includes('premium-polaroid') ? '高级拍立得（已授权）' : '尚未授权'}</span></div><h2>高级拍立得</h2><p>以图集为中心组织作品，编辑拍立得页面并管理发布版本。</p><ul><li>图集、封面与图集内照片</li><li>独立的主页资料、套餐与联系信息</li><li>草稿预览与显式发布</li></ul>${account.templates.premium.includes('premium-polaroid') ? `<a class="button primary" href="/${escape(slug)}/admin/premium-polaroid">编辑高级拍立得草稿 <span aria-hidden="true">→</span></a>` : '<span class="unavailable">当前账号尚未开通此内容空间</span>'}</article></div><aside class="explanation"><h2>保存草稿，不等于发布</h2><p>两套内容独立保存。保存只更新私人草稿，不会发布或同步到另一套内容。本站私有素材可在两套后台复用，业务草稿各自保存；不会自动读取或导入旧版全局照片。</p></aside><footer>工作台地址属于当前站点，不是另一套登录入口。</footer></section>`);
     }
     const result = await runtime.pool.query(`SELECT s.slug FROM sites s
       JOIN portfolio_users p ON p.id=s.owner_id

@@ -1,5 +1,9 @@
 # M4 first slice: premium publication
 
+> 历史阶段记录：保留当时范围、失败与验收事实；当前能力、合并、运行及授权
+> 以 [CURRENT_STATUS](CURRENT_STATUS.md) 和 [SESSION_HANDOFF](SESSION_HANDOFF.md) 为准。
+> 下文当时的 Draft、环境缺口或“未完成”不自动构成当前阻塞。
+
 Date: 2026-09-28. User explicitly allowed extending PR31; no merge or remote
 deployment was authorized. This is not completion of all M4/basic publishing.
 

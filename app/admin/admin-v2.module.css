@@ -26,6 +26,34 @@
 
 .skipLink:focus { transform: translateY(0); }
 
+.workspaceContext {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.workspaceContext > div { min-width: 0; }
+.workspaceContext strong { font-size: .88rem; }
+.workspaceContext p { margin: .35rem 0 0; color: var(--admin-v2-muted); font-size: .78rem; line-height: 1.6; }
+.workspaceContext nav { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: .5rem; }
+.workspaceContext a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: .6rem .8rem;
+  border: 1px solid var(--admin-v2-line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--admin-v2-ink);
+  font-size: .78rem;
+  font-weight: 600;
+}
+.workspaceContext a:hover { background: #eef2f6; }
+.workspaceContext a:focus-visible { outline: 3px solid #64748b; outline-offset: 3px; }
+.newWindowHint { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
 .topbar {
   position: fixed;
   z-index: 50;
@@ -1379,4 +1407,92 @@
   .legacyCard { grid-template-columns: 1fr; }
   .legacyPreview { height: 12rem; min-height: 0; }
   .resetDialogActions { display: grid; grid-template-columns: 1fr; }
+}
+
+/* Site editors share the management workspace language. Legacy /test/admin stays unchanged. */
+:global(body:not(.is-locked)):has(.shell[data-site-editor="basic"]) { overflow-x: clip; }
+.shell[data-site-editor="basic"] {
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  --admin-v2-ink: #243247;
+  --admin-v2-muted: #647084;
+  --admin-v2-line: #dce2e9;
+  --admin-v2-paper: #fff;
+  --admin-v2-canvas: #f3f5f8;
+  --admin-v2-accent: #334a68;
+  --admin-v2-accent-text: #334a68;
+  --admin-v2-topbar-height: 4.5rem;
+  padding-top: 0;
+}
+.shell[data-site-editor="basic"] .topbar {
+  position: sticky;
+  top: 0;
+  grid-template-columns: 14.5rem minmax(0, 1fr) auto;
+  min-height: var(--admin-v2-topbar-height);
+  height: auto;
+  background: #fff;
+  box-shadow: 0 1px 6px rgb(36 50 71 / 4%);
+  backdrop-filter: none;
+}
+.shell[data-site-editor="basic"] .adminTitleBlock {
+  width: auto;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: .2rem;
+  font-family: var(--font-geist-sans), sans-serif;
+  letter-spacing: 0;
+}
+.shell[data-site-editor="basic"] .adminTitleBlock strong { font-size: .9rem; }
+.shell[data-site-editor="basic"] .adminTitleBlock > span { color: var(--admin-v2-muted); font-size: .72rem; }
+.shell[data-site-editor="basic"] .currentSection h1 { font-size: 1.2rem; letter-spacing: -.02em; }
+.shell[data-site-editor="basic"] .saveStatus { min-width: 0; max-width: 23rem; }
+.shell[data-site-editor="basic"] .saveStatusDetail { font-size: .7rem; line-height: 1.45; }
+.shell[data-site-editor="basic"] .saveButton { border-radius: 10px; color: #fff; }
+.shell[data-site-editor="basic"] .saveButton:disabled { background: #e8ecf1; border-color: #dce2e9; color: #728095; }
+.shell[data-site-editor="basic"] .body { grid-template-columns: 14.5rem minmax(0, 1fr); }
+.shell[data-site-editor="basic"] .sidebar nav { gap: .35rem; padding: 1rem .75rem; }
+.shell[data-site-editor="basic"] .sidebar a { grid-template-columns: 1.6rem minmax(0, 1fr); border-left: 0; border-radius: 10px; padding: .8rem .75rem; }
+.shell[data-site-editor="basic"] .sidebar a:hover { background: #f3f5f8; }
+.shell[data-site-editor="basic"] .sidebar a[aria-current="page"] { background: #eaf0f7; color: #243e5e; }
+.shell[data-site-editor="basic"] .sidebar a[aria-current="page"]::after { display: none; }
+.shell[data-site-editor="basic"] .main { padding: clamp(1.25rem, 2.3vw, 2rem); }
+.shell[data-site-editor="basic"] .section { border-radius: 14px; }
+.shell[data-site-editor="basic"] .sectionHeader { gap: 1.5rem; padding: 1.4rem 1.5rem; }
+.shell[data-site-editor="basic"] .sectionHeader h2 { font-size: clamp(1.25rem, 2vw, 1.6rem); letter-spacing: -.025em; }
+.shell[data-site-editor="basic"] .sectionHeader p { font-size: .85rem; line-height: 1.65; }
+.shell[data-site-editor="basic"] .sectionFieldset { padding: 1.5rem; }
+.shell[data-site-editor="basic"] :is(.formGroup, .templateDetail, .templateList, .disclosureCard, .layoutSummary, .slotPane, .slotEditor, .assetPane, .legacyDisclosure, .dangerZone, .errorSummary, .resetDialog) { border-radius: 12px; }
+.shell[data-site-editor="basic"] :is(.field input, .field textarea, .bookingList input, .mobileSwitcher select, .templateMobileSelector select, .librarySearch input, .librarySelect select, .slotFields input, .slotFields select) { border-color: var(--admin-v2-line); border-radius: 8px; }
+.shell[data-site-editor="basic"] :is(.templateListButton[data-inspected="true"], .slotListButton[data-active="true"]) { background: #edf2f8; }
+.shell[data-site-editor="basic"] :is(.templateListButton[data-inspected="true"] .templateListStates small:last-child, .templateDetailStates span[data-template-state="已选为主页 · 未保存"], .assetThumb b) { color: #fff; }
+.shell[data-site-editor="basic"] :is(.templateMaterialProfile, .templateCompositionPreview, .hostedImportNotice, .legacyMeta, .platformQrEditor) { background: #f6f8fb; }
+.shell[data-site-editor="basic"] :is(.templateMaterialDemand > div, .platformQrPreview, .slotThumb, .assetThumb) { background: #e9edf3; }
+.shell[data-site-editor="basic"] .resetDialog::backdrop { background: rgb(24 34 49 / 60%); backdrop-filter: none; }
+
+@media (max-width: 1150px) {
+  .shell[data-site-editor="basic"] .workspaceContext { align-items: flex-start; flex-direction: column; }
+}
+
+@media (max-width: 900px) {
+  .shell[data-site-editor="basic"] .topbar { grid-template-columns: minmax(0, 1fr) auto; }
+  .shell[data-site-editor="basic"] .body { grid-template-columns: minmax(0, 1fr); }
+  .shell[data-site-editor="basic"] .main { padding: 1rem; }
+  .shell[data-site-editor="basic"] .sectionHeader { gap: .7rem; }
+  .shell[data-site-editor="basic"] .mobileSwitcher label { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .75rem; }
+}
+
+@media (max-width: 480px) {
+  .shell[data-site-editor="basic"] .currentSection { padding: .6rem 0 .6rem .75rem; gap: .25rem; }
+  .shell[data-site-editor="basic"] .currentSection > span { display: block; font-size: .65rem; }
+  .shell[data-site-editor="basic"] .currentSection h1 { font-size: 1rem; }
+  .shell[data-site-editor="basic"] .topbarActions { gap: .5rem; padding: .6rem .75rem .6rem .35rem; }
+  .shell[data-site-editor="basic"] .saveButton { min-width: 3.75rem; padding: .6rem .65rem; }
+  .shell[data-site-editor="basic"] .main { padding: .75rem; }
+  .shell[data-site-editor="basic"] .workspaceContext { gap: .65rem; margin-bottom: 1rem; }
+  .shell[data-site-editor="basic"] .workspaceContext nav { display: grid; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .shell[data-site-editor="basic"] .workspaceContext a { padding-inline: .4rem; font-size: .72rem; }
+  .shell[data-site-editor="basic"] .sectionHeader,
+  .shell[data-site-editor="basic"] .sectionFieldset { padding: 1rem .85rem; }
+  .shell[data-site-editor="basic"] .sectionHeader h2 { font-size: 1.25rem; }
+  .shell[data-site-editor="basic"] .errorSummary { align-items: stretch; flex-direction: column; gap: .65rem; overflow-wrap: anywhere; }
 }

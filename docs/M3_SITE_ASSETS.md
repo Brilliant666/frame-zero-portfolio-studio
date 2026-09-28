@@ -1,5 +1,9 @@
 # M3 Site private assets and local cutover checkpoint
 
+> 历史阶段记录：保留当时范围、失败与验收事实；当前能力、合并、运行及授权
+> 以 [CURRENT_STATUS](CURRENT_STATUS.md) 和 [SESSION_HANDOFF](SESSION_HANDOFF.md) 为准。
+> 下文当时的 Draft、环境缺口或“未完成”不自动构成当前阻塞。
+
 Date: 2026-09-27. Scope: `M3_SITE_ASSETS_STAR_PRESERVATION_AND_LOCAL_3001_CUTOVER`.
 Base: PR30, `codex/site-content-editor-integration`,
 `0984a1c9b410821d6f8c38ed6fc7a845d75f24f4`. Main remains

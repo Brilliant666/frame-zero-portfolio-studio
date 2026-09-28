@@ -1,459 +1,162 @@
-# Portfolio Platform
+# 摄影作品集平台 / Portfolio Platform
 
-A multi-template photography portfolio platform with a shared content admin.
+摄影师登录后管理自己的 Site，在基础十一模板或高级拍立得后台编辑内容，保存私人草稿，并通过高级拍立得发布摄影主页。
 
-`FRAME//ZERO` is a historical codename and technical namespace, not the formal
-product brand. The current priority is to deliver a usable self-hosted V1 on a
-user-owned Linux server before expanding the product surface.
+当前已具备本机可用的账号、Site 授权、两套编辑器、私有作品资源和高级发布链路。**本机验收不等于公网部署或 V1 上线**。当前 `star`、`phototest` 是模拟测试账号，不是真实客户认证证明。`FRAME//ZERO` 是历史代号和技术命名空间，不是正式品牌。
 
-Current governance:
+新会话先读 [AGENTS.md](AGENTS.md) → [当前状态](docs/CURRENT_STATUS.md) → [会话交接](docs/SESSION_HANDOFF.md)。本轮阶段接受、合并和日常切换的最终证据以 [PR #32](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/32) 及仓库外本机交接记录为准；不要从旧阶段文档推断现有服务状态。
 
-- [Portfolio Platform North Star](docs/PORTFOLIO_PLATFORM_NORTH_STAR.md)
-- [Self-Hosted V1 Launch Roadmap](docs/SELF_HOSTED_V1_ROADMAP.md)
-- [Current Status](docs/CURRENT_STATUS.md)
+## 1. 已实现的核心能力
 
-The existing D1, Cloudflare, and local-photo sections below describe the current
-legacy implementation and migration source. They are not the accepted target
-production architecture.
+- PostgreSQL、Better Auth 会话、账号与 Site 归属检查、模板使用授权；尚不开放公众注册。
+- 十一套基础模板共用基础后台，保留模板、资料、套餐、素材排版、联系、高级设置六分区。
+- 高级拍立得使用独立后台，分为图集管理、主页资料、拍摄套餐、联系约拍；保留星座/散落/跨页构图及纸面/夜空主题。
+- 两套内容分别保存、分别校验 schema 和版本；版本冲突拒绝覆盖，保存中继续编辑不会被旧响应抹掉。
+- 同一 Site 复用自己的作品资源；上传、选片、草稿预览和资源读取经过服务端授权，不跨用户共享私人资源。
+- 高级拍立得支持保存草稿、发布已保存版本、发布历史和回退；公开页只解析 Published，保存不会自动改变公开页。
+- 第一轮后台 UI 整理包含保存吸顶、照片网格、次要操作收纳，以及平台首页、登录和工作台的统一界面，不代表全部体验问题已解决。
 
-## Included templates
+基础模板发布尚未接线。完整原图归档、正式客户验收、公网运行及恢复演练仍未完成。
 
-1. Bright Cinematic
-2. Neon HUD
-3. Infinite Film Rail
-4. Manga Panels
-5. Prism Liquid
-6. Orbital Portal
-7. Photography Archive OS
-8. Editorial Duet
-9. Polaroid Field
-10. Character Select
-11. Museum Depth
+## 2. 页面与后台入口
 
-Every template is a separate lazy-loaded React entry. They share one D1-backed
-content document for profile, package, and contact data. Each template keeps a
-small independent selection of 7–12 local-library assets, so changing one
-layout does not disturb the composition of another.
+以下是 Site Node 本机运行路径。`siteSlug` 由服务器查归属，不直接等同于用户名。
 
-## Versioned document contract
+| 路径 | 职责 |
+| --- | --- |
+| `/` | 平台介绍 |
+| `/login` | 统一登录；成功后提供本人工作台链接，尚未自动跳转 |
+| `/:siteSlug` | 已发布摄影主页；无发布内容时明确未发布 |
+| `/:siteSlug/admin` | 本人 Site 工作台，选择获授权的编辑器 |
+| `/:siteSlug/admin/basic/template` | 基础后台；同层还有 `profile`、`packages`、`layout`、`contact`、`advanced` |
+| `/:siteSlug/admin/premium-polaroid` | 高级拍立得后台 |
+| `/:siteSlug/admin/preview/basic` | 本人基础版已保存草稿预览 |
+| `/:siteSlug/admin/preview/premium-polaroid` | 本人高级已保存草稿预览 |
+| `/test` | 本机安全模板实验室，不是全体用户共用的内容后台 |
+| `/test/admin` | 本机验收配置开启时，进入当前登录者的基础后台；匿名转登录 |
 
-Phase 0 defines the future portable `SiteDocumentV1` contract in
-`app/site-document.ts`. Its strict parser accepts `schemaVersion: 1`, known
-content fields, and template compositions that reference opaque `assetId`
-values. It rejects tenant identity, storage paths, resolved image URLs, legacy
-`works` fields, unknown schema versions, and invalid or duplicate slot
-references.
+`/test` 系列是内部入口，不代表开放互联网测试服务。`FRAME_ZERO_LOCAL_ACCEPTANCE=1` 控制本机验收快捷行为，目标 Site 仍检查权限。
 
-Schema version 1 freezes its eleven template identities in
-`SITE_DOCUMENT_V1_TEMPLATE_IDS`; the document contract does not import or derive
-them from the mutable runtime template catalog. Adding, removing, renaming, or
-editing runtime catalog entries therefore cannot silently expand or invalidate
-historical V1 documents. A new document template identity requires an explicit
-versioned contract decision.
+同一验收开关下，尚未发布的 Site 可将已登录本人且有高级权限的访问私密跳转到草稿预览；匿名访客仍看到未发布，已有 Published 优先。这不是匿名公开草稿。
 
-Slot indices are unique and structurally bounded from 0 through 255. Exact slot
-and renderer compatibility for the current installation must later be checked
-against both `templateId` and `templateVersion`; structural parsing does not
-claim that a frozen identity is currently renderable.
-An `assetId` remains an uninterpreted opaque reference at the document parser
-boundary, so structural parsing does not reject historical references. The
-Phase 0 migration contract in `app/stable-id-migration.ts` fixes newly migrated
-internal Site and Asset identities as server-generated UUID v4 values. Public
-Asset identifiers, URL encoding, and object-storage keys remain an ADR-0008
-decision. Even when a reference resembles a path or URL, consumers must only
-use it as an ID in a future site-scoped resolver; the document contract never
-resolves or fetches it.
-Manual compositions may intentionally reuse one asset in multiple slots;
-automatic layout keeps its stricter no-reuse rule.
+旧 `/admin`、`/preview`、`/preview/admin` 只属于独立 legacy 兼容路径；**Site Node runner 拒绝这些路径和旧全局内容接口**，不能绕过 Site 授权。新平台默认入口不是旧 `/preview`。当前没有 `/register` 或 `/account`；未来开放注册需单独实施。
 
-This contract and the pure PR-01C compatibility adapter are intentionally not
-connected to the current D1 API yet. The homepage and admin still use legacy
-`SiteContent`. A document is not a self-contained photo export, and asset
-existence and target-Site ownership must later be validated by a site-scoped
-resolver or repository.
+## 3. 产品与数据边界
 
-## Stable ID migration planning
+基础版与高级拍立得只共享本站点作品资源和必要平台支撑能力；资料、套餐、联系方式、图集/排版及专属配置独立演进，不强制同步，不自动使用账号邮箱作为公开联系方式。共享按钮外观不等于合并业务格式。
 
-`app/stable-id-migration.ts` defines an unconnected migration planning contract
-for the current `site_settings(id = 1)` source. The source is located by
-`migrationKey = legacy:site_settings:1`; that key is never a `siteId`. Dry-runs
-allocate nothing. A first apply produces only a UUID v4 pending checkpoint that
-must be persisted and read back before asset planning. Pending retries reuse the
-same Site ID, completed retries are no-ops, and conflicting checkpoints fail
-closed.
+保存、预览、发布、公开访问是不同状态：
 
-Before allocating any Asset UUID, asset planning validates every legacy slot's
-`templateId` at runtime against the frozen V1 template identities. An empty
-`unresolved` report produces `completion.status = "ready-to-complete"` and a
-`nextCheckpoint` whose status is `completed`. If any slot remains unresolved,
-completion is `blocked-by-unresolved`, `nextCheckpoint` is `null`, and the
-current checkpoint remains pending. Conflicts do not produce a completion
-checkpoint.
+1. 当前编辑预览是内存快照，不保存、不发布。
+2. 保存写入对应 Site、内容空间及预期版本的私人草稿。
+3. 已保存草稿预览需要本人授权，不能用匿名参数开放。
+4. 高级发布创建不可变版本并更新 Published 指针；回退不重写当前草稿。
 
-Confirmed legacy SHA-256 values are private source fingerprints. Within one
-Site they may reuse a persisted fingerprint-to-Asset mapping; another Site must
-receive another random Asset ID. A legacy slot without a confirmed fingerprint
-is reported as unresolved instead of deriving identity from a path, filename,
-display code, or hash. This module does not create tables, write D1, modify the
-local importer, or connect the migration to the page/API runtime.
+高级模板使用权不等于平台管理员权限。旧 SQLite 记录 `1` / `2601`、全局 manifest、catalog 和平台卡是兼容/受控接入来源，不是多用户权威存储，也不是新 Site 的 fallback。
 
-A later persistence executor must commit `newMappings` and the completed
-checkpoint in the same atomic transaction. PR-01B defines that planning
-requirement only; it does not implement the database transaction. Completed
-retries remain stable no-ops.
+私人照片、`public/photos`（包括链接目录）、数据库和凭据永远不提交 Git。展示变体可用不等于原图已归档；缺原图资源必须如实标记。受控导入不是正常启动步骤。
 
-## Legacy SiteContent compatibility adapter
+## 4. 技术栈与目录
 
-`app/legacy-site-content-adapter.ts` is the unconnected PR-01C compatibility
-boundary from raw legacy `SiteContent` JSON to `SiteDocumentV1`. It accepts the
-original `unknown` value and never runs `normalizeSiteContent()`, so an unknown
-template, malformed required field, unsupported theme, or value that the legacy
-runtime would replace with demo content remains diagnosable. Root content is
-strictly validated and deeply copied, and every successful document or blocked
-preview is returned from `parseSiteDocumentV1()`.
+平台使用 Standard Next.js Node、React、TypeScript、Better Auth、Drizzle/PostgreSQL、Sharp。锁定版本见 [package.json](package.json) 和 lockfile，Node 要求 `>=22.13.0`。vinext/Cloudflare D1 保留为 legacy 兼容实现，不是当前 Site 数据库。
 
-The adapter materializes compositions for all eleven frozen V1 templates with
-`templateVersion: 1`. An own `templateWorks` key selects the explicit layout,
-including an explicit empty array; a missing key selects the caller's
-precomputed global-works fallback. The caller supplies one deeply read-only,
-single-Site, slot-aware resolution snapshot covering all eleven templates. Each
-snapshot entry records the template, version, explicit/fallback mode, legacy
-source position and slot index, plus either a resolved UUID v4 Asset ID or an
-unresolved reason. The adapter does not call the layout algorithm or derive a
-slot assignment itself.
+| 位置 | 用途 |
+| --- | --- |
+| [app](app) | 页面、十一模板、图集交互和路由 |
+| [app/admin](app/admin) | 基础编辑器及六分区 |
+| [app/preview-workspace](app/preview-workspace) | 高级独立业务格式及编辑器 |
+| [app/site-editor](app/site-editor) | Site 编辑适配、草稿和发布操作 UI |
+| [db/accounts](db/accounts) | 会话、Site、草稿、资源与发布服务端边界 |
+| [scripts](scripts) | 构建、本机运行、显式迁移和验证 |
+| [tests](tests) | 单测、隔离 PostgreSQL、编辑器和运行时回归 |
+| [docs](docs) | 产品决定、路线图、阶段证据与交接 |
 
-For each snapshot-provided slot, a resolved enabled work contributes its
-`title`, `subtitle`, strict `0..100%` focus point, and `locked` state (defaulting
-to `false`) together with the snapshot UUID. A disabled work is omitted without
-creating an unresolved item. An unresolved work is also omitted from the
-composition but remains in the unresolved report. Legacy image/preview values,
-dimensions, display code, and old asset reference never enter the V1 slot;
-invalid focus is an error rather than a clamp or demo fallback.
+## 5. 正确启动方式
 
-Results are a deterministic three-state union. `ready` contains the only
-document that a future persistence executor may save. `blocked-by-unresolved`
-contains only `documentPreview`; unresolved slots are omitted from that preview,
-and it must never be treated as a completed migration document. `invalid`
-contains `document: null`. Stable, sorted errors and unresolved diagnostics
-identify blocking input or asset-resolution problems; aggregated warnings make
-unsupported `theme`, dropped `work.code`, and dropped `fullWidth` visible rather
-than silently discarding them. Resolved snapshot IDs receive an additional UUID
-v4 check because the V1 parser intentionally treats Asset IDs as opaque.
+在**对应工作区根目录**执行。先核对 Node、分支、构建和端口归属；不要在运行中的 3001/3003 目录切分支或覆盖构建。停服务前确认无未保存编辑和进行中的上传、保存、发布。
 
-This adapter performs no I/O and allocates no identity. It does not read D1, the
-filesystem, the photo manifest, private importer state, or the network; it does
-not import a UUID generator or infer an Asset ID from a path, URL, filename,
-display code, SHA-256 value, or legacy `assetId`. PR-01C does not connect the
-adapter to the current API, homepage, admin, importer, or database. The legacy
-API and page behavior therefore remain unchanged, while repository, double-read,
-checkpoint persistence, atomic migration writes, and runtime wiring stay in
-later PRs.
+### A. 已有数据库和配置：正常重启
 
-Theme overrides are outside the executable V1 contract until a closed,
-sanitized schema and explicit version-compatibility policy are accepted.
+前提：现有 PostgreSQL 已运行，数据库/schema/账号可用，资源根不变；目录已有匹配版本的 `.next` 和被忽略的 `.env.accounts.local`。机器位置、外置环境文件和精确恢复命令见 `%LOCALAPPDATA%/PortfolioPlatform/local-m3/SESSION_HANDOFF.local.md`，不提交该私有记录。
 
-## Adaptive composition planning foundation
-
-COMPOSITION-02 establishes a pure Composition Variant contract, strict registry
-validation, deterministic assignment, and recommendation planning. A stable
-`variantId` identifies an immutable, design-approved composition within one
-`templateId` and `templateVersion`; it is not inferred from the current photo
-count, ratios, legacy `templateWorks`, or renderer output.
-
-`templateVersion` continues to identify the logical slot schema. Immutable
-Variants under the same version may assign different target ratios to the same
-stable logical slots, but changing slot count, order, key, role, capacity, or
-composition meaning requires a new template version. An existing Variant is
-never changed in place; a new design under the same logical schema receives a
-new `variantId`.
-
-This is a contract/planner foundation only. It does not change
-`SiteDocumentV1`, approve any production Variant or concrete research ratios,
-or connect the planner to Admin, renderer, API, D1, or the eleven formal
-templates. Future persisted composition must explicitly record its Variant in
-a separately approved Vnext contract. Until then, the current production
-layout and rendering paths remain unchanged.
-
-In short: the pure contract/planner foundation is implemented; no production
-runtime integration exists, and no formal visual Variant is approved.
-
-## Local development
-
-Requires Node.js `>=22.13.0`.
-
-If the terminal is still using an older installed version, switch it first:
-
-```bash
-fnm use 22.13.1
+```sh
+npm run platform:start
 ```
 
-```bash
-npm install
-npm run dev
+启动日常 `http://127.0.0.1:3001/`。`--daily` 将 origin 设为 3001，沿用配置的数据库和资源根。使用外置环境文件时，按本机记录执行 `node --env-file=<本机环境文件> scripts/start-local-accounts.mjs --daily`，不输出或复制密钥到仓库。
+
+**重启不迁移、不重新创建 star、不初始化已有数据库、不重导图库、不重新发布。** PostgreSQL 可由现有本机专用进程提供，Docker 不是日常前提。
+
+### B. 全新开发环境：首次准备
+
+克隆、`npm ci` 并不足以完整体验。还需：
+
+- Node `>=22.13.0` 和专用 loopback PostgreSQL。
+- 被忽略的 `.env.accounts.local`：核对 `FRAME_ZERO_LOCAL_ACCOUNTS`、`FRAME_ZERO_ACCOUNT_DATABASE_URL`、`FRAME_ZERO_ACCOUNT_ORIGIN`、`FRAME_ZERO_ACCOUNT_SECRET`；资源功能还需仓库外持久的 `FRAME_ZERO_SITE_ASSET_ROOT`。
+- 按 [account-config](scripts/lib/account-config.mjs) 校验：开发数据库名 `frame_zero_accounts`、仅 loopback、origin 为本机 3001 或 3003，secret 至少 32 字符；不得复用其他人的私人目录。
+- 明确属于新环境后，显式 `npm run accounts:migrate` 建 schema，再按授权用交互式 `npm run accounts:provision` 开户。不内置默认密码，不在命令行参数传密码。
+- 在未运行服务的工作区执行 `npm run build`，再选择日常或候选启动方式。
+
+隔离验证另用 `.env.accounts.test`、`frame_zero_accounts_test` 和 3004。不能对已有业务实例机械执行本节。Docker 辅助脚本仍保留，但不要求为此重启或修复 Docker。历史准备细节见 [账号基础记录](docs/LOCAL_ACCOUNT_FOUNDATION.md)，其中旧环境缺口不是当前事实。
+
+### C. 候选验收实例
+
+在独立候选目录完成构建，配置 `FRAME_ZERO_ACCOUNT_ORIGIN=http://127.0.0.1:3003` 后：
+
+```sh
+npm run accounts:start
 ```
 
-The local preview runs at `http://127.0.0.1:3001/`; the content admin is at
-`http://127.0.0.1:3001/admin`. The same `npm run dev` command also starts the
-loopback-only photo import service on an automatically assigned free port. The
-supervisor passes that private origin to the Admin server process; users do not
-need to find or manage the companion port. It is a local editing companion only
-and is never started by the production build.
+3003 可以与 3001 共用本机业务库和资源根，**不能据端口不同当作沙盒**。写入测试用隔离库；不同端口不构成 Cookie 隔离。保留 Origin、Host、CSRF 和会话限制，不复制 token 绕过登录。
 
-Uploaded platform sharing cards use that same ignored, loopback-only private
-state and are referenced from legacy/local `SiteContent` by an optional opaque
-`social[].qrAssetId`. The shared public renderer probes a card once and mounts
-its image only when the local route returns a PNG; missing configuration, a
-missing asset, an unavailable companion, or a denied production route therefore
-leaves account text and safe HTTPS profile links intact without a broken image.
-This is accepted only for the local product experience. Production Caddy still
-denies `/api/platform-qr/*`, `SiteDocumentV1` remains unchanged, and hosted
-AssetStorage/AssetResolver support is `P1_PRE_DEPLOYMENT`.
+### D. Legacy 兼容与回退
 
-The [ADMIN-V2 / DESIGN-01 workbench](docs/admin-v2.md) divides the editor into
-six focused routes for templates, profile, packages, layout, contact, and
-advanced compatibility controls. All routes share one client-side draft and
-the existing save endpoint; the fixed top-bar **保存修改** action is the only
-global persistence control and saves changes across all six sections. There is
-no separate global draft-page preview. The template route keeps its compact eleven-item selector and
-shows one candidate at a time with a neutral, repository-owned structure
-diagram—not the user's photographs or SiteContent. Its detail area leads with
-the candidate name and description, then shows the structure and one material
-direction plan shared with the detailed guidance: fixed landscape, fixed
-portrait, and source-adaptive slots always account for the complete slot set.
-A 16:9 target is presentation cropping, not a separate source-file requirement.
-The route retains one workflow action: choosing a
-new homepage template updates only the draft `activeTemplate`, then opens
-**素材排版**; choosing the already-current draft template simply opens that same
-workspace. Neither path saves or applies a composition. Recommended composition, preview, adoption, and all
-`templateWorks` editing belong to **素材排版**, where generating or previewing a
-recommendation remains read-only until **采用推荐到草稿** is chosen. Desktop editing uses a
-fixed top bar and persistent sidebar; mobile keeps every section accessible through a compact
-switcher, while complex photo layout remains desktop-first. The Admin structure
-does not change `SiteContent`, the write payload, D1 schema, or template catalog.
-The former candidate “查看模板效果” action is not duplicated inside the template picker;
-the material-layout recommendation preview remains the scoped read-only visual check.
-When that handoff carries an unsaved homepage-template change, the layout
-workspace calls it out explicitly before material editing; the top-bar **保存修改** action is
-still required to persist the choice.
+`npm run dev` 启动 vinext/D1 和本地照片 companion，默认同样占用 3001；不是新平台默认启动方式，不能与日常实例争端口。旧后台、预览、全局 SQLite 和图库仅在明确保留的 legacy 目录使用。`build:legacy`、`start:legacy` 保留回归用途。
 
-The Polaroid Field keeps its fixed nine-slot contract. On desktop its initial
-view and FIT control calculate a rotation-aware fit with a safe viewport margin;
-zooming and panning remain available after that fitted overview.
+应用回退按只读核对进程 → 停止 → 确认退出 → 恢复已保留应用命令 → 健康检查执行；**不以恢复旧数据库快照回退应用**。机器专属步骤见本机交接记录。
 
-## Public-safe demo data
+### E. 普通生产产物不等于本机 runner
 
-The repository contains fictional profile, pricing, and contact placeholders.
-Replace them locally through `/admin`; never commit real contact details.
-
-After the browser loads saved `SiteContent`, it updates the visible tab title
-from `profile.brand`, then `profile.photographer`, with a neutral portfolio
-fallback. This is client-visible polish only: the server-rendered title,
-Open Graph, Twitter, and other SEO metadata still use the legacy demo path.
-The future `PUBLIC-IDENTITY / SSR-BRIDGE` scope must use editable
-`profile.role` instead of a hard-coded photographer role, combine empty
-city/role values safely, and must not use `profile.mark` as the SEO title
-subject.
-
-Photography assets are intentionally excluded from Git and GitHub:
-
-- `public/photos/`
-- `public/og.png`
-
-For local testing, place the generated WebP variants in `public/photos/`. The
-repository contains layout code and image metadata only, never the photographs.
-When photos are absent, every template keeps its intended composition with
-designed text placeholders.
-
-### Add local materials
-
-For normal local editing, open **Admin → 素材排版** and choose the single
-**添加素材** entry. Expand it and use **选择照片** for one or more photographs,
-or **选择文件夹** for a one-time batch that includes supported photographs in
-nested folders. A folder is only a batch source: every accepted item becomes a
-photograph in the same local material library, and no folder object or source
-path becomes product data.
-
-Both choices enter the same Web `FileList` batch path. Folder selection is a
-capability enhancement on that path, not a separate importer or a browser-name
-branch. After selection, Admin first shows the pending batch for review. Nothing
-is imported until the user confirms it; cancelling or replacing the pending
-selection leaves the library unchanged. Preview pages contain at most 24
-thumbnails, while confirmation always processes the complete selected batch.
-
-After confirmation, accepted photographs are processed one at a time, progress
-remains visible, and the material grid refreshes automatically when the batch
-finishes. The result summary distinguishes **本次新增**, **恢复可用**,
-**重复跳过**, and **可用素材总计**. Duplicate means identical file content, so a
-differently named copy or the same photograph selected through another folder
-can be skipped; regenerated missing derivatives are reported as restored rather
-than incorrectly described as already present.
-Adding material updates the local Photo Library; it does not save or change the
-shared SiteContent draft and it never runs automatic layout.
-
-The folder selection imports a one-time snapshot. Later changes to that computer
-folder are not watched or rescanned automatically, so select the folder again to
-import new material. **刷新素材列表** only reloads the generated manifest. A
-future remembered-source workflow must use a trusted local companion and keep
-any absolute folder path in local-only state; it remains
-`LOCAL_SOURCE_BINDING_FOLLOWUP`.
-
-The local service streams each selected file through a temporary directory into
-the internal importer core. That core deduplicates identical files by SHA-256,
-applies EXIF orientation, strips image metadata, and creates three colour-managed
-WebP variants per unique photograph. Original files and browser folder paths are
-not copied into the project or manifest. Each file is limited to 200 MiB, and
-requests plus manifest updates are serialized through the same project lock.
-
-Advanced and command-line importing are not product workflows. Existing
-repository-level entry points, linked-output adoption, automatic interrupted
-write recovery, and stale-lock recovery remain internal compatibility and
-maintenance capabilities. HR-001 did not remove or replace the importer core;
-HR-002 reuses that same core for both photograph and folder selection, and
-HR-003 adds review and explicit confirmation before either batch starts. HR-004
-adds paged review plus the local material-management layer described below.
-
-Generated files stay local in `public/photos/library/`. The browser-safe index is
-`public/photos/library-manifest.json`; it contains stable asset IDs, aspect ratios,
-orientations, and responsive image dimensions for active material, but no source file names or local
-paths. A private catalog in `.frame-zero/` stores that browser-safe asset metadata
-plus opaque batch IDs, photo/folder source kind, first-import order, timestamps,
-revision counters, and recycle-bin status. It never stores or returns a file name,
-folder name, or local path. Pre-catalogue assets
-remain usable and are labelled as having unknown historical import order.
-Incremental import state is stored in `.frame-zero/`. Both locations are
-ignored by Git. JPEG, PNG, WebP, AVIF, TIFF, HEIC, and HEIF inputs are considered;
-actual format support depends on the installed Sharp build. Camera RAW formats
-such as ARW, CR3, and NEF are not supported. Damaged or unsupported files are
-reported without stopping the rest of an Admin batch.
-
-The local library can be sorted by newest or oldest known import order and
-filtered by import batch. The folder is a source for that batch, not a permanent
-album or automatic classification. Each card shows whether the current draft or
-saved content refers to it. **移到回收站** removes the photograph from new
-selection and automatic layout while retaining its responsive files and all
-existing references; **恢复** returns it to its original import position. There
-is deliberately no irreversible purge action in this local UI.
-
-Primary assignment treats landscape material as 3:2 and portrait material as
-2:3. A 16:9 shape remains an approved presentation crop where a template needs
-it, rather than a separate source category. The importer still preserves true
-dimensions and square orientation metadata instead of falsifying the source.
-Direction is template-specific rather than a global landscape preference:
-`film-rail` stays landscape-only, `orbital-portal` stays portrait-only, and
-`character-select` adapts every slot to its source. The other eight templates
-keep structural hero/cover slots fixed while ordinary gallery slots adapt to
-source-oriented 3:2 or 2:3 presentation. `character-select` uses three justified
-rows for all nine source-orientation combinations and no longer forces a 1:1
-roster. All eleven templates still require real-material desktop/mobile human
-review before approval.
-
-Imports are additive: choosing the wrong folder, temporarily losing a source file,
-or hitting one damaged photograph will not delete assets already used by a saved
-homepage. The current compatibility manifest still keys its legacy entries by
-SHA-256 so re-imports reuse them; those hashes are migration fingerprints, not
-the future random internal Asset IDs.
-
-Normal projects keep `public/photos/` as a regular ignored directory. Internal
-compatibility safeguards continue to pin an intentionally adopted junction or
-symlink with a random owner token and hashed target, preventing an accidental or
-retargeted link from receiving generated files. This is not exposed as an Admin
-import option.
-
-The folder import control is available only from the loopback Admin. A hosted
-Admin can still browse an existing manifest, but it does not call a visitor's
-`127.0.0.1`; remote object storage is a separate future scope. Manual
-**刷新素材列表** remains a manifest reload, while standalone service diagnostics
-remain an internal maintenance path. Normal `npm run dev` uses automatic
-loopback port discovery.
-
-After the material grid refreshes, for the active template you can:
-
-- generate, preview, and explicitly adopt a ratio-aware recommendation into the current draft;
-- pick or replace a specific fixed slot manually;
-- swap adjacent slots, remove a photograph, or lock it before recomposing;
-- click the subject in a crop preview, or use the two sliders, to set its focal point;
-- save the result without copying the rest of the material library into D1.
-
-If a template has no saved V2 composition it continues to use the original `works`
-list. If there are not enough compatible landscape or portrait photographs, the
-unfilled slots remain intentional text placeholders instead of forcing a bad crop.
-
-`npm run check:public` fails if photographs, local Windows paths, WeChat storage
-identifiers, non-placeholder email addresses, Chinese mobile numbers, or common
-credential formats appear in the worktree, index, or reachable Git history.
-
-## Useful commands
-
-```bash
-npm run lint
-npm test
-npm run test:contracts
-npm run test:adapters
-npm run test:photos
-npm run test:composition
+```sh
 npm run build
 npm run start
-npm run test:node-runtime
-npm run check:bundle
-npm run build:node
-npm run start:node
-npm run build:legacy
-npm run test:legacy-runtime
-npm run check:bundle:legacy
+```
+
+以上生成并启动 `.next/standalone/server.js`，不自动开启本机账号 runner 的 socket/Host proof、内部验收入口或现有本机配置，不能写成与 `platform:start` 等价，也不能声称换域名即可上线账号链路。
+
+容器、Caddy 和 Linux bootstrap 有仓库侧验证；真实 DNS、TLS、服务器配置、备份恢复与公网验收仍是独立授权的部署工作。见 [Node 运行时记录](docs/stage-a-runtime.md)、[部署 bootstrap](docs/stage-a2-deployment-bootstrap.md)、[运维文档](docs/deployment-bootstrap-runbook.md)。本次不远程部署。
+
+## 6. 测试与预算政策
+
+常用命令（依赖须安装；构建类测试不在运行目录执行）：
+
+```sh
+npm run lint
 npm run check:public
-npm run deployment:validate -- /path/to/server-only.env
-npm run deployment:bootstrap -- --help
-npm run test:deployment-bootstrap
-npm run test:deployment-operations
-npm run db:generate
+npm run test:admin
+npm run test:accounts
+npm run build
+npm run check:bundle
+npm test
 ```
 
-Stage A now uses the Standard Next.js Node standalone artifact for the default
-production `build`, `start`, and bundle gate. It is intentionally not the
-default local editing runtime yet: the target PostgreSQL repository belongs to
-Stage B, so Node reads use the current fallback and writes fail closed. The
-vinext/D1 editor and Photo Library companion remain available through
-`npm run dev`, while explicit `*:legacy` commands preserve rollback evidence. See
-[`docs/stage-a-runtime.md`](docs/stage-a-runtime.md) for the evidence matrix,
-private-photo packaging boundary, remaining cutover gaps, and rollback path.
+`test:accounts` 需要准备隔离 `.env.accounts.test` 与 PostgreSQL，不能指向日常库。完整 `npm test` 包含 legacy 和 Standard Next 构建/运行时测试，不代替本机账号或浏览器验收。
 
-Stage A2 now has a repository-reviewed non-root image, strict server-only
-configuration, minimal `Caddy -> App` Compose shell, public/private proxy
-boundary, structured container logs, and Linux deploy/update/rollback smoke.
-The production Caddyfile keeps public ACME while CI uses a separate internal
-TLS file. This is `REPO_SIDE_BOOTSTRAP_READY`, not a deployment or online
-milestone: target Linux, real 80/443, DNS, public HTTPS, and target smoke remain
-`EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED`. See
-[`docs/stage-a2-deployment-bootstrap.md`](docs/stage-a2-deployment-bootstrap.md)
-and the
-[`deployment bootstrap runbook`](docs/deployment-bootstrap-runbook.md).
+CI 五项：Quality、Public repository safety、Container、Deployment Bootstrap、Local Account PostgreSQL Integration。只使用对应 head/目标的证据，PR 绿灯不替代 main 合并后的 push 检查。
 
-The legacy local editor stores content settings in its project-local Miniflare
-D1 database. The logical `DB` binding in `.openai/hosting.json` belongs to the
-explicit Cloudflare compatibility lane, not the Standard Next.js production
-artifact. Stage B will replace that persistence boundary with PostgreSQL.
+体积允许合理增长：跨路由汇总和 legacy 参考超出按告警记录原因、增量与影响，不为微小 bytes 增长删产品。缺失/损坏产物、错误映射、泄漏、懒加载结构仍严格失败；Next 单模板 64 KiB 硬约束保留。详见 [M2/预算政策](docs/M2_SITE_CONTENT_EDITOR.md)、[后台验收](docs/ADMIN_WORKSPACE_LAYOUT.md)。
 
-## Admin security assumptions
+## 7. 限制、历史定位与交接
 
-The homepage content API is public by design, so anything entered in `/admin`
-must be suitable for public display. The hosted admin trusts the
-`oai-authenticated-user-*` headers injected by ChatGPT Sites. If you deploy this
-repository behind another proxy, protect `/admin` and `PUT /api/site-content`
-with your own authentication and strip any client-supplied headers using that
-prefix. Local write access is intended only for a loopback-only development
-server bound to `127.0.0.1`.
+尚未完成：高级素材搜索/筛选/批选、基础 Site 资源元信息、分享卡新增替换、预览呈现一致性补齐、基础发布、资源回收与完整原图归档。登录后自动进入后台仅讨论过，未实施；文档交接不自动授权这些候选任务。
 
-## Public repository publishing
+产品目标见 [North Star](docs/PORTFOLIO_PLATFORM_NORTH_STAR.md)，阶段映射见 [V1 路线图](docs/SELF_HOSTED_V1_ROADMAP.md)。当前能力与停止边界以 [CURRENT_STATUS](docs/CURRENT_STATUS.md) 为准，新对话按 [SESSION_HANDOFF](docs/SESSION_HANDOFF.md) 进入相关代码。
 
-The Windows publishing script creates the public GitHub repository, verifies
-that every required template branch exists, runs the public-safety gate, pushes
-the V1 and all template branches individually, and makes
-`codex/template-gallery` the default branch:
+历史技术仍可追溯，但不是当前启动指引：
 
-```powershell
-.\scripts\publish-public-repo.ps1
-```
+- [旧 README 完整快照](https://github.com/Brilliant666/frame-zero-portfolio-studio/blob/7f8701499397a6da00885a7339f24bf35ec9b9c3/README.md)：保留 D1、导入器、平台卡、模板方向和早期公共仓库发布流程。旧 `publish-public-repo.ps1` 不是现有仓库的日常发布命令。
+- [SiteDocumentV1](app/site-document.ts)、[稳定 ID 规划](app/stable-id-migration.ts)、[旧内容适配](app/legacy-site-content-adapter.ts)：冻结/纯规划契约，不意味着新 Site 保存格式已统一；不得据此合并独立内容或自动迁移源记录。
+- [基础 Admin V2](docs/admin-v2.md)、[旧运行时](docs/stage-a-runtime.md)：保留兼容行为与技术沿革，旧全局 API 安全假设不能套到新 Site 后台。
+- [M2 编辑](docs/M2_SITE_CONTENT_EDITOR.md)、[M3 资源](docs/M3_SITE_ASSETS.md)、[受控接入](docs/M3_LOCAL_IMPORT.md)、[本机验收](docs/LOCAL_M3_HANDS_ON_ACCEPTANCE.md)、[高级发布](docs/M4_PREMIUM_PUBLICATION.md)：保留阶段证据，文中“当时未完成”不代表现在仍未完成。
 
-It requires an authenticated GitHub CLI session for the `Brilliant666`
-account. Never add photographs or real personal information to make the remote
-preview self-contained.
+本轮交接后等待用户选择目标。不自动合并新 PR、不迁移真实数据、不开放注册/公网，不把模拟账号验收写成客户上线。

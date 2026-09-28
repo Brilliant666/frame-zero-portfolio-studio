@@ -10,7 +10,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
   assert.equal(origin, 'http://127.0.0.1:3004');
   const output = join(process.cwd(), 'outputs', 'site-editor-browser');
   await mkdir(output, { recursive: true });
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined });
   let stopped = false, activeStage = '';
   const releases = new Set();
   const network = [], checkpoints = [], screenshots = [], steps = [];
@@ -111,14 +111,14 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
   }
   async function nav(p, section) {
     const href = `${basic}/${section}`;
-    if (p.viewportSize().width < 768) await p.getByLabel('切换后台分区').selectOption(href);
+    if (p.viewportSize().width <= 900) await p.getByLabel('切换后台分区').selectOption(href);
     else await p.locator(`nav[aria-label="后台主要分区"] a[href="${href}"]`).click();
     await p.waitForURL(`**${href}`);
   }
   async function saved(p, space, shortcut = false, status = 200) {
     await step(`${space} save action starts (expected ${status})`);
     const result = p.waitForResponse(r => new URL(r.url()).pathname === path(space) && r.request().method() === 'PUT');
-    const action = shortcut ? p.keyboard.press('Control+s') : p.getByRole('button', { name: space === 'basic' ? '保存修改' : '保存新版修改', exact: true }).click();
+    const action = shortcut ? p.keyboard.press('Control+s') : p.getByRole('button', { name: '保存修改', exact: true }).click();
     const [response] = await bounded(Promise.all([result, action]), `Save ${space} headers/action`);
     assert.equal(response.status(), status);
     await step(`${space} save HTTP ${status} received`);
@@ -127,7 +127,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
     const body = status === 200 ? await bounded(response.json(), `Save ${space} JSON body`) : null;
     await step(`${space} save response consumed`);
     await bounded(p.waitForFunction(() => !document.querySelector('[data-save-state="saving"]')
-      && ![...document.querySelectorAll('header p')].some(el => el.textContent.includes(' · 保存中'))), `${space} save UI settles`);
+      && ![...document.querySelectorAll('header [role="status"]')].some(el => el.textContent.includes('保存中'))), `${space} save UI settles`);
     await step(`${space} save UI settled`);
     return body;
   }
@@ -170,10 +170,11 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
       await openEditor(page, premium);
       await field(page, '摄影师名称').fill('Premium anonymous photographer');
       await field(page, '首页标题').fill('Premium private title');
-      await page.getByRole('button', { name: '套餐与联系', exact: true }).click();
+      await page.getByRole('button', { name: '拍摄套餐', exact: true }).click();
       await page.getByRole('button', { name: '添加套餐', exact: true }).click();
       await field(page, '套餐 1 · 名称').fill('Premium anonymous package');
       await field(page, '套餐 1 · 价格').fill('200');
+      await page.getByRole('button', { name: '联系约拍', exact: true }).click();
       await field(page, '邮箱').fill('premium@fixture.example');
       await field(page, '微信号').fill('premium-fixture-contact');
       premiumSaved = await saved(page, 'premium-polaroid');
@@ -252,6 +253,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
         await bounded(snapshot(other, `05-${space}-conflict-before-reload`), `${space} conflict screenshot`, 10000);
         await step(`${space} conflict retained and server winner verified`);
         if (space === 'premium-polaroid') {
+          await other.locator('summary').filter({ hasText: '更多操作' }).click();
           const download = other.waitForEvent('download');
           await other.getByRole('button', { name: '导出当前草稿', exact: true }).click();
           const file = await (await download).path();
@@ -291,7 +293,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
       await openEditor(page, premium);
       // The restored MotionHome uses photographer as its visible h1 (not hero.title).
       await field(page, '摄影师名称').fill('UNSAVED MEMORY PREVIEW');
-      await page.getByRole('button', { name: '查看草稿效果', exact: true }).click();
+      await page.getByRole('button', { name: '预览当前编辑', exact: true }).click();
       const dialog = page.getByRole('dialog');
       await dialog.getByRole('heading', { name: 'UNSAVED MEMORY PREVIEW', exact: true }).waitFor();
       assert.deepEqual(await read('premium-polaroid'), savedBefore, 'Memory preview must not persist unsaved edits');
