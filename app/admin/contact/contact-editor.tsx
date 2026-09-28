@@ -7,6 +7,8 @@ import { getPlatformQrAssetPath } from "../../platform-qr";
 import { getSafeSocialUrl } from "../../social-links";
 import { completePlatformQrUpload, type PlatformQrUploadTarget } from "./platform-qr-attachment";
 import { platformQrUploadAccept, uploadPlatformQr } from "./platform-qr-client";
+import SiteContactCard from "../../site-editor/contact-card";
+import { setContactCardReference } from "../../site-editor/contact-card-state";
 import styles from "../admin-v2.module.css";
 
 const MAX_SOCIAL_LINKS = 8;
@@ -139,8 +141,8 @@ export default function ContactEditor() {
         </FormGroup>
 
         <FormGroup
-          title="平台账号与二维码"
-          description="每个平台可填写账号或主页链接，并单独上传一张二维码图片；全部模板共用这里保存的内容，不再根据链接自动生成二维码。"
+          title={siteScope ? "平台账号与可选联系卡" : "平台账号与二维码"}
+          description={siteScope ? "文字账号、主页网址和图片卡均可独立使用或组合，也可留空。十一套基础模板共用此处内容；高级内容独立保存。" : "每个平台可填写账号或主页链接，并单独上传一张二维码图片；全部模板共用这里保存的内容，不再根据链接自动生成二维码。"}
         >
           <div className={`${styles.pairGrid} ${styles.socialGrid}`}>
             {content.social.map((item, index) => {
@@ -149,7 +151,7 @@ export default function ContactEditor() {
                 ? "已识别安全 HTTPS 链接；离开输入框后会自动精简为链接。"
                 : item.handle.toLowerCase().includes("https://")
                   ? "未识别：分享文案必须只包含一个无账号密码的 HTTPS 链接。"
-                  : "普通账号会作为文本展示；二维码图片请在下方单独上传。";
+                  : "普通账号会作为文本展示；图片卡可选。";
               const qrSrc = siteScope
                 ? item.qrAssetId && /^[a-f0-9-]{36}$/.test(item.qrAssetId) ? `${siteScope.assetsEndpoint}/${item.qrAssetId}/full` : null
                 : getPlatformQrAssetPath(item.qrAssetId);
@@ -169,7 +171,10 @@ export default function ContactEditor() {
                   onChange={(value) => updateSocialHandle(index, value)}
                   onBlur={(value) => normalizeSocialHandle(index, value)}
                 />
-                {siteScope ? <div><p>已接入的本站分享卡保留；可编辑账号与链接，不会读取全局平台卡。</p>{qrSrc && <><a href={qrSrc} target="_blank" rel="noreferrer">查看本站分享卡原图</a><button type="button" onClick={() => clearSocialQr(index)}>移除分享卡引用</button></>}</div> : <div className={styles.platformQrEditor} data-has-image={Boolean(qrSrc)}>
+                {siteScope ? <SiteContactCard assetsEndpoint={siteScope.assetsEndpoint} assetId={item.qrAssetId} targetKey={item} onChange={assetId => setContent(current => {
+                  const social = setContactCardReference(current.social, item, assetId);
+                  return social === current.social ? current : { ...current, social };
+                })} /> : <div className={styles.platformQrEditor} data-has-image={Boolean(qrSrc)}>
                   <div className={styles.platformQrPreview}>
                     {qrSrc ? (
                       <a href={qrSrc} target="_blank" rel="noopener noreferrer" aria-label={`查看${item.label || `平台 ${index + 1}`}二维码原图`}>
