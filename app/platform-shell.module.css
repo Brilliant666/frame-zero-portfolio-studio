@@ -1,0 +1,85 @@
+.shell { --surface: #fff; --canvas: #f3f5f8; --ink: #243247; --muted: #64748b; --line: #dbe2eb; --accent: #304d70; min-height: 100svh; background: var(--canvas); color: var(--ink); font-family: Arial, "Microsoft YaHei", sans-serif; }
+.shell * { box-sizing: border-box; }
+.shell a { text-decoration: none; }
+.header { min-height: 80px; max-width: 1240px; margin: 0 auto; padding: 18px 32px; display: flex; justify-content: space-between; align-items: center; gap: 20px; border-bottom: 1px solid var(--line); }
+.brand { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); font-size: 16px; font-weight: 700; }
+.brand span { color: var(--accent); font-size: 26px; }
+.primaryButton, .secondaryButton { display: inline-flex; align-items: center; justify-content: center; gap: 14px; min-height: 44px; padding: 12px 20px; border: 1px solid transparent; border-radius: 10px; cursor: pointer; font: inherit; font-size: 14px; font-weight: 600; line-height: 1.4; text-align: center; }
+.primaryButton { background: var(--accent); color: #fff; }
+.secondaryButton { color: var(--ink); background: var(--surface); border-color: var(--line); }
+.primaryButton:hover { background: #243e5e; }
+.secondaryButton:hover { background: #edf2f8; }
+.shell :is(a, button, input, summary):focus-visible { outline: 3px solid #7f9fc4; outline-offset: 3px; }
+.shell button:disabled { cursor: wait; opacity: .6; }
+.textLink, .textButton { color: var(--accent); font-size: 14px; }
+.textButton { padding: 12px 0; background: transparent; border: 0; cursor: pointer; font: inherit; font-size: 14px; }
+.homeContent { max-width: 1176px; padding: 0 32px; margin: 0 auto; }
+.hero { padding: 80px 0 68px; max-width: 790px; }
+.eyebrow { color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: .06em; margin: 0 0 18px; }
+.hero h1, .loginIntro h1 { margin: 0; font-size: clamp(40px, 5.5vw, 72px); line-height: 1.18; letter-spacing: -.055em; font-weight: 700; }
+.lead { max-width: 650px; color: var(--muted); font-size: 17px; line-height: 1.9; margin: 26px 0; }
+.hint { color: var(--muted); font-size: 12px; margin: 16px 0 0; }
+.workflow { padding: 30px 0 52px; border-top: 1px solid var(--line); }
+.sectionHeading h2 { margin: 0 0 28px; font-size: 24px; font-weight: 600; line-height: 1.5; }
+.sectionHeading .eyebrow { margin-bottom: 10px; }
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.steps article { padding: 26px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.steps article > span { font-size: 13px; color: var(--accent); font-weight: 700; }
+.steps h3 { font-size: 17px; margin: 22px 0 10px; }
+.steps p { font-size: 14px; color: var(--muted); line-height: 1.8; margin: 0; }
+.footer { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding: 26px 0; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+.footer > p { margin: 0; }
+.internalTools { max-width: 360px; }
+.internalTools summary, .accountDetails summary { cursor: pointer; min-height: 28px; line-height: 1.7; }
+.internalTools nav { display: grid; gap: 12px; padding-top: 12px; }
+.internalTools a { color: var(--accent); }
+.internalTools p { line-height: 1.7; }
+.loginContent { max-width: 1120px; margin: 0 auto; padding: 80px 32px; display: grid; grid-template-columns: 1fr 440px; align-items: start; gap: 76px; }
+.loginIntro { padding-top: 26px; }
+.loginIntro h1 { font-size: clamp(36px, 4.3vw, 54px); }
+.loginIntro .lead { font-size: 15px; }
+.routeNote { margin-top: 42px; padding-top: 24px; border-top: 1px solid var(--line); }
+.routeNote strong { font-size: 14px; }
+.routeNote p { margin: 12px 0 0; color: var(--muted); font-size: 13px; line-height: 1.9; }
+.loginCard { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 32px; box-shadow: 0 12px 36px rgb(35 52 76 / 5%); min-width: 0; }
+.loginCard h2 { font-size: 25px; line-height: 1.4; margin: 0; overflow-wrap: anywhere; }
+.cardDescription { color: var(--muted); font-size: 13px; line-height: 1.8; margin: 12px 0 24px; overflow-wrap: anywhere; }
+.status { color: var(--accent); background: #edf2f8; border-radius: 8px; padding: 12px 14px; font-size: 13px; line-height: 1.6; margin: 0 0 24px; }
+.loginForm { display: grid; gap: 22px; }
+.loginForm label { display: grid; gap: 9px; font-size: 14px; font-weight: 600; }
+.loginForm input { width: 100%; min-width: 0; height: 48px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); font: inherit; font-size: 16px; font-weight: 400; }
+.loginForm input::placeholder { color: #7e8b9d; font-size: 13px; }
+.loginForm .primaryButton { margin-top: 4px; }
+.accountActions { display: grid; gap: 12px; }
+.accountDetails { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+.accountDetails p { line-height: 1.7; overflow-wrap: anywhere; }
+.accountDetails .secondaryButton { margin: 6px 0 10px; }
+@media (max-width: 800px) {
+  .loginContent { grid-template-columns: minmax(0, 1fr); max-width: 560px; gap: 28px; padding-top: 40px; }
+  .loginIntro { padding: 0; }
+  .loginIntro h1 { font-size: 38px; }
+  .loginIntro h1 br { display: none; }
+  .loginIntro .lead { margin: 16px 0 0; }
+  .routeNote { display: none; }
+  .steps { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .steps h3 { margin-top: 14px; }
+}
+@media (max-width: 480px) {
+  .header { padding: 14px 18px; min-height: 72px; gap: 10px; }
+  .brand { font-size: 13px; gap: 6px; }
+  .brand span { font-size: 22px; }
+  .header .secondaryButton { padding: 10px 12px; font-size: 12px; }
+  .header .textLink { font-size: 12px; }
+  .homeContent { padding: 0 20px; }
+  .hero { padding: 48px 0 42px; }
+  .hero h1 { font-size: 44px; }
+  .lead { font-size: 15px; margin: 22px 0; }
+  .sectionHeading h2 { font-size: 20px; }
+  .steps article { padding: 22px; }
+  .footer { flex-direction: column; gap: 18px; }
+  .loginContent { padding: 34px 18px 48px; }
+  .loginIntro h1 { font-size: 30px; }
+  .loginIntro .eyebrow { margin-bottom: 12px; }
+  .loginCard { padding: 24px 20px; border-radius: 14px; }
+  .loginCard h2 { font-size: 23px; }
+}

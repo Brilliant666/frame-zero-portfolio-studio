@@ -18,7 +18,7 @@ M1 implementation head: 8318e06
 M1 PR: #29 accepted and Squash merged into main
 M2 PR: #30 accepted and Squash merged as 4abf530
 M3/M4 PR: #31 accepted and Squash merged as 20d8743
-New admin layout PR: Draft delivery only; merge not authorized
+New admin layout PR: #32 Draft; includes platform/login/workspace entry UI; merge not authorized
 Remote deployment: FROZEN / NOT_AUTHORIZED
 External deployment gate: EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED
 V1 status: NOT_LAUNCHED
