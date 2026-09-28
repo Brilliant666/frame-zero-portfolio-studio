@@ -13,6 +13,8 @@
 }
 .row { justify-content: space-between; flex-wrap: wrap; }
 .overview { min-width: 0; }
+.overview { flex: 1 1 280px; overflow-wrap: anywhere; }
+.panel { margin-bottom: 16px; }
 .versions { flex-wrap: wrap; gap: 8px; line-height: 1.7; }
 .versions strong { font-size: 13px; font-weight: 600; }
 .separator { color: #bbc4d0; }

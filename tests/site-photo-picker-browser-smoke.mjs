@@ -53,7 +53,7 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
   };
   const save = async (status = 200) => {
     const pending = page.waitForResponse(response => new URL(response.url()).pathname === endpoint && response.request().method() === 'PUT');
-    await page.getByRole('button', { name: '保存修改', exact: true }).click();
+    await page.getByRole('button', { name: '仅保存草稿', exact: true }).click();
     const response = await pending; assert.equal(response.status(), status);
     // The real status, rendered conflict and retained draft are asserted below.
     // As in the existing editor smoke, do not wait on the browser's error-body

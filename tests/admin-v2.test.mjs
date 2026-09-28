@@ -610,7 +610,9 @@ test("Admin V2 keeps one shared save action on the unchanged site-content endpoi
   assert.doesNotMatch(provider, /site_settings|SiteDocument|migration|repository/);
   assert.equal([provider, shell, template, structurePreview, layout, layoutPreview]
     .reduce((count, input) => count + (input.match(/method:\s*"PUT"/g)?.length ?? 0), 0), 1);
-  assert.doesNotMatch(shell, /DraftTemplatePreviewTrigger|预览当前草稿|data-admin-draft-preview-trigger/);
+  assert.match(shell, /<DraftTemplatePreviewTrigger templateId=\{content\.activeTemplate\} scope="admin" label="预览当前编辑"/);
+  assert.match(shell, /saveDraft=\{save\}/, "Site combined action must reuse the existing save function");
+  assert.match(shell, /siteScope \? "仅保存草稿"/, "The shortcut action remains a draft-only save");
   assert.match(shell, /aria-keyshortcuts="Control\+S Meta\+S"/);
   assert.doesNotMatch([shell, template, structurePreview, layout, layoutPreview].join("\n"), /\/api\/site-content/);
 });

@@ -7,23 +7,26 @@ import { ADMIN_SECTIONS, getAdminSection } from "./admin-navigation";
 import { formatSavedAt, useAdmin } from "./admin-provider";
 import { getAdminStatus } from "./admin-state";
 import styles from "./admin-v2.module.css";
+import PublicationControls from "../site-editor/publication-controls";
+import DraftTemplatePreviewTrigger from "./draft-preview";
 
 export default function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
   const router = useRouter();
   const internalTest = pathname.startsWith("/test/admin");
-  const { dirty, editorLabel, loadState, message, reload, save, saveState, updatedAt, siteScope, conflict } = useAdmin();
+  const { dirty, editorLabel, loadState, message, reload, save, saveState, updatedAt, siteScope, conflict, revision, content, pendingSave, checkSave } = useAdmin();
   const sectionHref = (href: string) => siteScope ? `${siteScope.adminBasePath}${href.slice(6)}` : internalTest ? `/test${href}` : href;
   const current = getAdminSection(siteScope ? `/admin${pathname.slice(siteScope.adminBasePath.length)}` : internalTest ? pathname.slice(5) : pathname);
   const savedAt = formatSavedAt(updatedAt);
   const status = getAdminStatus(loadState, saveState, dirty);
-  const saveDisabled = conflict || !dirty || loadState !== "ready" || saveState === "saving";
-  const saveActionLabel = saveState === "saving"
+  const saveDisabled = conflict || pendingSave || !dirty || loadState !== "ready" || saveState === "saving";
+  const saveActionLabel = siteScope ? "仅保存草稿" : saveState === "saving"
     ? "正在保存修改"
     : saveState === "error"
       ? "重试保存"
       : "保存修改";
   const showStatusMessage = loadState !== "ready"
+    || pendingSave
     || saveState === "error"
     || saveState === "saving"
     || saveState === "success";
@@ -32,6 +35,11 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
     : savedAt
       ? `上次保存 ${savedAt}`
       : siteScope ? "保存仅更新本站基础版草稿，不会公开发布" : "保存后，主页刷新即显示最新内容";
+  const exportDraft = () => {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(content, null, 2)], { type: "application/json" }));
+    const link = document.createElement("a"); link.href = url; link.download = "basic-draft.json"; link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
 
   return (
     <div className={styles.shell} data-admin-v2="true" data-site-editor={siteScope ? "basic" : undefined}>
@@ -61,7 +69,7 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
           </div>
           <button
             type="button"
-            className={styles.saveButton}
+            className={siteScope ? styles.draftButton : styles.saveButton}
             onClick={() => void save()}
             disabled={saveDisabled}
             aria-label={saveActionLabel}
@@ -71,7 +79,7 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
           >
             <span className={styles.saveButtonFull} aria-hidden="true">{saveActionLabel}</span>
             <span className={styles.saveButtonCompact} aria-hidden="true">
-              {saveState === "saving" ? "保存中…" : saveState === "error" ? "重试" : "保存"}
+              {saveState === "saving" ? "保存中…" : siteScope ? "仅存草稿" : saveState === "error" ? "重试" : "保存"}
             </span>
           </button>
         </div>
@@ -113,14 +121,18 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
             <div className={styles.workspaceContext}>
               <div>
                 <strong>基础版草稿</strong>
-                <p>十一套模板共用本空间内容，与高级版独立保存。保存不会公开发布。</p>
+                <p>十一套模板共用本空间内容，与高级版独立。仅保存草稿不会发布；保存并发布更新本站公开主页。</p>
               </div>
               <nav aria-label="基础版空间操作">
+                {loadState === "ready" && <DraftTemplatePreviewTrigger templateId={content.activeTemplate} scope="admin" label="预览当前编辑" />}
                 <a href={siteScope.adminBasePath.replace(/\/basic$/, "")} onClick={(event) => { if (dirty && !window.confirm("当前基础版草稿尚未保存。离开后未保存修改会丢失，确认返回内容空间选择？")) event.preventDefault(); }}>切换内容空间</a>
                 <Link href={siteScope.previewHref} target="_blank">预览已保存草稿<span className={styles.newWindowHint}>（新窗口）</span></Link>
+                <details><summary>草稿操作</summary><button type="button" onClick={exportDraft}>导出当前草稿</button><button type="button" disabled={saveState === "saving"} onClick={() => { if ((!dirty && !pendingSave && !conflict) || window.confirm("重新读取会替换当前编辑。请先导出留存，确认继续？")) void reload(); }}>重新读取草稿</button></details>
               </nav>
             </div>
           )}
+          {siteScope?.publicationEndpoint && siteScope.publicHref && <PublicationControls endpoint={siteScope.publicationEndpoint} publicHref={siteScope.publicHref} space="basic" templateId={content.activeTemplate} revision={revision} dirty={dirty} disabled={loadState !== "ready" || saveState === "saving" || conflict || pendingSave} saveDraft={save} />}
+          {pendingSave && <button type="button" onClick={() => void checkSave()}>检查保存结果</button>}
           {loadState === "error" || loadState === "degraded" || conflict ? (
             <div className={styles.errorSummary} role="alert">
               <span>{message}</span>

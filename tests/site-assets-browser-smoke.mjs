@@ -44,7 +44,7 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
   }
   async function save(space) {
     const result = page.waitForResponse(r => r.request().method() === 'PUT' && new URL(r.url()).pathname === `/api/sites/${a}/drafts/${space}`);
-    await page.getByRole('button', { name: '保存修改', exact: true }).click();
+    await page.getByRole('button', { name: '仅保存草稿', exact: true }).click();
     const response = await result; assert.equal(response.status(), 200);
     return response.json();
   }

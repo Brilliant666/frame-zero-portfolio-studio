@@ -118,7 +118,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
   async function saved(p, space, shortcut = false, status = 200) {
     await step(`${space} save action starts (expected ${status})`);
     const result = p.waitForResponse(r => new URL(r.url()).pathname === path(space) && r.request().method() === 'PUT');
-    const action = shortcut ? p.keyboard.press('Control+s') : p.getByRole('button', { name: '保存修改', exact: true }).click();
+    const action = shortcut ? p.keyboard.press('Control+s') : p.getByRole('button', { name: '仅保存草稿', exact: true }).click();
     const [response] = await bounded(Promise.all([result, action]), `Save ${space} headers/action`);
     assert.equal(response.status(), status);
     await step(`${space} save HTTP ${status} received`);

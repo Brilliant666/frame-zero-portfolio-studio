@@ -16,7 +16,11 @@ import SitePhotoPicker from "./site-photo-picker";
 import { appendPickedPhotos } from "./photo-picker-state";
 import { parseSitePremiumDocument } from "../site-editor/content-schema";
 import SiteAssetUpload from "../site-editor/asset-upload";
+import SiteContactCard from "../site-editor/contact-card";
+import { setContactCardReference } from "../site-editor/contact-card-state";
 import type { SiteEditorScope } from "../site-editor/scope";
+import type { PublicationEditorProps } from "../site-editor/publication-controls";
+import { confirmDraftSave, DraftSaveRejected, DraftSaveUncertain, writeSiteDraft, type DraftSaveOptions, type DraftSaveReceipt, type PendingDraftSave } from "../site-editor/draft-save";
 import styles from "./admin.module.css";
 
 type Envelope = { content: PreviewPortfolioDocumentV1 | null; revision: number; updatedAt: string | null };
@@ -38,7 +42,7 @@ function CoverSettings({ siteMode, children }: { siteMode: boolean; children: Re
   return siteMode ? <details className={styles.coverSettings}><summary>封面与重点照片设置</summary><div>{children}</div></details> : <>{children}</>;
 }
 
-export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorScope; PublicationControls?: ComponentType<{ revision: number; dirty: boolean; disabled: boolean }>; SitePreview?: ComponentType<{ document: PreviewPortfolioDocumentV1; embedded?: boolean; initialCollectionId?: string; assets?: readonly PhotoAsset[] }> }) {
+export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorScope; PublicationControls?: ComponentType<PublicationEditorProps>; SitePreview?: ComponentType<{ document: PreviewPortfolioDocumentV1; embedded?: boolean; initialCollectionId?: string; assets?: readonly PhotoAsset[] }> }) {
   // Site routes exist only in Standard Next Node; omit their adapter from rollback builds.
   const siteScope = process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? props?.siteScope : undefined;
   const endpoint = siteScope?.endpoint ?? "/api/preview/site-content";
@@ -82,6 +86,10 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
   const readingLock = useRef(false);
   const draftVersion = useRef(0);
   const requestNumber = useRef(0);
+  const lifetime = useRef(new AbortController());
+  const pendingRef = useRef<PendingDraftSave | null>(null);
+  const [pendingSave, setPendingSave] = useState(false);
+  useEffect(() => { const controller = new AbortController(); lifetime.current = controller; return () => controller.abort(); }, [endpoint]);
   const dirty = saved === null ? previewIsDirty(draft, createEmptyPreviewDocument()) : previewIsDirty(draft, saved);
   const assetMap = useMemo(() => new Map(assets.map((asset) => [asset.id, asset])), [assets]);
   const selected = draft.collections.find((collection) => collection.id === selectedId) ?? draft.collections[0] ?? null;
@@ -104,6 +112,7 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
       if (draftVersion.current !== startVersion) throw new Error("读取期间草稿发生变化，未覆盖。请再次明确重新读取。");
       const next = result.content ?? createEmptyPreviewDocument();
       current.current = next; draftVersion.current += 1; setDraft(next); setSaved(result.content); setRevision(result.revision); setUpdatedAt(result.updatedAt);
+      pendingRef.current = null; setPendingSave(false);
       setConflict(false); setLoadState("ready"); setMessage(siteMode ? "本站高级拍立得草稿已读取。保存不发布，也不改变基础版内容。" : result.content ? "新版内容已读取。保存只影响 /preview。" : "尚未配置新版。请填写资料、新建图集后保存；不会自动复制旧站。");
     } catch (error) { if (request === requestNumber.current) { setLoadState("error"); setMessage(error instanceof Error ? error.message : "读取失败；草稿保留。"); } }
     finally { readingLock.current = false; }
@@ -129,25 +138,48 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
   }, [siteScope]);
   useEffect(() => { const timer = setTimeout(() => void loadLibrary(), 0); return () => clearTimeout(timer); }, [loadLibrary]);
 
-  const save = useCallback(async () => {
-    if (savingLock.current || loadState !== "ready" || !dirty || conflict) return;
+  const save = useCallback(async (options?: DraftSaveOptions): Promise<DraftSaveReceipt | null> => {
+    const signal = options?.signal ? AbortSignal.any([options.signal, lifetime.current.signal]) : lifetime.current.signal;
+    if (savingLock.current || loadState !== "ready" || conflict || pendingRef.current || signal.aborted) return null;
+    if (!dirty) return saved && revision > 0 ? { content: saved, revision, updatedAt } : null;
     let submitted: PreviewPortfolioDocumentV1;
     try { submitted = siteMode ? parseSitePremiumDocument(current.current) : parsePreviewDocument(current.current); }
-    catch (error) { setMessage(error instanceof Error ? error.message : "内容校验失败，草稿保留。"); return; }
+    catch (error) { setMessage(error instanceof Error ? error.message : "内容校验失败，草稿保留。"); return null; }
     savingLock.current = true; setSaving(true); setMessage("正在保存新版修改…");
     try {
-      const response = await fetch(endpoint, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: submitted, expectedRevision: revision }) });
-      if (response.status === 409) { setConflict(true); throw new Error("版本冲突：其他标签页已保存新版本。当前草稿已保留；请先导出草稿，再重新读取并人工合并。不会自动覆盖。"); }
-      const body: unknown = await response.json();
-      if (!response.ok) throw new Error(body && typeof body === "object" && "error" in body && typeof body.error === "string" ? body.error : "保存失败；草稿保留。");
+      const receipt = siteMode ? await writeSiteDraft(endpoint, "premium-polaroid", { content: submitted, expectedRevision: revision }, signal) : null;
+      const response = receipt ? null : await fetch(endpoint, { method: "PUT", signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: submitted, expectedRevision: revision }) });
+      if (response?.status === 409) { setConflict(true); throw new Error("版本冲突：其他标签页已保存新版本。当前草稿已保留；请先导出草稿，再重新读取并人工合并。不会自动覆盖。"); }
+      const body: unknown = receipt ?? await response!.json();
+      if (signal.aborted) return null;
+      if (response && !response.ok) throw new Error(body && typeof body === "object" && "error" in body && typeof body.error === "string" ? body.error : "保存失败；草稿保留。");
       const result = readEnvelope(body, siteMode);
       if (!result.content || result.revision <= revision) throw new Error("未收到有效保存确认，草稿保留；请核对重新读取。");
       const reconciled = reconcilePreviewSave(submitted, current.current, result.content);
       current.current = reconciled.draft; draftVersion.current += 1; setDraft(reconciled.draft); setSaved(reconciled.saved); setRevision(result.revision); setUpdatedAt(result.updatedAt);
       setMessage(reconciled.changedWhileSaving ? "提交的版本已保存；保存期间的新编辑仍保留为未保存修改。" : siteMode ? "本站高级拍立得草稿已保存。基础版内容和公开页面未改变。" : "新版保存成功。/preview 刷新后读取此版本；旧站内容未改变。");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "保存失败；草稿保留。"); }
-    finally { savingLock.current = false; setSaving(false); }
-  }, [conflict, dirty, endpoint, loadState, revision, siteMode]);
+      return { content: result.content, revision: result.revision, updatedAt: result.updatedAt };
+    } catch (error) {
+      if (signal.aborted) return null;
+      if (error instanceof DraftSaveRejected && error.status === 409) setConflict(true);
+      if (error instanceof DraftSaveUncertain) { pendingRef.current = error.pending; setPendingSave(true); }
+      setMessage(error instanceof Error ? error.message : "保存失败；草稿保留。"); return null;
+    }
+    finally { savingLock.current = false; if (!signal.aborted) setSaving(false); }
+  }, [conflict, dirty, endpoint, loadState, revision, saved, siteMode, updatedAt]);
+  const checkSave = async () => {
+    const pending = pendingRef.current;
+    if (!pending || savingLock.current) return;
+    savingLock.current = true;
+    try {
+      const receipt = await confirmDraftSave(endpoint, "premium-polaroid", pending, lifetime.current.signal);
+      if (lifetime.current.signal.aborted) return;
+      const reconciled = reconcilePreviewSave(pending.content as PreviewPortfolioDocumentV1, current.current, receipt.content as PreviewPortfolioDocumentV1);
+      current.current = reconciled.draft; draftVersion.current += 1; setDraft(reconciled.draft); setSaved(reconciled.saved); setRevision(receipt.revision); setUpdatedAt(receipt.updatedAt);
+      pendingRef.current = null; setPendingSave(false); setMessage("已确认原提交的草稿保存成功；未自动发布。后续编辑仍保留。");
+    } catch { if (!lifetime.current.signal.aborted) setMessage("保存结果仍待确认，未再次写入。请保留当前编辑，检查其他标签页；必要时导出后明确重新读取。"); }
+    finally { savingLock.current = false; }
+  };
   useEffect(() => {
     const shortcut = (event: KeyboardEvent) => { if (!isAdminSaveShortcut(event)) return; event.preventDefault(); if (!pickerCollectionId) void save(); };
     const leave = (event: BeforeUnloadEvent) => { if (!dirty && !saving && !pickerCollectionId) return; event.preventDefault(); event.returnValue = ""; };
@@ -219,7 +251,7 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
       <div><p className={styles.breadcrumb}>{siteName} <span>/</span> 高级拍立得</p><h1>{sections.find(([id]) => id === section)?.[1]}</h1></div>
       <div className={styles.actions}><span className={styles.saveStatus} role="status">{saving ? "保存中…" : dirty ? "有未保存修改" : saved ? `草稿 v${revision} · 已保存` : "尚未配置"}</span>
         <button type="button" disabled={loadState !== "ready"} onClick={() => { setPreviewCollectionId(undefined); setPreview(structuredClone(draft)); }}>预览当前编辑</button>
-        <button className={styles.primary} type="button" onClick={() => void save()} disabled={loadState !== "ready" || saving || !dirty || conflict}>保存修改</button>
+        <button type="button" onClick={() => void save()} disabled={loadState !== "ready" || saving || !dirty || conflict || pendingSave}>仅保存草稿</button>
       </div>
     </header> : <>
     <header className={styles.topbar}><div><h1>新版摄影作品集后台</h1><p>{siteMode ? "本站高级拍立得草稿" : "独立本地工作区"} · {dirty ? "有未保存修改" : saved ? `已保存 · 版本 ${revision}` : "尚未配置"}{saving ? " · 保存中" : ""}</p></div><div className={styles.actions}>
@@ -232,7 +264,8 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
     {siteMode && <aside className={styles.sidebar}><a className={styles.siteBack} href={siteScope?.adminBasePath.replace(/\/premium-polaroid$/, "")} onClick={(event) => { if (dirty && !window.confirm("当前草稿尚未保存，确认返回内容空间选择？")) event.preventDefault(); }}>← 站点工作台</a><nav aria-label="高级拍立得编辑分区">{sections.map(([id, label], index) => <button key={id} type="button" aria-pressed={section === id} onClick={() => changeSection(id)}><span aria-hidden="true">0{index + 1}</span>{label}</button>)}</nav><p>高级拍立得<br /><small>独立内容 · 本站照片共享</small></p></aside>}
     <div className={styles.body}>
       {siteMode && <div className={styles.workspaceTools}><a href={siteScope?.previewHref} target="_blank" rel="noreferrer">预览已保存草稿 ↗</a><details className={styles.moreTools}><summary>更多操作</summary><div><button type="button" onClick={exportDraft}>导出当前草稿</button><button type="button" disabled={saving || loadState === "loading"} onClick={() => { if ((!dirty && !conflict) || confirm("重新读取将替换当前未保存草稿。若有冲突，请先导出留存，确认继续？")) void reload(); }}>重新读取</button>{updatedAt && <small>上次保存 {new Date(updatedAt).toLocaleString()}</small>}</div></details></div>}
-      {siteMode && props?.PublicationControls && <props.PublicationControls revision={revision} dirty={dirty} disabled={loadState !== "ready" || saving || conflict} />}
+      {siteMode && props?.PublicationControls && <props.PublicationControls revision={revision} dirty={dirty} disabled={loadState !== "ready" || saving || conflict || pendingSave || !!pickerCollectionId} templateId="premium-polaroid" saveDraft={save} />}
+      {pendingSave && <button type="button" onClick={() => void checkSave()}>检查保存结果</button>}
       <p className={styles.notice} data-problem={loadState === "error" || conflict || undefined} role="status">{message}{!siteMode && updatedAt && <><br /><small>服务端更新时间：{updatedAt}</small></>}</p>
       {!siteMode && <>
       <div className={styles.row}>{siteMode ? <><a href={siteScope?.adminBasePath.replace(/\/premium-polaroid$/, "")} onClick={(event) => { if (dirty && !window.confirm("当前草稿尚未保存，确认返回内容空间选择？")) event.preventDefault(); }}>返回本站后台</a><span className={styles.hint}>两套内容独立保存；本站素材共享引用。</span></> : <><a href="/admin" target="_blank" rel="noreferrer">原版后台 ↗</a><a href="/" target="_blank" rel="noreferrer">原版十一模板主页 ↗</a><span className={styles.hint}>新旧内容独立保存，素材库共用。</span></>}<button type="button" onClick={exportDraft}>导出当前草稿</button></div>
@@ -272,7 +305,7 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
         </>}
         {section === "contact" && <>
           <section className={styles.panel}><h2>联系方式</h2><TextFields value={draft.contact} prefix="" onChange={(contact) => edit((doc) => ({ ...doc, contact }))} /></section>
-          <section className={styles.panel}><h2>平台账号与分享卡</h2><p className={styles.hint}>{siteMode ? "已接入的本站分享卡保留；可编辑平台名称与账号，不读取全局平台卡。" : "分享卡可通过一次性复制原站资料复用现有引用；文件保持 local-only。此处不另建上传系统。"}</p>{draft.social.map((item, index) => <div className={styles.panel} key={index}><TextFields value={{ label: item.label, handle: item.handle }} prefix={`平台 ${index + 1} · `} onChange={(next) => edit((doc) => ({ ...doc, social: doc.social.map((entry, i) => i === index ? { ...entry, ...next } : entry) }))} />{(siteMode ? assetMap.get(item.qrAssetId ?? "")?.variants.full.src : getPlatformQrAssetPath(item.qrAssetId)) && <img className={styles.qr} alt={`${item.label}分享卡`} src={(siteMode ? assetMap.get(item.qrAssetId ?? "")?.variants.full.src : getPlatformQrAssetPath(item.qrAssetId))!} />}<div className={styles.row}><button type="button" disabled={index === 0} onClick={() => edit((doc) => ({ ...doc, social: moveItem(doc.social, index, index - 1) }))}>上移</button>{item.qrAssetId && <button type="button" onClick={() => edit((doc) => ({ ...doc, social: doc.social.map((entry, i) => i === index ? { label: entry.label, handle: entry.handle } : entry) }))}>移除分享卡引用</button>}<button type="button" onClick={() => edit((doc) => ({ ...doc, social: doc.social.filter((_, i) => i !== index) }))}>移除平台</button></div></div>)}<button type="button" disabled={draft.social.length >= 8} onClick={() => edit((doc) => ({ ...doc, social: [...doc.social, { label: "", handle: "" }] }))}>添加平台账号</button></section>
+          <section className={styles.panel}><h2>平台账号与分享卡</h2><p className={styles.hint}>{siteMode ? "文字账号、合法主页网址和图片卡均可独立使用。选用或移除卡片仅修改本空间草稿。" : "分享卡可通过一次性复制原站资料复用现有引用；文件保持 local-only。此处不另建上传系统。"}</p>{draft.social.map((item, index) => <div className={styles.panel} key={index}><TextFields value={{ label: item.label, handle: item.handle }} prefix={`平台 ${index + 1} · `} onChange={(next) => edit((doc) => ({ ...doc, social: doc.social.map((entry, i) => i === index ? { ...entry, ...next } : entry) }))} />{siteScope ? <SiteContactCard assetsEndpoint={siteScope.assetsEndpoint} assetId={item.qrAssetId} targetKey={item} onChange={(id) => edit((doc) => { const social = setContactCardReference(doc.social, item, id); return social === doc.social ? doc : { ...doc, social }; })} /> : getPlatformQrAssetPath(item.qrAssetId) && <img className={styles.qr} alt={`${item.label}分享卡`} src={(siteMode ? assetMap.get(item.qrAssetId ?? "")?.variants.full.src : getPlatformQrAssetPath(item.qrAssetId))!} />}<div className={styles.row}><button type="button" disabled={index === 0} onClick={() => edit((doc) => ({ ...doc, social: moveItem(doc.social, index, index - 1) }))}>上移</button>{!siteMode && item.qrAssetId && <button type="button" onClick={() => edit((doc) => ({ ...doc, social: doc.social.map((entry, i) => i === index ? { label: entry.label, handle: entry.handle } : entry) }))}>移除分享卡引用</button>}<button type="button" onClick={() => edit((doc) => ({ ...doc, social: doc.social.filter((_, i) => i !== index) }))}>移除平台</button></div></div>)}<button type="button" disabled={draft.social.length >= 8} onClick={() => edit((doc) => ({ ...doc, social: [...doc.social, { label: "", handle: "" }] }))}>添加平台账号</button></section>
           <section className={styles.panel}><h2>约拍清单</h2><Field label="清单字段（每行一条，顺序即展示顺序）" multiline value={draft.bookingFields.join("\n")} onChange={(text) => edit((doc) => ({ ...doc, bookingFields: text === "" ? [] : text.split("\n") }))} /></section>
           <section className={styles.panel}><h2>约拍标题</h2><TextFields value={draft.statement} prefix="" onChange={(statement) => edit((doc) => ({ ...doc, statement }))} /></section>
         </>}
