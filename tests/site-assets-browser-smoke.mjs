@@ -64,7 +64,7 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
   async function images({ editor = false } = {}) {
     // Editors have long forms and lazy recommendation thumbnails. Bring a real
     // asset into view rather than requiring every offscreen lazy image to load.
-    if (editor) await page.locator('img[src*="/api/sites/"]').first().scrollIntoViewIfNeeded();
+    if (editor) await page.locator('img[src*="/api/sites/"]').filter({ visible: true }).first().scrollIntoViewIfNeeded();
     try {
       await page.waitForFunction(() => {
         const imgs = [...document.querySelectorAll('img[src*="/api/sites/"]')].filter(i => {

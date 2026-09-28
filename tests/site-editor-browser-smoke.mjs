@@ -6,7 +6,10 @@ import { chromium } from 'playwright';
 
 // Open the actual disclosure before editing; never force visibility or bypass UI.
 async function expandControl(page, control) {
-  const disclosure = page.locator('details').filter({ has: control }).last();
+  await control.waitFor({ state: 'attached' });
+  const ancestors = page.locator('details').filter({ has: control });
+  assert.ok(await ancestors.count() > 0, 'Expected an existing disclosure for this control');
+  const disclosure = ancestors.last();
   if (await disclosure.getAttribute('open') === null) await disclosure.locator(':scope > summary').click();
   await control.waitFor({ state: 'visible' });
 }
@@ -121,7 +124,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
     if (p.viewportSize().width <= 900) await p.getByLabel('切换后台分区').selectOption(href);
     else if (section === 'advanced') {
       const compatibility = p.getByRole('link', { name: '兼容内容与工具', exact: true });
-      await expandControl(p, compatibility);
+      await expandControl(p, p.getByRole('link', { name: '兼容内容与工具', exact: true, includeHidden: true }));
       await compatibility.click();
     }
     else await p.locator(`nav[aria-label="后台主要分区"] a[href="${href}"]`).click();
@@ -201,7 +204,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
         await expandControl(page, field(page, '图集名称'));
         await field(page, '图集名称').fill(name);
       }
-      await expandControl(page, page.getByRole('button', { name: '图集上移', exact: true }));
+      await expandControl(page, page.getByRole('button', { name: '图集上移', exact: true, includeHidden: true }));
       await page.getByRole('button', { name: '图集上移', exact: true }).click();
       premiumSaved = await saved(page, 'premium-polaroid');
       assert.deepEqual(premiumSaved.content.collections.map(c => c.name), ['Anonymous collection two', 'Anonymous collection one']);

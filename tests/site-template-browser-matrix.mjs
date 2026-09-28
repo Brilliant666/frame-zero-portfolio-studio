@@ -4,7 +4,10 @@ import ts from 'typescript';
 
 // Open the actual disclosure before editing; never force visibility or bypass UI.
 async function expandControl(page, control) {
-  const disclosure = page.locator('details').filter({ has: control }).last();
+  await control.waitFor({ state: 'attached' });
+  const ancestors = page.locator('details').filter({ has: control });
+  assert.ok(await ancestors.count() > 0, 'Expected an existing disclosure for this control');
+  const disclosure = ancestors.last();
   if (await disclosure.getAttribute('open') === null) await disclosure.locator(':scope > summary').click();
   await control.waitFor({ state: 'visible' });
 }
@@ -205,7 +208,7 @@ export async function siteTemplateBrowserMatrix({ page, publicPage, context, ori
       await expandControl(page, page.getByLabel('平台 1 · 名称', { exact: true }));
       await page.getByLabel('平台 1 · 名称', { exact: true }).fill('Premium fixture contact');
       await page.getByLabel('平台 1 · 账号或主页链接', { exact: true }).fill('https://example.com/fixture');
-      await expandControl(page, page.getByRole('button', { name: '选择或上传联系卡', exact: true }));
+      await expandControl(page, page.getByRole('button', { name: '选择或上传联系卡', exact: true, includeHidden: true }));
       await page.getByRole('button', { name: '选择或上传联系卡', exact: true }).click();
       await page.locator('article').filter({ has: page.locator('code', { hasText: sharedCardId }) }).getByRole('button', { name: '选用此卡片', exact: true }).click();
       assert.ok((await page.getByAltText('当前联系卡', { exact: true }).getAttribute('src')).includes(sharedCardId));

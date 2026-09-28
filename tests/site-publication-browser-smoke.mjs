@@ -9,7 +9,10 @@ import { siteTemplateBrowserMatrix } from './site-template-browser-matrix.mjs';
 
 // Open the actual disclosure before editing; never force visibility or bypass UI.
 async function expandControl(page, control) {
-  const disclosure = page.locator('details').filter({ has: control }).last();
+  await control.waitFor({ state: 'attached' });
+  const ancestors = page.locator('details').filter({ has: control });
+  assert.ok(await ancestors.count() > 0, 'Expected an existing disclosure for this control');
+  const disclosure = ancestors.last();
   if (await disclosure.getAttribute('open') === null) await disclosure.locator(':scope > summary').click();
   await control.waitFor({ state: 'visible' });
 }
@@ -94,7 +97,7 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
     if (page.viewportSize().width <= 900) await page.getByLabel('切换后台分区').selectOption(href);
     else if (section === 'advanced') {
       const compatibility = page.getByRole('link', { name: '兼容内容与工具', exact: true });
-      await expandControl(page, compatibility);
+      await expandControl(page, page.getByRole('link', { name: '兼容内容与工具', exact: true, includeHidden: true }));
       await compatibility.click();
     }
     else await page.locator(`nav[aria-label="后台主要分区"] a[href="${href}"]`).click();
@@ -171,7 +174,7 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
       await expandControl(page, page.getByLabel('平台 1', { exact: true }));
       await page.getByLabel('平台 1', { exact: true }).fill('Fixture contact');
       await page.getByLabel(/^账号、主页链接或分享文案 1/).fill('https://example.com/fixture');
-      await expandControl(page, page.getByRole('button', { name: '选择或上传联系卡', exact: true }));
+      await expandControl(page, page.getByRole('button', { name: '选择或上传联系卡', exact: true, includeHidden: true }));
       await page.getByRole('button', { name: '选择或上传联系卡', exact: true }).click();
       originalCard = await upload(await makeFile('contact-card', 480, 640, '#f0e0d0'));
       await step('contact card uploaded, explicit selection');
@@ -187,11 +190,11 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
     });
     await stage('02 card cancellation and failed replacement keep old reference', async () => {
       const before = await draft(), pointer = (await publication()).current.id;
-      await expandControl(page, page.getByRole('button', { name: '替换联系卡', exact: true }));
+      await expandControl(page, page.getByRole('button', { name: '替换联系卡', exact: true, includeHidden: true }));
       await page.getByRole('button', { name: '替换联系卡', exact: true }).click();
       await page.getByRole('button', { name: '取消选卡', exact: true }).click();
       assert.ok((await page.getByAltText('当前联系卡', { exact: true }).getAttribute('src')).includes(originalCard.id));
-      await expandControl(page, page.getByRole('button', { name: '替换联系卡', exact: true }));
+      await expandControl(page, page.getByRole('button', { name: '替换联系卡', exact: true, includeHidden: true }));
       await page.getByRole('button', { name: '替换联系卡', exact: true }).click();
       await page.route(`**${assetsPath}`, route => route.request().method() === 'POST' ? route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Synthetic upload unavailable' }) }) : route.continue());
       await page.getByLabel('上传本站照片', { exact: true }).setInputFiles(await makeFile('failed-card', 320, 480, '#123456'));
