@@ -53,6 +53,10 @@ export function assetDto(row, slug) {
     return [name, { src: `/api/sites/${encodeURIComponent(slug)}/assets/${row.id}/${name}`, width: v.width, height: v.height, bytes: v.bytes }];
   })) };
 }
+// Admission time belongs to the authenticated Site library, not public rendering.
+export function siteAssetDto(row, slug) {
+  return { ...assetDto(row, slug), ...(row.created_at == null ? {} : { createdAt: new Date(row.created_at).toISOString() }) };
+}
 export async function insertPreparedAsset(db, asset) {
   const result = await db.query(`INSERT INTO site_assets(id,site_id,digest,original_type,width,height,variants)
     VALUES($1,$2,$3,$4,$5,$6,$7::jsonb) ON CONFLICT(site_id,digest) DO NOTHING RETURNING *`,

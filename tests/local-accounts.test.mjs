@@ -415,6 +415,12 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1080000 },
       await siteAssetsBrowserSmoke({ origin: config.origin, password, signal: browserTest.signal, restart: async () => { await stopServer(); await startServer(); } });
     });
   }
+  if (process.env.FRAME_ZERO_PICKER_BROWSER_SMOKE === '1' || process.env.FRAME_ZERO_EDITOR_BROWSER_SMOKE === '1') {
+    await t.test('real browser premium photo picker on 500 isolated Site assets', { timeout: 300000 }, async browserTest => {
+      const { sitePhotoPickerBrowserSmoke } = await import('./site-photo-picker-browser-smoke.mjs');
+      await sitePhotoPickerBrowserSmoke({ runtime, origin: config.origin, password, assetRoot, signal: browserTest.signal });
+    });
+  }
   await t.test('real PostgreSQL Site asset upload, access and reference boundaries', { timeout: 180000 }, async () => {
     const { siteAssetsIntegration } = await import('./site-assets-integration.mjs');
     await siteAssetsIntegration({ runtime, origin: config.origin, password, restart: async () => { await stopServer(); await startServer(); } });

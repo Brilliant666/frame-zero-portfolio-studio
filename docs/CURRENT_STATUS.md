@@ -35,19 +35,25 @@ PR28–31 已合并：真实账号与 Site 授权、两个独立内容空间、�
 
 ## 当前未完成与下一步
 
+本轮新增授权：在 `codex/premium-photo-picker` 隔离分支实现
+[高级图集批量选片](PREMIUM_PHOTO_PICKER.md)，只提交供继续修改，**不合并**。
+此分支提供筛选、跨页多选、批量追加和顺序确认；基础图库、账号、上传底层、
+真实迁移和公开主页不在范围内。已接受的 main / 日常 3001 基线仍是上文版本，
+本分支不授权替换日常构建。此前交接的“等待新目标”已由本次具体请求解除，
+其余合并、真实数据与远程部署边界保持。
+
 详见 [交接问题表](SESSION_HANDOFF.md#已知问题与最多三个候选)。最多三个候选是：
 图集选片/本站图库、分享卡与预览接线、基础模板发布。它们只是建议，不是执行授权。
 本轮不再为微小字节告警压缩产品；预算政策见 [README](../README.md)。
 
 ## 当前权限终点
 
-`PRODUCT_DELIVERY_MISSION_02` 保留为产品研发原则，但本次
-`PR32_CLOSEOUT_AND_NEW_SESSION_HANDOFF` 的“交接完成后停下”优先。
-本次只授权 PR32 收口、main 验证、日常切换和必要文档补记。
-**新对话恢复上下文后等待用户选择任务，不自动实现候选，不继承合并权限。**
+`PRODUCT_DELIVERY_MISSION_02` 保留为产品研发原则。PR32 交接已结束；
+当前用户已批准上述高级选片切片及提交，后续小项继续逐项确认。
+**本 PR 保持待修改，不合并；不继承 PR32 的 main 合并或日常切换权限。**
 
 ```text
-NEXT_PRODUCT_IMPLEMENTATION = NOT_STARTED
+NEXT_PRODUCT_IMPLEMENTATION = PREMIUM_PHOTO_PICKER_BRANCH_ONLY
 REAL_STAR_PROVISIONING = LOCAL_SIMULATED_ACCOUNT_ONLY
 REMOTE_DEPLOYMENT = NOT_AUTHORIZED
 V1_LAUNCHED = NO

@@ -1,16 +1,27 @@
 import { assetToWork, parsePhotoLibraryManifest, type PhotoLibraryManifest, type PhotoAsset } from "../photo-library";
 import type { SiteContent } from "../site-config";
 
+export interface SiteAsset extends PhotoAsset { createdAt?: string }
+export interface SiteAssetManifest extends PhotoLibraryManifest { assets: SiteAsset[]; truncated?: boolean }
+
 /** Separate Site transport: never relax the legacy /photos/library validator. */
-export function parseSiteAssets(value: unknown, endpoint: string): PhotoLibraryManifest | null {
+export function parseSiteAssets(value: unknown, endpoint: string): SiteAssetManifest | null {
   if (!/^\/api\/sites\/[a-z0-9-]+\/assets$/.test(endpoint) || !value || typeof value !== "object") return null;
-  const raw = value as { version?: unknown; assets?: unknown };
+  const raw = value as { version?: unknown; assets?: unknown; truncated?: unknown };
   if (!Array.isArray(raw.assets)) return null;
+  if ("truncated" in raw && typeof raw.truncated !== "boolean") return null;
   const sources = new Map<string, string>();
+  const createdTimes = new Map<string, string>();
   const assets = raw.assets.map((item: unknown) => {
     if (!item || typeof item !== "object") return null;
     const asset = item as Record<string, unknown>;
     if (typeof asset.id !== "string" || !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(asset.id)) return null;
+    if ("createdAt" in asset) {
+      if (typeof asset.createdAt !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(asset.createdAt)) return null;
+      const timestamp = Date.parse(asset.createdAt);
+      if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString() !== asset.createdAt) return null;
+      createdTimes.set(asset.id, asset.createdAt);
+    }
     if (!asset.variants || typeof asset.variants !== "object") return null;
     const variants = Object.fromEntries(["thumbnail", "card", "full"].map(kind => {
       const variant = (asset.variants as Record<string, unknown>)[kind];
@@ -27,7 +38,7 @@ export function parseSiteAssets(value: unknown, endpoint: string): PhotoLibraryM
   const checked = parsePhotoLibraryManifest({ version: raw.version, assets });
   if (!checked) return null;
   for (const asset of checked.assets) for (const variant of Object.values(asset.variants)) variant.src = sources.get(variant.src)!;
-  return checked;
+  return { ...checked, ...(typeof raw.truncated === "boolean" ? { truncated: raw.truncated } : {}), assets: checked.assets.map(asset => createdTimes.has(asset.id) ? { ...asset, createdAt: createdTimes.get(asset.id)! } : asset) };
 }
 
 export async function loadSiteAssets(endpoint: string) {

@@ -89,6 +89,8 @@
 .workspace[data-site-editor="premium"] .member img { grid-column: 1/-1; width: 100%; height: 145px; background: #eef1f5; }
 .workspace[data-site-editor="premium"] .member span { grid-column: 1/-1; min-width: 0; }
 .workspace[data-site-editor="premium"] .member button { padding: 4px; }
+.workspace[data-site-editor="premium"] .member .movePosition { grid-column: 1/-1; }
+.workspace[data-site-editor="premium"] .member[data-new="true"] { border-color: #5279ad; background: #f1f6ff; }
 .workspace[data-site-editor="premium"] .library { border-color: #dde3ec; border-radius: 8px; }
 @media(max-width:900px) {
   .workspace[data-site-editor="premium"] .workArea { grid-template-columns: 150px minmax(0,1fr); }

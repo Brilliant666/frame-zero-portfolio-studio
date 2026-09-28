@@ -116,9 +116,10 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
       await page.getByRole('button', { name: '图集管理', exact: true }).click();
       await page.getByRole('button', { name: '新建图集', exact: true }).click();
       await page.getByLabel('图集名称', { exact: true }).fill('Anonymous landscape portrait square');
-      await page.getByText('从共享素材库添加照片', { exact: true }).click();
-      await page.getByRole('button', { name: '加入图集', exact: true }).first().waitFor();
-      for (let i = 0; i < 3; i++) await page.getByRole('button', { name: '加入图集', exact: true }).first().click();
+      await page.getByRole('button', { name: '从本站图库选片', exact: true }).click();
+      const picker = page.getByRole('dialog', { name: '从本站图库选片', exact: true });
+      for (const asset of assets) await picker.getByRole('checkbox', { name: `选择照片 ${asset.id}`, exact: true }).check();
+      await picker.getByRole('button', { name: '加入当前图集（3 张）', exact: true }).click();
       await page.getByText('封面与重点照片设置', { exact: true }).click();
       await page.getByRole('combobox', { name: '独立封面', exact: true }).selectOption(assets.find(a => a.orientation === 'landscape').id);
       await page.getByRole('combobox', { name: '星图重点照片', exact: true }).selectOption(assets.find(a => a.orientation === 'portrait').id);
