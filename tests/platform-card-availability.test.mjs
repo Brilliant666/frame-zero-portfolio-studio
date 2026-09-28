@@ -65,3 +65,17 @@ test("platform cards fail visually safe for 404, 503, wrong content, and network
     false,
   );
 });
+
+test("JPEG and WebP cards are accepted only on controlled Site variant routes", async (t) => {
+  const { probePlatformCardAvailability } = await loadAvailabilityProbe(t);
+  const site = "/api/sites/owner-a/assets/12345678-1234-4234-8234-123456789abc/full";
+  for (const type of ["image/jpeg", "image/webp"]) {
+    const fetchImpl = async () => new Response(null, { headers: { "content-type": type } });
+    assert.equal(await probePlatformCardAvailability(site, { fetchImpl }), true);
+    for (const url of ["/api/platform-qr/synthetic", "https://example.com/x.webp", `${site}?external=1`, "/photos/library/a.webp"]) {
+      assert.equal(await probePlatformCardAvailability(url, { fetchImpl }), false, url);
+    }
+    for (const status of [401, 403, 404, 503]) assert.equal(await probePlatformCardAvailability(site, { fetchImpl: async () => new Response(null, { status, headers: { "content-type": type } }) }), false);
+  }
+  for (const type of ["image/svg+xml", "text/html", "application/octet-stream"]) assert.equal(await probePlatformCardAvailability(site, { fetchImpl: async () => new Response(null, { headers: { "content-type": type } }) }), false);
+});

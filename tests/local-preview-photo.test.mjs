@@ -7,6 +7,18 @@ import sharp from "sharp";
 import ts from "typescript";
 import {createLocalPreviewPhotoHandler} from "../scripts/lib/local-preview-photo.mjs";
 
+test("Site and Published variants bypass the legacy local image helper",async()=>{
+  const text=await fs.readFile(new URL("../app/templates/polaroid-field/entry-photos.ts",import.meta.url),"utf8");
+  const js=ts.transpileModule(text,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
+  const {entryPhotoSource}=await import(`data:text/javascript;base64,${Buffer.from(js).toString("base64")}`);
+  for(const route of ["sites","public-sites"]){
+    const prefix=`/api/${route}/fixture/assets/11111111-1111-4111-8111-111111111111/`;
+    const asset={variants:{card:{src:prefix+"card",width:1100},full:{src:prefix+"full",width:2200}}};
+    assert.equal(entryPhotoSource(asset),prefix+"card");
+    assert.equal(entryPhotoSource(asset,2200),prefix+"full");
+  }
+});
+
 test("entry preparation shares relative and absolute URLs and waits for decoding",async()=>{
   const text=await fs.readFile(new URL("../app/templates/polaroid-field/entry-photos.ts",import.meta.url),"utf8");
   const js=ts.transpileModule(text,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;

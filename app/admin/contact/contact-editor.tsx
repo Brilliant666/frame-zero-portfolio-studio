@@ -150,7 +150,9 @@ export default function ContactEditor() {
                 : item.handle.toLowerCase().includes("https://")
                   ? "未识别：分享文案必须只包含一个无账号密码的 HTTPS 链接。"
                   : "普通账号会作为文本展示；二维码图片请在下方单独上传。";
-              const qrSrc = getPlatformQrAssetPath(item.qrAssetId);
+              const qrSrc = siteScope
+                ? item.qrAssetId && /^[a-f0-9-]{36}$/.test(item.qrAssetId) ? `${siteScope.assetsEndpoint}/${item.qrAssetId}/full` : null
+                : getPlatformQrAssetPath(item.qrAssetId);
               const uploadAvailable = localPhotoImportState === "configured" && Boolean(localPhotoImportOrigin);
               const uploading = uploadingIndex === index;
               return (
@@ -167,7 +169,7 @@ export default function ContactEditor() {
                   onChange={(value) => updateSocialHandle(index, value)}
                   onBlur={(value) => normalizeSocialHandle(index, value)}
                 />
-                {siteScope ? <p>本站平台卡上传尚未接线（M3），当前可编辑账号与链接。</p> : <div className={styles.platformQrEditor} data-has-image={Boolean(qrSrc)}>
+                {siteScope ? <div><p>已接入的本站分享卡保留；可编辑账号与链接，不会读取全局平台卡。</p>{qrSrc && <><a href={qrSrc} target="_blank" rel="noreferrer">查看本站分享卡原图</a><button type="button" onClick={() => clearSocialQr(index)}>移除分享卡引用</button></>}</div> : <div className={styles.platformQrEditor} data-has-image={Boolean(qrSrc)}>
                   <div className={styles.platformQrPreview}>
                     {qrSrc ? (
                       <a href={qrSrc} target="_blank" rel="noopener noreferrer" aria-label={`查看${item.label || `平台 ${index + 1}`}二维码原图`}>

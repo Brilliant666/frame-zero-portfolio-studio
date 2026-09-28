@@ -286,17 +286,20 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
       }
     });
     await stage('06 memory preview differs from protected saved preview', async () => {
-      const savedTitle = (await read('premium-polaroid')).content.hero.title;
+      const savedBefore = await read('premium-polaroid');
+      const savedName = savedBefore.content.profile.photographer;
       await openEditor(page, premium);
-      await field(page, '首页标题').fill('UNSAVED MEMORY PREVIEW');
+      // The restored MotionHome uses photographer as its visible h1 (not hero.title).
+      await field(page, '摄影师名称').fill('UNSAVED MEMORY PREVIEW');
       await page.getByRole('button', { name: '查看草稿效果', exact: true }).click();
       const dialog = page.getByRole('dialog');
-      await dialog.getByText('UNSAVED MEMORY PREVIEW', { exact: true }).first().waitFor();
+      await dialog.getByRole('heading', { name: 'UNSAVED MEMORY PREVIEW', exact: true }).waitFor();
+      assert.deepEqual(await read('premium-polaroid'), savedBefore, 'Memory preview must not persist unsaved edits');
       await snapshot(page, '06-memory-preview');
       await page.getByRole('button', { name: '关闭草稿效果', exact: true }).click();
       const preview = await context.newPage(); await preview.goto(`${origin}/${a}/admin/preview/premium-polaroid`);
-      await preview.getByText(savedTitle, { exact: true }).first().waitFor();
-      assert.ok(!(await preview.locator('body').innerText()).includes('UNSAVED MEMORY PREVIEW'));
+      await preview.getByRole('heading', { name: savedName, exact: true }).waitFor();
+      assert.equal(await preview.getByRole('heading', { name: 'UNSAVED MEMORY PREVIEW', exact: true }).count(), 0);
       await snapshot(preview, '06-protected-saved-preview'); await preview.close();
       premiumSaved = await saved(page, 'premium-polaroid');
     });

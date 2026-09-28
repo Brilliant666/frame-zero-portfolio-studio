@@ -22,7 +22,7 @@ export async function probePlatformCardAvailability(
       ?.split(";", 1)[0]
       .trim()
       .toLowerCase();
-    return response.ok && contentType === "image/png";
+    return response.ok && (contentType === "image/png" || /^\/api\/sites\/[a-z0-9-]+\/assets\/[a-f0-9-]+\/(?:card|full|original)$/.test(url) && ["image/jpeg", "image/webp"].includes(contentType ?? ""));
   } catch {
     return false;
   }

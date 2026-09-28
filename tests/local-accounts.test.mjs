@@ -8,6 +8,10 @@ import { createAccountRuntime } from '../db/accounts/runtime.mjs';
 import { provisionAccount } from '../db/accounts/provision.mjs';
 import { readOwnedSite } from '../db/accounts/http.mjs';
 import { migrateAccounts } from '../db/accounts/migrate.mjs';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 
 // Deliberately fail, not skip, when the dedicated integration environment is missing.
 const config = readAccountConfig();
@@ -17,6 +21,7 @@ const runtime = createAccountRuntime(config);
 const password = 'Isolated-fixture-password-28!';
 const input = (name, premium = false) => ({ username: name, slug: name, email: `${name}@accounts.example`, password, premium });
 let server;
+let assetRoot;
 
 async function cleanTestTables() {
   const client = await runtime.pool.connect();
@@ -24,7 +29,7 @@ async function cleanTestTables() {
     const database = (await client.query('SELECT current_database() AS name')).rows[0].name;
     assert.equal(database, 'frame_zero_accounts_test', 'Refuse cleanup outside the dedicated test database');
     // Explicit list, no CASCADE: newly introduced referencing data must fail safely.
-    await client.query('TRUNCATE TABLE site_content_drafts, site_template_grants, sites, portfolio_users, "session", account, verification, "user", account_provisioning');
+    await client.query('TRUNCATE TABLE site_publications, site_publication_revisions, site_legacy_imports, site_assets, site_content_drafts, site_template_grants, sites, portfolio_users, "session", account, verification, "user", account_provisioning');
   } finally { client.release(); }
 }
 
@@ -35,7 +40,7 @@ async function startServer() {
     socket.listen(3004, '127.0.0.1', () => socket.close(resolve));
   });
   server = spawn(process.execPath, ['scripts/start-local-accounts.mjs', '--test'], {
-    env: { ...process.env, NODE_ENV: 'production' }, windowsHide: true,
+    env: { ...process.env, NODE_ENV: 'production', FRAME_ZERO_SITE_ASSET_ROOT: assetRoot }, windowsHide: true,
     stdio: ['ignore', 'ignore', 'ignore'],
   });
   let launchFailed = false;
@@ -98,8 +103,9 @@ async function saveDraft(slug, space, cookie, content, expectedRevision) {
   return request(draftPath(slug, space), { cookie, method: 'PUT', body: { content, expectedRevision } });
 }
 
-test('real PostgreSQL and Standard Next account boundary', { timeout: 720000 }, async t => {
-  t.after(async () => { await stopServer(); await runtime.pool.end(); });
+test('real PostgreSQL and Standard Next account boundary', { timeout: 1080000 }, async t => {
+  assetRoot = await mkdtemp(path.join(tmpdir(), 'site-assets-integration-'));
+  t.after(async () => { await stopServer(); await runtime.pool.end(); await rm(assetRoot, { recursive: true, force: true }); });
   await migrateAccounts(config);
   await cleanTestTables();
   await t.test('migration re-run is a no-op', async () => {
@@ -167,7 +173,14 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 720000 }, 
     assert.doesNotMatch(html, /data-site-state=|data-site-admin=/);
     // The dedicated local runner explicitly enables this internal area. The
     // normal production runner's disabled case is covered by runtime tests.
-    assert.equal((await request('/test')).status, 200);
+    const laboratory = await request('/test?template=neon-hud');
+    assert.equal(laboratory.status, 200);
+    const laboratoryHtml = await laboratory.text();
+    assert.match(laboratoryHtml, /模板实验室/);
+    assert.match(laboratoryHtml, /不是摄影师 Site/);
+    assert.equal((laboratoryHtml.match(/<option\b/g) ?? []).length, 11);
+    assert.match(laboratoryHtml, /value="neon-hud" selected=""/);
+    assert.doesNotMatch(laboratoryHtml, /<img[^>]+src="\/photos\//);
     assert.equal((await request('/test/admin')).status, 200);
   });
   await t.test('public Sites are unpublished and expose no private identity or grants', async () => {
@@ -302,10 +315,10 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 720000 }, 
       assert.equal((await saveDraft('fixturealpha', space, alpha, content, 1)).status, 400);
     }
     const assetBasic = structuredClone(savedBasic.content);
-    assetBasic.works = [{ assetId: 'not-owned-by-this-site' }];
+    assetBasic.works = [{ assetId: randomUUID(), code: 'unowned', title: '', subtitle: '', image: '', preview: '', position: '50% 50%', previewWidth: 100, previewHeight: 100, fullWidth: 100, enabled: true }];
     assert.equal((await saveDraft('fixturealpha', 'basic', alpha, assetBasic, 1)).status, 422);
     const assetPremium = structuredClone(savedPremium.content);
-    assetPremium.social = [{ label: 'Unowned card', handle: 'fixture', qrAssetId: 'a'.repeat(64) }];
+    assetPremium.social = [{ label: 'Unowned card', handle: 'fixture', qrAssetId: randomUUID() }];
     assert.equal((await saveDraft('fixturealpha', 'premium-polaroid', alpha, assetPremium, 1)).status, 422);
     for (const expectedRevision of [-1, 0.5, '1']) {
       assert.equal((await saveDraft('fixturealpha', 'basic', alpha, savedBasic.content, expectedRevision)).status, 400);
@@ -364,7 +377,7 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 720000 }, 
   });
   await t.test('expired database session is rejected without a cookie-cache grace period', async () => {
     const cookie = await login('fixturebeta');
-    await runtime.pool.query('UPDATE "session" SET expires_at=now()-interval \'1 minute\' WHERE user_id=(SELECT id FROM "user" WHERE username=$1)', ['fixturebeta']);
+    await runtime.pool.query('UPDATE "session" SET expires_at=timezone(\'UTC\',now())-interval \'1 minute\' WHERE user_id=(SELECT id FROM "user" WHERE username=$1)', ['fixturebeta']);
     assert.equal((await request('/api/account/site', { cookie })).status, 401);
     await sitePage('/fixturebeta/admin', 401, cookie);
     assert.equal((await request(draftPath('fixturebeta'), { cookie })).status, 401);
@@ -391,11 +404,47 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 720000 }, 
         restart: async () => { await stopServer(); await startServer(); },
         expire: async username => {
           assert.ok(['smokefixturea', 'smokefixtureb'].includes(username));
-          await runtime.pool.query('UPDATE "session" SET expires_at=now()-interval \'1 minute\' WHERE user_id=(SELECT id FROM "user" WHERE username=$1)', [username]);
+          await runtime.pool.query('UPDATE "session" SET expires_at=timezone(\'UTC\',now())-interval \'1 minute\' WHERE user_id=(SELECT id FROM "user" WHERE username=$1)', [username]);
         },
       });
     });
+    await t.test('real browser Site asset upload and shared editor references', { timeout: 240000 }, async browserTest => {
+      await provisionAccount(runtime, input('assetsmokea', true));
+      await provisionAccount(runtime, input('assetsmokeb'));
+      const { siteAssetsBrowserSmoke } = await import('./site-assets-browser-smoke.mjs');
+      await siteAssetsBrowserSmoke({ origin: config.origin, password, signal: browserTest.signal, restart: async () => { await stopServer(); await startServer(); } });
+    });
   }
+  await t.test('real PostgreSQL Site asset upload, access and reference boundaries', { timeout: 180000 }, async () => {
+    const { siteAssetsIntegration } = await import('./site-assets-integration.mjs');
+    await siteAssetsIntegration({ runtime, origin: config.origin, password, restart: async () => { await stopServer(); await startServer(); } });
+  });
+  await t.test('legacy import preserves bytes and semantics with idempotent recovery', { timeout: 180000 }, async () => {
+    const { siteLegacyImportIntegration } = await import('./site-legacy-import-integration.mjs');
+    await siteLegacyImportIntegration({ runtime, config, password, root: assetRoot, restart: async () => { await stopServer(); await startServer(); } });
+  });
+  await t.test('publication snapshots, rollback and Site boundaries', { timeout: 180000 }, async () => {
+    const { publicationIntegration } = await import('./site-publication-integration.mjs');
+    await publicationIntegration({ runtime, origin: config.origin, password, restart: async () => { await stopServer(); await startServer(); } });
+  });
+  await t.test('local acceptance shortcuts require owner, grant and explicit runtime switch', async () => {
+    const previous = process.env.FRAME_ZERO_LOCAL_ACCEPTANCE;
+    const raw = (route, cookie) => fetch(`${config.origin}${route}`, { redirect: 'manual', headers: cookie ? { cookie } : {}, signal: AbortSignal.timeout(10000) });
+    try {
+      process.env.FRAME_ZERO_LOCAL_ACCEPTANCE = '1'; await stopServer(); await startServer();
+      const a = await login('fixturealpha'), b = await login('fixturebeta');
+      for (const [route, cookie, location] of [['/fixturealpha', a, '/fixturealpha/admin/preview/premium-polaroid'], ['/test/admin', a, '/fixturealpha/admin/basic/profile'], ['/test/admin', b, '/fixturebeta/admin/basic/profile'], ['/test/admin', undefined, '/login']]) {
+        const response = await raw(route, cookie); assert.equal(response.status, 307); assert.equal(response.headers.get('location'), location); assert.match(response.headers.get('cache-control'), /no-store/); assert.ok(response.headers.get('vary')?.split(',').some(value => value.trim().toLowerCase() === 'cookie'));
+      }
+      for (const [route, cookie] of [['/fixturealpha', undefined], ['/fixturealpha', b], ['/fixturebeta', b]]) {
+        const response = await raw(route, cookie); assert.equal(response.status, 200); assert.match(await response.text(), /unpublished/);
+      }
+      assert.equal((await raw('/test', a)).status, 200);
+      assert.ok((await raw('/api/site-content', a)).status >= 400);
+      process.env.FRAME_ZERO_LOCAL_ACCEPTANCE = '0'; await stopServer(); await startServer();
+      assert.equal((await raw('/fixturealpha', await login('fixturealpha'))).status, 200);
+    } finally { if (previous === undefined) delete process.env.FRAME_ZERO_LOCAL_ACCEPTANCE; else process.env.FRAME_ZERO_LOCAL_ACCEPTANCE = previous; await stopServer(); await startServer(); }
+  });
   await t.test('incorrect and unknown credentials share errors; attempts are limited', async () => {
     const wrong = await request('/api/auth/sign-in/username', { body: { username: 'fixturealpha', password: 'incorrect-password' } });
     const unknown = await request('/api/auth/sign-in/username', { body: { username: 'unknownfixture', password: 'incorrect-password' } });

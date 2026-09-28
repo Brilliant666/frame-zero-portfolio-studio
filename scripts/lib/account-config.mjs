@@ -19,7 +19,8 @@ export function readAccountConfig(env = process.env) {
   }
   const isTest = database.pathname === "/frame_zero_accounts_test";
   const origin = env.FRAME_ZERO_ACCOUNT_ORIGIN;
-  if (origin !== `http://127.0.0.1:${isTest ? 3004 : 3003}`) {
+  const origins = isTest ? ['http://127.0.0.1:3004'] : ['http://127.0.0.1:3001', 'http://127.0.0.1:3003'];
+  if (!origins.includes(origin)) {
     throw new Error("Account origin must match the dedicated local Node environment.");
   }
   const secret = env.FRAME_ZERO_ACCOUNT_SECRET;

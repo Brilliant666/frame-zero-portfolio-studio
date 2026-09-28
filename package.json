@@ -10,6 +10,7 @@
     "accounts:generate": "drizzle-kit generate --config=drizzle.accounts.config.ts",
     "accounts:migrate": "node --env-file=.env.accounts.local scripts/account-migrate.mjs",
     "accounts:start": "node --env-file=.env.accounts.local scripts/start-local-accounts.mjs",
+    "platform:start": "node --env-file=.env.accounts.local scripts/start-local-accounts.mjs --daily",
     "accounts:provision": "node --env-file=.env.accounts.local scripts/account-provision.mjs",
     "test:accounts": "node --env-file=.env.accounts.test --test tests/local-accounts.test.mjs",
     "dev": "node scripts/dev-local.mjs",
@@ -34,7 +35,7 @@
     "test:composition": "node --test tests/template-composition.test.mjs",
     "test:fallback": "node --test tests/template-work-fallback.test.mjs",
     "test:preview": "node --test tests/template-preview-composition.test.mjs",
-    "test:admin": "node --test tests/admin-state.test.mjs tests/admin-v2.test.mjs tests/preview-admin-state.test.mjs tests/preview-workspace-storage.test.mjs tests/site-editor-schema.test.mjs",
+    "test:admin": "node --test tests/admin-state.test.mjs tests/admin-v2.test.mjs tests/preview-admin-state.test.mjs tests/preview-workspace-storage.test.mjs tests/site-editor-schema.test.mjs tests/site-assets.test.mjs tests/site-assets-client.test.mjs tests/legacy-site-import.test.mjs tests/legacy-import-source-gate.test.mjs tests/local-platform-boundary.test.mjs tests/local-acceptance.test.mjs",
     "test:polish": "node --test tests/client-visible-title.test.mjs tests/orbital-portal-focus.test.mjs tests/polaroid-field-fit.test.mjs tests/polaroid-collection-layout.test.mjs tests/polaroid-collection.test.mjs tests/pr24-limited-closure.test.mjs tests/template-page-style-consistency.test.mjs tests/template-section-navigation.test.mjs tests/collection-photo-composition.test.mjs tests/composer-layout.test.mjs tests/composer-view.test.mjs tests/composer-selection.test.mjs tests/composer-motion.test.mjs tests/composer-promotion.test.mjs tests/preview-source-order.test.mjs tests/preview-title-font.test.mjs tests/home-intro.test.mjs tests/collection-entrance.test.mjs tests/preview-theme.test.mjs tests/glass-segments.test.mjs tests/local-preview-runtime.test.mjs tests/local-preview-photo.test.mjs tests/photo-upgrade.test.mjs",
     "test:container-contract": "node --test tests/container-packaging.test.mjs",
     "test:deployment-config": "node --test tests/deployment-config.test.mjs",
@@ -63,7 +64,8 @@
     "next": "16.3.3",
     "pg": "8.23.0",
     "react": "19.2.6",
-    "react-dom": "19.2.6"
+    "react-dom": "19.2.6",
+    "sharp": "0.34.5"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.37.1",
@@ -80,7 +82,6 @@
     "eslint-config-next": "16.3.3",
     "playwright": "1.63.0",
     "react-server-dom-webpack": "19.2.6",
-    "sharp": "0.34.5",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3",
     "vinext": "0.0.50",

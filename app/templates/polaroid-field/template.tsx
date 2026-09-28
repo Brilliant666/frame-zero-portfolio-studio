@@ -54,7 +54,7 @@ export default function PolaroidFieldTemplate({
   onOpenWork,
   collectionWorkspace,
 }: TemplateProps & { collectionWorkspace?: { collections: readonly Collection[]; assets?: readonly PhotoAsset[]; initialCollectionId?: string; headerAccessory?: ReactNode; Navigation?: ComponentType<{active:PolaroidView;onNavigate:(event:ReactMouseEvent<HTMLElement>,view:PolaroidView)=>void}> } }) {
-  const Navigation = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" ? collectionWorkspace?.Navigation : undefined;
+  const Navigation = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? collectionWorkspace?.Navigation : undefined;
   const fieldSlots = useMemo(
     () => buildPhotoSlots(works, POLAROID_RATIOS, { templateId: "polaroid-field" }),
     [works],

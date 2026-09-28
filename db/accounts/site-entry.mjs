@@ -1,5 +1,6 @@
 import { accountRequestAllowed, getAccountRuntime, readSiteForPrincipal } from './http.mjs';
 import { isSiteSlug } from './site-slug.mjs';
+import { unpublishedAcceptanceRedirect } from './local-acceptance.mjs';
 
 const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
@@ -23,7 +24,7 @@ export async function handleSiteEntry(request, slug, admin = false) {
       // load another owner's Site and check its identity afterward.
       const account = await readSiteForPrincipal(runtime, session.user, null, slug);
       if (!account) return page('无权访问此后台', '<p>请从账号页面进入自己拥有的站点。</p>', 403);
-      return page('站点后台', `<section data-site-admin="true"><h2>${escape(account.site.slug)}</h2><p>当前账号：${escape(account.user.username)}</p><p>站点归属已验证。</p><p>基础模板：${account.templates.basic.length} 套</p><p>高级模板：${account.templates.premium.includes('premium-polaroid') ? '高级拍立得（已授权）' : '尚未授权'}</p><nav><a href="/${escape(slug)}/admin/basic/profile">编辑基础版草稿</a>${account.templates.premium.includes('premium-polaroid') ? `<a href="/${escape(slug)}/admin/premium-polaroid">编辑高级拍立得草稿</a>` : ''}</nav><p>两套内容独立保存。保存只更新私人草稿，不会发布或同步到另一套内容。</p><p>Site 素材选片、上传和正式资源解析尚未接线；不会读取旧版全局内容或自动导入现有照片。</p><a href="/${escape(slug)}">查看站点公开状态</a></section>`);
+      return page('站点后台', `<section data-site-admin="true"><h2>${escape(account.site.slug)}</h2><p>当前账号：${escape(account.user.username)}</p><p>站点归属已验证。</p><p>基础模板：${account.templates.basic.length} 套</p><p>高级模板：${account.templates.premium.includes('premium-polaroid') ? '高级拍立得（已授权）' : '尚未授权'}</p><nav><a href="/${escape(slug)}/admin/basic/profile">编辑基础版草稿</a>${account.templates.premium.includes('premium-polaroid') ? `<a href="/${escape(slug)}/admin/premium-polaroid">编辑高级拍立得草稿</a>` : ''}</nav><p>两套内容独立保存。保存只更新私人草稿，不会发布或同步到另一套内容。</p><p>本站私有素材可在两套后台复用，业务草稿各自保存；不会自动读取或导入旧版全局照片。</p><a href="/${escape(slug)}">查看站点公开状态</a></section>`);
     }
     const result = await runtime.pool.query(`SELECT s.slug FROM sites s
       JOIN portfolio_users p ON p.id=s.owner_id
@@ -32,6 +33,8 @@ export async function handleSiteEntry(request, slug, admin = false) {
     if (!result.rowCount) return page('站点不存在', '<p>请检查摄影师主页地址。</p>', 404);
     // M1 has no Published repository yet. In particular, do not fall back to
     // site_settings 1/2601, profile defaults, or any draft to fill this page.
+    const acceptance = await unpublishedAcceptanceRedirect(request, runtime, slug);
+    if (acceptance) return acceptance;
     return page('作品集尚未发布', '<section data-site-state="unpublished"><p>摄影师尚未发布作品集，请稍后再来。</p><p>如果你是站点所有者，请登录查看自己的站点后台。</p></section>');
   } catch {
     return page('站点服务暂不可用', '<p>暂时无法读取站点。请稍后重试；现有本地作品集未被迁移或替换。</p>', 503);

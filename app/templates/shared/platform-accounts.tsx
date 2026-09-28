@@ -7,6 +7,7 @@ import type { SiteContent } from "../../site-config";
 import { getPlatformQrAssetPath } from "../../platform-qr";
 import { getSafeSocialUrl } from "../../social-links";
 import { probePlatformCardAvailability } from "./platform-card-availability";
+import { usePlatformAssets } from "./asset-context";
 import styles from "./platform-accounts.module.css";
 
 type PlatformAccountsProps = Readonly<{
@@ -54,9 +55,10 @@ function PlatformShareCard({ label, url }: Readonly<{ label: string; url: string
 }
 
 export default function PlatformAccounts({ accounts, layout = "grid", tone = "light" }: PlatformAccountsProps) {
+  const siteAssets = usePlatformAssets();
   const visibleAccounts = accounts.flatMap((account, index) => {
     const handle = account.handle.trim();
-    const qrUrl = getPlatformQrAssetPath(account.qrAssetId);
+    const qrUrl = siteAssets ? siteAssets.get(account.qrAssetId ?? "") ?? null : getPlatformQrAssetPath(account.qrAssetId);
     if (!handle && !qrUrl) return [];
 
     const label = account.label.trim() || `平台 ${index + 1}`;

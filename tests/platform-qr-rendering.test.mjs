@@ -132,7 +132,9 @@ test("shared platform account cards preserve links, accessibility, natural ratio
   assert.doesNotMatch(component, /setInterval|setTimeout/);
   assert.match(availability, /method:\s*"HEAD"/);
   assert.match(availability, /cache:\s*"no-store"/);
-  assert.match(availability, /response\.ok && contentType === "image\/png"/);
+  assert.match(availability, /response\.ok && \(contentType === "image\/png"/);
+  // Site JPEG/WebP capability and legacy PNG-only behavior are exercised by
+  // platform-card-availability.test.mjs, rather than coupling to regex syntax.
   assert.match(availability, /catch\s*\{\s*return false;/s);
   assert.match(component, /getSafeSocialUrl/);
   assert.match(component, /getPlatformQrAssetPath/);
