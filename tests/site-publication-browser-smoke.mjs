@@ -92,6 +92,11 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
   async function nav(section) {
     const href = `${basic}/${section}`;
     if (page.viewportSize().width <= 900) await page.getByLabel('切换后台分区').selectOption(href);
+    else if (section === 'advanced') {
+      const compatibility = page.getByRole('link', { name: '兼容内容与工具', exact: true });
+      await expandControl(page, compatibility);
+      await compatibility.click();
+    }
     else await page.locator(`nav[aria-label="后台主要分区"] a[href="${href}"]`).click();
     await page.waitForURL(`**${href}`);
   }
