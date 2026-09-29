@@ -204,7 +204,7 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
         await picker.getByRole('button', { name: '取消选片', exact: true }).click();
       }
     });
-    await step('50 and 100 members: exact position, stable batch order, undo and retained effect mode', async () => {
+    await step('50 and 100 members: whole-card drag, edge scrolling, touch, keyboard, undo and retained effect mode', async () => {
       await exerciseLargeCollections({ page, read, shot,
         published: async () => (await runtime.pool.query('SELECT * FROM site_publications WHERE site_id=$1', [siteId])).rows });
     });

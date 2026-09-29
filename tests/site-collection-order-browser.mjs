@@ -8,7 +8,6 @@ export async function exerciseCollectionOrder({ page, selected, read, published,
   const before = await read();
   const publishedBefore = await published();
   const card = id => editor.locator(`[data-member-id="${id}"]`);
-  const handle = id => card(id).getByRole('button', { name: /^拖动成员 / });
   async function order(expected) {
     await page.waitForFunction(ids => {
       const actual = [...document.querySelectorAll('[aria-label="图集照片排序"] [data-member-id]')].map(node => node.dataset.memberId);
@@ -22,10 +21,10 @@ export async function exerciseCollectionOrder({ page, selected, read, published,
     assert.deepEqual(await published(), publishedBefore, 'Reordering must not publish');
   }
   async function beginDrag(source, target) {
-    await handle(source).scrollIntoViewIfNeeded();
-    const start = await handle(source).boundingBox();
-    const end = await card(target).getByRole('button', { name: /^查看成员 / }).boundingBox();
-    assert.ok(start && end, 'Real source handle and target photo have layout boxes');
+    await card(source).scrollIntoViewIfNeeded();
+    const start = await card(source).boundingBox();
+    const end = await card(target).boundingBox();
+    assert.ok(start && end, 'Real source card and target card have layout boxes');
     const from = { x: start.x + start.width / 2, y: start.y + start.height / 2 };
     const to = { x: end.x + end.width / 4, y: end.y + end.height / 2 };
     assert.ok(from.y > 0 && from.y < page.viewportSize().height && to.y > 0 && to.y < page.viewportSize().height, 'Both real pointer positions are inside the viewport');
@@ -39,17 +38,20 @@ export async function exerciseCollectionOrder({ page, selected, read, published,
   const mode = await effect.locator('[data-composer]').getAttribute('data-composer');
   await page.getByRole('button', { name: '照片排序', exact: true }).click();
   await order(selected);
+  assert.equal(await editor.getByRole('checkbox').count(), 0, 'Sort cards have no selection controls');
+  assert.equal(await editor.getByRole('combobox').count(), 0, 'Sort has no batch movement toolbar');
+  assert.equal(await editor.getByRole('button', { name: /^拖动成员 / }).count(), 0, 'The card itself is the drag surface');
   await beginDrag(selected[2], selected[0]);
   await page.mouse.up();
   const moved = [selected[2], selected[0], selected[1]];
   await order(moved);
   assert.equal(await effect.locator('[data-composer]').getAttribute('data-composer'), mode, 'Pointer reorder preserves the selected composition');
-  await handle(moved[0]).press('End');
+  await card(moved[0]).press('End');
   await order([moved[1], moved[2], moved[0]]);
-  assert.equal(await handle(moved[0]).evaluate(node => node === document.activeElement), true, 'End keeps focus on the same member');
-  await handle(moved[0]).press('Home');
+  assert.equal(await card(moved[0]).evaluate(node => node === document.activeElement), true, 'End keeps focus on the same member');
+  await card(moved[0]).press('Home');
   await order(moved);
-  assert.equal(await handle(moved[0]).evaluate(node => node === document.activeElement), true, 'Home keeps focus on the same member');
+  assert.equal(await card(moved[0]).evaluate(node => node === document.activeElement), true, 'Home keeps focus on the same member');
   await beginDrag(moved[2], moved[0]);
   await page.keyboard.press('Escape'); await page.mouse.up();
   await order(moved);

@@ -17,15 +17,16 @@ export async function exerciseLargeCollections({ page, read, published, shot }) 
     assert.deepEqual(await read(), before, 'Editing order never saves automatically');
     assert.deepEqual(await published(), pointer, 'Editing order never publishes');
   }
-  async function select(id) { await editor.locator(`[data-member-id="${id}"]`).getByRole('checkbox').check(); }
-  async function clearSelection() {
-    await editor.getByRole('button', { name: '清空选择', exact: true }).click();
-    assert.equal(await editor.getByRole('checkbox', { checked: true }).count(), 0);
-  }
-  async function move(kind, position) {
-    await editor.getByRole('combobox', { name: '移动方式', exact: true }).selectOption(kind);
-    await editor.getByRole('spinbutton', { name: kind === 'position' ? '移动后起始序号' : '当前目标照片序号', exact: true }).fill(String(position));
-    await editor.getByRole('button', { name: '移动选中照片', exact: true }).click();
+  const card = id => editor.locator(`[data-member-id="${id}"]`);
+  async function drag(source, target) {
+    await card(source).scrollIntoViewIfNeeded();
+    const from = await card(source).boundingBox(), to = await card(target).boundingBox();
+    assert.ok(from && to);
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 4, to.y + to.height / 2, { steps: 12 });
+    assert.equal(await card(target).getAttribute('data-drop-target'), 'true');
+    await page.mouse.up();
   }
   for (const count of [50, 100]) {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -49,22 +50,34 @@ export async function exerciseLargeCollections({ page, read, published, shot }) 
     await tab('照片排序').click();
     assert.equal(await effect.isVisible(), false, 'Sorting starts full width without the effect panel');
     await expectOrder(original);
-    await select(original[46]); await move('position', 3);
-    const single = [...original]; single.splice(2, 0, single.splice(46, 1)[0]);
-    await expectOrder(single);
-    await editor.getByRole('button', { name: '撤销最近移动', exact: true }).click(); await expectOrder(original);
-    await clearSelection();
-    // Select in deliberately reversed order; the block must retain array order.
-    for (const index of [46, 24, 9]) await select(original[index]);
-    const block = [original[9], original[24], original[46]];
-    const rest = original.filter(id => !block.includes(id));
-    for (const [kind, target, insert] of [['position', 3, 2], ['before', 5, 4], ['after', 5, 5]]) {
-      await move(kind, target);
-      const expected = [...rest]; expected.splice(insert, 0, ...block);
-      await expectOrder(expected);
-      await editor.getByRole('button', { name: '撤销最近移动', exact: true }).click(); await expectOrder(original);
-      await clearSelection(); for (const id of [...block].reverse()) await select(id);
-    }
+    assert.equal(await editor.getByRole('checkbox').count(), 0);
+    assert.equal(await editor.getByRole('combobox').count(), 0);
+    assert.equal(await editor.getByRole('spinbutton').count(), 0);
+    assert.equal(await editor.getByRole('button', { name: /^拖动成员 / }).count(), 0);
+    // The entire card is focusable; distant keyboard moves remain available.
+    await card(original[46]).press('Home');
+    const distant = [...original]; distant.unshift(distant.splice(46, 1)[0]);
+    await expectOrder(distant);
+    assert.equal(await card(original[46]).evaluate(node => node === document.activeElement), true);
+    await editor.getByRole('button', { name: '撤销最近移动', exact: true }).click();
+    await expectOrder(original);
+    await drag(original[2], original[0]);
+    const moved = [...original]; moved.unshift(moved.splice(2, 1)[0]);
+    await expectOrder(moved);
+    await editor.getByRole('button', { name: '撤销最近移动', exact: true }).click();
+    await expectOrder(original);
+    // Holding the card at the viewport edge scrolls a long collection. Escape
+    // must cancel even after scrolling over additional possible destinations.
+    await card(original[0]).scrollIntoViewIfNeeded();
+    const start = await card(original[0]).boundingBox();
+    const scrollBefore = await page.evaluate(() => scrollY);
+    await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(start.x + start.width / 2, page.viewportSize().height - 12, { steps: 12 });
+    await page.waitForFunction(before => scrollY > before + 100, scrollBefore);
+    await page.keyboard.press('Escape'); await page.mouse.up();
+    await expectOrder(original);
+    assert.equal(await editor.locator('[data-dragging], [data-drop-target]').count(), 0);
     await tab('展示效果').click();
     await effect.getByRole('button', { name: '跨页', exact: true }).click();
     await page.waitForFunction(() => document.querySelector('[aria-label="当前图集即时效果"] [data-composer]')?.getAttribute('data-composer') === 'editorial');
@@ -73,6 +86,48 @@ export async function exerciseLargeCollections({ page, read, published, shot }) 
     await tab('照片排序').click();
     await page.setViewportSize({ width: 390, height: 844 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 2), false);
+    if (count === 50) {
+      // Real Chromium touch input, rather than dispatching synthetic DOM events.
+      // This remains inside the isolated anonymous fixture supplied by CI.
+      const touch = await page.context().newCDPSession(page);
+      await touch.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+      try {
+        await card(original[6]).scrollIntoViewIfNeeded();
+        const box = await card(original[6]).boundingBox();
+        const x = box.x + box.width / 2, y = box.y + box.height / 2;
+        const scrollBeforeTouch = await page.evaluate(() => scrollY);
+        await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+        for (let step = 1; step <= 6; step++) {
+          await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y - step * 15 }] });
+          await page.waitForTimeout(20);
+        }
+        await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await page.waitForFunction(before => scrollY > before + 20, scrollBeforeTouch);
+        await expectOrder(original);
+        assert.equal(await editor.locator('[data-dragging]').count(), 0, 'Ordinary swipe scrolls without sorting');
+        // Wait for native swipe momentum to settle before taking drag coordinates.
+        let stableFrames = 0, lastScroll = await page.evaluate(() => scrollY);
+        for (let attempt = 0; attempt < 30 && stableFrames < 3; attempt++) {
+          await page.waitForTimeout(100);
+          const nextScroll = await page.evaluate(() => scrollY);
+          stableFrames = Math.abs(nextScroll - lastScroll) < 1 ? stableFrames + 1 : 0; lastScroll = nextScroll;
+        }
+        assert.ok(stableFrames >= 3, 'Touch scroll momentum settled');
+        await card(original[1]).scrollIntoViewIfNeeded();
+        const source = await card(original[1]).boundingBox(), target = await card(original[0]).boundingBox();
+        await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: source.x + source.width / 2, y: source.y + source.height / 2 }] });
+        await page.waitForTimeout(450);
+        assert.equal(await card(original[1]).getAttribute('data-dragging'), 'true', 'Long press activates card dragging');
+        await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: target.x + target.width / 4, y: target.y + target.height / 2 }] });
+        await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await expectOrder([original[1], original[0], ...original.slice(2)]);
+        await editor.getByRole('button', { name: '撤销最近移动', exact: true }).click();
+        await expectOrder(original);
+      } finally {
+        await touch.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+        await touch.detach();
+      }
+    }
     await expectOrder(original); await shot(`large-collection-${count}-mobile`);
     // Discard only the unsaved fixture added in this iteration, never saved data.
     const discard = dialog => dialog.accept();
