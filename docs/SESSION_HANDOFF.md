@@ -1,6 +1,7 @@
 # 会话交接
 
-更新：2026-09-29。先读 [AGENTS](../AGENTS.md)、[CURRENT_STATUS](CURRENT_STATUS.md)，
+更新：2026-09-29。当前收口：[图库、图集与本机交付总结](PR33_LOCAL_UX_CLOSEOUT.md)。3001 已按用户本轮授权更新到 `2a03913`，原数据和 Published 保持；本机测试凭据已按要求调整，详情只在私有交接中。
+先读 [AGENTS](../AGENTS.md)、[CURRENT_STATUS](CURRENT_STATUS.md)，
 当前交互以 [图集整卡拖动](PR33_CARD_DRAG.md) 为准，旧批量精确排序界面已按用户要求简化。
 当前新增 [图库到图集的创建流程](PR33_ALBUM_CREATION_FLOW.md)：图库优先，图集新建先命名再自动选片，保留原保存与发布逻辑。
 本次进展见 [本站图库、图集库与精确排序](PR33_LIBRARY_WORKSPACE.md)。
@@ -65,6 +66,6 @@ createdAt 仅代表加入本站时间；10000 条截断仍只支持已载入部�
 - 历史 site-content-integration 的未提交 admin.tsx 保留；私人 photos、凭据、环境、数据库、备份不入 Git。
   只暂存具体路径。主 checkout 中的用户未提交修改不能覆盖。
 
-本轮保持 PR OPEN + DRAFT；不 Ready／Approve／Merge／auto-merge，不修改 main、日常 3001 或用户 Published，
+本轮保持 PR OPEN + DRAFT；不 Ready／Approve／Merge／auto-merge，不修改 main 或用户 Published；本轮明确授权的 3001 更新已完成，后续切换仍需授权，
 不远程部署，不声称 V1 上线。资源回收、永久删除、完整原图补档、公网与真实客户交付继续暂缓。
 验证按影响相称；小改动不要求每次全项目审计。
