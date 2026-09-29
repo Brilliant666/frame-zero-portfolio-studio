@@ -1,3 +1,20 @@
+# 当前检查点：新高级模板前台设计验证
+
+更新：2026-09-30。PR33 已经用户明确授权 squash 合并；main 为 `06c0a22179726c2e0d9a26e6341e1620d65f4b90`，合并前后五项 CI 通过。下方 PR33 的 OPEN/DRAFT 和禁止合并描述均为历史状态。
+
+当前任务：`NEW_PREMIUM_TEMPLATE_REFERENCE_AND_DESIGN_PROOF`。从上述 main 建立独立 `codex/premium-reference-template-v1` 分支，参考第三方公开页面自行实现新高级前台；只有网址，无源码或原站素材复用授权。
+
+本轮设计、观察证据、内容字段和正式接入清单统一见 [流影视廊设计验证](PREMIUM_FLOW_GALLERY_PROOF.md)。
+- 交付真实 React/Next 首页、完整作品浏览、大图返回和手机布局；视觉确认待用户验收。
+- 第三个独立内容空间、专属后台、保存和发布仅规划，本轮不实施。
+- 候选使用独立本机 3005 和匿名测试资源，不连接业务数据库；正式构建入口关闭。
+- 原十一模板、现有高级拍立得、3001/3003/3004、star 草稿和 Published 均不改动。
+- 新 PR 保持 OPEN + DRAFT，不 Ready、不合并、不自动部署。后续视觉确认不自动构成日常切换授权。
+- 原未提交 AGENTS、site-content-integration/admin.tsx、私人照片、恢复材料保留。
+
+---
+
+## 以下为 PR33 历史收口（2026-09-29）
 # 当前检查点
 
 更新：2026-09-29。[AGENTS](../AGENTS.md) → 本页 → [SESSION_HANDOFF](SESSION_HANDOFF.md)。
