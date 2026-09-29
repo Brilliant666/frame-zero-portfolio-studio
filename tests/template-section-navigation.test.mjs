@@ -183,7 +183,7 @@ function cssRuleBlocks(text, selector) {
 }
 
 function cssDeclarations(block) {
-  return Object.fromEntries(Array.from(block.matchAll(/(?:^|;)\s*([\w-]+)\s*:\s*([^;{}]+)/g))
+  return Object.fromEntries(Array.from(block.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/(?:^|;)\s*([\w-]+)\s*:\s*([^;{}]+)/g))
     .map((match) => [match[1], match[2].trim()]));
 }
 
@@ -614,15 +614,19 @@ test("public and Admin renderers pass a stable lightbox closer through the optio
   }
 });
 
-test("Admin template preview uses one scroll root with a sticky toolbar above fixed template headers", async () => {
-  const [dialogCss, globalCss] = await Promise.all([
+test("Admin preview separates its toolbar from the contained artwork scrollport and fixed headers", async () => {
+  const [dialogCss, globalCss, previewDialog, savedPreviewCss] = await Promise.all([
     source("app/admin/template-preview-dialog.module.css"),
     source("app/globals.css"),
+    source("app/admin/template-preview-dialog.tsx"),
+    source("app/site-editor/preview-notice.module.css"),
   ]);
   const dialog = cssDeclarations(cssRuleBlocks(dialogCss, ".dialog")[0] ?? "");
+  const openDialog = cssDeclarations(cssRuleBlocks(dialogCss, ".dialog[open]")[0] ?? "");
   const toolbar = cssDeclarations(cssRuleBlocks(dialogCss, ".toolbar")[0] ?? "");
   const toolbarButton = cssDeclarations(cssRuleBlocks(dialogCss, ".toolbar button")[0] ?? "");
   const surface = cssDeclarations(cssRuleBlocks(dialogCss, ".surface")[0] ?? "");
+  const scrollport = cssDeclarations(cssRuleBlocks(dialogCss, ".scrollport")[0] ?? "");
   const previewSelectorStart = globalCss.indexOf(
     "dialog[data-template-real-preview] main[data-template]:is(",
   );
@@ -647,15 +651,26 @@ test("Admin template preview uses one scroll root with a sticky toolbar above fi
   const previewHeaderOpen = globalCss.indexOf("{", previewSelectorEnd);
   const previewHeader = cssDeclarations(extractBraceBlock(globalCss, previewHeaderOpen));
 
-  assert.equal(dialog.overflow, "auto", "the dialog must remain the sole preview scroll root");
-  assert.equal(toolbar.position, "sticky");
-  assert.equal(toolbar.top, "0");
+  assert.equal(dialog.overflow, "hidden", "the toolbar must stay outside artwork scrolling");
+  assert.equal(openDialog.display, "grid");
+  assert.equal(openDialog["grid-template-rows"]?.replace(/\s+/g, ""), "autominmax(0,1fr)");
+  assert.equal(toolbar.position, "relative", "a dedicated toolbar row must not overlay the artwork");
+  assert.ok(!toolbar.top || toolbar.top === "auto");
   assert.equal(toolbar.height, "4rem");
   assert.ok(minimumRem(toolbarButton["min-height"]) >= 2.75, "the close button needs a 44px target");
-  assert.equal(surface["min-height"]?.replace(/\s+/g, ""), "calc(100dvh-4rem)");
-  assert.equal(surface.overflow, "clip", "the surface must not become a competing scroll root");
-  assert.ok(!surface.transform || surface.transform === "none", "the surface must not re-contain fixed headers");
-  assert.equal(previewHeader.top?.replace(/\s+/g, ""), "4rem!important");
+  assert.equal(surface["min-height"], "0", "the artwork viewport must fit the remaining dialog height");
+  assert.equal(surface.overflow, "hidden");
+  assert.equal(surface.contain, "layout paint", "fixed headers and lightboxes must stay inside the artwork viewport");
+  assert.equal(scrollport.height, "100%");
+  assert.equal(scrollport.overflow, "auto", "only the inner artwork content scrolls, not its fixed-position containing block");
+  assert.match(previewDialog, /className=\{styles\.scrollport\} data-preview-scrollport/);
+  assert.equal(previewHeader.top?.replace(/\s+/g, ""), "0!important", "the fixed header must not repeat the toolbar offset inside its new containing block");
+  const savedFrame = cssDeclarations(cssRuleBlocks(savedPreviewCss, ".frame")[0] ?? "");
+  const savedCanvas = cssDeclarations(cssRuleBlocks(savedPreviewCss, ".canvas")[0] ?? "");
+  const savedScrollport = cssDeclarations(cssRuleBlocks(savedPreviewCss, ".scrollport")[0] ?? "");
+  assert.equal(savedFrame["grid-template-rows"]?.replace(/\s+/g, ""), "autominmax(0,1fr)");
+  assert.equal(savedCanvas.contain, "layout paint", "saved private previews must isolate their notice from fixed template UI too");
+  assert.equal(savedScrollport.overflow, "auto");
 
   const mobileBlocks = mediaBlocks(dialogCss, 480);
   const mobileToolbar = mobileBlocks.flatMap((block) => cssRuleBlocks(block, ".toolbar").map(cssDeclarations));

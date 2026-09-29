@@ -15,6 +15,7 @@ import {
 import { cloneSiteContent, siteConfig, type SiteContent } from "../site-config";
 import type { SiteEditorScope } from "../site-editor/scope";
 import { hydrateConfirmedSiteWorks, hydrateSiteWorks, loadSiteAssets } from "../site-editor/assets-client";
+import { confirmDraftSave, DraftSaveRejected, DraftSaveUncertain, writeSiteDraft, type DraftSaveOptions, type DraftSaveReceipt, type PendingDraftSave } from "../site-editor/draft-save";
 import {
   canSubmitAdminSave,
   hasAdminChanges,
@@ -40,7 +41,10 @@ type AdminContextValue = {
   editorLabel: string;
   localPhotoImportOrigin: string | null;
   localPhotoImportState: "configured" | "missing" | "hosted";
-  save: () => Promise<boolean>;
+  revision: number;
+  pendingSave: boolean;
+  save: (options?: DraftSaveOptions) => Promise<DraftSaveReceipt | null>;
+  checkSave: () => Promise<void>;
   reload: () => Promise<boolean>;
   resetToExample: () => void;
 };
@@ -89,6 +93,10 @@ export function AdminProvider({
   const contentRef = useRef(content);
   const savingRef = useRef(false);
   const loadRequestRef = useRef(0);
+  const lifetime = useRef(new AbortController());
+  const pendingRef = useRef<PendingDraftSave | null>(null);
+  const [pendingSave, setPendingSave] = useState(false);
+  useEffect(() => { const controller = new AbortController(); lifetime.current = controller; return () => controller.abort(); }, [endpoint]);
 
   const replaceContent = useCallback((next: SiteContent) => {
     contentRef.current = next;
@@ -139,6 +147,7 @@ export function AdminProvider({
       setUpdatedAt(result.updatedAt);
       setRevision(result.revision ?? 0);
       setConflict(false);
+      pendingRef.current = null; setPendingSave(false);
       setLoadState(result.warning ? "degraded" : "ready");
       setMessage(result.warning
         ? "数据库暂不可用；已显示示例数据并暂停编辑，请重新读取"
@@ -160,35 +169,40 @@ export function AdminProvider({
     };
   }, [reload]);
 
-  const save = useCallback(async () => {
+  const save = useCallback(async (options?: DraftSaveOptions): Promise<DraftSaveReceipt | null> => {
     const submitted = cloneSiteContent(contentRef.current);
+    const signal = options?.signal ? AbortSignal.any([options.signal, lifetime.current.signal]) : lifetime.current.signal;
     if (
       savingRef.current
       || conflict
-      || !canSubmitAdminSave(loadState, saveState, submitted, savedContent)
-    ) return false;
+      || pendingRef.current || signal.aborted || loadState !== "ready"
+    ) return null;
+    if (!canSubmitAdminSave(loadState, saveState, submitted, savedContent)) return siteScope && revision > 0 ? { revision, content: cloneSiteContent(savedContent), updatedAt } : null;
 
     savingRef.current = true;
     setSaveState("saving");
     setMessage("正在保存修改…");
 
     try {
-      const response = await fetch(endpoint, {
+      const confirmed = siteScope ? await writeSiteDraft(endpoint, "basic", { content: submitted, expectedRevision: revision }, signal) : null;
+      const response = confirmed ? null : await fetch(endpoint, {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ content: submitted, ...(siteScope ? { expectedRevision: revision } : {}) }),
+        signal,
       });
-      if (siteScope && response.status === 409) {
+      if (siteScope && response?.status === 409) {
         setConflict(true);
         throw new Error("版本冲突：当前草稿已保留。请备份当前修改，再重新读取并人工合并；不会自动覆盖。");
       }
-      const result = await response.json() as {
+      const result = (confirmed ?? await response!.json()) as {
         content?: SiteContent;
         updatedAt?: string | null;
         error?: string;
         revision?: number;
       };
-      if (!response.ok || !result.content) throw new Error(result.error ?? "保存失败");
+      if (signal.aborted) return null;
+      if (response && !response.ok || !result.content) throw new Error(result.error ?? "保存失败");
       if (siteScope && (!Number.isSafeInteger(result.revision) || result.revision! <= revision)) throw new Error("保存确认版本无效，草稿已保留");
 
       const saved = siteScope
@@ -203,15 +217,33 @@ export function AdminProvider({
       setMessage(reconciled.changedWhileSaving
         ? "提交版本已保存；保存期间产生的新修改仍未保存"
         : siteScope ? "本站基础版草稿已保存；公开页面未改变" : "保存成功，主页刷新后即显示最新内容");
-      return true;
+      return { content: result.content, revision: result.revision ?? 0, updatedAt: result.updatedAt ?? null };
     } catch (error) {
+      if (signal.aborted) return null;
+      if (error instanceof DraftSaveRejected && error.status === 409) setConflict(true);
+      if (error instanceof DraftSaveUncertain) { pendingRef.current = error.pending; setPendingSave(true); }
       setSaveState("error");
       setMessage(error instanceof Error ? error.message : "保存失败");
-      return false;
+      return null;
     } finally {
       savingRef.current = false;
     }
-  }, [conflict, endpoint, loadState, replaceContent, revision, savedContent, saveState, siteScope]);
+  }, [conflict, endpoint, loadState, replaceContent, revision, savedContent, saveState, siteScope, updatedAt]);
+
+  const checkSave = useCallback(async () => {
+    const pending = pendingRef.current;
+    if (!pending || savingRef.current || !siteScope) return;
+    savingRef.current = true;
+    try {
+      const receipt = await confirmDraftSave(endpoint, "basic", pending, lifetime.current.signal);
+      if (lifetime.current.signal.aborted) return;
+      const confirmed = hydrateConfirmedSiteWorks(cloneSiteContent(receipt.content as SiteContent), siteScope.assetsEndpoint);
+      const reconciled = reconcileAdminSave(pending.content, contentRef.current, confirmed);
+      replaceContent(cloneSiteContent(reconciled.draft as SiteContent)); setSavedContent(confirmed); setRevision(receipt.revision); setUpdatedAt(receipt.updatedAt);
+      pendingRef.current = null; setPendingSave(false); setSaveState("success"); setMessage("已确认原提交的草稿保存成功；未自动发布。后续编辑仍保留。");
+    } catch { if (!lifetime.current.signal.aborted) setMessage("保存结果仍待确认，未再次写入。请保留当前编辑，检查其他标签页；必要时备份后明确重新读取。"); }
+    finally { savingRef.current = false; }
+  }, [endpoint, replaceContent, siteScope]);
 
   useEffect(() => {
     if (saveState !== "success") return;
@@ -223,6 +255,7 @@ export function AdminProvider({
     const handleKeyboardSave = (event: KeyboardEvent) => {
       if (!isAdminSaveShortcut(event)) return;
       event.preventDefault();
+      if (Array.from(document.querySelectorAll('[aria-modal="true"], dialog[open]')).some(element => element.getClientRects().length > 0)) return;
       void save();
     };
     window.addEventListener("keydown", handleKeyboardSave);
@@ -248,6 +281,9 @@ export function AdminProvider({
 
   const value = useMemo<AdminContextValue>(() => ({
     siteScope,
+    revision,
+    pendingSave,
+    checkSave,
     conflict,
     content,
     savedContent,
@@ -264,7 +300,7 @@ export function AdminProvider({
     save,
     reload,
     resetToExample,
-  }), [busy, conflict, content, dirty, editorLabel, loadState, localPhotoImportOrigin, localPhotoImportState, message, reload, resetToExample, save, savedContent, saveState, setContent, siteScope, updatedAt]);
+  }), [busy, checkSave, conflict, content, dirty, editorLabel, loadState, localPhotoImportOrigin, localPhotoImportState, message, pendingSave, reload, resetToExample, revision, save, savedContent, saveState, setContent, siteScope, updatedAt]);
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
 }

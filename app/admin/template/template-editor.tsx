@@ -46,7 +46,7 @@ export default function TemplateEditor() {
   };
 
   const detailState = inspectedIsDraft
-    ? inspectedIsSaved ? "当前主页模板" : "已选为主页 · 未保存"
+    ? inspectedIsSaved ? (siteScope ? "已保存草稿模板" : "当前主页模板") : "当前草稿选择 · 未保存"
     : null;
 
   const statusLabels = (templateId: TemplateId) => [

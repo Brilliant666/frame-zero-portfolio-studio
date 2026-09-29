@@ -1,0 +1,24 @@
+.library { min-width:0; color:#242321; }
+.header { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.header h2 { margin:0; font-size:20px; }
+.header p,.destination p { margin:4px 0 0; font-size:13px; }
+.library button { min-height:44px; padding:8px 12px; border:1px solid #aaa49b; background:white; color:inherit; font:inherit; cursor:pointer; }
+.library button:disabled { opacity:.5; cursor:not-allowed; }
+.library :focus-visible { outline:3px solid #a55232; outline-offset:3px; }
+.filters { display:grid; grid-template-columns:2fr repeat(3,minmax(0,1fr)); gap:12px; margin:16px 0 0; border:0; padding:0; min-width:0; }
+.filters label,.destination label { display:grid; gap:6px; min-width:0; }
+.library select,.library input[type="search"] { min-height:44px; width:100%; min-width:0; padding:8px; font:inherit; color:inherit; background:white; border:1px solid #bdb5ab; }
+.hint { font-size:12px; color:#6e665d; }
+.tools { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:16px 0; }
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(185px,1fr)); gap:12px; }
+.card { display:grid; align-content:start; gap:6px; min-width:0; padding:10px; background:white; border:1px solid #d5d0c6; }
+.card[data-selected="true"] { border-color:#93613e; background:#f6efe3; }
+.card small { font-size:11px; color:#6e665d; overflow-wrap:anywhere; }
+.card .photo { padding:0; border:0; }
+.photo img { display:block; width:100%; height:160px; object-fit:contain; background:#f0ede7; }
+.pick { display:flex; align-items:center; gap:8px; min-height:44px; cursor:pointer; }
+.pick input { width:20px; height:20px; }
+.destination { display:grid; grid-template-columns:minmax(180px,1fr) minmax(0,2fr) auto; gap:16px; align-items:center; padding:16px; background:#fff; border:1px solid #d5d0c6; }
+.library .primary { color:white; background:#272b28; }
+.warning { padding:12px; background:#fff2e7; color:#943d23; overflow-wrap:anywhere; }
+@media(max-width:700px) { .filters { grid-template-columns:repeat(2,minmax(0,1fr)); } .grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; } .card { padding:8px; } .photo img { height:120px; } .destination { grid-template-columns:1fr; } }

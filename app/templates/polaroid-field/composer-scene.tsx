@@ -8,7 +8,7 @@ import { resolveComposerHero } from "./composer-selection";
 import {composerReleaseVelocity,composerZoomLimit,composerWheelKind,composerWheelZoomFactor,composerZoomShortcut,composerFlip,composerPaperBounds,constrainComposer,zoomComposerAt,type MotionSample} from "./composer-motion";
 import {useComposerMotion} from "./use-composer-motion";
 import {playCollectionEntrance,type CollectionEntranceSource} from "./collection-entrance";
-import { COMPOSER_MODES, composerSeed, composerView, parseComposerPreference, type ComposerBounds, type ComposerPreference, type ComposerView } from "./composer-view";
+import { COMPOSER_MODES, composerSeed, composerView, parseComposerPreference, type ComposerBounds, type ComposerPreference, type ComposerMode, type ComposerView } from "./composer-view";
 import styles from "./composer.module.css";
 import "./motion-fonts.css";
 import { entryPhotoSource, prepareEntryPhoto, revealEntryImage } from "./entry-photos";
@@ -17,7 +17,7 @@ import { observePhotoUpgrades, type PhotoUpgrade } from "./photo-upgrade";
 import {createMotionActivity} from "./motion-diagnostic";
 
 type Props = { cards: readonly SceneCard[]; sceneId: string; title?: string; description?: string;
-  active?: boolean; focusId?: string | null; coverId?: string | null; entranceSource?: CollectionEntranceSource; onBack: () => void; onOpen: (id: string) => void; onAssetUnavailable: (id: string) => void };
+  active?: boolean; editorEmbedded?: boolean; editorMode?: ComposerMode; focusId?: string | null; coverId?: string | null; entranceSource?: CollectionEntranceSource; onBack: () => void; onOpen: (id: string) => void; onAssetUnavailable: (id: string) => void };
 const labels = { constellation: "星座", scatter: "散落", editorial: "跨页" };
 const preferenceKey = (id: string) => `frame-zero:preview-composer:v2:${id}`;
 function readPreference(id: string) {
@@ -25,8 +25,9 @@ function readPreference(id: string) {
   catch { return parseComposerPreference(null); }
 }
 
-export default function ComposerScene({ cards, sceneId, title, description, active=true, focusId, coverId, entranceSource, onBack, onOpen, onAssetUnavailable }: Props) {
-  const [preference, setPreference] = useState(() => readPreference(sceneId));
+export default function ComposerScene({ cards, sceneId, title, description, active=true, editorEmbedded=false, editorMode, focusId, coverId, entranceSource, onBack, onOpen, onAssetUnavailable }: Props) {
+  const [localPreference, setPreference] = useState(() => editorEmbedded ? parseComposerPreference(null) : readPreference(sceneId));
+  const preference = useMemo(() => editorEmbedded && editorMode ? { ...localPreference, mode: editorMode } : localPreference, [localPreference, editorEmbedded, editorMode]);
   const hero = resolveComposerHero(cards.map(card => card.id), preference.heroId, focusId, coverId);
   const [lines, setLines] = useState(true);
   const [photoSources,setPhotoSources]=useState<Record<string,PhotoUpgrade>>({});
@@ -121,10 +122,11 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
   useLayoutEffect(() => {
     const stage = stageRef.current, header = headerRef.current;
     if (!stage || !header) return;
-    const nav = stage.closest("main")?.querySelector("header") ?? document.querySelector("header");
+    const nav = editorEmbedded ? null : stage.closest("main")?.querySelector("header") ?? document.querySelector("header");
     const measure = () => {
       if (!stage.clientWidth) return;
       const stageBox=stage.getBoundingClientRect();
+      const coordinateScale=editorEmbedded && stageBox.width > 0 ? stage.clientWidth/stageBox.width : 1;
       // Only persistent chrome counts: opening the options popover must not
       // refit the scene underneath the visitor's pointer.
       const parts=[header.querySelector(`.${styles.identity}`),header.querySelector("[data-preview-segments]"),header.querySelector("summary")];
@@ -132,17 +134,17 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
         const range=element.tagName==="SUMMARY"?document.createRange():null;
         if(range) range.selectNodeContents(element);
         const box=range?range.getBoundingClientRect():element.getBoundingClientRect();
-        return {left:box.left-stageBox.left-(range?24:0),right:box.right-stageBox.left+(range?10:0),top:box.top-stageBox.top-(range?7:0),bottom:box.bottom-stageBox.top+(range?7:0)};
+        return {left:(box.left-stageBox.left)*coordinateScale-(range?24:0),right:(box.right-stageBox.left)*coordinateScale+(range?10:0),top:(box.top-stageBox.top)*coordinateScale-(range?7:0),bottom:(box.bottom-stageBox.top)*coordinateScale+(range?7:0)};
       });
       setOverlays(old=>JSON.stringify(old)===JSON.stringify(measured)?old:measured);
       const next = { width: stage.clientWidth, height: stage.clientHeight, top: Math.max(0,...measured.map(box=>box.bottom))+8,
-        nav: nav instanceof HTMLElement ? nav.offsetHeight : 80 };
+        nav: nav instanceof HTMLElement ? nav.offsetHeight : editorEmbedded ? 0 : 80 };
       setSize(old => Object.keys(next).every(key => old[key as keyof typeof old] === next[key as keyof typeof next]) ? old : next);
     };
     const observer = new ResizeObserver(measure);
     observer.observe(stage); observer.observe(header); if (nav) observer.observe(nav);
     measure(); return () => observer.disconnect();
-  }, []);
+  }, [editorEmbedded]);
   useLayoutEffect(() => {
     cameraMode.current = preference.mode === "scatter" ? "fit" : "hero";
   }, [cards, hero.id, preference, sceneId]);
@@ -188,7 +190,7 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
   }, [layout, size, compact, commit, cameraOptions,motion,preference.mode,cancelAnimations,beginEntrance,cancelEntrance]);
   const updatePreference = (next: ComposerPreference) => {
     const valid = parseComposerPreference(next);
-    if(!compact && (valid.mode!==preference.mode || valid.seed!==preference.seed)){
+    if(!editorEmbedded && !compact && (valid.mode!==preference.mode || valid.seed!==preference.seed)){
       motion.stop();const before=new Map<string,{x:number;y:number;width:number;angle:number}>();
       worldRef.current?.querySelectorAll<HTMLElement>("[data-card-id]").forEach(element=>{
         const box=element.getBoundingClientRect(),style=getComputedStyle(element),matrix=new DOMMatrixReadOnly(style.transform);
@@ -196,12 +198,13 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
       });flip.current=before;
     }
     setPreference(valid);
-    try { localStorage.setItem(preferenceKey(sceneId), JSON.stringify(valid)); } catch { /* Private/disabled storage: this visit still works. */ }
+    try { if (!editorEmbedded) localStorage.setItem(preferenceKey(sceneId), JSON.stringify(valid)); } catch { /* Private/disabled storage: this visit still works. */ }
   };
   useLayoutEffect(() => {
     const stage = stageRef.current;
     if (!stage || compact) return;
     const wheel = (event: WheelEvent) => {
+      if (editorEmbedded) return;
       // Floating camera/navigation buttons are part of the canvas, not scroll exits.
       // Keep native scrolling only inside editable settings and expanded controls.
       if ((event.target as Element).closest('select,input,textarea,[contenteditable="true"],details[open]')) return;
@@ -222,7 +225,7 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
     };
     stage.addEventListener("wheel", wheel, { passive: false });
     return () => stage.removeEventListener("wheel", wheel);
-  }, [compact, layout, size, cameraOptions,motion,commit]);
+  }, [compact, layout, size, cameraOptions,motion,commit,editorEmbedded]);
   const zoom = (factor: number) => {
     const old = motion.target(), fit = composerView(layout, size.width, size.height, size.top, "fit", cameraOptions);
     const scale = composerZoomLimit(old.scale*factor,fit.scale);
@@ -232,6 +235,7 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
   useLayoutEffect(()=>{
     if(!active||compact)return;
     const shortcut=(event:KeyboardEvent)=>{
+      if(editorEmbedded && !stageRef.current?.contains(document.activeElement))return;
       const action=composerZoomShortcut(event);
       if(!action||event.defaultPrevented||document.querySelector('[aria-modal="true"]'))return;
       const target=event.target;
@@ -244,7 +248,7 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
     };
     window.addEventListener("keydown",shortcut,true);
     return()=>window.removeEventListener("keydown",shortcut,true);
-  },[active,compact,layout,size,cameraOptions,motion,interruptEntrance]);
+  },[active,compact,layout,size,cameraOptions,motion,interruptEntrance,editorEmbedded]);
   const finishDrag = (id: number,cancelled=false) => {
     pointers.current.delete(id);
     if(pinch.current){
@@ -260,12 +264,13 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
     drag.current = null;
     if (stageRef.current?.hasPointerCapture(id)) stageRef.current.releasePointerCapture(id);
   };
-  return <section ref={stageRef} className={styles.stage} data-composer={preference.mode} data-collection-scene={sceneId} data-compact={compact} data-hero-source={hero.source}
+  return <section ref={stageRef} className={styles.stage} data-editor-embedded={editorEmbedded || undefined} data-composer={preference.mode} data-collection-scene={sceneId} data-compact={compact} data-hero-source={hero.source}
     data-layout-rows={layout.meta?.selectedRows} data-layout-available={layout.meta ? `${layout.meta.availableW},${layout.meta.availableH}` : undefined}
     aria-label={`${title ?? "图集"}构图画布`} tabIndex={compact ? undefined : 0}
     onPointerDownCapture={interruptEntrance} onWheelCapture={interruptEntrance} onKeyDownCapture={interruptEntrance}
-    style={{ "--nav": `${size.nav}px`,touchAction:compact?"pan-y pinch-zoom":"none" } as CSSProperties}
+    style={{ "--nav": `${size.nav}px`,touchAction:compact || editorEmbedded?"pan-y pinch-zoom":"none" } as CSSProperties}
     onPointerDown={event => {
+      if (editorEmbedded) return;
       const target = event.target as Element;
       if (compact || event.button !== 0 || (target.closest("button,select,input,a,summary,details") && !target.closest("[data-card-id]"))) return;
       event.preventDefault();
@@ -282,6 +287,7 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
       drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY, view: viewRef.current, moved: false,samples:[{x:event.clientX,y:event.clientY,t:performance.now()}] };
     }}
     onPointerMove={event => {
+      if (editorEmbedded) return;
       if(pointers.current.has(event.pointerId))pointers.current.set(event.pointerId,{x:event.clientX,y:event.clientY});
       if(pinch.current && pointers.current.size>=2){
         const [a,b]=[...pointers.current.values()],start=pinch.current,rect=event.currentTarget.getBoundingClientRect();
@@ -315,9 +321,9 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
       }
     }}>
     <div className={styles.header} ref={headerRef}>
-      <div className={styles.identity}><button type="button" onClick={onBack}>← 返回图集首页</button><div><strong>{title || "未命名图集"}</strong><span className={styles.description}>{cards.length} 张照片{description ? ` · ${description}` : ""}</span>{description && <details className={styles.mobileDescription}><summary>图集说明</summary><span>{cards.length} 张照片 · {description}</span></details>}</div></div>
+      <div className={styles.identity}>{!editorEmbedded && <button type="button" onClick={onBack}>← 返回图集首页</button>}<div><strong>{title || "未命名图集"}</strong><span className={styles.description}>{cards.length} 张照片{description ? ` · ${description}` : ""}</span>{description && <details className={styles.mobileDescription}><summary>图集说明</summary><span>{cards.length} 张照片 · {description}</span></details>}</div></div>
       <div className={styles.options}>
-        <GlassSegments label="构图" value={preference.mode} options={COMPOSER_MODES.map(mode=>({value:mode,label:labels[mode]}))} onChange={mode=>updatePreference({...preference,mode})}/>
+        {!editorEmbedded && <GlassSegments label="构图" value={preference.mode} options={COMPOSER_MODES.map(mode=>({value:mode,label:labels[mode]}))} onChange={mode=>updatePreference({...preference,mode})}/>}
         <details><summary>调整摆放</summary><div className={styles.settings}>
           <label>主角照片<select aria-label="主角照片" value={hero.source === "preference" ? hero.id ?? "" : ""} disabled={!cards.length} onChange={event => updatePreference({ ...preference, heroId: event.target.value || undefined })}><option value="">封面（默认）</option>{cards.map((card, index) => <option key={card.id} value={card.id}>第 {index + 1} 张</option>)}</select></label>
           <button type="button" disabled={cards.length < 2} onClick={() => updatePreference({ ...preference, seed: (preference.seed + 1) >>> 0 })}>换一种摆法</button>

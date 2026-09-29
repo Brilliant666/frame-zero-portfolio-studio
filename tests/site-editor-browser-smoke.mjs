@@ -4,6 +4,16 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { chromium } from 'playwright';
 
+// Open the actual disclosure before editing; never force visibility or bypass UI.
+async function expandControl(page, control) {
+  await control.waitFor({ state: 'attached' });
+  const ancestors = page.locator('details').filter({ has: control });
+  assert.ok(await ancestors.count() > 0, 'Expected an existing disclosure for this control');
+  const disclosure = ancestors.last();
+  if (await disclosure.getAttribute('open') === null) await disclosure.locator(':scope > summary').click();
+  await control.waitFor({ state: 'visible' });
+}
+
 // A single bounded acceptance scenario, not a new E2E framework. All edits use
 // the real forms and real API. Never capture traces, cookies, headers or bodies.
 export async function siteEditorBrowserSmoke({ origin, password, restart, expire, signal }) {
@@ -100,6 +110,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
   async function openEditor(p, url) {
     const loaded = p.waitForResponse(r => r.request().method() === 'GET' && r.url().includes('/api/sites/') && r.status() === 200);
     await Promise.all([p.goto(`${origin}${url}`), loaded]);
+    if (url.includes('/admin/premium-polaroid')) await p.getByRole('button', { name: '主页资料', exact: true }).click();
     await field(p, '摄影师名称').waitFor();
     await p.waitForFunction(() => !document.querySelector('input')?.disabled && !document.querySelector('fieldset')?.disabled);
   }
@@ -112,13 +123,18 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
   async function nav(p, section) {
     const href = `${basic}/${section}`;
     if (p.viewportSize().width <= 900) await p.getByLabel('切换后台分区').selectOption(href);
+    else if (section === 'advanced') {
+      const compatibility = p.getByRole('link', { name: '兼容内容与工具', exact: true });
+      await expandControl(p, p.getByRole('link', { name: '兼容内容与工具', exact: true, includeHidden: true }));
+      await compatibility.click();
+    }
     else await p.locator(`nav[aria-label="后台主要分区"] a[href="${href}"]`).click();
     await p.waitForURL(`**${href}`);
   }
   async function saved(p, space, shortcut = false, status = 200) {
     await step(`${space} save action starts (expected ${status})`);
     const result = p.waitForResponse(r => new URL(r.url()).pathname === path(space) && r.request().method() === 'PUT');
-    const action = shortcut ? p.keyboard.press('Control+s') : p.getByRole('button', { name: '保存修改', exact: true }).click();
+    const action = shortcut ? p.keyboard.press('Control+s') : p.getByRole('button', { name: '仅保存草稿', exact: true }).click();
     const [response] = await bounded(Promise.all([result, action]), `Save ${space} headers/action`);
     assert.equal(response.status(), status);
     await step(`${space} save HTTP ${status} received`);
@@ -172,6 +188,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
       await field(page, '首页标题').fill('Premium private title');
       await page.getByRole('button', { name: '拍摄套餐', exact: true }).click();
       await page.getByRole('button', { name: '添加套餐', exact: true }).click();
+      await expandControl(page, field(page, '套餐 1 · 名称'));
       await field(page, '套餐 1 · 名称').fill('Premium anonymous package');
       await field(page, '套餐 1 · 价格').fill('200');
       await page.getByRole('button', { name: '联系约拍', exact: true }).click();
@@ -182,11 +199,15 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
       await snapshot(page, '02-premium-saved');
     });
     await stage('03 empty collections create / rename / reorder / save', async () => {
-      await page.getByRole('button', { name: '图集管理', exact: true }).click();
+      await page.getByRole('button', { name: '图集', exact: true }).click();
       for (const name of ['Anonymous collection one', 'Anonymous collection two']) {
         await page.getByRole('button', { name: '新建图集', exact: true }).click();
-        await field(page, '图集名称').fill(name);
+        const creation = page.getByRole('dialog', { name: '新建图集', exact: true });
+        await creation.getByLabel('图集名称', { exact: true }).fill(name);
+        await creation.getByRole('button', { name: '创建并选片', exact: true }).click();
+        await page.getByRole('dialog', { name: '从图库选片', exact: true }).getByRole('button', { name: '取消选片', exact: true }).click();
       }
+      await page.getByRole('navigation', { name: '图集编辑内容', exact: true }).getByRole('button', { name: '图集设置', exact: true }).click();
       await page.getByRole('button', { name: '图集上移', exact: true }).click();
       premiumSaved = await saved(page, 'premium-polaroid');
       assert.deepEqual(premiumSaved.content.collections.map(c => c.name), ['Anonymous collection two', 'Anonymous collection one']);
@@ -253,9 +274,8 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
         await bounded(snapshot(other, `05-${space}-conflict-before-reload`), `${space} conflict screenshot`, 10000);
         await step(`${space} conflict retained and server winner verified`);
         if (space === 'premium-polaroid') {
-          await other.locator('summary').filter({ hasText: '更多操作' }).click();
           const download = other.waitForEvent('download');
-          await other.getByRole('button', { name: '导出当前草稿', exact: true }).click();
+          await other.getByRole('button', { name: '导出当前草稿', exact: true }).filter({ visible: true }).click();
           const file = await (await download).path();
           const exported = JSON.parse(await readFile(file, 'utf8'));
           assert.ok(JSON.stringify(exported).includes(`${space} retained conflict`));
@@ -274,10 +294,10 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
         try {
           const [outcome] = await bounded(Promise.all([
             dismissed,
-            other.getByRole('button', { name: '重新读取', exact: true }).click(),
+            other.getByRole('button', { name: space === 'basic' ? '重新读取' : '重新读取草稿', exact: true }).filter({ visible: true }).click(),
           ]), `${space} reload confirm dismiss`, 10000);
           if (outcome.error) throw outcome.error;
-          assert.match(confirmMessage, /未保存草稿|未保存/);
+          assert.match(confirmMessage, space === 'basic' ? /重新读取会替换未保存草稿/ : /重新读取会替换当前编辑/);
         } finally { other.off('dialog', onDialog); }
         await step(`${space} reload warning dismissed`);
         assert.equal(await field(other, '摄影师名称').inputValue(), `${space} retained conflict`);

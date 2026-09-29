@@ -336,7 +336,7 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(layout, /setLibraryMessage\("素材库还为空。"\)/);
   assert.match(layout, /libraryState === "error"[\s\S]*\? "素材库暂时无法读取"/);
   assert.match(layout, /<p>\{libraryState === "error"[\s\S]*\? libraryMessage/);
-  assert.match(layout, /使用上方“添加素材”把照片或文件夹加入素材库/);
+  assert.match(layout, /使用下方“上传素材与排版建议”把照片或文件夹加入素材库/);
   assert.match(managementClient, /service-update-required/);
   assert.match(managementClient, /本地素材服务版本较旧；请停止并重新运行 npm run dev/);
   assert.doesNotMatch(layout, /先运行文件夹导入命令|重新执行导入命令/);
@@ -610,7 +610,9 @@ test("Admin V2 keeps one shared save action on the unchanged site-content endpoi
   assert.doesNotMatch(provider, /site_settings|SiteDocument|migration|repository/);
   assert.equal([provider, shell, template, structurePreview, layout, layoutPreview]
     .reduce((count, input) => count + (input.match(/method:\s*"PUT"/g)?.length ?? 0), 0), 1);
-  assert.doesNotMatch(shell, /DraftTemplatePreviewTrigger|预览当前草稿|data-admin-draft-preview-trigger/);
+  assert.match(shell, /<DraftTemplatePreviewTrigger templateId=\{content\.activeTemplate\} scope="admin" label="预览当前编辑"/);
+  assert.match(shell, /saveDraft=\{save\}/, "Site combined action must reuse the existing save function");
+  assert.match(shell, /siteScope \? "仅保存草稿"/, "The shortcut action remains a draft-only save");
   assert.match(shell, /aria-keyshortcuts="Control\+S Meta\+S"/);
   assert.doesNotMatch([shell, template, structurePreview, layout, layoutPreview].join("\n"), /\/api\/site-content/);
 });

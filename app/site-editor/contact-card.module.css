@@ -1,0 +1,20 @@
+.editor { min-width: 0; display: grid; gap: .75rem; grid-column: 1 / -1; }
+.editor p, .editor small { margin: 0; line-height: 1.6; }
+.editor button, .editor input { font: inherit; color: inherit; }
+.editor button { padding: .5rem .75rem; border: 1px solid #8886; border-radius: .4rem; background: transparent; cursor: pointer; }
+.editor button:disabled { cursor: not-allowed; opacity: .5; }
+.editor input { display: block; max-width: 100%; min-width: 0; background: transparent; border: 1px solid #8886; padding: .45rem; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.preview { display: block; width: fit-content; max-width: 100%; }
+.preview img { display: block; max-width: min(7rem, 100%); max-height: 7rem; width: auto; height: auto; object-fit: contain; filter: none; }
+.picker { display: grid; gap: .75rem; border: 1px solid #8886; padding: 1rem; border-radius: .5rem; min-width: 0; }
+.picker h4 { margin: 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: .75rem; }
+.grid article { display: grid; align-content: start; gap: .4rem; min-width: 0; border: 1px solid #8884; border-radius: .4rem; padding: .5rem; }
+.grid img { display: block; max-width: 100%; width: auto; height: auto; max-height: 18rem; object-fit: contain; filter: none; margin: auto; }
+.grid code { overflow-wrap: anywhere; font-size: .75rem; }
+
+.caption { font-size: .82rem; color: #706960; }
+.tools summary { cursor: pointer; min-height: 44px; padding: .6rem 0; }
+.tools[open] > .actions { margin-bottom: .5rem; }
+.editor :focus-visible { outline: 3px solid #a55232; outline-offset: 3px; }

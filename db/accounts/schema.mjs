@@ -64,7 +64,7 @@ export const publicationRevisions = pgTable('site_publication_revisions', {
   content: jsonb('content').notNull(), assetIds: uuid('asset_ids').array().notNull(),
   publishedAt: timestamp('published_at', {withTimezone:true}).defaultNow().notNull(),
 }, table => [uniqueIndex('publication_site_revision_unique').on(table.siteId,table.id),
-  check('publication_premium_space',sql`${table.space} = 'premium-polaroid'`),
+  check('publication_known_space',sql`${table.space} IN ('basic', 'premium-polaroid')`),
   check('publication_positive_revision',sql`${table.draftRevision} > 0`)]);
 export const publications = pgTable('site_publications', {
   siteId: uuid('site_id').primaryKey().references(() => sites.id),

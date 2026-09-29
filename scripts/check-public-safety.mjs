@@ -45,6 +45,7 @@ const allowedEmails = [
   /^noreply@github\.com$/i,
   /@users\.noreply\.github\.com$/i,
   /\.example$/i,
+  /@example\.invalid$/i, // Anonymous account fixtures; never a deliverable mailbox.
 ];
 
 function gitText(...args) {

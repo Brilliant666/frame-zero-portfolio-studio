@@ -179,10 +179,10 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
           <small>03 / TRANSMIT REQUEST</small>
           <h2>把角色坐标<br />发送给我。</h2>
           <p>{content.contact.note}</p>
-          <button type="button" onClick={() => void onCopy(content.contact.wechat, "portal-wechat")}>
+          {content.contact.wechat.trim() && (<button type="button" onClick={() => void onCopy(content.contact.wechat, "portal-wechat")}>
             <span>WECHAT CHANNEL</span><strong>{copiedKey === "portal-wechat" ? "已复制 ✓" : content.contact.wechat}</strong>
-          </button>
-          <a href={`mailto:${content.contact.email}`}><span>EMAIL SIGNAL</span><strong>{content.contact.email}</strong></a>
+          </button>)}
+          {content.contact.email.trim() && (<a href={`mailto:${content.contact.email}`}><span>EMAIL SIGNAL</span><strong>{content.contact.email}</strong></a>)}
           <PlatformAccounts accounts={content.social} tone="dark" />
         </div>
         <div className={styles.console}>

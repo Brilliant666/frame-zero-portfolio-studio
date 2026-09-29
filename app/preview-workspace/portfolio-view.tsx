@@ -45,7 +45,7 @@ export function PreviewPortfolioExperience({ document, embedded = false, initial
       packages={content.packages.filter(p => p.enabled)} bookingTemplate={["【约拍任务申请】", ...content.bookingFields].join("\n")}
       booted copiedKey={interactions.copiedKey} isPreview={embedded} onCopy={interactions.copyText}
       onOpenWork={openWork} onBeforeViewChange={close}
-      collectionWorkspace={{ collections: document.collections, initialCollectionId, assets, headerAccessory: <StarThemeToggle />, Navigation:embedded?undefined:StarNavigation }} /></Suspense>
+      collectionWorkspace={{ collections: document.collections, initialCollectionId, assets, headerAccessory: <StarThemeToggle />, Navigation: StarNavigation }} /></Suspense>
     {interactions.activeWork && <Lightbox theme="light" safeMissingImage separateControls motionOrigin={origin} work={interactions.activeWork} works={[...interactions.lightboxWorks]}
       frameRef={interactions.lightboxRef} closeButtonRef={interactions.closeButtonRef} onMove={interactions.moveActiveWork} onClose={close} />}
   </StarMotionShell></Suspense>;

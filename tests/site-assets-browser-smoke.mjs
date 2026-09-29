@@ -31,6 +31,13 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
     if (url.pathname.startsWith(`/api/sites/${a}/assets`)) network.push({ path: url.pathname, method: response.request().method(), status: response.status() });
   });
   const page = await context.newPage();
+  async function expandTools(title) {
+    const summary = page.getByText(title, { exact: true });
+    // Read the native disclosure state and use its visible control, as a user does.
+    const details = summary.locator('..');
+    if (await details.getAttribute('open') === null) await summary.click();
+  }
+
   async function login(p, username) {
     await p.goto(`${origin}/login`);
     await p.getByLabel('用户名', { exact: true }).fill(username);
@@ -44,7 +51,7 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
   }
   async function save(space) {
     const result = page.waitForResponse(r => r.request().method() === 'PUT' && new URL(r.url()).pathname === `/api/sites/${a}/drafts/${space}`);
-    await page.getByRole('button', { name: '保存修改', exact: true }).click();
+    await page.getByRole('button', { name: '仅保存草稿', exact: true }).click();
     const response = await result; assert.equal(response.status(), 200);
     return response.json();
   }
@@ -57,7 +64,7 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
   async function images({ editor = false } = {}) {
     // Editors have long forms and lazy recommendation thumbnails. Bring a real
     // asset into view rather than requiring every offscreen lazy image to load.
-    if (editor) await page.locator('img[src*="/api/sites/"]').first().scrollIntoViewIfNeeded();
+    if (editor) await page.locator('img[src*="/api/sites/"]').filter({ visible: true }).first().scrollIntoViewIfNeeded();
     try {
       await page.waitForFunction(() => {
         const imgs = [...document.querySelectorAll('img[src*="/api/sites/"]')].filter(i => {
@@ -97,6 +104,7 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
       for (const [name, width, height, background] of [['landscape', 900, 600, '#476aa3'], ['portrait', 600, 900, '#70a284'], ['square', 700, 700, '#d2ad65']]) {
         files.push({ name: `${name}.png`, mimeType: 'image/png', buffer: await sharp({ create: { width, height, channels: 3, background } }).png().toBuffer() });
       }
+      await expandTools('上传素材与排版建议');
       await page.getByLabel('上传本站照片', { exact: true }).setInputFiles(files);
       await page.getByText('已上传 3 张；本站两套后台可引用同一资源，无需重复上传。', { exact: true }).waitFor();
       const list = await context.request.get(`${origin}/api/sites/${a}/assets`);
@@ -112,14 +120,17 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
     });
     await step('02 premium existing editor reuses uploaded assets / independent saved fields', async () => {
       await page.goto(`${origin}${premium}`);
+      await page.getByRole('button', { name: '主页资料', exact: true }).click();
       await page.getByLabel('摄影师名称', { exact: true }).fill('Premium asset photographer');
-      await page.getByRole('button', { name: '图集管理', exact: true }).click();
+      await page.getByRole('button', { name: '图集', exact: true }).click();
       await page.getByRole('button', { name: '新建图集', exact: true }).click();
-      await page.getByLabel('图集名称', { exact: true }).fill('Anonymous landscape portrait square');
-      await page.getByText('从共享素材库添加照片', { exact: true }).click();
-      await page.getByRole('button', { name: '加入图集', exact: true }).first().waitFor();
-      for (let i = 0; i < 3; i++) await page.getByRole('button', { name: '加入图集', exact: true }).first().click();
-      await page.getByText('封面与重点照片设置', { exact: true }).click();
+      const creation = page.getByRole('dialog', { name: '新建图集', exact: true });
+      await creation.getByLabel('图集名称', { exact: true }).fill('Anonymous landscape portrait square');
+      await creation.getByRole('button', { name: '创建并选片', exact: true }).click();
+      const picker = page.getByRole('dialog', { name: '从图库选片', exact: true });
+      for (const asset of assets) await picker.getByRole('checkbox', { name: `选择照片 ${asset.id}`, exact: true }).check();
+      await picker.getByRole('button', { name: '加入当前图集（3 张）', exact: true }).click();
+      await page.getByRole('navigation', { name: '图集编辑内容', exact: true }).getByRole('button', { name: '图集设置', exact: true }).click();
       await page.getByRole('combobox', { name: '独立封面', exact: true }).selectOption(assets.find(a => a.orientation === 'landscape').id);
       await page.getByRole('combobox', { name: '星图重点照片', exact: true }).selectOption(assets.find(a => a.orientation === 'portrait').id);
       premiumSaved = await save('premium-polaroid');
@@ -136,17 +147,18 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
       await page.goto(`${origin}/${a}/admin/preview/premium-polaroid`);
       await images(); await shot('03-premium-home');
       await page.getByRole('button', { name: /进入图集：Anonymous/ }).click();
-      await page.getByRole('button', { name: '散落', exact: true }).waitFor();
+      const savedPreview = page.locator('[data-site-premium]');
+      await savedPreview.getByRole('button', { name: '散落', exact: true }).waitFor();
       for (const mode of ['星座', '散落', '跨页']) {
-        await page.getByRole('button', { name: mode, exact: true }).click();
-        assert.equal(await page.getByRole('button', { name: mode, exact: true }).getAttribute('aria-pressed'), 'true');
+        await savedPreview.getByRole('button', { name: mode, exact: true }).click();
+        assert.equal(await savedPreview.getByRole('button', { name: mode, exact: true }).getAttribute('aria-pressed'), 'true');
         await images(); await shot(`03-${mode}`);
       }
-      await page.getByRole('button', { name: '切换到夜空', exact: true }).click();
-      await page.getByRole('button', { name: '切换到纸面', exact: true }).waitFor();
+      await savedPreview.getByRole('button', { name: '切换到夜空', exact: true }).click();
+      await savedPreview.getByRole('button', { name: '切换到纸面', exact: true }).waitFor();
       await shot('03-night');
-      await page.getByRole('button', { name: '散落', exact: true }).click();
-      await page.getByRole('button', { name: /查看第 1 张照片/ }).click();
+      await savedPreview.getByRole('button', { name: '散落', exact: true }).click();
+      await savedPreview.getByRole('button', { name: /查看第 1 张照片/ }).click();
       await page.getByRole('dialog', { name: /第 \d+ 张照片预览/ }).waitFor(); await images(); await shot('03-lightbox');
       await page.keyboard.press('Escape');
       await page.getByRole('dialog', { name: /第 \d+ 张照片预览/ }).waitFor({ state: 'hidden' });
@@ -155,11 +167,12 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
       for (const width of [390, 320]) {
         await page.setViewportSize({ width, height: 844 });
         await page.goto(`${origin}${basic}/layout`);
+        await expandTools('上传素材与排版建议');
         await page.getByLabel('上传本站照片', { exact: true }).waitFor();
         await images({ editor: true }); await shot('04-basic-mobile');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 2), false, `Basic editor overflow at ${width}`);
-        await page.goto(`${origin}${premium}`);
-        await page.getByRole('button', { name: '图集管理', exact: true }).click();
+        await page.goto(`${origin}${premium}#edit-collections`);
+        await page.getByRole('navigation', { name: '图集编辑内容', exact: true }).getByRole('button', { name: '图集设置', exact: true }).click();
         await page.getByLabel('图集名称', { exact: true }).waitFor();
         assert.equal(await page.getByLabel('图集名称', { exact: true }).inputValue(), 'Anonymous landscape portrait square');
         await shot('04-premium-mobile');

@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import type { TemplateId, Work } from "../site-config";
 import TemplateRenderer from "../templates/template-renderer";
 import Lightbox from "../templates/shared/lightbox";
 import { useTemplateInteractions } from "../templates/shared/use-template-interactions";
 import { useAdmin } from "./admin-provider";
+import { PlatformAssetContext } from "../templates/shared/asset-context";
 import type { DraftPreviewScope } from "./draft-preview";
 import styles from "./template-preview-dialog.module.css";
 
@@ -49,7 +51,9 @@ export default function TemplatePreviewDialog({
   draftScope?: DraftPreviewScope;
   onRequestClose: () => void;
 }>) {
-  const { content } = useAdmin();
+  const { content, siteScope } = useAdmin();
+  const platformAssets = useMemo(() => siteScope ? new Map(content.social.flatMap(s => s.qrAssetId
+    ? [[s.qrAssetId, `${siteScope.assetsEndpoint}/${s.qrAssetId}/full`] as const] : [])) : null, [content.social, siteScope]);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const {
     activeWork,
@@ -92,7 +96,10 @@ export default function TemplatePreviewDialog({
     else onRequestClose();
   };
 
-  return (
+  // Native top-layer placement does not remove DOM ancestors. Mount outside
+  // the editor so its navigation/link styles cannot change preview content.
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <dialog
       ref={dialogRef}
       className={styles.dialog}
@@ -120,6 +127,8 @@ export default function TemplatePreviewDialog({
         <button type="button" onClick={closePreview}>退出预览 ×</button>
       </div>
       <div className={styles.surface}>
+        <div className={styles.scrollport} data-preview-scrollport>
+        <PlatformAssetContext.Provider value={platformAssets}>
         <TemplateRenderer
           key={`${templateId}-${mappingSignature(works)}`}
           templateId={templateId}
@@ -145,7 +154,10 @@ export default function TemplatePreviewDialog({
             onClose={() => setActiveWork(null)}
           />
         ) : null}
+        </PlatformAssetContext.Provider>
+        </div>
       </div>
-    </dialog>
+    </dialog>,
+    document.body,
   );
 }

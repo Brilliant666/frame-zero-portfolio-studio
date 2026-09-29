@@ -1,5 +1,5 @@
 import { accountJson } from "../../db/accounts/http.mjs";
-import { AssetError, UUID, assetDto, readAssetVariant, uploadAsset } from "../../db/accounts/assets.mjs";
+import { AssetError, UUID, siteAssetDto as assetDto, readAssetVariant, uploadAsset } from "../../db/accounts/assets.mjs";
 import { authorizeEditor } from "./server";
 
 export async function handleAssetsRequest(request: Request, slug: string, id?: string, variant?: string) {
@@ -20,8 +20,8 @@ export async function handleAssetsRequest(request: Request, slug: string, id?: s
       } });
     }
     if (request.method === "GET") {
-      const result = await runtime.pool.query("SELECT * FROM site_assets WHERE site_id=$1 ORDER BY created_at,id LIMIT 10000", [account.site.id]);
-      return accountJson({ version: 1, assets: result.rows.map((row: Parameters<typeof assetDto>[0]) => assetDto(row, slug)) });
+      const result = await runtime.pool.query("SELECT * FROM site_assets WHERE site_id=$1 ORDER BY created_at,id LIMIT 10001", [account.site.id]);
+      return accountJson({ version: 1, truncated: result.rows.length > 10000, assets: result.rows.slice(0, 10000).map((row: Parameters<typeof assetDto>[0]) => assetDto(row, slug)) });
     }
     if (request.method === "POST") {
       const result = await uploadAsset(request, runtime.pool, account.site.id);

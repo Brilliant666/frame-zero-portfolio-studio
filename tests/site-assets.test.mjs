@@ -4,8 +4,20 @@ import { mkdtemp, rm, readdir, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import sharp from 'sharp';
-import { assetPath, assetDto, boundedBody, safeFilename, uploadAsset, MAX_UPLOAD_BYTES } from '../db/accounts/assets.mjs';
+import { assetPath, assetDto, siteAssetDto, boundedBody, safeFilename, uploadAsset, MAX_UPLOAD_BYTES } from '../db/accounts/assets.mjs';
 const site = '12345678-1234-4234-8234-123456789abc';
+
+test('Site DTO emits admission time without exposing storage or upload metadata', () => {
+  const row = { id: site, width: 900, height: 600, created_at: new Date('2026-09-28T08:10:12.123Z'), digest: 'private-digest', original_type: 'image/jpeg', variants: Object.fromEntries(['thumbnail', 'card', 'full', 'original'].map(kind => [kind, { width: 900, height: 600, bytes: 100, key: '/private/original.jpg' }])) };
+  const dto = siteAssetDto(row, 'owner-a');
+  assert.equal('createdAt' in assetDto(row, 'owner-a'), false, 'Public asset DTO retains its original metadata boundary');
+  assert.equal(dto.createdAt, '2026-09-28T08:10:12.123Z');
+  assert.deepEqual(Object.keys(dto).sort(), ['aspectRatio', 'createdAt', 'id', 'orientation', 'variants']);
+  assert.deepEqual(Object.keys(dto.variants).sort(), ['card', 'full', 'thumbnail']);
+  assert.equal(JSON.stringify(dto).includes('private'), false);
+  assert.equal(siteAssetDto({ ...row, created_at: '2026-09-28T16:10:12.123+08:00' }, 'owner-a').createdAt, dto.createdAt);
+  assert.equal('createdAt' in siteAssetDto({ ...row, created_at: undefined }, 'owner-a'), false);
+});
 
 test('Site storage keys and filename reject traversal, local paths and unsafe names', () => {
   for (const name of ['../a.png', ['C:', 'photo.png'].join('\\'), '%00a.png', '..']) assert.throws(() => safeFilename(name));

@@ -1,69 +1,57 @@
 # 当前检查点
 
-更新：2026-09-28。五分钟入口：[AGENTS](../AGENTS.md) → 本页 →
-[SESSION_HANDOFF](SESSION_HANDOFF.md)。旧阶段报告只记录当时事实，不构成今天的门禁。
+更新：2026-09-29。[AGENTS](../AGENTS.md) → 本页 → [SESSION_HANDOFF](SESSION_HANDOFF.md)。
+本轮已收口：[图库、图集与本机交付总结](PR33_LOCAL_UX_CLOSEOUT.md)。产品版本 `2a03913` 已经用户授权更新到 3001，3003 保留同版候选；仅本机交付，不合并。
+当前交互：[图集整卡拖动](PR33_CARD_DRAG.md)，排序区去除批量工具栏/选择框/手柄，保留触屏长按、键盘、放大及撤销；替代原批量精确排序界面。
+当前新增：[图库到图集的创建流程](PR33_ALBUM_CREATION_FLOW.md)，按“图库 → 图集”导航和命名后直接选片实施。运行与最终 CI 以本机交接和最新 Head 为准。
+本次切片：[本站图库、图集库与精确排序](PR33_LIBRARY_WORKSPACE.md)。布局与长图集排序按实际体验重做；运行切换状态以本机交接现场记录为准。
+历史切片：[高级图集直接排序与即时效果](PR33_COLLECTION_ORDER.md)。最终界面以整卡拖动和本轮收口记录为准。
+当前任务：**PR33_ADMIN_UX_A_B_C**，实施与未完成验收见 [后台体验记录](PR33_ADMIN_UX.md)。前次任务：**PR33_UNATTENDED_FUNCTIONAL_CLOSURE**，范围和切片证据统一记在
+[PR33 功能收口记录](PR33_FUNCTIONAL_CLOSURE.md)。旧交接的“只做选片／逐项等待”已由用户本轮授权替代。
 
-## 已接受的功能基线
+## 当前研发状态
 
-PR28–31 已合并：真实账号与 Site 授权、两个独立内容空间、本站资源、
-高级拍立得草稿/发布/历史/回退。PR32 两轮 UI 已获用户接受：基础六分区、
-高级四分区，以及平台首页、登录和站点工作台的第一轮整理。
-这不是“所有后台体验问题已解决”，也不是 V1 上线。
+[PR #33](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/33)，
+`codex/premium-photo-picker`，保持 **OPEN + DRAFT**，不合并。
+基础发布、保存并发布、同地址展示切换、可选联系卡和基础图库真实时间排序已实现。
+本机完整门禁 596 项、lint、真实 PostgreSQL 与浏览器 31/31 通过；11 模板矩阵完成。
+上述功能闭环基线 SHA：`6785bdfcbd39c834e3a660808b9f0796fb2975ec`。当前产品 SHA：`2a0391344f46f2c0e1c2719b09c694dd9dedefb1`；五项远端检查通过，包含最新拖动浏览器回归。
+最终远端五项 CI 必须查看 PR 对应 Head，不能引用起始提交的旧检查；人工视觉接受仍待确认。
+隔离验收已在 `http://127.0.0.1:3004/login` 运行，账号和私有凭据位置见收口记录。
 
-| 能力 | 实现与证据层级 | 仍有的边界 |
-| --- | --- | --- |
-| 账号、Site、模板授权 | IMPLEMENTED / VERIFIED_IN_CI / VERIFIED_LOCALLY | 本机 star、phototest 是模拟账号；不是实际客户认证 |
-| 基础/高级独立编辑、保存、CAS、私人预览 | 同上；复用真实编辑器，隔离 PG 验证跨 Site 拒绝和重启持久化 | 保存不发布，两套业务资料不自动同步 |
-| Site 资源及既有展示图接入 | 同上；归属校验、隔离上传回归、本机展示图可读 | 未完成完整原图归档、回收及大库体验 |
-| 高级拍立得发布、历史、回退 | 同上；公开页只读 Published | 基础模板发布未接线 |
-| 后台与入口 UI 第一轮 | IMPLEMENTED / VERIFIED_LOCALLY；37 项定向测试、27 项隔离 PG 集成、1440/390/320 有界面检查 | 搜索批选、分享卡新增替换、预览呈现统一另行确定 |
-| 公网服务、真实客户交付 | 未验证、未授权 | REMOTE_DEPLOYMENT = NOT_AUTHORIZED；V1_LAUNCHED = NO |
+| 能力 | 当前事实 |
+| --- | --- |
+| 账号、Site、模板授权、本站资源 | 原已接受基线；本机模拟验证，不是实际客户验证 |
+| 基础／高级内容 | 11 套基础模板共用基础内容；高级独立资料、套餐、联系、图集与版本；仅同 Site 共享资源 |
+| 保存与发布 | 普通保存及 Ctrl/Cmd+S 只保存草稿；保存并发布明确更新唯一 Published 指针 |
+| 唯一公开地址 | `/:siteSlug` 按 Published 空间和模板渲染；切后台、选模板和保存均不切换公开页 |
+| 联系卡 | 文字／网址独立可用，图片可选；替换／移除只改本空间引用，不删除底层资源 |
+| 预览 | 当前内存编辑、本人已保存草稿、访客 Published 保持三种来源 |
+| 高级选片 | 保留 48 张分页、跨页多选、按选择顺序追加、去重、500 上限和冲突保护 |
 
-## 版本和运行事实的定位
+## 日常与授权边界
 
-- PR30 Squash：`4abf530b35d3a063180fbadd689b609d97288ead`。
-- PR31 Squash：`20d87433eb140f3d48ecec5fa175f0d72895ee53`；五项 main push 检查成功。
-- [PR32](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/32) 是本次接受/收口记录。
-  **其最终评论记录实际最终 Head、Squash、五项 main push 运行和 3001 切换结果**；
-  这些结果只能在操作完成后记录，不用 PR 测试 merge SHA 冒充 Squash。
-- 日常入口为 `http://127.0.0.1:3001/`；3003 只作候选验收，不能同时称为日常权威。
-  两者使用同一本机业务库，不是两个沙盒，也不是 Cookie 隔离边界。
-- 实际运行版本、3003 是否停止、目录、备份和恢复命令在仓库外
-  `%LOCALAPPDATA%/PortfolioPlatform/local-m3/SESSION_HANDOFF.local.md`。
-  PID 和运行状态需现场复核；仅连接 GitHub 时不得声称已验证本机。
-- 主 checkout、历史工作分支、实际服务目录可能不同。先查 Git/进程，不擅自切分支或覆盖运行构建。
+日常 3001 已按本轮明确授权更新到 PR33 `2a03913`，备份后复用已验证构建；无新增迁移，原 `ea76e48` 构建保留用于应用回退。
+本次 3003 使用独立构建副本、独立 PG 55435 和匿名测试素材。原 3004 与日常业务库均受保护。
+后台体验 A/B/C 已实现；75 项相关测试和独立 API 回归通过，同数据截图已完成。真实手机软键盘、基础跨空间确认框后的浏览器路径仍待人工验收，不能算全部通过。
 
-## 当前未完成与下一步
+用户已授权本 PR 内连续实现、测试、提交、推送和更新描述；
+**本轮 3001 切换已获授权并完成；未授权后续日常替换、Ready、Approve、Merge、auto-merge、main 修改、真实迁移或远程部署。**
+历史 site-content-integration 未提交编辑、私人照片、数据库、草稿和 Published 指针受保护。
 
-详见 [交接问题表](SESSION_HANDOFF.md#已知问题与最多三个候选)。最多三个候选是：
-图集选片/本站图库、分享卡与预览接线、基础模板发布。它们只是建议，不是执行授权。
-本轮不再为微小字节告警压缩产品；预算政策见 [README](../README.md)。
+`HUMAN_VISUAL_APPROVAL = PENDING` · `DAILY_3001 = UPDATED_2a03913` ·
+`DAILY_DATA_AND_PUBLISHED = UNCHANGED` · `REMOTE_DEPLOYMENT = NOT_AUTHORIZED` · `V1_LAUNCHED = NO`。
+远程交付门禁继续为 `EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED`；本地研发授权不替代该审批。
+已有仓库侧部署准备仍为 `REPO_SIDE_BOOTSTRAP_READY`、`NOT_ONLINE_PREVIEW`；
+`Remote deployment: FROZEN / NOT_AUTHORIZED`。
 
-## 当前权限终点
+## 暂缓
 
-`PRODUCT_DELIVERY_MISSION_02` 保留为产品研发原则，但本次
-`PR32_CLOSEOUT_AND_NEW_SESSION_HANDOFF` 的“交接完成后停下”优先。
-本次只授权 PR32 收口、main 验证、日常切换和必要文档补记。
-**新对话恢复上下文后等待用户选择任务，不自动实现候选，不继承合并权限。**
+资源回收／永久删除、完整原图补档、公网部署与真实客户交付未实施。
+不重做 Auth POC、Docker 排障、开户、历史图库迁移或微小预算压缩。
+小改动采用相称验证，不要求每个按钮改字都重审整个发布系统。
 
-```text
-NEXT_PRODUCT_IMPLEMENTATION = NOT_STARTED
-REAL_STAR_PROVISIONING = LOCAL_SIMULATED_ACCOUNT_ONLY
-REMOTE_DEPLOYMENT = NOT_AUTHORIZED
-V1_LAUNCHED = NO
-Remote deployment: FROZEN / NOT_AUTHORIZED
-External deployment gate: EXTERNAL_DEPLOYMENT_APPROVAL_REQUIRED
-Online status: NOT_ONLINE_PREVIEW
-Repository deployment packaging: REPO_SIDE_BOOTSTRAP_READY
-```
-
-不重复 Auth POC、Docker 排障、开户、图库导入或旧预算清零；不修改真实资料、
-不自动发布或迁移。私人 photos、SQLite、环境和凭据不入库；只按具体路径暂存。
-
-## 细节记录
-
-[账号](LOCAL_ACCOUNT_FOUNDATION.md) · [M2](M2_SITE_CONTENT_EDITOR.md) ·
-[M3](M3_SITE_ASSETS.md) · [本机验收](LOCAL_M3_HANDS_ON_ACCEPTANCE.md) ·
-[高级发布](M4_PREMIUM_PUBLICATION.md) · [UI 验证](ADMIN_WORKSPACE_LAYOUT.md) ·
-[North Star](PORTFOLIO_PLATFORM_NORTH_STAR.md) · [路线图](SELF_HOSTED_V1_ROADMAP.md)。
-本机完整审查报告和截图位于上述私有运维目录，不复制到公共仓库。
+[North Star](PORTFOLIO_PLATFORM_NORTH_STAR.md) · [路线图](SELF_HOSTED_V1_ROADMAP.md) ·
+[发布](M4_PREMIUM_PUBLICATION.md) · [选片](PREMIUM_PHOTO_PICKER.md) · [后台](ADMIN_WORKSPACE_LAYOUT.md)。
+运行目录、私有备份、凭据位置和恢复命令见仓库外
+`%LOCALAPPDATA%/PortfolioPlatform/local-m3/SESSION_HANDOFF.local.md`，PID 必须现场复核。

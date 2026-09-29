@@ -25,7 +25,7 @@ export function BasicEditorSectionView({ section }: { section: BasicEditorSectio
 }
 
 export function BasicEditorLayout({ siteScope, children }: { siteScope: SiteEditorScope; children: ReactNode }) {
-  return <AdminProvider siteScope={siteScope} initialContent={createEmptyBasicContent()} editorLabel="本站基础版独立草稿" localPhotoImportOrigin={null} localPhotoImportState="hosted">
+  return <AdminProvider key={siteScope.endpoint} siteScope={siteScope} initialContent={createEmptyBasicContent()} editorLabel="本站基础版独立草稿" localPhotoImportOrigin={null} localPhotoImportState="hosted">
     <AdminShell>{children}</AdminShell>
   </AdminProvider>;
 }

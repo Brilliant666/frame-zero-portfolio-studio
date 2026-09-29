@@ -25,8 +25,8 @@ export function AdminSection({
       aria-labelledby={headingId}
       aria-busy={busy}
     >
-      <header className={styles.sectionHeader}>
-        <div>
+      <header className={siteScope ? styles.siteSectionHint : styles.sectionHeader}>
+        <div className={siteScope ? "sr-only" : undefined}>
           <span>{eyebrow}</span>
           <h2 id={headingId}>{title}</h2>
         </div>

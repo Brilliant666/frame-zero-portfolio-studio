@@ -5,6 +5,8 @@ import path from "node:path";
 import test from "node:test";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
+import vm from "node:vm";
+import { createRequire } from "node:module";
 
 const sources = [
   ["app/template-composition/contract.ts", "contract.mjs"],
@@ -373,4 +375,47 @@ test("preview modules separate photo-free template structures from layout-only d
   assert.doesNotMatch(`${draftPreview}\n${draftPreviewDialog}\n${templatePreviewDialog}`, /fetch\(|method:\s*"PUT"|setContent|planTemplateCompositionPreview/);
   assert.doesNotMatch(layoutPreview, /method:\s*"PUT"|\/api\/site-content/);
   assert.doesNotMatch(layoutPreview, /TemplateRenderer|Lightbox|useTemplateInteractions/);
+});
+
+test("current preview portals outside editor ancestors while retaining content context and close behavior", async () => {
+  const nodeRequire = createRequire(import.meta.url);
+  const source = await readSource("app/admin/template-preview-dialog.tsx");
+  const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText;
+  const body = { nodeType: 1 }, content = { profile: { photographer: "Unsaved context" }, social: [], packages: [], bookingFields: [], templateWorks: {} };
+  const Renderer = () => null, Provider = () => null;
+  let closed = 0;
+  const run = document => {
+    const loadedModule = { exports: {} };
+    vm.runInNewContext(compiled, {
+      module: loadedModule, exports: loadedModule.exports, ...(document ? { document } : {}),
+      require: id => {
+        if (id === "react") return { useMemo: fn => fn(), useCallback: fn => fn, useRef: () => ({ current: null }), useEffect: () => {} };
+        if (id === "react-dom" || id === "react/jsx-runtime") return nodeRequire(id);
+        if (id === "./admin-provider") return { useAdmin: () => ({ content, siteScope: { assetsEndpoint: "/api/sites/fixture/assets" } }) };
+        if (id.includes("use-template-interactions")) return { useTemplateInteractions: () => ({ activeWork: null, setActiveWork: () => {}, lightboxWorks: [] }) };
+        if (id.includes("asset-context")) return { PlatformAssetContext: { Provider } };
+        if (id.endsWith(".css")) return { default: new Proxy({}, { get: (_, key) => String(key) }) };
+        return { default: Renderer };
+      },
+    });
+    return loadedModule.exports.default({ templateId: "archive-os", works: [], title: "当前草稿预览", description: "内存草稿", previewSource: "draft", draftScope: "admin", onRequestClose: () => closed++ });
+  };
+  assert.equal(run(undefined), null, "server rendering must not access document.body");
+  const portal = run({ body });
+  assert.equal(portal.containerInfo, body, "real React portal must target body rather than the workspaceContext navigation ancestor");
+  const dialog = portal.children;
+  assert.equal(dialog.type, "dialog");
+  assert.equal(dialog.props["data-admin-draft-preview-dialog"], "true");
+  assert.equal(dialog.props["aria-label"], "当前草稿预览");
+  const elements = [];
+  const walk = value => { if (Array.isArray(value)) value.forEach(walk); else if (value?.props) { elements.push(value); walk(value.props.children); } };
+  walk(dialog);
+  const renderer = elements.find(element => element.type === Renderer);
+  assert.equal(renderer.props.content.profile, content.profile, "the body portal still receives the current editor context snapshot");
+  assert.equal(elements.filter(element => element.type === Provider).length, 1, "Site resource context stays inside the portal");
+  dialog.props.onClose();
+  assert.equal(closed, 1, "native dialog close still delegates to the trigger's focus-return handler");
+  const trigger = await readSource("app/admin/draft-preview.tsx");
+  assert.match(trigger, /requestAnimationFrame\(\(\) => triggerRef\.current\?\.focus\(\)\)/);
+  assert.match(source, /dialog\.showModal\(\)/, "moving the DOM parent must retain native modal behavior");
 });

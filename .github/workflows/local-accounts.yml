@@ -12,7 +12,7 @@ concurrency:
 jobs:
   postgres-integration:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     services:
       postgres:
         image: postgres:17.6-alpine
@@ -43,11 +43,15 @@ jobs:
           FRAME_ZERO_ACCOUNT_SECRET: isolated-ci-account-test-secret-never-used-outside-tests-2026
           FRAME_ZERO_ACCOUNT_ORIGIN: http://127.0.0.1:3004
           FRAME_ZERO_EDITOR_BROWSER_SMOKE: '1'
+          FRAME_ZERO_PUBLICATION_BROWSER_SMOKE: '1'
+          FRAME_ZERO_BROWSER_OUTPUT_DIR: ${{ runner.temp }}/site-publication-browser
       - name: Anonymous browser acceptance evidence (no traces or credentials)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: site-editor-browser-${{ github.run_id }}-${{ github.run_attempt }}
-          path: outputs/site-editor-browser/
+          path: |
+            outputs/site-editor-browser/
+            ${{ runner.temp }}/site-publication-browser/
           if-no-files-found: warn
           retention-days: 14

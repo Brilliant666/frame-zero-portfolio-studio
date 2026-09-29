@@ -328,10 +328,10 @@ export default function ArchiveOsTemplate({
           <h2 id="archive-booking-heading">创建一条新的<br />拍摄任务。</h2>
           <p>{content.profile.intro} 告诉我角色与画面目标，我们从同一份清晰的任务档案开始。</p>
           <div className={styles.contactActions}>
-            <button type="button" onClick={() => void onCopy(content.contact.wechat, "archive-wechat")}>
+            {content.contact.wechat.trim() && (<button type="button" onClick={() => void onCopy(content.contact.wechat, "archive-wechat")}>
               <small>WECHAT / COPY ID</small><strong>{content.contact.wechat}</strong><span>{copiedKey === "archive-wechat" ? "COPIED ✓" : "COPY ↗"}</span>
-            </button>
-            <a href={`mailto:${content.contact.email}`}><small>EMAIL / NEW MESSAGE</small><strong>{content.contact.email}</strong><span>OPEN ↗</span></a>
+            </button>)}
+            {content.contact.email.trim() && (<a href={`mailto:${content.contact.email}`}><small>EMAIL / NEW MESSAGE</small><strong>{content.contact.email}</strong><span>OPEN ↗</span></a>)}
           </div>
           <p className={styles.note}>{content.contact.note}</p>
           <PlatformAccounts accounts={content.social} tone="dark" />

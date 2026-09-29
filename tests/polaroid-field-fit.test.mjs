@@ -417,10 +417,13 @@ test("contact Admin keeps WeChat, Email, and note while normalizing safe platfor
     fs.readFile(new URL("../app/admin/admin-v2.module.css", import.meta.url), "utf8"),
   ]);
   const contactStart = editor.indexOf('<FormGroup title="联系方式"');
-  const platformStart = editor.indexOf("title=\"平台账号与二维码\"");
+  const platformStart = editor.indexOf('title={siteScope ? "平台账号与可选联系卡" : "平台账号与二维码"}');
   assert.notEqual(contactStart, -1);
   assert.notEqual(platformStart, -1);
   assert.ok(contactStart < platformStart, "the shared contact fields stay in the primary Admin section");
+  assert.ok(editor.includes("文字账号、主页网址和图片卡均可独立使用或组合，也可留空"), "Site contact cards are optional, with independent text and URL entries");
+  assert.ok(editor.includes("<SiteContactCard"), "Site entries use the owned resource picker instead of the legacy QR upload");
+  assert.ok(editor.includes("setContactCardReference(current.social, item, assetId)"), "card replacement binds the actual social entry rather than a reusable row index");
   const contactFields = editor.slice(contactStart, platformStart);
   assert.ok(contactFields.includes('label="微信号"'));
   assert.ok(contactFields.includes("content.contact.wechat"));
@@ -432,7 +435,7 @@ test("contact Admin keeps WeChat, Email, and note while normalizing safe platfor
   assert.ok(!editor.includes("findQqContact"));
   assert.ok(!editor.includes("isQqSocialEntry"));
   assert.ok(!editor.includes("updateQqContact"));
-  assert.ok(!editor.includes("<details"), "shared contact fields are not hidden behind template-specific UI");
+  assert.ok(!contactFields.includes("<details"), "primary shared contact fields remain directly available; optional platform entries may use disclosures");
   assert.ok(!editor.includes("其他模板兼容内容"));
 
   assert.ok(editor.includes("const MAX_SOCIAL_LINKS = 8"));

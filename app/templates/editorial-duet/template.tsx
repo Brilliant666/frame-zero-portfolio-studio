@@ -271,16 +271,16 @@ export default function EditorialDuetTemplate({
           <p className={styles.bookingIntro}>告诉我角色、日期和你脑海里的那一幕。复制清单并通过微信或邮箱发送，即可开始第一次沟通。</p>
 
           <div className={styles.directContact}>
-            <button type="button" onClick={() => void onCopy(content.contact.wechat, "editorial-wechat")}>
+            {content.contact.wechat.trim() && (<button type="button" onClick={() => void onCopy(content.contact.wechat, "editorial-wechat")}>
               <span>WECHAT</span>
               <strong>{content.contact.wechat}</strong>
               <b aria-live="polite">{copiedKey === "editorial-wechat" ? "COPIED ✓" : "COPY ↗"}</b>
-            </button>
-            <a href={`mailto:${content.contact.email}`}>
+            </button>)}
+            {content.contact.email.trim() && (<a href={`mailto:${content.contact.email}`}>
               <span>EMAIL</span>
               <strong>{content.contact.email}</strong>
               <b>WRITE ↗</b>
-            </a>
+            </a>)}
           </div>
           <small className={styles.contactNote}>{content.contact.note}</small>
           <PlatformAccounts accounts={content.social} tone="light" />
@@ -307,7 +307,7 @@ export default function EditorialDuetTemplate({
       </footer>
 
       <div className={styles.mobileBar} aria-label="手机快捷约拍">
-        <button type="button" onClick={() => void onCopy(content.contact.wechat, "editorial-mobile")}>{copiedKey === "editorial-mobile" ? "微信号已复制 ✓" : "复制微信号"}</button>
+        {content.contact.wechat.trim() && (<button type="button" onClick={() => void onCopy(content.contact.wechat, "editorial-mobile")}>{copiedKey === "editorial-mobile" ? "微信号已复制 ✓" : "复制微信号"}</button>)}
         <a href="#editorial-booking">开始约拍 ↗</a>
       </div>
     </main>

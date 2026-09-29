@@ -103,7 +103,7 @@ async function saveDraft(slug, space, cookie, content, expectedRevision) {
   return request(draftPath(slug, space), { cookie, method: 'PUT', body: { content, expectedRevision } });
 }
 
-test('real PostgreSQL and Standard Next account boundary', { timeout: 1080000 }, async t => {
+test('real PostgreSQL and Standard Next account boundary', { timeout: 1800000 }, async t => {
   assetRoot = await mkdtemp(path.join(tmpdir(), 'site-assets-integration-'));
   t.after(async () => { await stopServer(); await runtime.pool.end(); await rm(assetRoot, { recursive: true, force: true }); });
   await migrateAccounts(config);
@@ -113,6 +113,10 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1080000 },
     await migrateAccounts(config);
     const after = await runtime.pool.query('SELECT * FROM drizzle.__drizzle_migrations ORDER BY id');
     assert.deepEqual(after.rows, before.rows);
+  });
+  await t.test('premium-history database upgrade and independent basic publication authority', async () => {
+    const { basicPublicationDatabaseIntegration } = await import('./basic-publication-database-integration.mjs');
+    await basicPublicationDatabaseIntegration({ runtime });
   });
   await t.test('concurrent provision is idempotent; conflicts cannot overwrite', async () => {
     const outcomes = await Promise.all([provisionAccount(runtime, input('fixturealpha', true)), provisionAccount(runtime, input('FIXTUREALPHA', true))]);
@@ -415,6 +419,18 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1080000 },
       await siteAssetsBrowserSmoke({ origin: config.origin, password, signal: browserTest.signal, restart: async () => { await stopServer(); await startServer(); } });
     });
   }
+  if (process.env.FRAME_ZERO_PICKER_BROWSER_SMOKE === '1' || process.env.FRAME_ZERO_EDITOR_BROWSER_SMOKE === '1') {
+    await t.test('real browser premium photo picker on 500 isolated Site assets', { timeout: 300000 }, async browserTest => {
+      const { sitePhotoPickerBrowserSmoke } = await import('./site-photo-picker-browser-smoke.mjs');
+      await sitePhotoPickerBrowserSmoke({ runtime, origin: config.origin, password, assetRoot, signal: browserTest.signal });
+    });
+  }
+  if (process.env.FRAME_ZERO_PUBLICATION_BROWSER_SMOKE === '1') {
+    await t.test('real browser publication flow, optional cards and eleven-template preview matrix', { timeout: 1600000 }, async browserTest => {
+      const { sitePublicationBrowserSmoke } = await import('./site-publication-browser-smoke.mjs');
+      await sitePublicationBrowserSmoke({ runtime, origin: config.origin, password, signal: browserTest.signal });
+    });
+  }
   await t.test('real PostgreSQL Site asset upload, access and reference boundaries', { timeout: 180000 }, async () => {
     const { siteAssetsIntegration } = await import('./site-assets-integration.mjs');
     await siteAssetsIntegration({ runtime, origin: config.origin, password, restart: async () => { await stopServer(); await startServer(); } });
@@ -426,6 +442,10 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1080000 },
   await t.test('publication snapshots, rollback and Site boundaries', { timeout: 180000 }, async () => {
     const { publicationIntegration } = await import('./site-publication-integration.mjs');
     await publicationIntegration({ runtime, origin: config.origin, password, restart: async () => { await stopServer(); await startServer(); } });
+  });
+  await t.test('eleven basic templates publish through one Site pointer with independent permissions', { timeout: 180000 }, async () => {
+    const { basicPublicationHttpIntegration } = await import('./basic-publication-http-integration.mjs');
+    await basicPublicationHttpIntegration({ runtime, origin: config.origin, password });
   });
   await t.test('local acceptance shortcuts require owner, grant and explicit runtime switch', async () => {
     const previous = process.env.FRAME_ZERO_LOCAL_ACCEPTANCE;

@@ -431,14 +431,14 @@ export default function NeonHudTemplate({
         <div className={styles.bookingGrid}>
           <div className={styles.contactPanel}>
             <div className={styles.panelBar}><span>DIRECT_CHANNELS.SYS</span><i>ONLINE</i></div>
-            <button type="button" onClick={() => void onCopy(content.contact.wechat, "hud-wechat")}>
+            {content.contact.wechat.trim() && (<button type="button" onClick={() => void onCopy(content.contact.wechat, "hud-wechat")}>
               <span><small>WECHAT / 点击复制</small><strong>{content.contact.wechat}</strong></span>
               <b aria-live="polite">{copiedKey === "hud-wechat" ? "COPIED ✓" : "COPY ↗"}</b>
-            </button>
-            <a href={`mailto:${content.contact.email}`}>
+            </button>)}
+            {content.contact.email.trim() && (<a href={`mailto:${content.contact.email}`}>
               <span><small>EMAIL / 发送邮件</small><strong>{content.contact.email}</strong></span>
               <b>OPEN ↗</b>
-            </a>
+            </a>)}
             <PlatformAccounts accounts={content.social} tone="dark" />
           </div>
 
@@ -461,7 +461,7 @@ export default function NeonHudTemplate({
       </section>
 
       <div className={styles.mobileBar} aria-label="手机快捷约拍">
-        <button type="button" onClick={() => void onCopy(content.contact.wechat, "hud-mobile")}>{copiedKey === "hud-mobile" ? "微信号已复制 ✓" : "复制微信号"}</button>
+        {content.contact.wechat.trim() && (<button type="button" onClick={() => void onCopy(content.contact.wechat, "hud-mobile")}>{copiedKey === "hud-mobile" ? "微信号已复制 ✓" : "复制微信号"}</button>)}
         <a href="#hud-contact">启动约拍任务 ↗</a>
       </div>
     </main>

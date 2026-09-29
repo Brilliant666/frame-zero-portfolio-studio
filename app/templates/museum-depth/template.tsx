@@ -137,8 +137,8 @@ export default function MuseumDepthTemplate({ content, works, packages, bookingT
       <section id="museum-visit" className={styles.visit} data-template-view="contact" hidden={activeView !== "contact"} tabIndex={-1}>
         <div className={styles.visitCopy}>
           <span>03 / PLAN YOUR VISIT</span><h2>预约一次<br />私人展览。</h2><p>{content.contact.note}</p>
-          <button type="button" onClick={() => void onCopy(content.contact.wechat, "museum-wechat")}><small>WECHAT / 点击复制</small><strong>{copiedKey === "museum-wechat" ? "已复制 ✓" : content.contact.wechat}</strong></button>
-          <a href={`mailto:${content.contact.email}`}><small>EMAIL</small><strong>{content.contact.email}</strong></a>
+          {content.contact.wechat.trim() && (<button type="button" onClick={() => void onCopy(content.contact.wechat, "museum-wechat")}><small>WECHAT / 点击复制</small><strong>{copiedKey === "museum-wechat" ? "已复制 ✓" : content.contact.wechat}</strong></button>)}
+          {content.contact.email.trim() && (<a href={`mailto:${content.contact.email}`}><small>EMAIL</small><strong>{content.contact.email}</strong></a>)}
           <PlatformAccounts accounts={content.social} tone="dark" />
         </div>
         <div className={styles.requestForm}>

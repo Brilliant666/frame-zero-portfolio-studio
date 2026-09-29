@@ -1,119 +1,71 @@
-# 新会话交接指南
+# 会话交接
 
-更新：2026-09-28。五分钟阅读路径：
-[AGENTS](../AGENTS.md) → [CURRENT_STATUS](CURRENT_STATUS.md) → 本文。
-然后按本次任务读取相关模块或 Accepted ADR；不要求先读完全部历史。
-本轮交接完成后等待用户选择下一项，不自动开始下列建议。
+更新：2026-09-29。当前收口：[图库、图集与本机交付总结](PR33_LOCAL_UX_CLOSEOUT.md)。3001 已按用户本轮授权更新到 `2a03913`，原数据和 Published 保持；本机测试凭据已按要求调整，详情只在私有交接中。
+先读 [AGENTS](../AGENTS.md)、[CURRENT_STATUS](CURRENT_STATUS.md)，
+当前交互以 [图集整卡拖动](PR33_CARD_DRAG.md) 为准，旧批量精确排序界面已按用户要求简化。
+当前新增 [图库到图集的创建流程](PR33_ALBUM_CREATION_FLOW.md)：图库优先，图集新建先命名再自动选片，保留原保存与发布逻辑。
+本次进展见 [本站图库、图集库与精确排序](PR33_LIBRARY_WORKSPACE.md)。
+最新切片见 [图集直接排序与即时效果](PR33_COLLECTION_ORDER.md)。
+再读 [PR33 后台体验当前记录](PR33_ADMIN_UX.md)，前次功能基线见 [收口记录](PR33_FUNCTIONAL_CLOSURE.md)。按任务需要读取 North Star、路线图和相关 Accepted ADR；
+不要求重读旧聊天、历史审计或 Docker 恢复。
 
-## 项目现在是什么
+## 本轮产品决定
 
-这是可在本机使用的摄影作品集平台，而不是单一静态模板站：
+- 11 套基础模板共享一个基础内容空间和通用后台；高级拍立得独立后台、内容和版本。
+- 同 Site 共享素材，其他 Site 的私人资源不可访问。基础与高级资料、套餐、联系方式不自动同步。
+- `/` 为平台介绍，`/login` 为统一登录，`/:siteSlug/admin` 为本站后台，`/:siteSlug` 为唯一公开作品入口。
+- 普通保存、Ctrl/Cmd+S 只保存草稿；“保存并发布”捕获本次编辑与原公开指针，保存成功后发布准确回执版本。
+- 切后台、选模板、选片、加入内存图集、保存，都不自行改变公开页；只有显式发布或回退更新单 Site 指针。
+- 基础公开模板取自该 Published 快照的 activeTemplate。切换不删除另一空间的草稿或历史。
+- 文字账号与网址独立可用，联系卡为可选图片。上传仅入库、选用仅修改当前草稿；移除引用不删除资源。
+- 三种预览来源保留：当前内存编辑、仅本人可见的已保存草稿、访客可见的 Published。
+- 高级三构图、主题、动效及基础模板特色保留。不无人值守重做审美。
 
-- 账号经 Better Auth 登录；服务端确认本人 Site 和模板授权（PR28/29）。
-- 11 套基础模板复用基础后台；高级拍立得使用独立后台与内容格式（PR30）。
-  两边分别保存资料、套餐、联系和配置，版本也独立；共享外观不等于共享业务文档。
-- 同 Site 使用本站 Asset 池，受归属校验；不向其他用户开放私人图库（PR31）。
-- 高级拍立得保存 PostgreSQL 草稿，显式发布不可变快照，可查看历史和回退公开指针；
-  回退不替换当前草稿，公开渲染及图片权限以当前 Published 为准（PR31）。
-- 基础六分区、高级四分区、平台/登录/站点入口已做第一轮 UI 整理（PR32）。
-  [实现及验证](ADMIN_WORKSPACE_LAYOUT.md)不是完整后台重构完成声明。
+## 当前范围与证据
 
-PR28–31 已合并；PR32 的最终收口事实看
-[PR32 最终评论](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/32)。
-实际 Squash、main push CI 和日常切换证据在发生后记录于该处与本机交接，
-不要求版本化文档不断追写自己的提交 SHA。
+PR33 从高级选片扩展为发布闭环与后台完善。用户授权在同一分支持续推进、普通提交和推送；
+“提交完成”“CI 绿”不是中途停止点。具体实现、测试结果、待验收项和恢复第一步只维护在
+[收口记录](PR33_FUNCTIONAL_CLOSURE.md)，不要重新叠加历史恢复指令。
 
-日常入口 `http://127.0.0.1:3001/`，候选端口 3003，隔离测试端口 3004。
-本机有专用 PostgreSQL 进程；Docker 不是正常启动前提。
-star/phototest 是模拟账号；展示变体已接入不等于完整原图归档，也不等于真实客户认证。
-没有公网部署，没有 V1 上线。
+原高级批量选片包含筛选、48 张分页、跨页暂选、查看全部暂选、按选择顺序追加、去重、500 上限、
+完整请求体上限及 CAS 保留草稿。保存并发布不得偷偷纳入尚未确认的暂选。
+createdAt 仅代表加入本站时间；10000 条截断仍只支持已载入部分的筛选、排序与分页。
 
-## 已确定的产品决定
+## 实现导航
 
-1. 基础版和各高级模板的后台/业务内容独立演进，只共享本站作品资源、授权、CAS 等支撑能力。
-2. `/` 是介绍，`/login` 统一登录，`/:siteSlug/admin` 是鉴权后的站点工作台，不是另一套登录。
-   当前没有 `/register` 或 `/account`；未来注册另行设计。登录后自动跳转未实现、未批准。
-3. `/test` 是安全模板实验室。`FRAME_ZERO_LOCAL_ACCEPTANCE=1` 下 `/test/admin`
-   是本人基础后台快捷入口，不是所有免费用户共用的内容后台。
-4. Save 保存草稿；当前编辑预览可含未保存内存数据；私人预览读取已保存草稿；Publish 才改变公开内容。
-5. 高级模板使用权不等于平台管理员权限。浏览器提供的 slug、空间、AssetId 都要经服务端授权。
-6. 已接受的拍立得、星座/散落/跨页、纸面/夜空和公开动效是保留基线，不借后台工作重做。
-7. 原图缺失须明确标记，不能拿展示图伪造完整原图。移出图集只是移除引用，不是删除文件。
-8. 合理功能增长可以形成体积告警并说明；不能因微小 bytes 增长扭曲产品。
-   安全、完整性、明确硬门禁仍必须通过，不能随手放宽阈值。
+| 范围 | 入口 |
+| --- | --- |
+| Site 账号与授权 | `db/accounts/runtime.mjs`、`site-entry.mjs`、`app/site-editor/page-auth.ts` |
+| 草稿独立 schema 与 CAS | `app/site-editor/server.ts`、`content-schema.ts`、`draft-save.ts` |
+| 发布投影、权限、单指针与回退 | `app/site-editor/publication-projection.ts`、`publication-server.ts`、`db/accounts/publications.mjs` |
+| 组合主操作 | `app/site-editor/publication-controls.tsx`、`publication-state.ts`、两套既有保存函数 |
+| 公开及私人渲染 | `app/site-editor/public-server.ts`、`basic-view.tsx`、`premium-view.tsx`、`draft-view.tsx` |
+| 可选联系卡／元信息 | `app/site-editor/contact-card.tsx`、`contact-card-state.ts`、`asset-metadata.ts` |
+| 高级选片 | `app/preview-workspace/site-photo-picker.tsx`、`photo-picker-state.ts` |
+| 隔离 PG／浏览器 | `tests/local-accounts.test.mjs`、`basic-publication-*-integration.mjs`、`site-publication-browser-smoke.mjs`、`site-template-browser-matrix.mjs` |
 
-## 代码导航
+保存时保留完整基础草稿，发布时仅投影当前实际槽位、有效公共资料与资源引用。
+显式空布局不 fallback；旧缺少布局按既有受校验兼容规则处理。公开照片仅当前 Published 白名单内的展示变体，
+不为旧页面延迟请求开放全部历史照片。公开页面与 metadata 共用同次读取的不可变快照。
 
-以下路径与测试均相对仓库；测试不是每次启动必跑命令。
+旧 SQLite 记录 1/2601、全局 manifest 和私人 `public/photos` 只作 legacy／已批准导入来源，
+不能作为新 Site 的 fallback。完整原图补档未完成，不用展示变体冒充原图归档。
 
-| 能力 | 真实实现 | 对应验证 |
-| --- | --- | --- |
-| 账号、Site、授权入口 | [runtime](../db/accounts/runtime.mjs)、[site-entry](../db/accounts/site-entry.mjs)、[page-auth](../app/site-editor/page-auth.ts) | [local-accounts](../tests/local-accounts.test.mjs) |
-| 基础后台 | [basic-editor](../app/site-editor/basic-editor.tsx)、[admin](../app/admin) | [admin-v2](../tests/admin-v2.test.mjs)、[真实编辑器](../tests/site-editor-browser-smoke.mjs) |
-| 高级后台 | [premium-editor](../app/site-editor/premium-editor.tsx)、[admin](../app/preview-workspace/admin.tsx) | [preview-admin-state](../tests/preview-admin-state.test.mjs)、真实编辑器测试 |
-| 本站共享资源 | [assets-server](../app/site-editor/assets-server.ts)、[assets](../db/accounts/assets.mjs)、[assets-client](../app/site-editor/assets-client.ts) | [资产集成](../tests/site-assets-integration.mjs)、[浏览器素材](../tests/site-assets-browser-smoke.mjs) |
-| 独立草稿、schema、CAS | [server](../app/site-editor/server.ts)、[content-schema](../app/site-editor/content-schema.ts) | [schema](../tests/site-editor-schema.test.mjs)、local-accounts 与真实编辑器测试 |
-| 发布/历史/回退 | [publication-server](../app/site-editor/publication-server.ts)、[publications](../db/accounts/publications.mjs)、[controls](../app/site-editor/publication-controls.tsx) | [发布集成](../tests/site-publication-integration.mjs) |
-| 公开与私人渲染 | [public-server](../app/site-editor/public-server.ts)、[public-site-gate](../db/accounts/public-site-gate.mjs)、[draft-view](../app/site-editor/draft-view.tsx) | 发布集成、local-accounts |
-| 启动与边界 | [runner](../scripts/start-local-accounts.mjs)、[config](../scripts/lib/account-config.mjs)、[legacy 边界](../scripts/lib/local-platform-boundary.mjs) | [边界测试](../tests/local-platform-boundary.test.mjs)、[本机验收入口](../tests/local-acceptance.test.mjs) |
-| 体积政策 | [Next 预算](../scripts/check-next-build-budget.mjs)、[legacy 预算](../scripts/check-build-budget.mjs) | [Next 预算测试](../tests/next-build-budget.test.mjs)、[legacy 预算测试](../tests/legacy-build-budget.test.mjs) |
+## 本机与恢复边界
 
-`app/admin` 与 `app/preview-workspace` 是既有编辑组件；`app/site-editor` 适配 Site 数据源。
-外观组件、授权、资源、错误反馈可共享，`SiteContent` 与 `PreviewPortfolioDocumentV1`
-的 schema、写入空间、版本独立，不能因为字段同名强制合并。
+- PR33 独立开发工作区与日常 3001 目录不同；不在运行目录切分支或覆盖构建。
+- 私有运维入口：`%LOCALAPPDATA%/PortfolioPlatform/local-m3/SESSION_HANDOFF.local.md`。
+  本机命令、环境位置、备份与运行版本以该文件和现场证据为准；不输出凭据。
+- 3001 为日常，前次授权已更新 ea76e48；本次 3003 候选连接独立 PG55435，仅此隔离环境用于写回归。3004 原验收环境受保护。
+  star、phototest 是用户维护的本机模拟内容，不是可任意改写的测试 fixture，也不是实际客户验证。
+- 新迁移 `0004_basic_publications.sql` 只放宽发布空间约束，保留旧高级历史和不可变保护。
+  前次已获授权、备份后迁移日常库，现状见本机交接；本轮没有迁移。后续切换与迁移仍须另行授权，先备份后显式迁移，
+  不能靠启动候选偷偷迁移业务库，也不能回退数据库快照覆盖用户后续编辑。
+- Windows 服务操作分开执行：只读核对 → 停止 → 确认退出 → 启动 → 独立健康检查。
+  只在确需切换时重启；不放宽 origin、Host、Cookie、CSRF 来跨端口登录。
+- 历史 site-content-integration 的未提交 admin.tsx 保留；私人 photos、凭据、环境、数据库、备份不入 Git。
+  只暂存具体路径。主 checkout 中的用户未提交修改不能覆盖。
 
-旧 SQLite 记录 1/2601、全局 manifest 和私人 `public/photos` 是保留的 legacy/迁移来源，
-不是新 Site 的全局 fallback。平台 runner 阻止旧 `/admin`、`/preview`、全局写接口及私有静态源；
-旧独立 legacy 进程才提供兼容回退。不能解除这些限制来解决新 Site 编辑问题。
-本机验收开关下，未发布站点仅对已登录本人且具有高级授权时私密重定向至草稿预览；
-匿名依然未发布，不能用这一捷径声称公开发布完成。
-历史导入协议见 [M3_LOCAL_IMPORT](M3_LOCAL_IMPORT.md)，不能把它当正常启动脚本。
-
-## 已知问题与最多三个候选
-
-证据来自 2026-09-28 只读后台审查和 PR32 当前实现。
-完整私有截图在本机 `closure/` 和 `admin-layout/`，不提交照片到 Git。
-
-| 问题、用户影响 | 状态及证据 | 依赖 / 建议优先级 |
-| --- | --- | --- |
-| 高级图库没有独立入口、搜索/方向筛选/分页/批选，大库逐张操作成本高 | 未实现；`app/preview-workspace/admin.tsx`。PR32 已改成员网格，不等于完整选片工作流；未做 500 张压测 | 本站 Asset API；P1 |
-| 基础 Site 资源时间/批次元信息缺失，“最近/最早”排序退化 | 未解决；`app/admin/layout/layout-workspace.tsx` 的 `unmanagedLibraryItem` 与排序逻辑 | 服务端真实元信息或去掉无依据承诺；P1 |
-| 分享卡已有引用可读/移除，但不能在 Site 表单新增替换；部分说明仍沿用 legacy 承诺 | 未接线；`app/admin/contact/contact-editor.tsx`、高级 admin Site 分支 | Site 资源选择/上传，各空间独立引用；P1 |
-| 内嵌当前编辑预览和私人/公开预览的导航外观仍不同 | 未统一；`app/preview-workspace/portfolio-view.tsx` 的 embedded 分支 | 保持三个数据来源语义，只统一呈现；P2 |
-| 基础模板不能发布 | 明确未实现，服务端返回 422；`app/site-editor/publication-server.ts` | 独立范围和验收，不能自动同步高级；P1 能力候选 |
-| 资源引用总览、回收、完整原图归档 | 未实现；导入仅保存展示变体，资源删除不能用移出替代 | 备份、引用分析、迁移批准；P2/另立任务 |
-
-已解决并从待办移出：高级分区稳定 hash、套餐/联系拆分、成员网格、状态词区分、
-发布历史折叠、Site 保存吸顶、平台/登录/工作台第一轮界面。详见 UI 记录。
-其他保留行为：公开首页三封面但只有前两个快捷按钮，并非草稿丢失；公开页本轮未改。
-
-下一轮最多三个建议（等待用户选择）：
-
-1. **本站图库与选片**：高级独立入口/搜索筛选批选、基础真实元信息，优先解决日常照片管理。
-2. **联系与预览接线**：分享卡新增替换、三种预览呈现一致，仍保留独立保存语义。
-3. **基础模板发布**：补齐基础用户从草稿到公开的完整流程，独立确认范围。
-
-## 工作方式、运行与禁止重复
-
-沿用 Mission 的小切片、真实授权、最多两层待审核依赖、完整验证原则；
-**本轮终点优先：新会话只恢复和复述，等待新目标。**
-不重做 Auth POC、Docker 治理、模拟账号开户、图库导入或微小预算清零。
-不因历史失败记录阻塞已经验证的能力，不继续往已合并分支追加新功能。
-CI、本机模拟验证、真实客户验证必须分开描述。
-
-启动前读 [README](../README.md) 的五类运行方式区别。
-有本机权限时读 `%LOCALAPPDATA%/PortfolioPlatform/local-m3/SESSION_HANDOFF.local.md`：
-那里才有当前进程目录、PostgreSQL、备份、启动/停止/恢复命令与实际功能版本。
-不要输出凭据内容。没有本机权限只能核对仓库，明确本机状态未经现场复核。
-
-3001 与候选3003共用非沙盒业务数据；不要用 star/已有 phototest 做写入验收。
-写入回归使用隔离 PG fixture 和3004。启动应用不等于迁移、开户、导入或发布。
-不要复制 Cookie 或关闭 CSRF/Host 检查跨端口登录；用正常登录产生当前会话。
-PID 只是快照，操作前查所有者、路径、端口。Windows 启停和 HTTP 健康检查分步执行。
-
-私人照片/凭据/数据库备份/环境与完整审查报告永不入库，只暂存具体路径。
-不得无新授权合并 PR、迁移真实数据、重置账号、发布内容或开放公网。
-
-## 新对话启动词
-
-请接手 Brilliant666/frame-zero-portfolio-studio。先读仓库 AGENTS.md、docs/CURRENT_STATUS.md、docs/SESSION_HANDOFF.md，再按本次目标读取相关代码、North Star 或 ADR，不要求重读旧聊天。先只读核对最新 main、当前分支、未提交修改与运行实例，不擅自切分支或覆盖构建。有本机权限时再读取约定位置的 SESSION_HANDOFF.local.md，核对日常3001、候选3003、数据库、运行版本及恢复命令，勿输出凭据；若只有 GitHub 访问，请明确本机状态未经现场复核。请简短复述已完成能力、未完成项和授权边界，区分基础与高级独立内容、本站共享资源、保存草稿与发布、本机模拟验证与真实客户验证。不重新做 Auth POC、Docker 排障、开户、图库迁移或微小预算压缩；保护私人照片、数据库、草稿和 Published 指针。本轮收口不构成后续合并、真实迁移或部署授权。交接中的三个候选只是建议，请等待我说明本次目标后再实施。
+本轮保持 PR OPEN + DRAFT；不 Ready／Approve／Merge／auto-merge，不修改 main 或用户 Published；本轮明确授权的 3001 更新已完成，后续切换仍需授权，
+不远程部署，不声称 V1 上线。资源回收、永久删除、完整原图补档、公网与真实客户交付继续暂缓。
+验证按影响相称；小改动不要求每次全项目审计。

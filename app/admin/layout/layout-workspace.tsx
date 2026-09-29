@@ -35,6 +35,7 @@ import {
 } from "../../templates/material-profiles";
 import { AdminSection } from "../admin-form";
 import { loadSiteAssets } from "../../site-editor/assets-client";
+import { compareSiteAssetTimes, siteAssetTimeLabel } from "../../site-editor/asset-metadata";
 import SiteAssetUpload from "../../site-editor/asset-upload";
 import { useAdmin } from "../admin-provider";
 import styles from "../admin-v2.module.css";
@@ -104,6 +105,7 @@ export default function LayoutWorkspace() {
   const [libraryBatches, setLibraryBatches] = useState<LocalPhotoLibraryBatch[]>([]);
   const [libraryRevision, setLibraryRevision] = useState<number | null>(null);
   const [libraryState, setLibraryState] = useState<LibraryState>("loading");
+  const [libraryTruncated, setLibraryTruncated] = useState(false);
   const [libraryMessage, setLibraryMessage] = useState("正在读取本地素材库…");
   const [isImporting, setIsImporting] = useState(false);
   const [filter, setFilter] = useState<LibraryFilter>("all");
@@ -199,6 +201,7 @@ export default function LayoutWorkspace() {
       return matchesFilter && matchesBatch && (!needle || asset.id.toLowerCase().includes(needle));
     });
     return [...filtered].sort((left, right) => {
+      if (siteScope) return compareSiteAssetTimes({ id: left.assetId, createdAt: left.addedAt }, { id: right.assetId, createdAt: right.addedAt }, librarySort);
       if (librarySort === "asset-id") return left.assetId.localeCompare(right.assetId);
       const leftOrdinal = left.importOrdinal;
       const rightOrdinal = right.importOrdinal;
@@ -207,7 +210,7 @@ export default function LayoutWorkspace() {
       if (rightOrdinal === null) return -1;
       return librarySort === "recent" ? rightOrdinal - leftOrdinal : leftOrdinal - rightOrdinal;
     });
-  }, [batchFilter, filter, libraryItems, librarySort, libraryView, query]);
+  }, [batchFilter, filter, libraryItems, librarySort, libraryView, query, siteScope]);
   const libraryStats = useMemo<PhotoLibraryStats>(() => assets.reduce((stats, asset) => ({
     ...stats,
     [asset.orientation]: stats[asset.orientation] + 1,
@@ -251,9 +254,13 @@ export default function LayoutWorkspace() {
       if (siteScope) {
         const manifest = await loadSiteAssets(siteScope.assetsEndpoint);
         if (request !== libraryRequestRef.current) return null;
-        setLibraryItems(manifest.assets.map(unmanagedLibraryItem));
+        setLibraryItems(manifest.assets.map(asset => ({ ...unmanagedLibraryItem(asset), addedAt: asset.createdAt ?? null })));
+        setLibraryBatches([]);
+        setBatchFilter("all");
+        setLibraryRevision(null);
         setLibraryState(manifest.assets.length ? "ready" : "empty");
-        setLibraryMessage(`本站可用素材 ${manifest.assets.length} 张；基础与高级后台共享资源，内容独立保存。`);
+        setLibraryTruncated(Boolean(manifest.truncated));
+        setLibraryMessage(`${manifest.truncated ? `当前仅载入前 ${manifest.assets.length} 张，查找、筛选与排序只覆盖已载入部分。` : `本站可用素材 ${manifest.assets.length} 张。`} 基础与高级后台共享资源，内容独立保存。`);
         return manifest.assets.length;
       }
       if (localPhotoImportState === "configured" && localPhotoImportOrigin) {
@@ -479,31 +486,10 @@ export default function LayoutWorkspace() {
           <small>{formatTemplateMaterialDirectionSummary(materialPlan)}</small>
         </div>
         <div><span>排版状态</span><strong>{layoutConfigured ? `${selectedBySlot.size} / ${template.photoSlots} 已排版` : "沿用旧版作品"}</strong><small>正在编辑槽位 {String(activeSlot + 1).padStart(2, "0")}</small></div>
-        <div className={styles.layoutActions}>
-          <button type="button" onClick={resetLayout}>清空本模板</button>
-        </div>
       </div>
 
-      {siteScope ? <><SiteAssetUpload endpoint={siteScope.assetsEndpoint} onUploaded={refreshLibrary} /><p role="status">{libraryMessage}</p></> : <PhotoImportPanel
-        importing={isImporting}
-        libraryMessage={libraryMessage}
-        libraryState={libraryState}
-        localPhotoImportOrigin={localPhotoImportOrigin}
-        localPhotoImportState={localPhotoImportState}
-        onImportingChange={setIsImporting}
-        onRefresh={refreshLibrary}
-        stats={libraryStats}
-      />}
-
-      <LayoutCompositionPreview
-        templateId={content.activeTemplate}
-        assets={assets}
-        libraryState={libraryState}
-        libraryMessage={libraryMessage}
-        busy={isImporting}
-        onRefresh={refreshLibrary}
-      />
-
+      {siteScope && libraryTruncated && libraryState !== "error" && <p className={styles.libraryManagementMessage} role="status">{libraryMessage}</p>}
+      {libraryState === "error" && <p role="alert">{libraryMessage}<button type="button" onClick={() => void refreshLibrary()}>重新读取素材</button></p>}
       <div className={styles.layoutWorkspace}>
         <section className={styles.slotPane} aria-labelledby="slot-list-heading">
           <div className={styles.paneHeading}>
@@ -617,20 +603,21 @@ export default function LayoutWorkspace() {
             <label className={styles.librarySelect}>
               <span>顺序</span>
               <select value={librarySort} onChange={(event) => { setLibrarySort(event.target.value as LibrarySort); setAssetPage(0); setArchiveCandidate(null); }}>
-                <option value="recent">最近新增</option>
-                <option value="oldest">最早记录</option>
+                <option value="recent">{siteScope ? "加入本站：最新优先" : "最近新增"}</option>
+                <option value="oldest">{siteScope ? "加入本站：最早优先" : "最早记录"}</option>
                 <option value="asset-id">素材编号</option>
               </select>
             </label>
-            <label className={styles.librarySelect}>
+            {!siteScope && <label className={styles.librarySelect}>
               <span>导入批次</span>
               <select value={batchFilter} onChange={(event) => { setBatchFilter(event.target.value); setAssetPage(0); setArchiveCandidate(null); }}>
                 <option value="all">全部批次</option>
                 <option value="legacy">既有素材（时间未知）</option>
                 {batchOptions.map((batch) => <option value={batch.id} key={batch.id}>{batchLabel(batch)} · {batch.count} 张</option>)}
               </select>
-            </label>
+            </label>}
           </div>
+          {siteScope && <p className={styles.libraryManagementMessage}>按加入本站时间排序，同时间按素材编号，未知时间置后。此时间不代表拍摄时间或旧导入顺序；当前没有批次数据。浏览排序不会改动作品排版。</p>}
           {managementMessage ? <p className={styles.libraryManagementMessage} role="status">{managementMessage}</p> : null}
 
           {filteredItems.length > 0 ? (
@@ -658,7 +645,7 @@ export default function LayoutWorkspace() {
                         </span>
                         <span className={styles.assetMeta}>
                           <strong>{orientationLabel(asset.orientation)} · {asset.aspectRatio.toFixed(2)}</strong>
-                          <small>{sourceLabel(item)}{item.importOrdinal === null ? "" : ` · #${item.importOrdinal}`}</small>
+                          <small>{siteScope ? siteAssetTimeLabel(item.addedAt) : `${sourceLabel(item)}${item.importOrdinal === null ? "" : ` · #${item.importOrdinal}`}`}</small>
                           <small>{pickHint}</small>
                         </span>
                       </button>
@@ -710,12 +697,12 @@ export default function LayoutWorkspace() {
               <p>{libraryState === "error"
                 ? libraryMessage
                 : (libraryView === "active" ? activeItems.length : archivedAssetCount) > 0
-                ? "试试清空搜索词，或切换画幅与导入批次。"
+                ? siteScope ? "试试清空搜索词，或切换画幅。" : "试试清空搜索词，或切换画幅与导入批次。"
                 : libraryView === "archived"
                   ? "移入回收站的素材会保留原文件和现有排版引用，并可随时恢复。"
                   : activeItems.length === 0
                 ? localPhotoImportState === "configured"
-                    ? "使用上方“添加素材”把照片或文件夹加入素材库。"
+                    ? "使用下方“上传素材与排版建议”把照片或文件夹加入素材库。"
                     : localPhotoImportState === "missing"
                       ? "本地照片导入服务未启动；请使用 npm run dev 启动完整编辑环境。"
                       : "当前没有可用的素材。"
@@ -724,6 +711,29 @@ export default function LayoutWorkspace() {
           )}
         </section>
       </div>
+      <details className={styles.layoutSecondaryTools}><summary>上传素材与排版建议</summary>
+        <button type="button" onClick={resetLayout}>清空本模板</button>
+      {siteScope ? <><SiteAssetUpload endpoint={siteScope.assetsEndpoint} onUploaded={refreshLibrary} /><p role="status">{libraryMessage}</p></> : <PhotoImportPanel
+        importing={isImporting}
+        libraryMessage={libraryMessage}
+        libraryState={libraryState}
+        localPhotoImportOrigin={localPhotoImportOrigin}
+        localPhotoImportState={localPhotoImportState}
+        onImportingChange={setIsImporting}
+        onRefresh={refreshLibrary}
+        stats={libraryStats}
+      />}
+
+      <LayoutCompositionPreview
+        templateId={content.activeTemplate}
+        assets={assets}
+        libraryState={libraryState}
+        libraryMessage={libraryMessage}
+        busy={isImporting}
+        onRefresh={refreshLibrary}
+      />
+
+      </details>
     </AdminSection>
   );
 }
