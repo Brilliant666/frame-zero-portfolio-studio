@@ -58,8 +58,8 @@ export default function SitePhotoLibrary({ assets, collections, ready, truncated
       setPicked([]); setError("");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "加入失败，选择已保留。"); }
   }
-  return <section className={styles.library} aria-label="本站图库">
-    <header className={styles.header}><div><h2>本站图库</h2><p>基础与高级共用本站照片；加入高级图集只修改该空间草稿。</p></div><button type="button" disabled={reloading} onClick={() => void reload()}>{reloading ? "正在读取…" : "重新读取素材"}</button></header>
+  return <section className={styles.library} aria-label="图库">
+    <header className={styles.header}><div><h2>图库</h2><p>基础与高级共用本站照片；加入高级图集只修改该空间草稿。</p></div><button type="button" disabled={reloading} onClick={() => void reload()}>{reloading ? "正在读取…" : "重新读取素材"}</button></header>
     <p role="status">{state}</p>
     {truncated && <p className={styles.warning}>当前仅载入部分本站素材（{assets.length} 张）；筛选、排序和分页只覆盖已载入照片。</p>}
     <fieldset className={styles.filters} disabled={filter.onlySelected}>

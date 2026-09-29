@@ -208,6 +208,7 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
     if (!matrixOnly) {
     await stage('03 identical revision across spaces never reports synced', async () => {
       await page.goto(`${origin}${premium}`); await ready();
+      await page.getByRole('button', { name: '主页资料', exact: true }).click();
       await page.getByLabel('摄影师名称', { exact: true }).fill('Premium publication fixture');
       const saved = await save('premium-polaroid'); assert.equal(saved.revision, 1);
       assert.equal(await publicationRegion().getByText('已同步', { exact: true }).count(), 0);

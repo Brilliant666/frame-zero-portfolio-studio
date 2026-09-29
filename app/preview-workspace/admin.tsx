@@ -24,6 +24,7 @@ import { confirmDraftSave, DraftSaveRejected, DraftSaveUncertain, writeSiteDraft
 import CollectionMemberEditor from "./collection-member-editor";
 import CollectionLivePreview from "./collection-live-preview";
 import SitePhotoLibrary from "./site-photo-library";
+import NewCollectionDialog from "./new-collection-dialog";
 import styles from "./admin.module.css";
 
 type Envelope = { content: PreviewPortfolioDocumentV1 | null; revision: number; updatedAt: string | null };
@@ -70,8 +71,8 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
   const [saving, setSaving] = useState(false);
   const [conflict, setConflict] = useState(false);
   const [message, setMessage] = useState("正在读取新版工作区…");
-  const [section, setSection] = useState("profile");
-  const sections = siteMode ? [["albums", "图集库"], ["library", "本站图库"], ["profile", "主页资料"], ["packages", "拍摄套餐"], ["contact", "联系约拍"]] : [["profile", "主页资料"], ["collections", "图集管理"], ["contact", "套餐与联系"]];
+  const [section, setSection] = useState(siteMode ? "library" : "profile");
+  const sections = siteMode ? [["library", "图库"], ["albums", "图集"], ["profile", "主页资料"], ["packages", "拍摄套餐"], ["contact", "联系约拍"]] : [["profile", "主页资料"], ["collections", "图集管理"], ["contact", "套餐与联系"]];
   const siteName = siteScope?.adminBasePath.split("/")[1] ?? "";
   const changeSection = (value: string) => {
     setSection(value);
@@ -84,6 +85,7 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
     window.addEventListener("hashchange", sync);
     return () => { clearTimeout(timer); window.removeEventListener("hashchange", sync); };
   }, [siteMode]);
+  const [creatingCollection, setCreatingCollection] = useState(false);
   const [collectionTab, setCollectionTab] = useState<"photos" | "settings" | "effect">("photos");
   const [compareEffect, setCompareEffect] = useState(false);
   const photoScroll = useRef(0);
@@ -99,6 +101,7 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
   const [previewCollectionId, setPreviewCollectionId] = useState<string | undefined>();
   const previewRef = useRef<HTMLElement | null>(null);
   const [assets, setAssets] = useState<SiteAsset[]>([]);
+  const pickerTrigger = useRef<HTMLButtonElement>(null);
   const [pickerCollectionId, setPickerCollectionId] = useState<string | null>(null);
   const [recentAdditions, setRecentAdditions] = useState<string[]>([]);
   const [libraryTruncated, setLibraryTruncated] = useState(false);
@@ -205,11 +208,11 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
     finally { savingLock.current = false; }
   };
   useEffect(() => {
-    const shortcut = (event: KeyboardEvent) => { if (!isAdminSaveShortcut(event)) return; event.preventDefault(); if (!pickerCollectionId && !enlargedMember && !preview) void save(); };
+    const shortcut = (event: KeyboardEvent) => { if (!isAdminSaveShortcut(event)) return; event.preventDefault(); if (!creatingCollection && !pickerCollectionId && !enlargedMember && !preview) void save(); };
     const leave = (event: BeforeUnloadEvent) => { if (!dirty && !saving && !pickerCollectionId) return; event.preventDefault(); event.returnValue = ""; };
     window.addEventListener("keydown", shortcut); window.addEventListener("beforeunload", leave);
     return () => { window.removeEventListener("keydown", shortcut); window.removeEventListener("beforeunload", leave); };
-  }, [dirty, saving, save, pickerCollectionId, enlargedMember, preview]);
+  }, [dirty, saving, save, creatingCollection, pickerCollectionId, enlargedMember, preview]);
   useEffect(() => {
     if (!preview) return;
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -248,10 +251,17 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
     setSelectedId(id); setCollectionTab("photos"); setOperationMember(null); photoScroll.current = 0;
     changeSection("collections");
   };
-  const createCollection = () => {
+  const createNamedCollection = (name: string) => {
+    if (current.current.collections.length >= 30 || loadState !== "ready" || saving) return;
     const id = crypto.randomUUID();
-    edit(doc => ({ ...doc, collections: [...doc.collections, { id, name: "新图集", description: "", visible: true, coverAssetId: null, coverFit: "natural", coverFocusX: 50, coverFocusY: 50, assetIds: [], focusAssetId: null }] }));
+    edit(doc => ({ ...doc, collections: [...doc.collections, { id, name, description: "", visible: true, coverAssetId: null, coverFit: "natural", coverFocusX: 50, coverFocusY: 50, assetIds: [], focusAssetId: null }] }));
     openCollection(id);
+    setCreatingCollection(false);
+    if (siteMode) setPickerCollectionId(id);
+  };
+  const createCollection = () => {
+    if (siteMode) setCreatingCollection(true);
+    else createNamedCollection("新图集");
   };
   const copyBasics = async () => {
     if (siteMode) return;
@@ -299,9 +309,9 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
     <div className={styles.workArea}>
     {siteMode && <aside className={styles.sidebar}><a className={styles.siteBack} href={siteScope?.adminBasePath.replace(/\/premium-polaroid$/, "")} onClick={(event) => { if (dirty && !window.confirm("当前草稿尚未保存，确认返回内容空间选择？")) event.preventDefault(); }}>← 站点工作台</a><nav aria-label="高级拍立得编辑分区">{sections.map(([id, label], index) => <button key={id} type="button" aria-pressed={section === id || (id === "albums" && section === "collections")} onClick={() => changeSection(id)}><span aria-hidden="true">0{index + 1}</span>{label}</button>)}</nav><p>高级拍立得<br /><small>独立内容 · 本站照片共享</small></p></aside>}
     <div className={styles.body}>
-      {siteMode && props?.PublicationControls && <props.PublicationControls revision={revision} dirty={dirty} disabled={loadState !== "ready" || saving || conflict || pendingSave || !!pickerCollectionId} templateId="premium-polaroid" saveDraft={save}
+      {siteMode && props?.PublicationControls && <props.PublicationControls revision={revision} dirty={dirty} disabled={loadState !== "ready" || saving || conflict || pendingSave || !!pickerCollectionId || creatingCollection} templateId="premium-polaroid" saveDraft={save}
         draftStatus={saving ? "保存中…" : dirty ? "未保存修改" : saved ? "已保存" : "尚未配置"}
-        draftAction={<button type="button" onClick={() => void save()} disabled={loadState !== "ready" || saving || !dirty || conflict || pendingSave || !!pickerCollectionId}>仅保存草稿</button>}
+        draftAction={<button type="button" onClick={() => void save()} disabled={loadState !== "ready" || saving || !dirty || conflict || pendingSave || !!pickerCollectionId || creatingCollection}>仅保存草稿</button>}
         tools={<>
           <button type="button" disabled={loadState !== "ready"} onClick={() => { setPreviewCollectionId(undefined); setPreview(structuredClone(draft)); }}>预览当前编辑</button>
           <a href={siteScope?.previewHref} target="_blank" rel="noreferrer">预览已保存草稿 ↗</a>
@@ -315,13 +325,16 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
       <nav className={styles.nav} aria-label="新版编辑分区">{sections.map(([id, label]) => <button key={id} type="button" aria-pressed={section === id} onClick={() => changeSection(id)}>{label}</button>)}</nav></>}
       <fieldset disabled={loadState !== "ready"} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
         {siteScope && <section className={styles.panel} hidden={section !== "library"}>
+          <p className={styles.hint}>先在图库添加照片，再进入图集组织展示。本站基础与高级内容共用这些照片。</p>
+          <div className={styles.row}><button type="button" onClick={() => changeSection("albums")}>进入图集 →</button></div>
           <SiteAssetUpload endpoint={siteScope.assetsEndpoint} onUploaded={loadLibrary} />
           <SitePhotoLibrary assets={assets} collections={draft.collections} ready={libraryReady} truncated={libraryTruncated} state={libraryState} onReload={loadLibrary} onAdd={addLibraryPhotos} onView={setEnlargedMember} />
         </section>}
         {siteMode && section === "albums" && <section className={styles.panel}>
-          <div className={styles.collectionHeading}><div><h2>图集库</h2><p>高级图集 · {draft.collections.length} / 30</p></div><button type="button" disabled={draft.collections.length >= 30} onClick={createCollection}>新建图集</button></div>
+          <div className={styles.collectionHeading}><div><h2>图集</h2><p>{draft.collections.length} 个图集 · 最多 30 个</p></div><button type="button" disabled={draft.collections.length >= 30 || loadState !== "ready" || saving} onClick={createCollection}>新建图集</button></div>
+          <p className={styles.hint}>新建图集 → 填写名称 → 图库选片 → 确认顺序与封面 → 查看效果 → 保存并发布</p>
           <div className={styles.albumGrid}>{draft.collections.map((item, index) => { const cover = collectionCover(item, assetMap); return <button type="button" className={styles.albumCard} key={item.id} onClick={() => openCollection(item.id)}>{cover ? <img src={cover.variants.thumbnail.src} alt="" /> : <span className={styles.albumPlaceholder}>暂无封面</span>}<strong>{index + 1}. {item.name || "未命名图集"}</strong><span>{item.assetIds.length} 张 · {item.visible ? "显示" : "隐藏"}</span><span>进入图集 →</span></button>; })}</div>
-          {!draft.collections.length && <p>先新建图集，再从本站图库选片。</p>}
+          {!draft.collections.length && <p>图库中的照片准备好后，点击“新建图集”开始。</p>}
         </section>}
         {section === "profile" && <>
           <section className={styles.panel}><h2>摄影师资料</h2><TextFields value={draft.profile} prefix="" onChange={(profile) => edit((doc) => ({ ...doc, profile }))} /></section>
@@ -330,10 +343,10 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
           {!siteMode && <section className={styles.panel}><h2>一次性复制原站资料</h2><p className={styles.hint}>只复制白名单基础资料、套餐和联系方式，不复制模板作品，不猜测图集分类。复制结果先进入草稿。</p><button type="button" onClick={() => void copyBasics()}>从原站复制基础资料到当前草稿</button></section>}
         </>}
         {section === "collections" && <>
-          {siteMode && <div className={styles.row}><button type="button" onClick={() => changeSection("albums")}>← 图集库</button><button type="button" onClick={() => changeSection("library")}>打开本站图库 / 上传照片</button></div>}
+          {siteMode && <div className={styles.row}><button type="button" onClick={() => changeSection("albums")}>← 图集</button><button type="button" onClick={() => changeSection("library")}>去图库添加照片</button></div>}
 
-          <div className={styles.collections}><aside className={styles.collectionNavigation}><div className={styles.collectionChooser}><button type="button" disabled={draft.collections.length >= 30} onClick={createCollection}>新建图集</button><label className={styles.collectionSelect}>当前图集<select value={selected?.id ?? ""} onChange={event => openCollection(event.target.value)}>{draft.collections.map((item, index) => <option key={item.id} value={item.id}>{index + 1}. {item.name || "未命名"} · {item.assetIds.length} 张{!item.visible && " · 隐藏"}</option>)}</select></label></div><div className={styles.list} aria-label="图集列表">{draft.collections.map((item, index) => { const cover = collectionCover(item, assetMap); return <button key={item.id} type="button" aria-current={selected?.id === item.id} onClick={() => openCollection(item.id)}>{cover && <img src={cover.variants.thumbnail.src} alt="" />}<span>{index + 1}. {item.name || "未命名"}<small>{item.assetIds.length} 张 · {item.visible ? "显示" : "隐藏"}</small></span></button>; })}</div></aside>
-            {selected ? <div className={siteMode ? styles.collectionWorkbench : undefined}><section className={styles.panel}><div className={styles.collectionHeading}><div><h2>{selected.name || "未命名图集"}</h2><p>{selected.assetIds.length} 张 · {selected.visible ? "显示此图集" : "此图集已隐藏"}</p></div>{siteScope && <div className={styles.row}><button type="button" className={styles.primary} disabled={!libraryReady || saving} onClick={() => { setCollectionTab("photos"); setPickerCollectionId(selected.id); }}>从本站图库选片</button><button type="button" onClick={() => { setPreviewCollectionId(selected.id); setPreview(structuredClone({ ...draft, collections: [{ ...selected, visible: true }] })); }}>完整图集预览</button></div>}</div>
+          <div className={styles.collections}><aside className={styles.collectionNavigation}><div className={styles.collectionChooser}><button type="button" disabled={draft.collections.length >= 30 || loadState !== "ready" || saving} onClick={createCollection}>新建图集</button><label className={styles.collectionSelect}>当前图集<select value={selected?.id ?? ""} onChange={event => openCollection(event.target.value)}>{draft.collections.map((item, index) => <option key={item.id} value={item.id}>{index + 1}. {item.name || "未命名"} · {item.assetIds.length} 张{!item.visible && " · 隐藏"}</option>)}</select></label></div><div className={styles.list} aria-label="图集列表">{draft.collections.map((item, index) => { const cover = collectionCover(item, assetMap); return <button key={item.id} type="button" aria-current={selected?.id === item.id} onClick={() => openCollection(item.id)}>{cover && <img src={cover.variants.thumbnail.src} alt="" />}<span>{index + 1}. {item.name || "未命名"}<small>{item.assetIds.length} 张 · {item.visible ? "显示" : "隐藏"}</small></span></button>; })}</div></aside>
+            {selected ? <div className={siteMode ? styles.collectionWorkbench : undefined}><section className={styles.panel}><div className={styles.collectionHeading}><div><h2>{selected.name || "未命名图集"}</h2><p>{selected.assetIds.length} 张 · {selected.visible ? "显示此图集" : "此图集已隐藏"}</p></div>{siteScope && <div className={styles.row}><button ref={pickerTrigger} type="button" className={styles.primary} disabled={!libraryReady || saving} onClick={() => { setCollectionTab("photos"); setPickerCollectionId(selected.id); }}>从图库选片</button><button type="button" onClick={() => { setPreviewCollectionId(selected.id); setPreview(structuredClone({ ...draft, collections: [{ ...selected, visible: true }] })); }}>完整图集预览</button></div>}</div>
               {siteScope && <>{(!libraryReady || libraryTruncated) && <p className={styles.warning} role="status">{libraryState}<button type="button" onClick={() => void loadLibrary()}>重新读取素材</button></p>}</>}
               {selected.coverAssetId && !assetMap.has(selected.coverAssetId) && <p className={styles.warning}>独立封面暂不可用，保留引用；当前预览使用首张可用成员。</p>}
               {siteMode && <nav className={styles.collectionTabs} aria-label="图集编辑内容"><button type="button" aria-pressed={collectionTab === "photos"} onClick={() => changeCollectionTab("photos")}>照片排序</button><button type="button" aria-pressed={collectionTab === "settings"} onClick={() => changeCollectionTab("settings")}>图集设置</button><button type="button" aria-pressed={collectionTab === "effect"} onClick={() => changeCollectionTab("effect")}>展示效果</button></nav>}
@@ -346,6 +359,7 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
                 if (!Number.isInteger(position) || position < 1 || position > selected.assetIds.length) { setMessage("位置无效，成员顺序未改变。"); return; }
                 updateCollection(item => ({ ...item, assetIds: moveItem(item.assetIds, index, position - 1) }));
               }}>移到第…位</button>}</div>}</li>)}</ol></>}
+              {siteMode && <div className={styles.flowNext}><p>顺序确认后，选择首页展示的图集封面。</p><button type="button" onClick={() => changeCollectionTab("settings")}>下一步：确认封面</button></div>}
               </div>
               <div hidden={siteMode && collectionTab !== "settings"} data-collection-settings>
 
@@ -362,9 +376,9 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
               {selected.coverFit === "fill" && <div className={styles.grid}>{(["X", "Y"] as const).map((axis) => { const key = axis === "X" ? "coverFocusX" : "coverFocusY"; return <label className={styles.field} key={axis}>封面焦点 {axis}：{selected[key]}%<input type="range" min="0" max="100" value={selected[key]} onChange={(event) => updateCollection((item) => ({ ...item, [key]: Number(event.target.value) }))} /></label>; })}</div>}
               <label className={styles.field}>星图重点照片<select value={selected.focusAssetId ?? ""} onChange={(event) => updateCollection((item) => ({ ...item, focusAssetId: event.target.value || null }))}><option value="">默认第一张可用成员</option>{selected.assetIds.map((id) => <option key={id} value={id}>{memberLabel(id)}</option>)}</select></label></CoverSettings>
               {siteMode && <CollectionMemberEditor key={`manage-${selected.id}`} mode="manage" collection={selected} assets={assets} onChange={next => updateCollection(() => next)} onView={setEnlargedMember} />}
-              <p className={styles.hint}>最多 30 个图集，每个图集最多 500 张；移除关系不会删除素材。</p></div>
+              <p className={styles.hint}>最多 30 个图集，每个图集最多 500 张；移除关系不会删除素材。</p>{siteMode && <div className={styles.flowNext}><button type="button" onClick={() => changeCollectionTab("photos")}>返回调整顺序</button><button type="button" className={styles.primary} onClick={() => changeCollectionTab("effect")}>下一步：查看效果</button></div>}</div>
               {siteScope ? null : <details><summary>从共享素材库添加照片</summary><p className={styles.hint}>{libraryState}</p><div className={styles.row}><button type="button" onClick={() => void loadLibrary()}>重新读取素材</button>{!siteMode && <a href="/admin/layout" target="_blank" rel="noreferrer">打开原版共享素材库管理 ↗</a>}</div><p className={styles.hint}>这是共用素材库；导入和回收会影响两边素材可用性。此处只选择可用图片。</p><div className={styles.library}>{assets.map((asset) => <div className={styles.asset} key={asset.id}><img alt={memberLabel(asset.id)} src={asset.variants.thumbnail.src} loading="lazy" /><span>{memberLabel(asset.id)}</span><button type="button" disabled={!libraryReady || selected.assetIds.includes(asset.id) || selected.assetIds.length >= 500} onClick={() => updateCollection((item) => ({ ...item, assetIds: [...item.assetIds, asset.id] }))}>{selected.assetIds.includes(asset.id) ? "已在图集" : "加入图集"}</button><button type="button" disabled={!libraryReady} onClick={() => updateCollection((item) => ({ ...item, coverAssetId: asset.id }))}>设为封面</button></div>)}</div></details>}
-            {siteMode && <aside className={styles.liveEffect} hidden={collectionTab !== "effect" && !(collectionTab === "photos" && compareEffect)}><CollectionLivePreview key={selected.id} collection={selected} assets={assets} onView={setEnlargedMember} active={(collectionTab === "effect" || (collectionTab === "photos" && compareEffect)) && !pickerCollectionId && !preview && !enlargedMember} /></aside>}</section></div> : <p className={styles.notice}>还没有图集，点击“新建图集”开始。</p>}
+            {siteMode && <aside className={styles.liveEffect} hidden={collectionTab !== "effect" && !(collectionTab === "photos" && compareEffect)}><p className={styles.hint}>这是当前编辑的效果。确认后使用页面“保存并发布”更新公开主页；“仅保存草稿”保留编辑供下次继续。</p><CollectionLivePreview key={selected.id} collection={selected} assets={assets} onView={setEnlargedMember} active={(collectionTab === "effect" || (collectionTab === "photos" && compareEffect)) && !pickerCollectionId && !preview && !enlargedMember} /></aside>}</section></div> : <p className={styles.notice}>还没有图集，点击“新建图集”开始。</p>}
           </div>
           {!siteMode && <section className={styles.panel}><h2>显式导入旧原型图集</h2><p className={styles.hint}>选择之前导出的 JSON。仅导入图集到当前草稿，不自动保存；不会猜测分类或恢复已丢失的内存。</p><label className={styles.field}>导入图集 JSON<input type="file" accept="application/json,.json" onChange={(event) => { void importCollections(event.target.files?.[0]); event.target.value = ""; }} /></label></section>}
         </>}
@@ -380,7 +394,8 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
       </fieldset>
     </div></div>
     {enlargedMember && <MemberPhoto asset={enlargedMember} onClose={() => setEnlargedMember(null)} />}
-    {siteMode && pickerTarget && <SitePhotoPicker key={pickerTarget.id} collectionName={pickerTarget.name || "未命名图集"} members={pickerTarget.assetIds} assets={assets} ready={libraryReady} truncated={libraryTruncated} state={libraryState} onReload={loadLibrary} onClose={() => setPickerCollectionId(null)} onAdd={addPickedPhotos} />}
+    {siteMode && pickerTarget && <SitePhotoPicker returnFocus={pickerTrigger} key={pickerTarget.id} collectionName={pickerTarget.name || "未命名图集"} members={pickerTarget.assetIds} assets={assets} ready={libraryReady} truncated={libraryTruncated} state={libraryState} onReload={loadLibrary} onClose={() => setPickerCollectionId(null)} onAdd={addPickedPhotos} />}
     {preview && createPortal(<section ref={previewRef} className={styles.preview} role="dialog" aria-modal="true" aria-label="新版未保存草稿效果"><div className={styles.previewBar}><p>{siteMode ? "当前编辑快照 · 预览不会保存或发布" : "草稿快照 · 尚未保存到主页"}</p><button type="button" onClick={() => setPreview(null)}>关闭草稿效果</button></div><PortfolioView document={preview} embedded initialCollectionId={previewCollectionId} {...(siteMode ? { assets } : {})} /></section>, document.body)}
+  {creatingCollection && <NewCollectionDialog onClose={() => setCreatingCollection(false)} onCreate={createNamedCollection} />}
   </main>;
 }

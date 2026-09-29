@@ -30,10 +30,12 @@ export async function exerciseLargeCollections({ page, read, published, shot }) 
   for (const count of [50, 100]) {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`${url.origin}${url.pathname}#edit-collections`);
-    await page.getByRole('button', { name: '图集库', exact: true }).click();
+    await page.getByRole('button', { name: '图集', exact: true }).click();
     await page.getByRole('button', { name: '新建图集', exact: true }).click();
-    await page.getByRole('button', { name: '从本站图库选片', exact: true }).click();
-    const picker = page.getByRole('dialog', { name: '从本站图库选片', exact: true });
+    const creation = page.getByRole('dialog', { name: '新建图集', exact: true });
+    await creation.getByLabel('图集名称', { exact: true }).fill(`Anonymous ${count} photo collection`);
+    await creation.getByRole('button', { name: '创建并选片', exact: true }).click();
+    const picker = page.getByRole('dialog', { name: '从图库选片', exact: true });
     const original = [];
     while (original.length < count) {
       const inputs = picker.getByRole('checkbox', { name: /^选择照片 / });

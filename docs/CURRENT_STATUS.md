@@ -1,6 +1,7 @@
 # 当前检查点
 
 更新：2026-09-29。[AGENTS](../AGENTS.md) → 本页 → [SESSION_HANDOFF](SESSION_HANDOFF.md)。
+当前新增：[图库到图集的创建流程](PR33_ALBUM_CREATION_FLOW.md)，按“图库 → 图集”导航和命名后直接选片实施。运行与最终 CI 以本机交接和最新 Head 为准。
 本次切片：[本站图库、图集库与精确排序](PR33_LIBRARY_WORKSPACE.md)。布局与长图集排序按实际体验重做；运行切换状态以本机交接现场记录为准。
 最新切片：[高级图集直接排序与即时效果](PR33_COLLECTION_ORDER.md)。3003 已经用户确认后更新；草稿和 Published 未变，3001/3004 未动。远端检查须核对本次提交 Head。
 当前任务：**PR33_ADMIN_UX_A_B_C**，实施与未完成验收见 [后台体验记录](PR33_ADMIN_UX.md)。前次任务：**PR33_UNATTENDED_FUNCTIONAL_CLOSURE**，范围和切片证据统一记在

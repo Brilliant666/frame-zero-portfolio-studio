@@ -1,6 +1,7 @@
 # 会话交接
 
 更新：2026-09-29。先读 [AGENTS](../AGENTS.md)、[CURRENT_STATUS](CURRENT_STATUS.md)，
+当前新增 [图库到图集的创建流程](PR33_ALBUM_CREATION_FLOW.md)：图库优先，图集新建先命名再自动选片，保留原保存与发布逻辑。
 本次进展见 [本站图库、图集库与精确排序](PR33_LIBRARY_WORKSPACE.md)。
 最新切片见 [图集直接排序与即时效果](PR33_COLLECTION_ORDER.md)。
 再读 [PR33 后台体验当前记录](PR33_ADMIN_UX.md)，前次功能基线见 [收口记录](PR33_FUNCTIONAL_CLOSURE.md)。按任务需要读取 North Star、路线图和相关 Accepted ADR；

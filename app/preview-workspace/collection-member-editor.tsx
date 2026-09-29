@@ -143,7 +143,7 @@ export default function CollectionMemberEditor({ collection, assets, onChange, o
     </div>
     <p id={helpId} className={styles.help}>{mode === "sort" ? "跨行移动可多选后输入目标序号；选中照片保持原有相对顺序。手柄拖动只移动这一张，插入线标明前后；键盘支持方向键和 Home / End。" : "选择照片后统一移出；选择一张可设为封面。移出不删除本站素材。"}</p>
     <p className={styles.live} role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
-    {!collection.assetIds.length && <p>图集还没有照片，请从本站图库选片。</p>}
+    {!collection.assetIds.length && <p>图集还没有照片，请从图库选片。</p>}
     <ol className={styles.grid} ref={list}>{collection.assetIds.map((id, index) => {
       const asset = assetMap.get(id);
       return <li className={styles.card} key={id} data-member-id={id} data-selected={selectedIds.includes(id) || undefined} data-dragging={dragView?.id === id || undefined} data-drop-target={dragView?.target === id && dragView.id !== id || undefined} data-drop-side={dragView?.target === id && dragView.id !== id ? dragView.side : undefined}>

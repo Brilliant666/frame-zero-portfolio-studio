@@ -110,6 +110,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
   async function openEditor(p, url) {
     const loaded = p.waitForResponse(r => r.request().method() === 'GET' && r.url().includes('/api/sites/') && r.status() === 200);
     await Promise.all([p.goto(`${origin}${url}`), loaded]);
+    if (url.includes('/admin/premium-polaroid')) await p.getByRole('button', { name: '主页资料', exact: true }).click();
     await field(p, '摄影师名称').waitFor();
     await p.waitForFunction(() => !document.querySelector('input')?.disabled && !document.querySelector('fieldset')?.disabled);
   }
@@ -198,11 +199,13 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
       await snapshot(page, '02-premium-saved');
     });
     await stage('03 empty collections create / rename / reorder / save', async () => {
-      await page.getByRole('button', { name: '图集库', exact: true }).click();
+      await page.getByRole('button', { name: '图集', exact: true }).click();
       for (const name of ['Anonymous collection one', 'Anonymous collection two']) {
         await page.getByRole('button', { name: '新建图集', exact: true }).click();
-        await page.getByRole('navigation', { name: '图集编辑内容', exact: true }).getByRole('button', { name: '图集设置', exact: true }).click();
-        await field(page, '图集名称').fill(name);
+        const creation = page.getByRole('dialog', { name: '新建图集', exact: true });
+        await creation.getByLabel('图集名称', { exact: true }).fill(name);
+        await creation.getByRole('button', { name: '创建并选片', exact: true }).click();
+        await page.getByRole('dialog', { name: '从图库选片', exact: true }).getByRole('button', { name: '取消选片', exact: true }).click();
       }
       await page.getByRole('navigation', { name: '图集编辑内容', exact: true }).getByRole('button', { name: '图集设置', exact: true }).click();
       await page.getByRole('button', { name: '图集上移', exact: true }).click();

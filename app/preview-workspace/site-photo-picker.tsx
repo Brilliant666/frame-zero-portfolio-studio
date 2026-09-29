@@ -1,12 +1,13 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element -- Authenticated Site image variants. */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import type { SiteAsset } from "../site-editor/assets-client";
 import { filterPickerAssets, PICKER_PAGE_SIZE, type PickerFilter } from "./photo-picker-state";
 import styles from "./site-photo-picker.module.css";
 
 type Props = {
+  returnFocus?: RefObject<HTMLButtonElement | null>;
   collectionName: string; members: readonly string[]; assets: readonly SiteAsset[];
   ready: boolean; truncated: boolean; state: string; onReload: () => Promise<void>;
   onAdd: (ids: readonly string[]) => void; onClose: () => void;
@@ -14,7 +15,7 @@ type Props = {
 const initialFilter: PickerFilter = { query: "", orientation: "all", membership: "outside", sort: "newest", onlySelected: false };
 const orientationName = { landscape: "横图", portrait: "竖图", square: "方图" };
 
-export default function SitePhotoPicker({ collectionName, members, assets, ready, truncated, state, onReload, onAdd, onClose }: Props) {
+export default function SitePhotoPicker({ returnFocus, collectionName, members, assets, ready, truncated, state, onReload, onAdd, onClose }: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [filter, setFilter] = useState(initialFilter);
   const [picked, setPicked] = useState<string[]>([]);
@@ -26,9 +27,10 @@ export default function SitePhotoPicker({ collectionName, members, assets, ready
   useEffect(() => {
     const node = dialog.current;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const target = returnFocus?.current ?? previous;
     node?.showModal();
-    return () => { node?.close(); previous?.focus(); };
-  }, []);
+    return () => { node?.close(); target?.focus(); };
+  }, [returnFocus]);
   const memberIds = useMemo(() => new Set(members), [members]);
   const pickedIds = useMemo(() => new Set(picked), [picked]);
   const availableIds = useMemo(() => new Set(assets.map(asset => asset.id)), [assets]);
@@ -43,7 +45,7 @@ export default function SitePhotoPicker({ collectionName, members, assets, ready
   const toggle = (id: string) => { setPicked(ids => ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id]); setError(""); };
   const close = () => { if (!picked.length || window.confirm("放弃本次选片？已加入图集的成员和其他编辑不变。")) onClose(); };
   return <dialog ref={dialog} className={styles.dialog} aria-labelledby="site-picker-title" onCancel={event => { event.preventDefault(); if (enlarged) closeEnlarged(); else close(); }}>
-    <header className={styles.header} inert={Boolean(enlarged)}><div><h2 id="site-picker-title">从本站图库选片</h2><p>加入「{collectionName}」 · 已有 {members.length} 张，还可加入 {remaining} 张</p></div><button type="button" onClick={close}>取消选片</button></header>
+    <header className={styles.header} inert={Boolean(enlarged)}><div><h2 id="site-picker-title">从图库选片</h2><p>加入「{collectionName}」 · 已有 {members.length} 张，还可加入 {remaining} 张</p></div><button type="button" onClick={close}>取消选片</button></header>
     <div className={styles.content} inert={Boolean(enlarged)}>
       <p role="status">{state}</p>
       {truncated && <p className={styles.warning}>本站素材超过 10,000 张，当前只载入其中一部分；筛选和分页仅覆盖已载入照片。</p>}

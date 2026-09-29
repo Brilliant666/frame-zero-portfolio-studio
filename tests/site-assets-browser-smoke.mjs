@@ -120,14 +120,14 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
     });
     await step('02 premium existing editor reuses uploaded assets / independent saved fields', async () => {
       await page.goto(`${origin}${premium}`);
+      await page.getByRole('button', { name: '主页资料', exact: true }).click();
       await page.getByLabel('摄影师名称', { exact: true }).fill('Premium asset photographer');
-      await page.getByRole('button', { name: '图集库', exact: true }).click();
+      await page.getByRole('button', { name: '图集', exact: true }).click();
       await page.getByRole('button', { name: '新建图集', exact: true }).click();
-      await page.getByRole('navigation', { name: '图集编辑内容', exact: true }).getByRole('button', { name: '图集设置', exact: true }).click();
-      await page.getByLabel('图集名称', { exact: true }).fill('Anonymous landscape portrait square');
-      await page.getByRole('navigation', { name: '图集编辑内容', exact: true }).getByRole('button', { name: '照片排序', exact: true }).click();
-      await page.getByRole('button', { name: '从本站图库选片', exact: true }).click();
-      const picker = page.getByRole('dialog', { name: '从本站图库选片', exact: true });
+      const creation = page.getByRole('dialog', { name: '新建图集', exact: true });
+      await creation.getByLabel('图集名称', { exact: true }).fill('Anonymous landscape portrait square');
+      await creation.getByRole('button', { name: '创建并选片', exact: true }).click();
+      const picker = page.getByRole('dialog', { name: '从图库选片', exact: true });
       for (const asset of assets) await picker.getByRole('checkbox', { name: `选择照片 ${asset.id}`, exact: true }).check();
       await picker.getByRole('button', { name: '加入当前图集（3 张）', exact: true }).click();
       await page.getByRole('navigation', { name: '图集编辑内容', exact: true }).getByRole('button', { name: '图集设置', exact: true }).click();
