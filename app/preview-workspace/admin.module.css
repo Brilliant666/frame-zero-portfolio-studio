@@ -182,12 +182,12 @@
 .uploadEntry span { font-size:12px; color:#61718a; }
 .uploadEntry > div[hidden] { display:none; }
 .uploadEntry section { margin-top:12px; }
-.collectionWorkbench { min-width:0; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.1fr); gap:16px; align-items:start; }
+.collectionWorkbench { min-width:0; display:block; }
 .collectionWorkbench > .panel { min-width:0; padding:16px; }
 .collectionTabs { display:flex; gap:8px; border-bottom:1px solid #d5deea; padding:0 0 12px; margin:12px 0; }
 .collectionTabs button[aria-pressed="true"] { background:#263e62; color:white; }
 .collectionTabs .mobileEffectTab { display:none; }
-.liveEffect { min-width:0; position:sticky; top:72px; }
+.liveEffect { min-width:0; position:static; margin-top:16px; }
 .collectionWorkbench [hidden] { display:none !important; }
 @media (max-width:1499px) {
  .workspace[data-site-editor="premium"] .collections { grid-template-columns:minmax(0,1fr); }
@@ -199,8 +199,21 @@
 @media (max-width:999px) {
  .collectionWorkbench { display:block; }
  .collectionTabs .mobileEffectTab { display:block; }
- .liveEffect { display:none; position:static; margin-top:12px; }
+ .liveEffect { position:static; margin-top:12px; }
  .liveEffect[data-show] { display:block; }
  .collectionTabs { gap:4px; }
  .collectionTabs button { padding-inline:8px; }
 }
+.workspace[data-site-editor="premium"] .collections { display:block; }
+.workspace[data-site-editor="premium"] .collectionNavigation > .list { display:none; }
+.workspace[data-site-editor="premium"] .collectionChooser { flex-direction:row-reverse; align-items:center; margin-block:12px; }
+.workspace[data-site-editor="premium"] .collectionSelect { display:flex; flex:1; min-width:0; align-items:center; gap:8px; }
+.workspace[data-site-editor="premium"] .collectionSelect select { flex:1; min-width:0; padding:8px; }
+.albumGrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:16px; }
+.workspace[data-site-editor="premium"] .albumCard { display:flex; flex-direction:column; align-items:stretch; text-align:left; gap:8px; min-width:0; padding:12px; }
+.albumCard img,.albumPlaceholder { width:100%; height:150px; object-fit:contain; background:#eef2f7; border-radius:6px; }
+.albumPlaceholder { display:grid; place-items:center; }
+.albumCard strong { overflow-wrap:anywhere; }
+.albumCard span { font-size:13px; }
+.collectionTabs { flex-wrap:wrap; }
+.workspace [hidden] { display:none !important; }

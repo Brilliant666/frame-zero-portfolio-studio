@@ -4,24 +4,31 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import type { Collection } from "../templates/polaroid-field/collection-model";
 import type { SiteAsset } from "../site-editor/assets-client";
-import { moveCollectionMember } from "./collection-member-order";
+import { moveCollectionMember, moveCollectionMembers, rememberMemberMove, undoMemberMove, type MemberMoveUndo } from "./collection-member-order";
 import styles from "./collection-member-editor.module.css";
 
 export type CollectionMemberEditorProps = {
+  mode?: "sort" | "manage";
   collection: Collection;
   assets: readonly SiteAsset[];
   onChange: (next: Collection) => void;
   onView: (asset: SiteAsset) => void;
 };
-type Drag = { id: string; target: string; pointerId: number; x: number; y: number; collectionId: string; originalIds: string[] };
+type Drag = { id: string; target: string; side: "before" | "after"; pointerId: number; x: number; y: number; collectionId: string; originalIds: string[] };
 
-export default function CollectionMemberEditor({ collection, assets, onChange, onView }: CollectionMemberEditorProps) {
+export default function CollectionMemberEditor({ collection, assets, onChange, onView, mode = "sort" }: CollectionMemberEditorProps) {
   const helpId = useId();
   const list = useRef<HTMLOListElement>(null);
   const handles = useRef(new Map<string, HTMLButtonElement>());
-  const positions = useRef(new Map<string, HTMLInputElement>());
+  const [selection, setSelection] = useState<{ collectionId: string; ids: string[] }>({ collectionId: collection.id, ids: [] });
+  const selectedIds = selection.collectionId === collection.id ? collection.assetIds.filter(id => selection.ids.includes(id)) : [];
+  const [destination, setDestination] = useState<"position" | "before" | "after">("position");
+  const [targetNumber, setTargetNumber] = useState("1");
+  const [undo, setUndo] = useState<MemberMoveUndo | null>(null);
+  const canUndo = undoMemberMove(collection, undo) !== collection;
+  const toggle = (id: string) => setSelection({ collectionId: collection.id, ids: selectedIds.includes(id) ? selectedIds.filter(value => value !== id) : [...selectedIds, id] });
   const drag = useRef<Drag | null>(null);
-  const [dragView, setDragView] = useState<{ id: string; target: string } | null>(null);
+  const [dragView, setDragView] = useState<{ id: string; target: string; side: "before" | "after" } | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const assetMap = useMemo(() => new Map(assets.map(asset => [asset.id, asset])), [assets]);
   const restoreFocus = useCallback((id: string) => requestAnimationFrame(() => handles.current.get(id)?.focus()), []);
@@ -44,7 +51,8 @@ export default function CollectionMemberEditor({ collection, assets, onChange, o
         const target = document.elementFromPoint(active.x, active.y)?.closest<HTMLElement>("[data-member-id]");
         if (target && list.current?.contains(target) && target.dataset.memberId && active.target !== target.dataset.memberId) {
           active.target = target.dataset.memberId;
-          setDragView({ id: active.id, target: active.target });
+          active.side = active.x < target.getBoundingClientRect().left + target.getBoundingClientRect().width / 2 ? "before" : "after";
+          setDragView({ id: active.id, target: active.target, side: active.side });
         }
       }
       frame = requestAnimationFrame(scroll);
@@ -54,7 +62,7 @@ export default function CollectionMemberEditor({ collection, assets, onChange, o
   }, [dragView]);
   function move(id: string, position: number) {
     const next = moveCollectionMember(collection, id, position);
-    if (next !== collection) { onChange(next); setAnnouncement(`照片已移到第 ${position + 1} 位，共 ${next.assetIds.length} 张；尚未保存。`); }
+    if (next !== collection) { setUndo(rememberMemberMove(collection, next)); onChange(next); setAnnouncement(`照片已移到第 ${position + 1} 位，共 ${next.assetIds.length} 张；尚未保存。`); }
     else setAnnouncement("位置未改变。");
     restoreFocus(id);
   }
@@ -71,9 +79,9 @@ export default function CollectionMemberEditor({ collection, assets, onChange, o
     if (!event.isPrimary || event.button !== 0) return;
     event.currentTarget.focus({ preventScroll: true });
     event.currentTarget.setPointerCapture(event.pointerId);
-    drag.current = { id, target: id, pointerId: event.pointerId, x: event.clientX, y: event.clientY, collectionId: collection.id, originalIds: [...collection.assetIds] };
-    setDragView({ id, target: id });
-    setAnnouncement("拖到目标照片后松开，或按 Escape 取消。");
+    drag.current = { id, target: id, side: "before", pointerId: event.pointerId, x: event.clientX, y: event.clientY, collectionId: collection.id, originalIds: [...collection.assetIds] };
+    setDragView({ id, target: id, side: "before" });
+    setAnnouncement("拖到目标照片左半侧放在它之前，右半侧放在它之后；Escape 取消。");
   }
   function pointerMove(event: PointerEvent<HTMLButtonElement>) {
     const active = drag.current;
@@ -82,9 +90,10 @@ export default function CollectionMemberEditor({ collection, assets, onChange, o
     const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-member-id]");
     if (target && list.current?.contains(target) && target.dataset.memberId) {
       active.target = target.dataset.memberId;
-      setDragView({ id: active.id, target: active.target });
+      active.side = event.clientX < target.getBoundingClientRect().left + target.getBoundingClientRect().width / 2 ? "before" : "after";
+      setDragView({ id: active.id, target: active.target, side: active.side });
     } else {
-      active.target = active.id; setDragView({ id: active.id, target: active.id });
+      active.target = active.id; setDragView({ id: active.id, target: active.id, side: active.side });
     }
   }
   function finish(event: PointerEvent<HTMLButtonElement>) {
@@ -102,19 +111,45 @@ export default function CollectionMemberEditor({ collection, assets, onChange, o
     if (active.collectionId !== collection.id || active.originalIds.join("\0") !== collection.assetIds.join("\0")) {
       setAnnouncement("图集已变化，已取消本次拖动。请重新排序。"); restoreFocus(active.id); return;
     }
-    move(active.id, collection.assetIds.indexOf(active.target));
+    const side = event.clientX < target.getBoundingClientRect().left + target.getBoundingClientRect().width / 2 ? "before" : "after";
+    const next = moveCollectionMembers(collection, [active.id], { kind: "relative", targetId: active.target, side });
+    if (next !== collection) { setUndo(rememberMemberMove(collection, next)); onChange(next); setAnnouncement(`照片已移到第 ${next.assetIds.indexOf(active.id) + 1} 位；尚未保存。`); }
+    restoreFocus(active.id);
   }
-  return <section className={styles.editor} aria-label="图集照片排序">
-    <p id={helpId} className={styles.help}>拖动照片下方手柄调整顺序；键盘可用方向键、Home / End。排序会立即更新当前编辑效果，保存后才保留。</p>
+  function moveSelected() {
+    const number = Number(targetNumber);
+    const maximum = destination === "position" ? collection.assetIds.length - selectedIds.length + 1 : collection.assetIds.length;
+    if (!selectedIds.length || !Number.isInteger(number) || number < 1 || number > maximum) { setAnnouncement(`请选择照片，并输入 1 到 ${maximum} 的整数。`); return; }
+    const targetId = collection.assetIds[number - 1];
+    if (destination !== "position" && selectedIds.includes(targetId)) { setAnnouncement("目标照片不能属于本次选中照片，请换一个目标序号。"); return; }
+    const next = moveCollectionMembers(collection, selectedIds, destination === "position" ? { kind: "position", position: number - 1 } : { kind: "relative", targetId, side: destination });
+    if (next !== collection) { setUndo(rememberMemberMove(collection, next)); onChange(next); setAnnouncement(`已移动 ${selectedIds.length} 张，保持原有相对顺序；尚未保存。`); requestAnimationFrame(() => handles.current.get(selectedIds[0])?.scrollIntoView({ block: "center" })); }
+    else setAnnouncement("顺序未改变。");
+  }
+  return <section className={styles.editor} aria-label={mode === "sort" ? "图集照片排序" : "图集成员管理"}>
+    <div className={styles.toolbar} data-active={selectedIds.length > 0 || canUndo || undefined}>
+      <strong>已选 {selectedIds.length} / {collection.assetIds.length} 张</strong>
+      <button type="button" onClick={() => setSelection({ collectionId: collection.id, ids: [...collection.assetIds] })} disabled={!collection.assetIds.length}>全选</button>
+      <button type="button" onClick={() => setSelection({ collectionId: collection.id, ids: [] })} disabled={!selectedIds.length}>清空选择</button>
+      {mode === "sort" ? <>
+        <label>移动方式<select value={destination} onChange={event => setDestination(event.target.value as typeof destination)}><option value="position">移到目标序号</option><option value="before">放到目标照片之前</option><option value="after">放到目标照片之后</option></select></label>
+        <label>{destination === "position" ? "移动后起始序号" : "当前目标照片序号"}<input type="number" min={1} max={destination === "position" ? collection.assetIds.length - selectedIds.length + 1 : collection.assetIds.length} value={targetNumber} onChange={event => setTargetNumber(event.target.value)} /></label>
+        <button type="button" disabled={!selectedIds.length} onClick={moveSelected}>移动选中照片</button>
+        <button type="button" disabled={!canUndo} onClick={() => { const previous = undoMemberMove(collection, undo); if (previous !== collection) { onChange(previous); setAnnouncement("已撤销最近一次移动；尚未保存。"); } setUndo(null); }}>撤销最近移动</button>
+      </> : <>
+        <button type="button" disabled={selectedIds.length !== 1 || !assetMap.has(selectedIds[0])} onClick={() => { onChange({ ...collection, coverAssetId: selectedIds[0] }); setAnnouncement("所选照片已设为独立封面；尚未保存。"); }}>将所选照片设为封面</button>
+        <button type="button" disabled={!selectedIds.length} onClick={() => { onChange({ ...collection, assetIds: collection.assetIds.filter(id => !selectedIds.includes(id)), focusAssetId: collection.focusAssetId && selectedIds.includes(collection.focusAssetId) ? null : collection.focusAssetId }); setSelection({ collectionId: collection.id, ids: [] }); setAnnouncement(`已移出 ${selectedIds.length} 张，素材未删除；尚未保存。`); }}>移出所选照片</button>
+      </>}
+    </div>
+    <p id={helpId} className={styles.help}>{mode === "sort" ? "跨行移动可多选后输入目标序号；选中照片保持原有相对顺序。手柄拖动只移动这一张，插入线标明前后；键盘支持方向键和 Home / End。" : "选择照片后统一移出；选择一张可设为封面。移出不删除本站素材。"}</p>
     <p className={styles.live} role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
     {!collection.assetIds.length && <p>图集还没有照片，请从本站图库选片。</p>}
     <ol className={styles.grid} ref={list}>{collection.assetIds.map((id, index) => {
       const asset = assetMap.get(id);
-      return <li className={styles.card} key={id} data-member-id={id} data-dragging={dragView?.id === id || undefined} data-drop-target={dragView?.target === id && dragView.id !== id || undefined}>
-        <button type="button" className={styles.photo} disabled={!asset} aria-label={`查看成员 ${index + 1} 大图`} onClick={() => { if (asset) onView(asset); }}>{asset ? <img src={asset.variants.thumbnail.src} alt="" loading="lazy" draggable={false} /> : <span>素材暂不可用<br />引用保留</span>}<span className={styles.number}>{index + 1}</span>{asset && <span className={styles.view}>查看大图</span>}</button>
-        <button type="button" className={styles.handle} ref={node => { if (node) handles.current.set(id, node); else handles.current.delete(id); }} aria-label={`拖动成员 ${index + 1} 调整顺序`} aria-describedby={helpId} onKeyDown={event => keyboard(event, id, index)} onPointerDown={event => start(event, id)} onPointerMove={pointerMove} onPointerUp={finish} onPointerCancel={cancelDrag} onLostPointerCapture={() => { if (drag.current?.id === id) cancelDrag(); }}>⠿ 拖动排序</button>
-        <div className={styles.actions}><button type="button" disabled={!asset || collection.coverAssetId === id} onClick={() => { onChange({ ...collection, coverAssetId: id }); setAnnouncement(`第 ${index + 1} 张已设为独立封面；尚未保存。`); }}>{collection.coverAssetId === id ? "当前封面" : "设为封面"}</button><button type="button" aria-label={`移出成员 ${index + 1}`} onClick={() => { onChange({ ...collection, assetIds: collection.assetIds.filter(entry => entry !== id), focusAssetId: collection.focusAssetId === id ? null : collection.focusAssetId }); setAnnouncement(`已移出第 ${index + 1} 张，素材未删除；尚未保存。`); restoreFocus(collection.assetIds[index + 1] ?? collection.assetIds[index - 1]); }}>移出</button></div>
-        <details className={styles.position}><summary>移到指定位置</summary><label>目标位置<input type="number" min={1} max={collection.assetIds.length} defaultValue={index + 1} key={index} ref={node => { if (node) positions.current.set(id, node); else positions.current.delete(id); }} aria-label={`成员 ${index + 1} 目标位置`} /></label><button type="button" onClick={() => { const value = Number(positions.current.get(id)?.value); if (!Number.isInteger(value) || value < 1 || value > collection.assetIds.length) { setAnnouncement(`请输入 1 到 ${collection.assetIds.length} 的整数。`); positions.current.get(id)?.focus(); return; } move(id, value - 1); }}>确认移动</button></details>
+      return <li className={styles.card} key={id} data-member-id={id} data-selected={selectedIds.includes(id) || undefined} data-dragging={dragView?.id === id || undefined} data-drop-target={dragView?.target === id && dragView.id !== id || undefined} data-drop-side={dragView?.target === id && dragView.id !== id ? dragView.side : undefined}>
+        <button type="button" className={styles.photo} disabled={!asset} aria-label={`查看成员 ${index + 1} 大图`} onClick={() => { if (asset) onView(asset); }}>{asset ? <img src={asset.variants.thumbnail.src} alt="" loading="lazy" draggable={false} /> : <span>素材暂不可用<br />引用保留</span>}<span className={styles.number}>{index + 1}</span>{mode === "manage" && collection.coverAssetId === id && <span className={styles.view}>封面</span>}</button>
+        <div className={styles.cardBar}><label className={styles.select}><input type="checkbox" checked={selectedIds.includes(id)} onChange={() => toggle(id)} aria-label={`选择成员 ${index + 1}`} /><span>选择</span></label>
+        {mode === "sort" && <button type="button" className={styles.handle} ref={node => { if (node) handles.current.set(id, node); else handles.current.delete(id); }} aria-label={`拖动成员 ${index + 1} 调整顺序`} aria-describedby={helpId} onKeyDown={event => keyboard(event, id, index)} onPointerDown={event => start(event, id)} onPointerMove={pointerMove} onPointerUp={finish} onPointerCancel={cancelDrag} onLostPointerCapture={() => { if (drag.current?.id === id) cancelDrag(); }}>⠿</button>}</div>
       </li>;
     })}</ol>
   </section>;

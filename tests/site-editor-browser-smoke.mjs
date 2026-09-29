@@ -198,7 +198,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
       await snapshot(page, '02-premium-saved');
     });
     await stage('03 empty collections create / rename / reorder / save', async () => {
-      await page.getByRole('button', { name: '图集管理', exact: true }).click();
+      await page.getByRole('button', { name: '图集库', exact: true }).click();
       for (const name of ['Anonymous collection one', 'Anonymous collection two']) {
         await page.getByRole('button', { name: '新建图集', exact: true }).click();
         await page.getByRole('navigation', { name: '图集编辑内容', exact: true }).getByRole('button', { name: '图集设置', exact: true }).click();

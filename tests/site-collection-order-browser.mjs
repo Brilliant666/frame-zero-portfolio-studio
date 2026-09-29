@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 // keyboard input; all DOM evaluation below is read-only evidence.
 export async function exerciseCollectionOrder({ page, selected, read, published, save, shot }) {
   const editor = page.getByRole('region', { name: '图集照片排序', exact: true });
-  const effect = page.getByRole('region', { name: '当前图集即时效果', exact: true });
+  const effect = page.getByRole('region', { name: '当前图集即时效果', exact: true, includeHidden: true });
   const before = await read();
   const publishedBefore = await published();
   const card = id => editor.locator(`[data-member-id="${id}"]`);
@@ -27,15 +27,17 @@ export async function exerciseCollectionOrder({ page, selected, read, published,
     const end = await card(target).getByRole('button', { name: /^查看成员 / }).boundingBox();
     assert.ok(start && end, 'Real source handle and target photo have layout boxes');
     const from = { x: start.x + start.width / 2, y: start.y + start.height / 2 };
-    const to = { x: end.x + end.width / 2, y: end.y + end.height / 2 };
+    const to = { x: end.x + end.width / 4, y: end.y + end.height / 2 };
     assert.ok(from.y > 0 && from.y < page.viewportSize().height && to.y > 0 && to.y < page.viewportSize().height, 'Both real pointer positions are inside the viewport');
     await page.mouse.move(from.x, from.y); await page.mouse.down();
     await page.mouse.move(to.x, to.y, { steps: 12 });
     assert.equal(await card(target).getAttribute('data-drop-target'), 'true');
   }
-  await page.getByRole('button', { name: '编辑照片', exact: true }).click();
+  await page.getByRole('button', { name: '照片排序', exact: true }).click();
+  await page.getByRole('button', { name: '展示效果', exact: true }).click();
   await effect.getByRole('button', { name: '散落', exact: true }).click();
   const mode = await effect.locator('[data-composer]').getAttribute('data-composer');
+  await page.getByRole('button', { name: '照片排序', exact: true }).click();
   await order(selected);
   await beginDrag(selected[2], selected[0]);
   await page.mouse.up();
