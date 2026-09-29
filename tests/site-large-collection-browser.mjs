@@ -18,7 +18,10 @@ export async function exerciseLargeCollections({ page, read, published, shot }) 
     assert.deepEqual(await published(), pointer, 'Editing order never publishes');
   }
   async function select(id) { await editor.locator(`[data-member-id="${id}"]`).getByRole('checkbox').check(); }
-  async function clearSelection() { for (const input of await editor.getByRole('checkbox', { checked: true }).all()) await input.uncheck(); }
+  async function clearSelection() {
+    await editor.getByRole('button', { name: '清空选择', exact: true }).click();
+    assert.equal(await editor.getByRole('checkbox', { checked: true }).count(), 0);
+  }
   async function move(kind, position) {
     await editor.getByRole('combobox', { name: '移动方式', exact: true }).selectOption(kind);
     await editor.getByRole('spinbutton', { name: kind === 'position' ? '移动后起始序号' : '当前目标照片序号', exact: true }).fill(String(position));
