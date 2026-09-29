@@ -201,10 +201,10 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
       await page.getByRole('button', { name: '图集管理', exact: true }).click();
       for (const name of ['Anonymous collection one', 'Anonymous collection two']) {
         await page.getByRole('button', { name: '新建图集', exact: true }).click();
-        await expandControl(page, field(page, '图集名称'));
+        await page.getByRole('navigation', { name: '图集编辑内容', exact: true }).getByRole('button', { name: '图集设置', exact: true }).click();
         await field(page, '图集名称').fill(name);
       }
-      await expandControl(page, page.getByRole('button', { name: '图集上移', exact: true, includeHidden: true }));
+      await page.getByRole('navigation', { name: '图集编辑内容', exact: true }).getByRole('button', { name: '图集设置', exact: true }).click();
       await page.getByRole('button', { name: '图集上移', exact: true }).click();
       premiumSaved = await saved(page, 'premium-polaroid');
       assert.deepEqual(premiumSaved.content.collections.map(c => c.name), ['Anonymous collection two', 'Anonymous collection one']);

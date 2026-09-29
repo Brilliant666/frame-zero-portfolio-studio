@@ -216,8 +216,9 @@ export async function siteTemplateBrowserMatrix({ page, publicPage, context, ori
       await page.getByRole('button', { name: '图集管理', exact: true }).click();
       for (let index = 1; index <= 4; index++) {
         await page.getByRole('button', { name: '新建图集', exact: true }).click();
-        await expandControl(page, page.getByLabel('图集名称', { exact: true }));
+        await page.getByRole('navigation', { name: '图集编辑内容', exact: true }).getByRole('button', { name: '图集设置', exact: true }).click();
         await page.getByLabel('图集名称', { exact: true }).fill(`Premium browser matrix ${index}`);
+        await page.getByRole('navigation', { name: '图集编辑内容', exact: true }).getByRole('button', { name: '编辑照片', exact: true }).click();
         await page.getByRole('button', { name: '从本站图库选片', exact: true }).click();
         const picker = page.getByRole('dialog', { name: '从本站图库选片', exact: true });
         await picker.getByRole('checkbox', { name: /^选择照片 / }).first().check();

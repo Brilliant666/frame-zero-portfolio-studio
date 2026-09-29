@@ -1,6 +1,7 @@
 # 当前检查点
 
-更新：2026-09-28。[AGENTS](../AGENTS.md) → 本页 → [SESSION_HANDOFF](SESSION_HANDOFF.md)。
+更新：2026-09-29。[AGENTS](../AGENTS.md) → 本页 → [SESSION_HANDOFF](SESSION_HANDOFF.md)。
+最新切片：[高级图集直接排序与即时效果](PR33_COLLECTION_ORDER.md)。3003 已经用户确认后更新；草稿和 Published 未变，3001/3004 未动。远端检查须核对本次提交 Head。
 当前任务：**PR33_ADMIN_UX_A_B_C**，实施与未完成验收见 [后台体验记录](PR33_ADMIN_UX.md)。前次任务：**PR33_UNATTENDED_FUNCTIONAL_CLOSURE**，范围和切片证据统一记在
 [PR33 功能收口记录](PR33_FUNCTIONAL_CLOSURE.md)。旧交接的“只做选片／逐项等待”已由用户本轮授权替代。
 

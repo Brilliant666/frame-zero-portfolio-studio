@@ -4,6 +4,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join, basename } from 'node:path';
 import sharp from 'sharp';
 import { chromium } from 'playwright';
+import { exerciseCollectionOrder } from './site-collection-order-browser.mjs';
 import { provisionAccount } from '../db/accounts/provision.mjs';
 
 // Fixture writes are restricted to the dedicated integration database and its
@@ -40,13 +41,9 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
   context.setDefaultTimeout(15000);
   const page = await context.newPage();
-  async function expandTools(title) {
-    const summary = page.getByText(title, { exact: true });
-    // Read the native disclosure state and use its visible control, as a user does.
-    const details = summary.locator('..');
-    if (await details.getAttribute('open') === null) await summary.click();
+  async function openSettings() {
+    await page.getByRole('button', { name: '图集设置', exact: true }).click();
   }
-
   const abort = () => { void browser.close(); };
   signal?.addEventListener('abort', abort, { once: true });
   const endpoint = `/api/sites/${slug}/drafts/premium-polaroid`;
@@ -98,7 +95,7 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
       await page.goto(`${origin}/${slug}/admin/premium-polaroid`);
       await page.getByRole('button', { name: '图集管理', exact: true }).click();
       await page.getByRole('button', { name: '新建图集', exact: true }).click();
-      await expandTools('图集名称、简介与显示顺序');
+      await openSettings();
       await page.getByLabel('图集名称', { exact: true }).fill('Anonymous picker collection');
       await open();
       await picker.waitFor();
@@ -135,7 +132,9 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
       page.once('dialog', dialog => dialog.accept());
       await picker.getByRole('button', { name: '取消选片', exact: true }).click();
       await picker.waitFor({ state: 'hidden' });
-      await page.getByRole('heading', { name: '成员与顺序 · 0 张', exact: true }).waitFor();
+      await page.getByRole('button', { name: '编辑照片', exact: true }).click();
+      await page.getByText('图集还没有照片，请从本站图库选片。', { exact: true }).waitFor();
+      assert.equal(await page.locator('[data-member-id]').count(), 0);
       await open();
       assert.equal(await checkboxes().evaluateAll(nodes => nodes.filter(node => node.checked).length), 0);
       await picker.getByRole('button', { name: '选择本页可加入照片', exact: true }).click();
@@ -163,13 +162,13 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
       await picker.getByRole('button', { name: '查看已选', exact: true }).click();
       assert.deepEqual((await idsOnPage()).sort(), [...selected].sort());
       await picker.getByRole('button', { name: '加入当前图集（3 张）', exact: true }).click();
-      await page.getByRole('heading', { name: '成员与顺序 · 3 张', exact: true }).waitFor();
-      await page.getByRole('button', { name: '成员 3 选择操作', exact: true }).click();
-      page.once('dialog', dialog => dialog.accept('1'));
-      await page.getByRole('button', { name: '成员 3 移到指定位置', exact: true }).click();
-      selected = [selected[2], selected[0], selected[1]];
-      saved = await save();
-      assert.deepEqual(saved.content.collections[0].assetIds, selected);
+      await picker.waitFor({ state: 'hidden' });
+      await page.getByRole('button', { name: '编辑照片', exact: true }).click();
+      assert.equal(await page.locator('[data-member-id]').count(), 3);
+    });
+    await step('real drag / keyboard / cancel / live composition / explicit draft save', async () => {
+      ({ selected, saved } = await exerciseCollectionOrder({ page, selected, read, save, shot,
+        published: async () => (await runtime.pool.query('SELECT * FROM site_publications WHERE site_id=$1', [siteId])).rows }));
       await page.reload();
       await page.getByRole('button', { name: '图集管理', exact: true }).click();
       assert.deepEqual((await read()).content.collections[0].assetIds, selected);
@@ -193,12 +192,13 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
       await page.setViewportSize({ width: 1440, height: 900 });
       const otherSave = await context.request.put(`${origin}${endpoint}`, { headers: { origin }, data: { content: saved.content, expectedRevision: saved.revision } });
       assert.equal(otherSave.status(), 200);
-      await expandTools('图集名称、简介与显示顺序');
+      await openSettings();
       await page.getByLabel('图集名称', { exact: true }).fill('Unsaved conflict retained');
       await save(409);
       await page.getByText(/版本冲突：其他标签页已保存新版本/).waitFor();
       assert.equal(await page.getByLabel('图集名称', { exact: true }).inputValue(), 'Unsaved conflict retained');
-      await page.getByRole('heading', { name: '成员与顺序 · 3 张', exact: true }).waitFor();
+      await page.getByRole('button', { name: '编辑照片', exact: true }).click();
+      assert.equal(await page.locator('[data-member-id]').count(), 3);
       assert.deepEqual((await read()).content.collections[0].assetIds, selected);
       assert.equal((await read()).content.collections[0].name, 'Anonymous picker collection');
       assert.deepEqual(await read('basic'), basicBefore);

@@ -123,13 +123,14 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
       await page.getByLabel('摄影师名称', { exact: true }).fill('Premium asset photographer');
       await page.getByRole('button', { name: '图集管理', exact: true }).click();
       await page.getByRole('button', { name: '新建图集', exact: true }).click();
-      await expandTools('图集名称、简介与显示顺序');
+      await page.getByRole('navigation', { name: '图集编辑内容', exact: true }).getByRole('button', { name: '图集设置', exact: true }).click();
       await page.getByLabel('图集名称', { exact: true }).fill('Anonymous landscape portrait square');
+      await page.getByRole('navigation', { name: '图集编辑内容', exact: true }).getByRole('button', { name: '编辑照片', exact: true }).click();
       await page.getByRole('button', { name: '从本站图库选片', exact: true }).click();
       const picker = page.getByRole('dialog', { name: '从本站图库选片', exact: true });
       for (const asset of assets) await picker.getByRole('checkbox', { name: `选择照片 ${asset.id}`, exact: true }).check();
       await picker.getByRole('button', { name: '加入当前图集（3 张）', exact: true }).click();
-      await page.getByText('封面与重点照片设置', { exact: true }).click();
+      await page.getByRole('navigation', { name: '图集编辑内容', exact: true }).getByRole('button', { name: '图集设置', exact: true }).click();
       await page.getByRole('combobox', { name: '独立封面', exact: true }).selectOption(assets.find(a => a.orientation === 'landscape').id);
       await page.getByRole('combobox', { name: '星图重点照片', exact: true }).selectOption(assets.find(a => a.orientation === 'portrait').id);
       premiumSaved = await save('premium-polaroid');
@@ -146,17 +147,18 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
       await page.goto(`${origin}/${a}/admin/preview/premium-polaroid`);
       await images(); await shot('03-premium-home');
       await page.getByRole('button', { name: /进入图集：Anonymous/ }).click();
-      await page.getByRole('button', { name: '散落', exact: true }).waitFor();
+      const savedPreview = page.locator('[data-site-premium]');
+      await savedPreview.getByRole('button', { name: '散落', exact: true }).waitFor();
       for (const mode of ['星座', '散落', '跨页']) {
-        await page.getByRole('button', { name: mode, exact: true }).click();
-        assert.equal(await page.getByRole('button', { name: mode, exact: true }).getAttribute('aria-pressed'), 'true');
+        await savedPreview.getByRole('button', { name: mode, exact: true }).click();
+        assert.equal(await savedPreview.getByRole('button', { name: mode, exact: true }).getAttribute('aria-pressed'), 'true');
         await images(); await shot(`03-${mode}`);
       }
-      await page.getByRole('button', { name: '切换到夜空', exact: true }).click();
-      await page.getByRole('button', { name: '切换到纸面', exact: true }).waitFor();
+      await savedPreview.getByRole('button', { name: '切换到夜空', exact: true }).click();
+      await savedPreview.getByRole('button', { name: '切换到纸面', exact: true }).waitFor();
       await shot('03-night');
-      await page.getByRole('button', { name: '散落', exact: true }).click();
-      await page.getByRole('button', { name: /查看第 1 张照片/ }).click();
+      await savedPreview.getByRole('button', { name: '散落', exact: true }).click();
+      await savedPreview.getByRole('button', { name: /查看第 1 张照片/ }).click();
       await page.getByRole('dialog', { name: /第 \d+ 张照片预览/ }).waitFor(); await images(); await shot('03-lightbox');
       await page.keyboard.press('Escape');
       await page.getByRole('dialog', { name: /第 \d+ 张照片预览/ }).waitFor({ state: 'hidden' });
@@ -171,7 +173,7 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 2), false, `Basic editor overflow at ${width}`);
         await page.goto(`${origin}${premium}`);
         await page.getByRole('button', { name: '图集管理', exact: true }).click();
-        await expandTools('图集名称、简介与显示顺序');
+        await page.getByRole('navigation', { name: '图集编辑内容', exact: true }).getByRole('button', { name: '图集设置', exact: true }).click();
         await page.getByLabel('图集名称', { exact: true }).waitFor();
         assert.equal(await page.getByLabel('图集名称', { exact: true }).inputValue(), 'Anonymous landscape portrait square');
         await shot('04-premium-mobile');
