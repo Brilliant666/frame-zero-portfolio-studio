@@ -135,7 +135,7 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
       await picker.getByRole('button', { name: '取消选片', exact: true }).click();
       await picker.waitFor({ state: 'hidden' });
       await page.getByRole('button', { name: '照片排序', exact: true }).click();
-      await page.getByText('图集还没有照片，请从本站图库选片。', { exact: true }).waitFor();
+      await page.getByRole('region', { name: '图集照片排序', exact: true }).getByText('图集还没有照片，请从本站图库选片。', { exact: true }).waitFor();
       assert.equal(await page.getByRole('region', { name: '图集照片排序', exact: true }).locator('[data-member-id]').count(), 0);
       await open();
       assert.equal(await checkboxes().evaluateAll(nodes => nodes.filter(node => node.checked).length), 0);
