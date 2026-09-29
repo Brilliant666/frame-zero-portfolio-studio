@@ -20,8 +20,8 @@ export async function exerciseLargeCollections({ page, read, published, shot }) 
   async function select(id) { await editor.locator(`[data-member-id="${id}"]`).getByRole('checkbox').check(); }
   async function clearSelection() { for (const input of await editor.getByRole('checkbox', { checked: true }).all()) await input.uncheck(); }
   async function move(kind, position) {
-    await editor.getByLabel('移动方式', { exact: true }).selectOption(kind);
-    await editor.getByLabel(kind === 'position' ? '移动后起始序号' : '当前目标照片序号', { exact: true }).fill(String(position));
+    await editor.getByRole('combobox', { name: '移动方式', exact: true }).selectOption(kind);
+    await editor.getByRole('spinbutton', { name: kind === 'position' ? '移动后起始序号' : '当前目标照片序号', exact: true }).fill(String(position));
     await editor.getByRole('button', { name: '移动选中照片', exact: true }).click();
   }
   for (const count of [50, 100]) {

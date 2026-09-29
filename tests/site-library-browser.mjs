@@ -12,7 +12,7 @@ export async function exerciseSiteLibrary({ page, read, published, shot }) {
   const library = page.getByRole('region', { name: '本站图库', exact: true });
   const photos = library.locator('[aria-label="图库浏览结果"]');
   const visibleIds = () => photos.getByRole('checkbox').evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label').replace('选择照片 ', '')));
-  await library.getByLabel('加入高级图集', { exact: true }).selectOption(collection.id);
+  await library.getByRole('combobox', { name: '加入高级图集', exact: true }).selectOption(collection.id);
   assert.equal((await visibleIds()).length, 48);
   await library.getByRole('button', { name: '选择本页照片', exact: true }).click();
   assert.equal(await photos.getByRole('checkbox', { checked: true }).count(), 48);
@@ -24,7 +24,7 @@ export async function exerciseSiteLibrary({ page, read, published, shot }) {
   const second = (await visibleIds()).find(id => !collection.assetIds.includes(id));
   assert.ok(second && second !== first);
   await library.getByRole('checkbox', { name: `选择照片 ${second}`, exact: true }).check();
-  await library.getByLabel('按素材 ID 查找', { exact: true }).fill(collection.assetIds[0]);
+  await library.getByRole('searchbox', { name: '按素材 ID 查找', exact: true }).fill(collection.assetIds[0]);
   await library.getByRole('checkbox', { name: `选择照片 ${collection.assetIds[0]}`, exact: true }).check();
   await library.getByRole('button', { name: '查看已选', exact: true }).click();
   assert.deepEqual(await visibleIds(), [first, second, collection.assetIds[0]], 'Cross-page selections retain selection order');
