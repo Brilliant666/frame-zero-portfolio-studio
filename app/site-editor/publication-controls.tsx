@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { editorJson, type DraftSaveOptions, type DraftSaveReceipt } from "./draft-save";
-import type { ContentSpace } from "./content-schema";
+import { isContentSpace, type ContentSpace } from "./content-schema";
 import { publicationMatches as matches, publicationSynced, type PublicationSummary as Publication, type PendingPublication } from "./publication-state";
 import { templateCatalog } from "../templates/catalog";
 import { useEditorActionVisibility } from "./use-editor-action-visibility";
@@ -13,11 +13,11 @@ export type PublicationEditorProps = {
   saveDraft: (options?: DraftSaveOptions) => Promise<DraftSaveReceipt | null>;
 };
 type PublicationState = { current: Publication | null; history: Publication[] };
-const spaceName = (space: ContentSpace) => space === "basic" ? "基础版" : "高级拍立得";
+const spaceName = (space: ContentSpace) => space === "basic" ? "基础版" : space === "premium-flow-gallery" ? "流影视廊" : "高级拍立得";
 const title = (value: Publication) => `${spaceName(value.space)}${value.space === "basic" ? ` · ${templateCatalog.find(item => item.id === value.templateId)?.name ?? value.templateId}` : ""} · v${value.draftRevision}`;
 function parseState(value: unknown): PublicationState {
   if (!value || typeof value !== "object" || !("history" in value) || !Array.isArray(value.history) || !("current" in value)) throw new Error("发布状态响应无效");
-  const valid = (item: unknown): item is Publication => !!item && typeof item === "object" && "id" in item && typeof item.id === "string" && "space" in item && ["basic", "premium-polaroid"].includes(String(item.space)) && "templateId" in item && typeof item.templateId === "string" && "draftRevision" in item && Number.isSafeInteger(item.draftRevision) && "publishedAt" in item && typeof item.publishedAt === "string";
+  const valid = (item: unknown): item is Publication => !!item && typeof item === "object" && "id" in item && typeof item.id === "string" && "space" in item && isContentSpace(String(item.space)) && "templateId" in item && typeof item.templateId === "string" && "draftRevision" in item && Number.isSafeInteger(item.draftRevision) && "publishedAt" in item && typeof item.publishedAt === "string";
   if (value.current !== null && !valid(value.current) || !value.history.every(valid)) throw new Error("发布版本身份无效");
   return value as PublicationState;
 }
@@ -65,7 +65,7 @@ export default function PublicationControls({ endpoint, publicHref, space, revis
       if (signal.aborted) return;
       if (!rollback && !receipt) { setMessage("未取得准确的保存确认，未尝试发布。请处理草稿提示后再操作。"); return; }
       target = { space: targetSpace, templateId: targetTemplate, revision: rollback?.draftRevision ?? receipt!.revision, expectedPublicationId: pointer, ...(rollback ? { rollbackId: rollback.id } : {}) };
-      const targetEndpoint = endpoint.replace(/\/(?:basic|premium-polaroid)$/, `/${targetSpace}`);
+      const targetEndpoint = endpoint.replace(/\/(?:basic|premium-polaroid|premium-flow-gallery)$/, `/${targetSpace}`);
       const { response, body } = await editorJson(targetEndpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rollback ? { action: "rollback", revisionId: rollback.id, expectedPublicationId: pointer } : { action: "publish", expectedDraftRevision: receipt!.revision, expectedPublicationId: pointer }) }, signal);
       if (signal.aborted) return;
       if (!response.ok && response.status < 500) {

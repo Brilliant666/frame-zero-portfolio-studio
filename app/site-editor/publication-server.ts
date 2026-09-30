@@ -11,7 +11,7 @@ export async function handlePublicationRequest(request: Request,slug: string,spa
   if("denied" in auth)return accountJson({error:"站点或内容空间不可访问"},auth.denied);
   if(!isContentSpace(space))return accountJson({error:"内容空间不可访问"},404);
   try {
-    if(request.method==="GET")return accountJson(await publicationHistory(auth.runtime.pool,auth.account.site.id,{allowPremium:auth.account.templates.premium.includes("premium-polaroid")}));
+    if(request.method==="GET")return accountJson(await publicationHistory(auth.runtime.pool,auth.account.site.id,{authorizedSpaces:["basic",...auth.account.templates.premium]}));
     if(request.method!=="POST")return accountJson({error:"METHOD_NOT_ALLOWED"},405);
     if(!(request.headers.get("content-type")??"").startsWith("application/json"))return accountJson({error:"INVALID_CONTENT_TYPE"},415);
     const raw=await request.text();

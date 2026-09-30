@@ -1,6 +1,7 @@
 import { accountRequestAllowed, accountJson, getAccountRuntime, readSiteForPrincipal } from "../../db/accounts/http.mjs";
 import { isSiteSlug } from "../../db/accounts/site-slug.mjs";
 import { createEmptyPreviewDocument } from "../preview-workspace/document";
+import { createEmptyFlowGalleryDocument } from "./flow-gallery-document";
 import { createEmptyBasicContent, isContentSpace, parseSpaceContent, contentAssetIds, UnconnectedAssetError, type ContentSpace } from "./content-schema";
 
 export async function authorizeEditor(request: Request, slug: string, space: string) {
@@ -12,7 +13,7 @@ export async function authorizeEditor(request: Request, slug: string, space: str
     const session = await runtime.auth.api.getSession({ headers: request.headers });
     if (!session) return { denied: 401 as const };
     const account = await readSiteForPrincipal(runtime, session.user, null, slug);
-    if (!account || (space === "premium-polaroid" && !account.templates.premium.includes(space))) return { denied: 403 as const };
+    if (!account || (space !== "basic" && !account.templates.premium.includes(space))) return { denied: 403 as const };
     return { runtime, account, userId: session.user.id, space: space as ContentSpace };
   } catch { return { denied: 503 as const }; }
 }
@@ -35,7 +36,7 @@ export async function handleDraftRequest(request: Request, slug: string, space: 
         WHERE d.site_id=$1::uuid AND d.space=$2 AND ${ownership}`, scope);
       const row = result.rows[0];
       return accountJson(row ? { content: row.content, revision: row.revision, updatedAt: row.updated_at } : {
-        content: space === "basic" ? createEmptyBasicContent() : createEmptyPreviewDocument(), revision: 0, updatedAt: null,
+        content: space === "basic" ? createEmptyBasicContent() : space === "premium-flow-gallery" ? createEmptyFlowGalleryDocument() : createEmptyPreviewDocument(), revision: 0, updatedAt: null,
       });
     }
     if (request.method !== "PUT") return accountJson({ error: "METHOD_NOT_ALLOWED" }, 405);

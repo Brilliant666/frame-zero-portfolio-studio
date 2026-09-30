@@ -12,9 +12,9 @@ async function projection(t) {
   const modules = {
     catalog: 'templates/catalog.ts', policy: 'photo-ratio-policy.ts', orientation: 'templates/shared/source-orientation-layout.ts',
     slots: 'templates/shared/photo-slots.tsx', fallback: 'templates/shared/template-work-fallback.ts',
-    document: 'preview-workspace/document.ts', schema: 'site-editor/content-schema.ts', projection: 'site-editor/publication-projection.ts',
+    document: 'preview-workspace/document.ts', flow: 'site-editor/flow-gallery-document.ts', schema: 'site-editor/content-schema.ts', projection: 'site-editor/publication-projection.ts',
   };
-  const imports = { '../catalog': 'catalog', '../templates/catalog': 'catalog', '../site-config': 'catalog', '../../photo-ratio-policy': 'policy', './source-orientation-layout': 'orientation', './photo-slots': 'slots', './photo-slots.module.css': 'styles', '../templates/shared/photo-slots': 'slots', '../templates/shared/template-work-fallback': 'fallback', '../preview-workspace/document': 'document', './content-schema': 'schema', 'react/jsx-runtime': 'jsx' };
+  const imports = { '../catalog': 'catalog', '../templates/catalog': 'catalog', '../site-config': 'catalog', '../../photo-ratio-policy': 'policy', './source-orientation-layout': 'orientation', './photo-slots': 'slots', './photo-slots.module.css': 'styles', '../templates/shared/photo-slots': 'slots', '../templates/shared/template-work-fallback': 'fallback', '../preview-workspace/document': 'document', './flow-gallery-document': 'flow', './content-schema': 'schema', 'react/jsx-runtime': 'jsx' };
   await fs.writeFile(path.join(directory, 'styles.mjs'), 'export default {};');
   await fs.writeFile(path.join(directory, 'jsx.mjs'), 'export const jsx=()=>null;export const jsxs=jsx;export const Fragment=Symbol();');
   for (const [name, source] of Object.entries(modules)) {
@@ -23,7 +23,7 @@ async function projection(t) {
     await fs.writeFile(path.join(directory, `${name}.mjs`), code);
   }
   const load = name => import(pathToFileURL(path.join(directory, `${name}.mjs`)).href);
-  return { ...await load('projection'), ...await load('schema'), ...await load('document'), ...await load('catalog') };
+  return { ...await load('projection'), ...await load('schema'), ...await load('document'), ...await load('catalog'), ...await load('flow') };
 }
 const id = n => `12345678-1234-4234-8234-${String(n).padStart(12, '0')}`;
 const work = (n, slotIndex = 0, enabled = true) => ({ assetId: id(n), slotIndex, enabled, code: '', title: `Photo ${n}`, subtitle: '', image: '', preview: '', position: '50% 50%', previewWidth: 900, previewHeight: 600, fullWidth: 900, locked: false });
@@ -46,6 +46,39 @@ test('all eleven basic snapshots keep only enabled active-template slots and lea
     assert.deepEqual(prepared.content.social, [{ label: 'Public link', handle: 'account' }]);
     assert.deepEqual(content, before);
   }
+});
+
+test('flow publication freezes visible groups in their own order and clears hidden rail references', async t => {
+  const m = await projection(t), d = m.createEmptyFlowGalleryDocument();
+  d.background.assetId = id(1);
+  d.groups = [{ id: id(10), name: 'Hidden', assetIds: [id(2)], captions: { [id(2)]: 'Private caption' }, visible: false }, { id: id(11), name: 'Visible B', assetIds: [id(4), id(3)], captions: { [id(3)]: 'Public caption' }, visible: true }, { id: id(12), name: 'Visible A', assetIds: [id(5)], captions: {}, visible: true }];
+  d.rails = { leftGroupId: id(10), rightGroupId: id(12) };
+  d.pricing = { enabled: true, heading: 'Packages', introduction: '', packages: [{ id: id(20), name: 'Disabled private package', price: '', description: '', details: [], enabled: false }, { id: id(21), name: 'Public package', price: '', description: '', details: [], enabled: true }] };
+  d.contact = { enabled: true, heading: 'Contact', intro: '', items: [{ id: id(30), label: 'Only label', value: ' ', href: '' }, { id: id(31), label: 'QR', value: '', href: '', qrAssetId: id(6) }, { id: id(32), label: 'URL', value: '', href: 'https://example.com' }] };
+  const before = structuredClone(d), prepared = m.preparePublication(d, 'premium-flow-gallery');
+  assert.equal(prepared.templateId, 'premium-flow-gallery');
+  assert.deepEqual(prepared.content.groups.map(g => g.id), [id(11), id(12)]);
+  assert.deepEqual(prepared.content.groups[0].assetIds, [id(4), id(3)]);
+  assert.deepEqual(prepared.content.rails, { leftGroupId: null, rightGroupId: id(12) }, 'No automatic substitution of visible group');
+  assert.deepEqual(prepared.content.pricing.packages.map(p => p.id), [id(21)]);
+  assert.deepEqual(prepared.content.contact.items.map(i => i.id), [id(31), id(32)]);
+  assert.deepEqual(prepared.assetIds, [id(1), id(4), id(3), id(5), id(6)]);
+  assert.deepEqual(m.parseFlowGalleryDocument(prepared.content), prepared.content);
+  assert.deepEqual(d, before, 'Publication leaves full independent draft intact');
+});
+
+test('flow disabled sections cannot leak contact assets or private package content', async t => {
+  const m = await projection(t), d = m.createEmptyFlowGalleryDocument();
+  d.contact.items = [{ id: id(20), label: 'Private', value: 'secret', href: '', qrAssetId: id(1) }];
+  d.contact.heading = 'Private contact heading';
+  d.pricing.packages = [{ id: id(30), name: 'Private package', price: '', description: '', details: [], enabled: true }];
+  d.pricing.introduction = 'Private introduction';
+  assert.deepEqual(m.contentAssetIds('premium-flow-gallery', d), [id(1)], 'Save validates even references in disabled draft sections');
+  const prepared = m.preparePublication(d, 'premium-flow-gallery');
+  assert.deepEqual(prepared.assetIds, []);
+  assert.deepEqual(prepared.content.contact, { enabled: false, heading: '', intro: '', items: [] });
+  assert.deepEqual(prepared.content.pricing, { enabled: false, heading: '', introduction: '', packages: [] });
+  assert.deepEqual(m.preparePublication(m.createEmptyFlowGalleryDocument(), 'premium-flow-gallery').assetIds, []);
 });
 
 test('explicit empty basic layout does not fall back, while missing layout freezes legacy assignment', async t => {

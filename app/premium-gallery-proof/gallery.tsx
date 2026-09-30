@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { GalleryDocument, GalleryPhoto } from "./model";
+import { galleryScrollport, galleryScrollTop, restoreGalleryScroll } from "./scrollport";
+import { lockGalleryBodyScroll } from "./body-scroll-lock";
 import styles from "./gallery.module.css";
 
 type Scene = "works" | "pricing" | "contact" | "gallery";
@@ -12,10 +14,10 @@ function readScene(available: Scene[]): Scene {
   return [...available, "gallery"].includes(hash) ? hash as Scene : "works";
 }
 
-function Photo({ photo, className }: { photo: GalleryPhoto; className?: string }) {
+function Photo({ photo, className, style }: { photo: GalleryPhoto; className?: string; style?: CSSProperties }) {
   // Authored proof assets retain intrinsic dimensions, including in the moving rails.
   // eslint-disable-next-line @next/next/no-img-element
-  return <img className={className} src={photo.url} width={photo.width} height={photo.height} alt={photo.alt} draggable={false} />;
+  return <img className={className} style={style} src={photo.url} width={photo.width} height={photo.height} alt={photo.alt} draggable={false} />;
 }
 
 function Rail({ group, reverse, paused, onSelect }: { group: GalleryDocument["groups"][number]; reverse: boolean; paused: boolean; onSelect: (photo: GalleryPhoto) => void }) {
@@ -81,11 +83,10 @@ function Lightbox({ photo, onClose }: { photo: GalleryPhoto; onClose: () => void
   const close = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const releaseScroll = lockGalleryBodyScroll(document.body);
     close.current?.focus();
     return () => {
-      document.body.style.overflow = overflow;
+      releaseScroll();
       requestAnimationFrame(() => {
         const target = previous?.isConnected ? previous : document.querySelector<HTMLElement>('nav[aria-label="主要导航"] a[aria-current="page"]');
         target?.focus({ preventScroll: true });
@@ -95,7 +96,7 @@ function Lightbox({ photo, onClose }: { photo: GalleryPhoto; onClose: () => void
   return <div ref={dialog} className={styles.lightbox} role="dialog" aria-modal="true" aria-label={photo.alt}
     onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
     onKeyDown={(event) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); onClose(); }
       if (event.key === "Tab") { event.preventDefault(); close.current?.focus(); }
     }}>
     <button ref={close} className={styles.close} onClick={onClose} aria-label="关闭大图">×</button>
@@ -110,6 +111,7 @@ export default function FlowGallery({ document: content }: { document: GalleryDo
   const root = useRef<HTMLDivElement>(null);
   const introduction = useRef<HTMLDivElement>(null);
   const [introHeight, setIntroHeight] = useState(58);
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
   const sceneBody = useRef<HTMLElement>(null);
   const lastWheel = useRef(0);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
@@ -117,17 +119,21 @@ export default function FlowGallery({ document: content }: { document: GalleryDo
   const activeScene = useRef<Scene>("works");
   const restoringScroll = useRef(false);
   const groups = content.groups.filter((group) => group.photos.length > 0);
-  const columns = groups.slice(0, 2);
+  const columns = content.featuredGroupIds
+    ? [content.featuredGroupIds.left, content.featuredGroupIds.right].map(id => groups.find(group => group.id === id) ?? null)
+    : groups.slice(0, 2);
   const available = useMemo(() => scenes.filter((item) => item === "works" || item === "pricing" && Boolean(content.pricing) || item === "contact" && Boolean(content.contact)), [content.pricing, content.contact]);
   const navigate = useCallback((next: Scene) => {
     window.location.hash = next;
   }, []);
   useEffect(() => {
+    const port = galleryScrollport(root.current);
+    const target = port ?? window;
     const originalRestoration = window.history.scrollRestoration;
-    window.history.scrollRestoration = "manual";
+    if (!port) window.history.scrollRestoration = "manual";
     const rememberScroll = () => {
       if (!restoringScroll.current && activeScene.current === "gallery" && readScene(available) === "gallery") {
-        galleryScroll.current = window.scrollY;
+        galleryScroll.current = galleryScrollTop(port, window);
       }
     };
     const update = () => {
@@ -138,11 +144,11 @@ export default function FlowGallery({ document: content }: { document: GalleryDo
     };
     update();
     window.addEventListener("hashchange", update);
-    window.addEventListener("scroll", rememberScroll, { passive: true });
+    target.addEventListener("scroll", rememberScroll, { passive: true });
     return () => {
       window.removeEventListener("hashchange", update);
-      window.removeEventListener("scroll", rememberScroll);
-      window.history.scrollRestoration = originalRestoration;
+      target.removeEventListener("scroll", rememberScroll);
+      if (!port) window.history.scrollRestoration = originalRestoration;
     };
   }, [available]);
   useLayoutEffect(() => {
@@ -151,11 +157,19 @@ export default function FlowGallery({ document: content }: { document: GalleryDo
     const top = scene === "gallery" ? galleryScroll.current : 0;
     // Override the host page's smooth scrolling so intermediate animation positions
     // cannot replace the gallery bookmark during hash/history navigation.
-    window.scrollTo({ top, left: 0, behavior: "instant" });
+    restoreGalleryScroll(galleryScrollport(root.current), window, top);
     if (scene !== "gallery") sceneBody.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
     const frame = requestAnimationFrame(() => { restoringScroll.current = false; });
     return () => cancelAnimationFrame(frame);
   }, [scene]);
+  useLayoutEffect(() => {
+    const port = galleryScrollport(root.current);
+    if (!port) return;
+    const measure = () => setViewportHeight(port.clientHeight);
+    const observer = new ResizeObserver(measure);
+    observer.observe(port); measure();
+    return () => observer.disconnect();
+  }, []);
   useLayoutEffect(() => {
     const element = introduction.current;
     if (!element) return;
@@ -180,8 +194,8 @@ export default function FlowGallery({ document: content }: { document: GalleryDo
     return () => element.removeEventListener("wheel", wheel);
   }, [scene, selected, available, navigate]);
 
-  return <div ref={root} style={{ "--intro-height": `${introHeight}px` } as CSSProperties} className={`${styles.root} ${scene === "gallery" ? styles.galleryRoot : ""}`}>
-    <div className={styles.background} aria-hidden="true"><Photo photo={content.background} /></div>
+  return <div ref={root} style={{ "--intro-height": `${introHeight}px`, ...(viewportHeight ? { "--gallery-viewport-height": `${viewportHeight}px` } : {}) } as CSSProperties} className={`${styles.root} ${scene === "gallery" ? styles.galleryRoot : ""}`}>
+    <div className={styles.background} aria-hidden="true">{content.background && <Photo photo={content.background} style={{ objectPosition: `${content.backgroundFocus?.x ?? 50}% ${content.backgroundFocus?.y ?? 50}%` }} />}</div>
     <header className={styles.navigation}>
       <a className={styles.brand} href="#works" aria-label={content.profile.brand}><span className={styles.avatar} aria-hidden="true">{content.profile.brand.slice(0, 1)}</span><span className={styles.brandName}>{content.profile.brand}</span></a>
       <nav aria-label="主要导航">{available.map((item) => <a key={item} href={`#${item}`} aria-current={scene === item || item === "works" && scene === "gallery" ? "page" : undefined}>{item === "works" ? "作品画廊" : item === "pricing" ? "价格与活动" : "联系方式"}</a>)}</nav>
@@ -206,11 +220,11 @@ export default function FlowGallery({ document: content }: { document: GalleryDo
       {scene === "works" && <>
         <div ref={introduction} className={styles.introduction}><h1>{content.profile.title}</h1><a className={styles.expand} href="#gallery">展开完整作品</a><p>{content.profile.intro}</p></div>
         <div className={`${styles.rails} ${paused ? styles.paused : ""}`} aria-label="作品速览">
-          {columns.length === 0 ? <p className={styles.emptyGallery}>还没有作品</p> : columns.map((column, index) => <Rail key={column.id} group={column} reverse={index === 1} paused={paused} onSelect={setSelected} />)}
+          {columns.length === 0 ? <p className={styles.emptyGallery}>还没有作品</p> : columns.map((column, index) => column ? <Rail key={`${index}-${column.id}`} group={column} reverse={index === 1} paused={paused} onSelect={setSelected} /> : <div key={`empty-${index}`} className={styles.emptyGallery}>尚未选择{index ? "右" : "左"}侧作品分类</div>)}
         </div>
       </>}
       {scene === "pricing" && content.pricing && <section className={styles.pricePanel}><h1>{content.pricing.heading}</h1><p className={styles.priceIntro}>{content.pricing.introduction}</p><div className={styles.packages}>{content.pricing.packages.map((item) => <article key={item.id}><h2>{item.name}</h2><p className={styles.price}>{item.price}</p><p>{item.description}</p><ul>{item.details.map((line, index) => <li key={index}>{line}</li>)}</ul></article>)}</div></section>}
-      {scene === "contact" && content.contact && <section className={styles.contactPanel}><div><h1>{content.contact.heading}</h1><p>{content.contact.intro}</p></div><div className={styles.contactCards}>{content.contact.items.map((item) => <article key={item.id}><h2>{item.label}</h2>{item.href && /^(https?:|mailto:)/.test(item.href) ? <a href={item.href} rel="noreferrer">{item.value} ↗</a> : <p>{item.value}</p>}</article>)}</div></section>}
+      {scene === "contact" && content.contact && <section className={styles.contactPanel}><div><h1>{content.contact.heading}</h1><p>{content.contact.intro}</p></div><div className={styles.contactCards}>{content.contact.items.map((item) => <article key={item.id}><h2>{item.label}</h2>{item.href && /^(https?:|mailto:)/.test(item.href) ? <a href={item.href} rel="noreferrer">{item.value} ↗</a> : <p>{item.value}</p>}{item.qrPhoto && <button className={styles.contactQr} aria-label={`查看${item.label}二维码`} onClick={() => setSelected(item.qrPhoto!)}><Photo photo={item.qrPhoto} /></button>}</article>)}</div></section>}
     </main>}
     {scene === "works" && <button className={styles.motion} aria-pressed={paused} onClick={() => setPaused(!paused)}>{paused ? "播放动效" : "暂停动效"}</button>}
     {scene !== "gallery" && <div className={styles.sceneProgress} aria-label="页面位置"><span>0{available.indexOf(scene) + 1} / {scene === "works" ? "作品画廊" : scene === "pricing" ? "价格与活动" : "联系方式"}</span><div className={styles.progressLine}>{available.map((item) => <button key={item} aria-label={`前往${item === "works" ? "作品画廊" : item === "pricing" ? "价格与活动" : "联系方式"}`} aria-current={scene === item ? "step" : undefined} onClick={() => navigate(item)} />)}</div></div>}

@@ -19,7 +19,7 @@ export default function SiteAssetUpload({ endpoint, onUploaded }: { endpoint: st
         if (!response.ok) throw new Error(`上传未完成（${response.status}），已成功 ${completed} 张；已有照片和草稿保留。`);
         completed += 1;
       }
-      setMessage(`已上传 ${completed} 张；本站两套后台可引用同一资源，无需重复上传。`);
+      setMessage(`已上传 ${completed} 张；本站各内容空间可引用同一资源，无需重复上传。`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "上传失败，已有照片保留。"); }
     finally { await onUploaded(); lock.current = false; setBusy(false); }
   }

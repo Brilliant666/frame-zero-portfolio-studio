@@ -9,24 +9,24 @@ import ts from 'typescript';
 async function modules(t) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'site-draft-save-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
-  for (const [name, location] of [['catalog', 'templates/catalog'], ['document', 'preview-workspace/document'], ['schema', 'site-editor/content-schema'], ['save', 'site-editor/draft-save']]) {
+  for (const [name, location] of [['catalog', 'templates/catalog'], ['document', 'preview-workspace/document'], ['flow', 'site-editor/flow-gallery-document'], ['schema', 'site-editor/content-schema'], ['save', 'site-editor/draft-save']]) {
     const source = await fs.readFile(new URL(`../app/${location}.ts`, import.meta.url), 'utf8');
     const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText
-      .replace('"../site-config"', '"./catalog.mjs"').replace('"../preview-workspace/document"', '"./document.mjs"').replace('"./content-schema"', '"./schema.mjs"');
+      .replace('"../site-config"', '"./catalog.mjs"').replace('"../preview-workspace/document"', '"./document.mjs"').replace('"./flow-gallery-document"', '"./flow.mjs"').replace('"./content-schema"', '"./schema.mjs"');
     await fs.writeFile(path.join(directory, `${name}.mjs`), js);
   }
-  return { ...await import(pathToFileURL(path.join(directory, 'save.mjs'))), ...await import(pathToFileURL(path.join(directory, 'schema.mjs'))), ...await import(pathToFileURL(path.join(directory, 'document.mjs'))) };
+  return { ...await import(pathToFileURL(path.join(directory, 'save.mjs'))), ...await import(pathToFileURL(path.join(directory, 'schema.mjs'))), ...await import(pathToFileURL(path.join(directory, 'document.mjs'))), ...await import(pathToFileURL(path.join(directory, 'flow.mjs'))) };
 }
 const endpoint = '/api/sites/anonymous-fixture/drafts/basic';
 const envelope = (content, revision = 3) => ({ content, revision, updatedAt: '2026-09-28T00:00:00.000Z' });
 
-test('save confirmation binds exact revision and normalized submitted content in both spaces', async t => {
+test('save confirmation binds exact revision and normalized submitted content in all three spaces', async t => {
   const m = await modules(t);
-  for (const [space, content] of [['basic', m.createEmptyBasicContent()], ['premium-polaroid', m.createEmptyPreviewDocument()]]) {
+  for (const [space, content] of [['basic', m.createEmptyBasicContent()], ['premium-polaroid', m.createEmptyPreviewDocument()], ['premium-flow-gallery', m.createEmptyFlowGalleryDocument()]]) {
     const pending = { content, expectedRevision: 2 };
     assert.equal(m.matchesDraftSave(envelope(content), pending, space), true);
     assert.equal(m.matchesDraftSave(envelope(content, 4), pending, space), false, 'Must not adopt a newer tab revision');
-    const other = structuredClone(content); other.profile.photographer = 'Other tab';
+    const other = structuredClone(content); if (space === 'premium-flow-gallery') other.profile.title = 'Other tab'; else other.profile.photographer = 'Other tab';
     assert.equal(m.matchesDraftSave(envelope(other), pending, space), false);
   }
   const content = m.createEmptyBasicContent();

@@ -118,6 +118,10 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1800000 },
     const { basicPublicationDatabaseIntegration } = await import('./basic-publication-database-integration.mjs');
     await basicPublicationDatabaseIntegration({ runtime });
   });
+  await t.test('third-space migration preserves records and enforces independent flow publication grant', async () => {
+    const { flowGalleryDatabaseIntegration } = await import('./flow-gallery-database-integration.mjs');
+    await flowGalleryDatabaseIntegration({ runtime });
+  });
   await t.test('concurrent provision is idempotent; conflicts cannot overwrite', async () => {
     const outcomes = await Promise.all([provisionAccount(runtime, input('fixturealpha', true)), provisionAccount(runtime, input('FIXTUREALPHA', true))]);
     assert.deepEqual(outcomes.map(o => o.status).sort(), ['ALREADY_EXISTS', 'CREATED']);
@@ -446,6 +450,10 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1800000 },
   await t.test('eleven basic templates publish through one Site pointer with independent permissions', { timeout: 180000 }, async () => {
     const { basicPublicationHttpIntegration } = await import('./basic-publication-http-integration.mjs');
     await basicPublicationHttpIntegration({ runtime, origin: config.origin, password });
+  });
+  await t.test('independent flow gallery HTTP draft, preview, publication and three-space switching', { timeout: 180000 }, async () => {
+    const { flowGalleryHttpIntegration } = await import('./flow-gallery-http-integration.mjs');
+    await flowGalleryHttpIntegration({ runtime, origin: config.origin, password, request, login, readDraft, saveDraft, sitePage, assetRoot });
   });
   await t.test('local acceptance shortcuts require owner, grant and explicit runtime switch', async () => {
     const previous = process.env.FRAME_ZERO_LOCAL_ACCEPTANCE;
