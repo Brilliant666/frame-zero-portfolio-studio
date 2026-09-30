@@ -751,7 +751,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
           assert.ok(Math.abs(Number.parseFloat(image.sizes) - image.renderedWidth) <= 1);
           assert.ok(/\/(?:card|full)$/.test(image.path), 'High-density desktop rail needs a larger source than the synthetic thumbnail');
         }
-        assert.ok(requests.every(request => request.origin === origin && ['GET', 'HEAD'].includes(request.method())), 'High-density sample is anonymous and read-only');
+        assert.ok(requests.every(request => request.origin === origin && ['GET', 'HEAD'].includes(request.method)), 'High-density sample is anonymous and read-only');
       } finally { await highDensity.close(); }
     });
     assert.deepEqual(await json(draftPath('basic')), basicBefore);
