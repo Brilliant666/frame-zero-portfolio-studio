@@ -127,48 +127,7 @@ test("GET falls back to demo content when D1 throws", async () => {
   assert.equal(payload.warning, "D1 unavailable");
 });
 
-test("PUT allows a loopback request and persists normalized content", async () => {
-  const database = new MemoryD1();
-  const response = await requestSiteContent(
-    "http://127.0.0.1:3001/api/site-content",
-    {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        content: {
-          profile: { brand: "LOCAL SAVE" },
-          works: [{
-            code: "LEGACY-01",
-            title: "LEGACY WORK",
-            subtitle: "Compatibility canary",
-            image: "/photos/legacy-full.webp",
-            preview: "/photos/legacy-card.webp",
-            position: "50% 50%",
-            previewWidth: 1100,
-            previewHeight: 733,
-            fullWidth: 2200,
-            enabled: true,
-          }],
-        },
-      }),
-    },
-    database,
-  );
-  const payload = await response.json();
-
-  assert.equal(response.status, 200);
-  assert.equal(payload.content.profile.brand, "LOCAL SAVE");
-  assert.equal(payload.content.works[0].image, "/photos/legacy-full.webp");
-  assert.equal(payload.content.works[0].preview, "/photos/legacy-card.webp");
-  const persisted = JSON.parse(database.row.content);
-  assert.equal(persisted.profile.brand, "LOCAL SAVE");
-  assert.equal(persisted.works[0].image, "/photos/legacy-full.webp");
-  assert.equal(persisted.works[0].preview, "/photos/legacy-card.webp");
-  assert.equal(payload.updatedAt, "2026-07-11 15:00:00");
-});
-
-test("PUT preserves the complete legacy SiteContent shape at site_settings id 1", async () => {
-  const database = new MemoryD1();
+test("GET normalizes the complete legacy SiteContent shape without rewriting its source", async () => {
   const work = {
     assetId: "asset_demo_01",
     slotIndex: 0,
@@ -224,20 +183,16 @@ test("PUT preserves the complete legacy SiteContent shape at site_settings id 1"
     ignoredRootField: "drop me",
   };
 
-  const response = await requestSiteContent(
-    "http://127.0.0.1:3001/api/site-content",
-    {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ content }),
-    },
-    database,
-  );
+  const storedContent = JSON.stringify(content);
+  const database = new MemoryD1({ id: 1, content: storedContent, updatedAt: "2026-07-11 14:00:00" });
+  const response = await requestSiteContent("http://127.0.0.1:3001/api/site-content", undefined, database);
   const payload = await response.json();
-  const persisted = JSON.parse(database.row.content);
+  const persisted = payload.content;
 
   assert.equal(response.status, 200);
   assert.equal(database.row.id, 1);
+  assert.equal(database.row.content, storedContent);
+  assert.equal(database.prepareCalls.some((query) => /^\s*(insert|update)\b/i.test(query)), false);
   assert.deepEqual(Object.keys(persisted).sort(), [
     "activeTemplate",
     "bookingFields",
@@ -264,105 +219,60 @@ test("PUT preserves the complete legacy SiteContent shape at site_settings id 1"
   assert.deepEqual(Object.keys(persisted.social[0]).sort(), ["handle", "label", "qrAssetId"]);
   assert.equal(persisted.social[0].qrAssetId, SYNTHETIC_QR_ASSET_ID);
   assert.deepEqual(Object.keys(persisted.templateWorks), ["film-rail"]);
-  assert.deepEqual(payload.content, persisted);
+  assert.equal(persisted.profile.brand, "FULL BRAND");
+  assert.equal(persisted.works[0].image, "/photos/full-01.webp");
+  assert.equal(persisted.works[0].preview, "/photos/card-01.webp");
+  assert.equal(payload.updatedAt, "2026-07-11 14:00:00");
 });
 
-test("PUT round-trips valid legacy platform QR IDs and strips non-opaque values", async () => {
-  const database = new MemoryD1();
-  const response = await requestSiteContent(
-    "http://127.0.0.1:3001/api/site-content",
-    {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        content: {
-          social: [
-            { label: "VALID", handle: "@valid", qrAssetId: SYNTHETIC_QR_ASSET_ID.toUpperCase() },
-            { label: "SHORT", handle: "@short", qrAssetId: "b".repeat(63) },
-            { label: "DATA", handle: "@data", qrAssetId: ["data", "image/png;base64,c3ludGhldGlj"].join(":") },
-            { label: "POSIX PATH", handle: "@path", qrAssetId: ["", "private", "not-an-id.png"].join("/") },
-            { label: "WINDOWS PATH", handle: "@path", qrAssetId: ["C", "\\private\\not-an-id.png"].join(":") },
-          ],
-        },
-      }),
-    },
-    database,
-  );
+test("GET normalizes legacy QR IDs without modifying stored source values", async () => {
+  const storedContent = JSON.stringify({
+    social: [
+      { label: "VALID", handle: "@valid", qrAssetId: SYNTHETIC_QR_ASSET_ID.toUpperCase() },
+      { label: "SHORT", handle: "@short", qrAssetId: "b".repeat(63) },
+      { label: "DATA", handle: "@data", qrAssetId: ["data", "image/png;base64,c3ludGhldGlj"].join(":") },
+      { label: "POSIX PATH", handle: "@path", qrAssetId: ["", "private", "not-an-id.png"].join("/") },
+      { label: "WINDOWS PATH", handle: "@path", qrAssetId: ["C", "\\private\\not-an-id.png"].join(":") },
+    ],
+  });
+  const database = new MemoryD1({ id: 1, content: storedContent, updatedAt: "2026-07-11 14:00:00" });
+  const response = await requestSiteContent("http://127.0.0.1:3001/api/site-content", undefined, database);
   const payload = await response.json();
-  const persisted = JSON.parse(database.row.content);
-
   assert.equal(response.status, 200);
   assert.equal(payload.content.social[0].qrAssetId, SYNTHETIC_QR_ASSET_ID);
-  assert.equal(persisted.social[0].qrAssetId, SYNTHETIC_QR_ASSET_ID);
-  for (const entry of payload.content.social.slice(1)) {
-    assert.equal("qrAssetId" in entry, false);
-  }
-  assert.deepEqual(persisted.social, payload.content.social);
-
-  const getResponse = await requestSiteContent(
-    "http://127.0.0.1:3001/api/site-content",
-    undefined,
-    database,
-  );
-  const getPayload = await getResponse.json();
-  assert.equal(getResponse.status, 200);
-  assert.deepEqual(getPayload.content.social, persisted.social);
+  for (const entry of payload.content.social.slice(1)) assert.equal("qrAssetId" in entry, false);
+  assert.equal(database.row.content, storedContent);
+  assert.equal(database.prepareCalls.some((query) => /^\s*(insert|update)\b/i.test(query)), false);
 });
 
-test("PUT rejects an unauthenticated remote request", async () => {
-  const database = new MemoryD1();
-  const response = await requestSiteContent(
-    "https://portfolio.example/api/site-content",
-    {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ content: { profile: { brand: "REMOTE SAVE" } } }),
-    },
-    database,
-  );
-  const payload = await response.json();
+const writeAttempts = [
+  { name: "loopback URL", url: "http://127.0.0.1:3001/api/site-content" },
+  { name: "localhost URL", url: "http://localhost:3001/api/site-content" },
+  { name: "IPv6 loopback URL", url: "http://[::1]:3001/api/site-content" },
+  { name: "remote URL", url: "https://portfolio.example/api/site-content" },
+  { name: "forged Host", headers: { Host: "127.0.0.1:3001" } },
+  { name: "forged Forwarded", headers: { Forwarded: "for=127.0.0.1;host=localhost;proto=http" } },
+  { name: "forged X-Forwarded headers", headers: { "X-Forwarded-Host": "127.0.0.1", "X-Forwarded-For": "127.0.0.1", "X-Forwarded-Proto": "http" } },
+  { name: "forged ChatGPT identity", headers: { "oai-authenticated-user-email": "forged@framezero.example", "oai-authenticated-user-full-name": "Forged", "oai-authenticated-user-full-name-encoding": "percent-encoded-utf-8" } },
+  { name: "forged local proofs", headers: { "x-frame-zero-preview-proof": "forged-local-development-proof", "x-frame-zero-local-proof": "forged" } },
+  { name: "oversized body", body: JSON.stringify({ content: { profile: { intro: "x".repeat(256_000) } } }) },
+  { name: "invalid JSON", body: "{not-json" },
+];
 
-  assert.equal(response.status, 401);
-  assert.equal(payload.error, "请先登录后再保存后台内容。");
-  assert.equal(database.row, null);
-  assert.equal(database.prepareCalls.length, 0);
-});
-
-test("PUT rejects a request body larger than 256 KB", async () => {
-  const database = new MemoryD1();
-  const response = await requestSiteContent(
-    "http://127.0.0.1:3001/api/site-content",
-    {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ content: { profile: { intro: "x".repeat(256_000) } } }),
-    },
-    database,
-  );
-  const payload = await response.json();
-
-  assert.equal(response.status, 413);
-  assert.equal(payload.error, "内容超过 256 KB 限制。");
-  assert.equal(database.row, null);
-  assert.equal(database.prepareCalls.length, 0);
-});
-
-test("PUT returns 400 for invalid JSON", async () => {
-  const database = new MemoryD1();
-  const response = await requestSiteContent(
-    "http://127.0.0.1:3001/api/site-content",
-    {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: "{not-json",
-    },
-    database,
-  );
-  const payload = await response.json();
-
-  assert.equal(response.status, 400);
-  assert.equal(typeof payload.error, "string");
-  assert.ok(payload.error.length > 0);
-  assert.equal(database.row, null);
-  assert.equal(database.prepareCalls.length, 0);
-});
+for (const attempt of writeAttempts) {
+  test(`PUT refuses ${attempt.name} before touching D1`, async () => {
+    const originalRow = { id: 1, content: JSON.stringify({ profile: { brand: "LEGACY SOURCE" } }), updatedAt: "2026-07-11 14:00:00" };
+    const database = new MemoryD1({ ...originalRow });
+    const response = await requestSiteContent(
+      attempt.url ?? "https://portfolio.example/api/site-content",
+      { method: "PUT", headers: { "content-type": "application/json", ...attempt.headers }, body: attempt.body ?? JSON.stringify({ content: { profile: { brand: "FORGED SAVE" } } }) },
+      database,
+    );
+    assert.equal(response.status, 410);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    const payload = await response.json();
+    assert.deepEqual(payload, { code: "LEGACY_WRITE_DISABLED", error: "旧版全局内容写入已停用，请使用本站后台保存。" });
+    assert.deepEqual(database.row, originalRow);
+    assert.deepEqual(database.prepareCalls, [], "Refusal must happen before even CREATE TABLE or a database read");
+  });
+}

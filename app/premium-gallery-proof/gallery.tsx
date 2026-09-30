@@ -5,6 +5,7 @@ import type { GalleryDocument, GalleryPhoto } from "./model";
 import { galleryScrollport, galleryScrollTop, restoreGalleryScroll } from "./scrollport";
 import { lockGalleryBodyScroll } from "./body-scroll-lock";
 import { railTimeAfterWheel } from "./rail-motion";
+import { galleryPhotoSource } from "./photo-source";
 import styles from "./gallery.module.css";
 
 type Scene = "works" | "pricing" | "contact" | "gallery";
@@ -15,21 +16,35 @@ function readScene(available: Scene[]): Scene {
   return [...available, "gallery"].includes(hash) ? hash as Scene : "works";
 }
 
-function Photo({ photo, className, style }: { photo: GalleryPhoto; className?: string; style?: CSSProperties }) {
-  // Authored proof assets retain intrinsic dimensions, including in the moving rails.
+function Photo({ photo, className, style, sizes = "100vw", full = false, lazy = false }: { photo: GalleryPhoto; className?: string; style?: CSSProperties; sizes?: string; full?: boolean; lazy?: boolean }) {
+  // Intrinsic dimensions preserve layout; responsive sources only change transferred pixels.
   // eslint-disable-next-line @next/next/no-img-element
-  return <img className={className} style={style} src={photo.url} width={photo.width} height={photo.height} alt={photo.alt} draggable={false} />;
+  return <img className={className} style={style} {...galleryPhotoSource(photo, sizes, full)} loading={lazy ? "lazy" : "eager"} decoding="async" width={photo.width} height={photo.height} alt={photo.alt} draggable={false} />;
 }
 
-function Rail({ group, reverse, paused, onSelect }: { group: GalleryDocument["groups"][number]; reverse: boolean; paused: boolean; onSelect: (photo: GalleryPhoto) => void }) {
+function Rail({ group, reverse, paused, onSelect, widthPercent }: { group: GalleryDocument["groups"][number]; reverse: boolean; paused: boolean; onSelect: (photo: GalleryPhoto) => void; widthPercent: number }) {
   const rail = useRef<HTMLDivElement>(null);
   const railWindow = useRef<HTMLDivElement>(null);
   const copy = useRef<HTMLDivElement>(null);
   const track = useRef<HTMLDivElement>(null);
   const primaryButtons = useRef(new Map<string, HTMLButtonElement>());
   const [duration, setDuration] = useState(600);
+  const [photoWidth, setPhotoWidth] = useState<number | null>(null);
+  const ratio = widthPercent / 100;
+  const photoSizes = photoWidth ? `${photoWidth}px` : `(max-width: 700px) calc((100vw - 52px) * ${ratio}), calc((55vw - 17px) * ${ratio})`;
   const keyboardIntent = useRef(false);
   const [keyboardFocused, setKeyboardFocused] = useState(false);
+  useLayoutEffect(() => {
+    const viewport = railWindow.current;
+    if (!viewport) return;
+    const image = viewport.querySelector("img");
+    // The button border and static-list scrollbar reduce the image slot;
+    // clientWidth excludes borders and is unaffected by the hover transform.
+    const measure = () => setPhotoWidth(Math.max(1, image?.clientWidth ?? viewport.clientWidth));
+    const observer = new ResizeObserver(measure);
+    observer.observe(viewport); if (image) observer.observe(image); measure();
+    return () => observer.disconnect();
+  }, []);
   useEffect(() => {
     const viewport = railWindow.current;
     if (!viewport) return;
@@ -96,7 +111,7 @@ function Rail({ group, reverse, paused, onSelect }: { group: GalleryDocument["gr
         // Loop duplicates disappear in keyboard mode; return to their accessible original.
         if (repeat) primaryButtons.current.get(photo.id)?.focus({ preventScroll: true });
         onSelect(photo);
-      }} aria-label={`查看大图：${photo.alt}`}><Photo photo={photo} /></button>)}</div>)}
+      }} aria-label={`查看大图：${photo.alt}`}><Photo photo={photo} sizes={photoSizes} /></button>)}</div>)}
     </div></div>
   </div>;
 }
@@ -138,7 +153,7 @@ function Lightbox({ photo, onClose }: { photo: GalleryPhoto; onClose: () => void
         if (width) setZoomWidth(width * 2);
       }
     }}>{zoomWidth === null ? "放大查看" : "适应屏幕"}</button>
-    <Photo photo={photo} className={styles.lightboxPhoto} style={zoomWidth === null ? undefined : { width: zoomWidth }} />
+    <Photo photo={photo} full className={styles.lightboxPhoto} style={zoomWidth === null ? undefined : { width: zoomWidth }} />
   </div>;
 }
 
@@ -150,6 +165,7 @@ export default function FlowGallery({ document: content }: { document: GalleryDo
   const introduction = useRef<HTMLDivElement>(null);
   const [introHeight, setIntroHeight] = useState(58);
   const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  const [gridPhotoWidth, setGridPhotoWidth] = useState<number | null>(null);
   const sceneBody = useRef<HTMLElement>(null);
   const lastWheel = useRef(0);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
@@ -209,6 +225,19 @@ export default function FlowGallery({ document: content }: { document: GalleryDo
     return () => observer.disconnect();
   }, []);
   useLayoutEffect(() => {
+    const element = root.current;
+    if (!element) return;
+    const measure = () => {
+      const width = element.getBoundingClientRect().width;
+      const mobile = window.matchMedia("(max-width: 700px)").matches;
+      setGridPhotoWidth(Math.ceil((width - (mobile ? 45 : 130)) / (mobile ? 2 : 3)));
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(element); measure();
+    window.addEventListener("resize", measure);
+    return () => { observer.disconnect(); window.removeEventListener("resize", measure); };
+  }, []);
+  useLayoutEffect(() => {
     const element = introduction.current;
     if (!element) return;
     const measure = () => setIntroHeight(element.getBoundingClientRect().height);
@@ -234,7 +263,7 @@ export default function FlowGallery({ document: content }: { document: GalleryDo
   }, [scene, selected, available, navigate]);
 
   return <div ref={root} data-flow-scene={scene} style={{ "--intro-height": `${introHeight}px`, ...(viewportHeight ? { "--gallery-viewport-height": `${viewportHeight}px` } : {}) } as CSSProperties} className={`${styles.root} ${scene === "gallery" ? styles.galleryRoot : ""}`}>
-    <div className={styles.background} aria-hidden="true">{content.background && <Photo photo={content.background} style={{ objectPosition: `${content.backgroundFocus?.x ?? 50}% ${content.backgroundFocus?.y ?? 50}%` }} />}</div>
+    <div className={styles.background} aria-hidden="true">{content.background && <Photo photo={content.background} sizes={`max(100vw, ${100 * content.background.width / content.background.height}svh)`} style={{ objectPosition: `${content.backgroundFocus?.x ?? 50}% ${content.backgroundFocus?.y ?? 50}%` }} />}</div>
     <header className={styles.navigation}>
       <a className={styles.brand} href="#works" aria-label={content.profile.brand}><span className={styles.avatar} aria-hidden="true">{content.profile.brand.slice(0, 1)}</span><span className={styles.brandName}>{content.profile.brand}</span></a>
       <nav aria-label="主要导航">{available.map((item) => <a key={item} href={`#${item}`} aria-current={scene === item || item === "works" && scene === "gallery" ? "page" : undefined}>{item === "works" ? "作品画廊" : item === "pricing" ? "价格与活动" : "联系方式"}</a>)}</nav>
@@ -244,7 +273,7 @@ export default function FlowGallery({ document: content }: { document: GalleryDo
       {groups.length === 0 && <p className={styles.emptyGallery}>还没有作品</p>}
       {groups.map((group) => <section key={group.id} className={styles.group} aria-labelledby={`group-${group.id}`}>
         <h2 id={`group-${group.id}`}>{group.name}</h2>
-        <div className={styles.photoGrid}>{group.photos.map((photo) => <button key={photo.id} className={photo.height > photo.width ? styles.tall : ""} onClick={() => setSelected(photo)} aria-label={`查看大图：${photo.alt}`}><Photo photo={photo} /></button>)}</div>
+        <div className={styles.photoGrid}>{group.photos.map((photo) => <button key={photo.id} className={photo.height > photo.width ? styles.tall : ""} onClick={() => setSelected(photo)} aria-label={`查看大图：${photo.alt}`}><Photo photo={photo} lazy sizes={gridPhotoWidth ? `${gridPhotoWidth}px` : "(max-width: 700px) calc((100vw - 45px) / 2), calc((100vw - 130px) / 3)"} /></button>)}</div>
       </section>)}
     </main> : <main ref={sceneBody} key={scene} className={`${styles.scene} ${styles[scene]}`}
       onTouchStart={(event) => { const touch = event.touches[0]; touchStart.current = { x: touch.clientX, y: touch.clientY }; }}
@@ -259,11 +288,11 @@ export default function FlowGallery({ document: content }: { document: GalleryDo
       {scene === "works" && <>
         <div ref={introduction} className={styles.introduction}><h1>{content.profile.title}</h1><a className={styles.expand} href="#gallery">展开完整作品</a><p>{content.profile.intro}</p></div>
         <div className={`${styles.rails} ${paused ? styles.paused : ""}`} aria-label="作品速览" style={content.leftRailWidthPercent === undefined ? undefined : { gridTemplateColumns: `minmax(0, ${content.leftRailWidthPercent}fr) minmax(0, ${100 - content.leftRailWidthPercent}fr)` }}>
-          {columns.length === 0 ? <p className={styles.emptyGallery}>还没有作品</p> : columns.map((column, index) => column ? <Rail key={`${index}-${column.id}`} group={column} reverse={index === 1} paused={paused} onSelect={setSelected} /> : <div key={`empty-${index}`} className={styles.emptyGallery}>尚未选择{index ? "右" : "左"}侧作品分类</div>)}
+          {columns.length === 0 ? <p className={styles.emptyGallery}>还没有作品</p> : columns.map((column, index) => column ? <Rail key={`${index}-${column.id}`} group={column} reverse={index === 1} paused={paused} onSelect={setSelected} widthPercent={index === 0 ? content.leftRailWidthPercent ?? 200 / 3 : 100 - (content.leftRailWidthPercent ?? 200 / 3)} /> : <div key={`empty-${index}`} className={styles.emptyGallery}>尚未选择{index ? "右" : "左"}侧作品分类</div>)}
         </div>
       </>}
       {scene === "pricing" && content.pricing && <section className={styles.pricePanel}><h1>{content.pricing.heading}</h1><p className={styles.priceIntro}>{content.pricing.introduction}</p><div className={styles.packages}>{content.pricing.packages.map((item) => <article key={item.id}><h2>{item.name}</h2><p className={styles.price}>{item.price}</p><p>{item.description}</p><ul>{item.details.map((line, index) => <li key={index}>{line}</li>)}</ul></article>)}</div></section>}
-      {scene === "contact" && content.contact && <section className={styles.contactPanel}><div><h1>{content.contact.heading}</h1><p>{content.contact.intro}</p></div><div className={styles.contactCards}>{content.contact.items.map((item) => <article key={item.id}><h2>{item.label}</h2>{item.href && /^(https?:|mailto:)/.test(item.href) ? <a href={item.href} rel="noreferrer">{item.value} ↗</a> : <p>{item.value}</p>}{item.qrPhoto && <button className={styles.contactQr} aria-label={`查看${item.label}二维码`} onClick={() => setSelected(item.qrPhoto!)}><Photo photo={item.qrPhoto} /></button>}</article>)}</div></section>}
+      {scene === "contact" && content.contact && <section className={styles.contactPanel}><div><h1>{content.contact.heading}</h1><p>{content.contact.intro}</p></div><div className={styles.contactCards}>{content.contact.items.map((item) => <article key={item.id}><h2>{item.label}</h2>{item.href && /^(https?:|mailto:)/.test(item.href) ? <a href={item.href} rel="noreferrer">{item.value} ↗</a> : <p>{item.value}</p>}{item.qrPhoto && <button className={styles.contactQr} aria-label={`查看${item.label}二维码`} onClick={() => setSelected(item.qrPhoto!)}><Photo photo={item.qrPhoto} sizes="96px" /></button>}</article>)}</div></section>}
     </main>}
     {scene === "works" && <button className={styles.motion} aria-pressed={paused} onClick={() => setPaused(!paused)}>{paused ? "播放动效" : "暂停动效"}</button>}
     {scene !== "gallery" && <div className={styles.sceneProgress} aria-label="页面位置"><span>0{available.indexOf(scene) + 1} / {scene === "works" ? "作品画廊" : scene === "pricing" ? "价格与活动" : "联系方式"}</span><div className={styles.progressLine}>{available.map((item) => <button key={item} aria-label={`前往${item === "works" ? "作品画廊" : item === "pricing" ? "价格与活动" : "联系方式"}`} aria-current={scene === item ? "step" : undefined} onClick={() => navigate(item)} />)}</div></div>}

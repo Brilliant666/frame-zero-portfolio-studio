@@ -4,16 +4,15 @@ import { publicSite } from "../site-editor/public-server";
 import { SitePortfolioView } from "../site-editor/premium-view";
 import { SiteBasicView } from "../site-editor/basic-view";
 import { PREVIEW_THEME_BOOTSTRAP_CSS, PREVIEW_THEME_KEY } from "../preview-workspace/preview-theme";
-import { getClientVisiblePortfolioTitle } from "../client-visible-title";
+import { publishedSiteMetadata } from "../site-editor/public-metadata";
+import { getAccountRuntime } from "../../db/accounts/http.mjs";
 import { isContentSpace } from "../site-editor/content-schema";
 export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: Promise<{ siteSlug: string }> }): Promise<Metadata> {
   const result = await publicSite((await params).siteSlug);
-  if (!result?.snapshot) return { title: "作品集尚未发布", robots: { index: false, follow: false } };
+  if (!result?.snapshot) return { title: { absolute: "作品集尚未发布" }, description: "摄影师尚未发布作品集", openGraph: null, twitter: null, alternates: null, robots: { index: false, follow: false } };
   if (!isContentSpace(result.snapshot.space)) notFound();
-  const { profile } = result.snapshot.content;
-  const title = result.snapshot.space === "premium-flow-gallery" ? profile.title.trim() || profile.brand.trim() || "摄影作品集" : getClientVisiblePortfolioTitle(profile);
-  return { title, description: profile.intro, openGraph: { title, description: profile.intro }, twitter: { card: "summary", title, description: profile.intro } };
+  return publishedSiteMetadata(result.snapshot, result.assets, getAccountRuntime().config.origin);
 }
 export default async function PublicPortfolio({ params }: { params: Promise<{ siteSlug: string }> }) {
   const result = await publicSite((await params).siteSlug);

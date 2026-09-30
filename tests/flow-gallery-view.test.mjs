@@ -20,6 +20,7 @@ const state = await load('app/site-editor/flow-gallery-state.ts');
 const scrolling = await load('app/premium-gallery-proof/scrollport.ts');
 const bodyLocks = await load('app/premium-gallery-proof/body-scroll-lock.ts');
 const motion = await load('app/premium-gallery-proof/rail-motion.ts');
+const sources = await load('app/premium-gallery-proof/photo-source.ts');
 
 test('wheel moves forward and reverse loops in the same visual direction, reversibly across either loop boundary', () => {
   const height = 1250, duration = 50000;
@@ -110,7 +111,7 @@ test('saved receipt object key order does not create dirty state; array order re
   assert.equal(edited.groups[0].assetIds[0], ASSET);
 });
 function asset(id = ASSET) {
-  return { id, aspectRatio: 2 / 3, orientation: 'portrait', variants: Object.fromEntries(['thumbnail', 'card', 'full'].map(kind => [kind, { src: `/api/sites/test/assets/${id}/${kind}`, width: 1000, height: 1500, bytes: 100 }])) };
+  return { id, aspectRatio: 2 / 3, orientation: 'portrait', variants: Object.fromEntries([['thumbnail', 267, 400], ['card', 734, 1100], ['full', 1467, 2200]].map(([kind, width, height]) => [kind, { src: `/api/sites/test/assets/${id}/${kind}`, width, height, bytes: 100 }])) };
 }
 function document() {
   const d = schema.createEmptyFlowGalleryDocument();
@@ -127,7 +128,10 @@ test('Site renderer resolves only supplied assets and never fills missing resour
   assert.equal(resolved.groups.length, 1);
   assert.equal(resolved.groups[0].photos.length, 1);
   assert.equal(resolved.groups[0].photos[0].alt, '这是本分类的说明');
-  assert.equal(resolved.groups[0].photos[0].url, `/api/sites/test/assets/${ASSET}/full`);
+  assert.equal(resolved.groups[0].photos[0].url, `/api/sites/test/assets/${ASSET}/card`);
+  assert.equal(resolved.groups[0].photos[0].fullUrl, `/api/sites/test/assets/${ASSET}/full`);
+  assert.equal(resolved.groups[0].photos[0].width, 1467);
+  assert.equal(resolved.groups[0].photos[0].height, 2200);
   assert.deepEqual(copy(view.resolveFlowGalleryDocument(document(), []).groups[0].photos), []);
   assert.doesNotMatch(JSON.stringify(resolved), /\/photos\/library|\/preview\/flow-gallery|shaomaimai/);
 });
@@ -154,8 +158,22 @@ test('disabled price and contact scenes are omitted; optional QR independently r
   const resolved = view.resolveFlowGalleryDocument(d, [asset()]);
   assert.equal(resolved.pricing.packages.length, 1);
   assert.equal(resolved.contact.items[0].qrPhoto, undefined);
-  assert.equal(resolved.contact.items[1].qrPhoto.url, `/api/sites/test/assets/${ASSET}/full`);
+  assert.equal(resolved.contact.items[1].qrPhoto.url, `/api/sites/test/assets/${ASSET}/card`);
   assert.equal(resolved.contact.items[2].qrPhoto, undefined);
+});
+
+test('responsive sources use actual portrait widths, retain DPR choices and request full only for the viewer', () => {
+  const photo = view.resolveFlowGalleryDocument(document(), [asset()]).groups[0].photos[0];
+  const props = sources.galleryPhotoSource(photo, '386px');
+  assert.equal(props.src, `/api/sites/test/assets/${ASSET}/card`);
+  assert.equal(props.sizes, '386px');
+  assert.equal(props.srcSet, `\/api/sites/test/assets/${ASSET}/thumbnail 267w, /api/sites/test/assets/${ASSET}/card 734w, /api/sites/test/assets/${ASSET}/full 1467w`);
+  assert.deepEqual(copy(sources.galleryPhotoSource(photo, '386px', true)), { src: photo.fullUrl });
+  const duplicate = { ...photo, variants: [{ url: 'thumb', width: 200 }, { url: 'card', width: 200 }, { url: 'full', width: 400 }, { url: 'invalid', width: 0 }] };
+  assert.equal(sources.galleryPhotoSource(duplicate, '150px').srcSet, 'thumb 200w, full 400w');
+  const proof = { id: 'proof', url: '/local-anonymous.svg', width: 600, height: 900, alt: 'Anonymous' };
+  assert.deepEqual(copy(sources.galleryPhotoSource(proof, '386px')), { src: proof.url });
+  assert.deepEqual(copy(sources.galleryPhotoSource(proof, '386px', true)), { src: proof.url });
 });
 test('selection preserves click order, de-duplicates and rejects unknown assets without changing the group', () => {
   const original = document().groups[0];

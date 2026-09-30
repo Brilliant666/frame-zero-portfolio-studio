@@ -2,6 +2,10 @@
 export interface GalleryPhoto {
   id: string;
   url: string;
+  /** Authorized display variants; proof assets keep their single authored URL. */
+  variants?: { url: string; width: number }[];
+  /** The full display variant is requested when the viewer opens. Never an original. */
+  fullUrl?: string;
   width: number;
   height: number;
   alt: string;

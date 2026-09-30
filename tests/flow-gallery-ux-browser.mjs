@@ -9,6 +9,8 @@ import { chromium } from 'playwright';
 import { provisionAccount } from '../db/accounts/provision.mjs';
 import { readPublished } from '../db/accounts/publications.mjs';
 import { isSiteSlug } from '../db/accounts/site-slug.mjs';
+import { assertPublishedMetadata } from './public-metadata-browser.mjs';
+import { measureFlowGalleryRoutes } from './flow-gallery-route-performance.mjs';
 
 const SPACE = 'premium-flow-gallery';
 const DEFAULT_SLUG = 'flowuxfixture';
@@ -70,7 +72,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
     origin, fixture: SLUG, head: process.env.GITHUB_SHA ?? 'local',
     scope: 'Synthetic third-space UI, memory preview, Published-only rendering and viewport/motion regressions; no physical device acceptance',
     checkpoints: [], screenshots: [], transitions: [], sceneScroll: [], lightboxReturns: [], lightboxSizing: [], motion: [], railWidths: [], network: [], forbiddenRequests: [], pageErrors: [],
-    protectedBefore, protectedAfter: null,
+    protectedBefore, protectedAfter: null, metadata: null, responsiveImages: [], routePerformance: [],
   };
   const persist = () => writeFile(join(output, 'acceptance.json'), JSON.stringify(report, null, 2));
   let browser, page, publicPage;
@@ -291,7 +293,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
     await stage('02 real UI upload, categories, background and rails', async () => {
       await module('library');
       const files = await Promise.all(Array.from({ length: 8 }, async (_, index) => {
-        const width = index % 3 === 0 ? 480 : 720, height = index % 3 === 0 ? 720 : 480;
+        const width = index % 3 === 0 ? 1440 : 2160, height = index % 3 === 0 ? 2160 : 1440;
         return { name: `anonymous-flow-${index + 1}.png`, mimeType: 'image/png', buffer: await sharp({ create: { width, height, channels: 3, background: { r: 35 + index * 19, g: 70 + index * 12, b: 100 + index * 9 } } }).png().toBuffer() };
       }));
       await page.getByLabel('上传本站照片', { exact: true }).setInputFiles(files);
@@ -381,6 +383,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       await publicPage.goto(`${origin}/${SLUG}`);
       await publicPage.locator('[data-flow-scene="works"]').waitFor();
       await publicPage.getByRole('heading', { name: 'Flow fixture published title', exact: true }).waitFor();
+      report.metadata = await assertPublishedMetadata(publicPage, { origin, snapshot: publishedSnapshot });
       await railWidth(publicPage.locator('[aria-label="作品速览"]'), 50, 'public');
       assert.equal(await publicPage.getByText('Unsaved immediate preview title', { exact: true }).count(), 0);
       assert.equal((await anonymous.request.get(`${origin}${draftPath(SPACE)}`)).status(), 401);
@@ -521,6 +524,17 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         await publicPage.goto(`${origin}/${SLUG}#works`);
         await publicPage.locator('[data-flow-scene="works"]').waitFor();
         await publicPage.waitForFunction(() => [...document.querySelector('[data-flow-scene]').querySelectorAll('img')].every(image => image.complete && image.naturalWidth > 0));
+        const responsive = await publicPage.locator('[data-flow-rail-window] img').evaluateAll(images => images.map(image => ({
+          path: new URL(image.currentSrc).pathname, srcSet: image.srcset, sizes: image.sizes,
+          renderedWidth: image.clientWidth, intrinsicWidth: Number(image.getAttribute('width')), dpr: devicePixelRatio,
+        })));
+        const backgroundId = (await readPublished(runtime.pool, SLUG)).content.background.assetId;
+        for (const image of responsive) {
+          assert.ok(image.srcSet.includes('thumbnail') && image.srcSet.includes('card') && image.srcSet.includes('full'), 'Rail retains display variants for screen density');
+          assert.ok(Math.abs(Number.parseFloat(image.sizes) - image.renderedWidth) <= 1, 'Rail sizes follow the actual column width');
+          if (viewport.width > 700 && !image.path.includes(`/${backgroundId}/`)) assert.ok(!image.path.endsWith('/full'), 'At DPR 1 these synthetic rail slots use a smaller display variant');
+        }
+        report.responsiveImages.push({ viewport, images: responsive });
         await railWidth(publicPage.locator('[aria-label="作品速览"]'), 50, 'public');
         await overflow(publicPage);
         for (const from of ['pricing', 'contact']) {
@@ -666,6 +680,9 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         await publicPage.mouse.click(target.x, target.y); await publicPage.getByRole('button', { name: '关闭大图', exact: true }).waitFor();
         diagnostic.actualPhotoClick = await publicPage.evaluate(() => window.__flowUxPublicPhotoClick);
         diagnostic.opened = await publicPage.evaluate(() => ({ scroll: scrollY, overflow: document.body.style.overflow, padding: document.body.style.paddingRight, width: document.body.getBoundingClientRect().width }));
+        const viewerImage = publicPage.locator('[role="dialog"][aria-modal="true"] img');
+        assert.ok((await viewerImage.getAttribute('src')).endsWith('/full'), 'Opening the viewer requests the full display variant');
+        assert.equal(await viewerImage.getAttribute('srcset'), null, 'The viewer does not inherit a rail slot size');
         await publicPage.getByRole('button', { name: '关闭大图', exact: true }).click();
         await publicPage.waitForFunction(() => !document.querySelector('[role="dialog"][aria-modal="true"]'));
         diagnostic.afterSettled = await stableScroll(publicPage);
@@ -708,6 +725,27 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         }
         await returnToWorks('gallery', publicPage.getByRole('button', { name: '返回首页', exact: true }));
       }
+    });
+    await stage('07 advanced public and admin cold/warm route resource measurements', async () => {
+      for (const viewport of VIEWPORTS) report.routePerformance.push(...await measureFlowGalleryRoutes({ browser, origin, fixtureSlug: SLUG, ownerStorageState: await context.storageState(), viewport, signal }));
+    });
+    await stage('08 independent DPR 2 responsive rail selection', async () => {
+      const highDensity = await browser.newContext({ viewport: VIEWPORTS[0], deviceScaleFactor: 2, reducedMotion: 'reduce', serviceWorkers: 'block' });
+      const requests = [];
+      highDensity.on('request', request => requests.push({ method: request.method(), origin: new URL(request.url()).origin }));
+      try {
+        const p = await highDensity.newPage();
+        await p.goto(`${origin}/${SLUG}#works`);
+        await p.waitForFunction(() => [...document.querySelectorAll('[data-flow-rail-window] img')].length > 0 && [...document.querySelectorAll('[data-flow-rail-window] img')].every(image => image.complete && image.naturalWidth > 0));
+        const images = await p.locator('[data-flow-rail-window] img').evaluateAll(images => images.map(image => ({ path: new URL(image.currentSrc).pathname, sizes: image.sizes, renderedWidth: image.clientWidth, dpr: devicePixelRatio })));
+        for (const image of images) {
+          assert.equal(image.dpr, 2);
+          assert.ok(Math.abs(Number.parseFloat(image.sizes) - image.renderedWidth) <= 1);
+          assert.ok(/\/(?:card|full)$/.test(image.path), 'High-density desktop rail needs a larger source than the synthetic thumbnail');
+        }
+        assert.ok(requests.every(request => request.origin === origin && ['GET', 'HEAD'].includes(request.method())), 'High-density sample is anonymous and read-only');
+        report.responsiveImages.push({ viewport: VIEWPORTS[0], sample: 'fresh anonymous DPR 2 context', images });
+      } finally { await highDensity.close(); }
     });
     assert.deepEqual(await json(draftPath('basic')), basicBefore);
     assert.equal((await publication()).current.id, published.id);

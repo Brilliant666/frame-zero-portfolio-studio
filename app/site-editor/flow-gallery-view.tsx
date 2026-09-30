@@ -11,7 +11,11 @@ export function resolveFlowGalleryDocument(document: FlowGalleryDocumentV1, asse
   const photo = (id: string | null, caption = ""): GalleryPhoto | null => {
     const asset = id ? byId.get(id) : undefined;
     if (!asset) return null;
-    return { id: asset.id, url: asset.variants.full.src, width: asset.variants.full.width, height: asset.variants.full.height, alt: caption || "作品照片" };
+    return {
+      id: asset.id, url: asset.variants.card.src, fullUrl: asset.variants.full.src,
+      variants: [asset.variants.thumbnail, asset.variants.card, asset.variants.full].map(variant => ({ url: variant.src, width: variant.width })),
+      width: asset.variants.full.width, height: asset.variants.full.height, alt: caption || "作品照片",
+    };
   };
   return {
     profile: document.profile,

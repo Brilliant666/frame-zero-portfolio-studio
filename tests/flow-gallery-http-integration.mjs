@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { rename } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 import { provisionAccount } from '../db/accounts/provision.mjs';
 import { readPublished } from '../db/accounts/publications.mjs';
+import { assetPath } from '../db/accounts/assets.mjs';
 
 /** Invoked only by the dedicated account suite, using its temporary asset root. */
 export async function flowGalleryHttpIntegration({ runtime, origin, password, request, login, readDraft, saveDraft, sitePage, assetRoot }) {
@@ -115,13 +117,46 @@ export async function flowGalleryHttpIntegration({ runtime, origin, password, re
   const html = await publicResponse.text();
   assert.match(html, /data-publication-space="premium-flow-gallery"/);
   assert.ok(html.includes(`data-publication-id="${first.id}"`));
-  assert.match(html, /<title>[^<]*FLOW-PUBLISHED-TITLE/);
+  assert.match(html, /<title>[^<]*FLOW-PUBLISHED-BRAND/);
+  assert.doesNotMatch(html, /<title>[^<]*FLOW-PUBLISHED-TITLE/);
   assert.match(html, /<meta name="description" content="FLOW-PUBLISHED-INTRO"/);
-  assert.match(html, /<meta property="og:title" content="FLOW-PUBLISHED-TITLE"/);
+  assert.match(html, /<meta property="og:title" content="FLOW-PUBLISHED-BRAND"/);
   assert.match(html, /FLOW-PUBLISHED-GROUP/);
   assert.doesNotMatch(html, /FLOW-HIDDEN-GROUP|FLOW-HIDDEN-CAPTION|FLOW-DISABLED-PACKAGE|FLOW-EMPTY-CONTACT|FLOW-BASIC-PUBLISHED|\/preview\/flow-gallery\/asset|shaomaimai\.icu/);
-  for (const id of snapshot.assetIds) for (const variant of ['thumbnail', 'card', 'full']) assert.equal((await request(`/api/public-sites/${slug}/assets/${id}/${variant}`)).status, 200);
-  for (const [name, id, variant] of [[slug, assets[3], 'full'], [slug, assets[5], 'full'], [slug, foreignAsset, 'full'], [other, assets[1], 'full'], [slug, assets[1], 'original']]) assert.equal((await request(`/api/public-sites/${name}/assets/${id}/${variant}`)).status, 404);
+  const publicAssetPath = (id, variant = 'full', name = slug) => `/api/public-sites/${name}/assets/${id}/${variant}`;
+  let cachedFullEtag;
+  for (const id of snapshot.assetIds) for (const variant of ['thumbnail', 'card', 'full']) {
+    const response = await request(publicAssetPath(id, variant));
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('cache-control'), 'private, no-cache, must-revalidate');
+    const etag = response.headers.get('etag'); assert.match(etag, /^"[a-f0-9]{64}"$/);
+    const bytes = await response.arrayBuffer(); assert.ok(bytes.byteLength > 0);
+    for (const method of ['GET', 'HEAD']) {
+      const revalidated = await request(publicAssetPath(id, variant), { method, headers: { 'if-none-match': etag } });
+      assert.equal(revalidated.status, 304); assert.equal((await revalidated.arrayBuffer()).byteLength, 0);
+      assert.equal(revalidated.headers.get('etag'), etag);
+      assert.equal(revalidated.headers.get('cache-control'), 'private, no-cache, must-revalidate');
+    }
+    const head = await request(publicAssetPath(id, variant), { method: 'HEAD' });
+    assert.equal(head.status, 200); assert.equal(head.headers.get('etag'), etag);
+    assert.equal(Number(head.headers.get('content-length')), bytes.byteLength); assert.equal((await head.arrayBuffer()).byteLength, 0);
+    if (id === assets[1] && variant === 'full') cachedFullEtag = etag;
+  }
+  assert.equal((await request(publicAssetPath(assets[1]), { headers: { 'if-none-match': '"stale"' } })).status, 200);
+  assert.equal((await request(publicAssetPath(assets[1]), { headers: { 'if-none-match': `"stale", W/${cachedFullEtag}` } })).status, 304);
+  assert.equal((await request(publicAssetPath(assets[1]), { headers: { 'if-none-match': '*' } })).status, 304);
+  assert.equal((await request(publicAssetPath(assets[1]), { headers: { range: 'bytes=0-5', 'if-none-match': cachedFullEtag } })).status, 416);
+  for (const [name, id, variant] of [[slug, assets[3], 'full'], [slug, assets[5], 'full'], [slug, foreignAsset, 'full'], [other, assets[1], 'full'], [slug, assets[1], 'original']]) {
+    for (const validator of [cachedFullEtag, '*']) assert.equal((await request(publicAssetPath(id, variant, name), { headers: { 'if-none-match': validator } })).status, 404);
+  }
+  assert.equal((await request(`/api/sites/${slug}/assets/${assets[1]}/full`, { headers: { 'if-none-match': cachedFullEtag } })).status, 401);
+  // A cached validator cannot hide a missing file. This only renames this
+  // suite's anonymous fixture beneath its dedicated temporary asset root.
+  const stored = (await runtime.pool.query('SELECT variants FROM site_assets WHERE site_id=$1 AND id=$2', [owner.siteId, assets[1]])).rows[0];
+  const fullPath = assetPath(assetRoot, stored.variants.full.key), unavailablePath = `${fullPath}.cache-test`;
+  await rename(fullPath, unavailablePath);
+  try { assert.equal((await request(publicAssetPath(assets[1]), { headers: { 'if-none-match': cachedFullEtag } })).status, 503); }
+  finally { await rename(unavailablePath, fullPath); }
   assert.equal((await request(`/api/sites/${slug}/assets`)).status, 401);
   assert.equal((await publication(outsider, { action: 'rollback', revisionId: first.id, expectedPublicationId: null }, other)).status, 404);
 
@@ -143,7 +178,9 @@ export async function flowGalleryHttpIntegration({ runtime, origin, password, re
   const basicPublishedResponse = await publication(cookie, { action: 'publish', expectedDraftRevision: savedBasic.revision, expectedPublicationId: first.id }, slug, 'basic');
   assert.equal(basicPublishedResponse.status, 200); const basicPublished = (await basicPublishedResponse.json()).publication;
   assert.match(await (await request(`/${slug}`)).text(), /data-publication-space="basic"/);
-  assert.equal((await request(`/api/public-sites/${slug}/assets/${assets[1]}/full`)).status, 404);
+  for (const method of ['GET', 'HEAD']) for (const validator of [cachedFullEtag, '*']) {
+    assert.equal((await request(publicAssetPath(assets[1]), { method, headers: { 'if-none-match': validator } })).status, 404, 'Current Published removal wins over a cached validator');
+  }
   await runtime.pool.query("INSERT INTO site_template_grants(id,site_id,product,source) VALUES($1,$2,'premium-polaroid','operator-test')", [randomUUID(), owner.siteId]);
   const polaroid = await readDraft(slug, 'premium-polaroid', cookie);
   polaroid.content.profile.photographer = 'FLOW-POLAROID-PUBLISHED';
@@ -172,6 +209,7 @@ export async function flowGalleryHttpIntegration({ runtime, origin, password, re
   assert.equal(rollback.status, 200); assert.equal((await rollback.json()).publication.id, first.id);
   assert.match(await (await request(`/${slug}`)).text(), /FLOW-PUBLISHED-TITLE/);
   assert.equal((await request(`/api/public-sites/${slug}/assets/${assets[1]}/full`)).status, 200);
+  assert.equal((await request(publicAssetPath(assets[1]), { headers: { 'if-none-match': cachedFullEtag } })).status, 304, 'Rollback restores public membership and permits revalidation');
   assert.equal((await request(`/api/public-sites/${slug}/assets/${assets[5]}/full`)).status, 404);
   assert.equal((await publication(cookie, { action: 'rollback', revisionId: first.id, expectedPublicationId: polaroidPublished.id })).status, 409);
   assert.deepEqual(await readDraft(slug, space, cookie), nextDraft, 'Rollback retains the newer third-space draft');
