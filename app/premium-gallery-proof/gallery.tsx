@@ -18,23 +18,60 @@ function Photo({ photo, className }: { photo: GalleryPhoto; className?: string }
   return <img className={className} src={photo.url} width={photo.width} height={photo.height} alt={photo.alt} draggable={false} />;
 }
 
-function Rail({ group, reverse, onSelect }: { group: GalleryDocument["groups"][number]; reverse: boolean; onSelect: (photo: GalleryPhoto) => void }) {
+function Rail({ group, reverse, paused, onSelect }: { group: GalleryDocument["groups"][number]; reverse: boolean; paused: boolean; onSelect: (photo: GalleryPhoto) => void }) {
+  const rail = useRef<HTMLDivElement>(null);
+  const railWindow = useRef<HTMLDivElement>(null);
   const copy = useRef<HTMLDivElement>(null);
+  const primaryButtons = useRef(new Map<string, HTMLButtonElement>());
   const [duration, setDuration] = useState(600);
+  const keyboardIntent = useRef(false);
+  const [keyboardFocused, setKeyboardFocused] = useState(false);
+  useLayoutEffect(() => {
+    if (!paused && !keyboardFocused && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      railWindow.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }
+  }, [paused, keyboardFocused]);
+  useEffect(() => {
+    // Pointer focus survives lightbox return, but should not freeze the rail.
+    // Track Tab before it enters the rail so keyboard users get a stable list.
+    const keyDown = (event: KeyboardEvent) => {
+      if (!["Tab", "Enter", " ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      keyboardIntent.current = true;
+      if (rail.current?.contains(document.activeElement)) setKeyboardFocused(true);
+    };
+    const pointerDown = () => { keyboardIntent.current = false; setKeyboardFocused(false); };
+    document.addEventListener("keydown", keyDown, true);
+    document.addEventListener("pointerdown", pointerDown, true);
+    return () => {
+      document.removeEventListener("keydown", keyDown, true);
+      document.removeEventListener("pointerdown", pointerDown, true);
+    };
+  }, []);
   useEffect(() => {
     const element = copy.current;
     if (!element) return;
-    // The proof deliberately uses a slow 3 px/s rail; the reference sample was slower.
-    const measure = () => setDuration(Math.max(60, element.getBoundingClientRect().height / 3));
+    // Visible reference samples move about 25–26 px/s, independently of list length.
+    const measure = () => setDuration(Math.max(1, element.getBoundingClientRect().height / 25));
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     measure();
     return () => observer.disconnect();
   }, []);
-  return <div className={styles.rail}>
+  return <div ref={rail} className={`${styles.rail} ${keyboardFocused ? styles.keyboardRail : ""}`}
+    onFocusCapture={(event) => {
+      if (!keyboardIntent.current) return;
+      setKeyboardFocused(true);
+      const target = event.target;
+      requestAnimationFrame(() => { if (target.isConnected) target.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" }); });
+    }}
+    onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setKeyboardFocused(false); }}>
     <h2 className={styles.railHeading}>{group.name}</h2>
-    <div className={styles.railWindow}><div className={`${styles.track} ${reverse ? styles.reverse : ""}`} style={{ "--rail-duration": `${duration}s` } as CSSProperties}>
-      {[0, 1].map((repeat) => <div ref={repeat === 0 ? copy : undefined} key={repeat} className={styles.railCopy} aria-hidden={repeat === 1 ? true : undefined}>{group.photos.map((photo) => <button key={photo.id} tabIndex={repeat ? -1 : 0} onClick={() => onSelect(photo)} aria-label={`查看大图：${photo.alt}`}><Photo photo={photo} /></button>)}</div>)}
+    <div ref={railWindow} className={styles.railWindow}><div className={`${styles.track} ${reverse ? styles.reverse : ""}`} style={{ "--rail-duration": `${duration}s` } as CSSProperties}>
+      {[0, 1].map((repeat) => <div ref={repeat === 0 ? copy : undefined} key={repeat} className={styles.railCopy} aria-hidden={repeat === 1 ? true : undefined}>{group.photos.map((photo) => <button key={photo.id} ref={repeat ? undefined : (button) => { if (button) primaryButtons.current.set(photo.id, button); else primaryButtons.current.delete(photo.id); }} tabIndex={repeat ? -1 : 0} onClick={() => {
+        // Loop duplicates disappear in keyboard mode; return to their accessible original.
+        if (repeat) primaryButtons.current.get(photo.id)?.focus({ preventScroll: true });
+        onSelect(photo);
+      }} aria-label={`查看大图：${photo.alt}`}><Photo photo={photo} /></button>)}</div>)}
     </div></div>
   </div>;
 }
@@ -168,17 +205,14 @@ export default function FlowGallery({ document: content }: { document: GalleryDo
       }}>
       {scene === "works" && <>
         <div ref={introduction} className={styles.introduction}><h1>{content.profile.title}</h1><a className={styles.expand} href="#gallery">展开完整作品</a><p>{content.profile.intro}</p></div>
-        <div className={`${styles.rails} ${paused ? styles.paused : ""}`} aria-label="作品速览" onFocusCapture={(event) => {
-          const target = event.target;
-          requestAnimationFrame(() => { if (target.isConnected) target.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" }); });
-        }}>
-          {columns.length === 0 ? <p className={styles.emptyGallery}>还没有作品</p> : columns.map((column, index) => <Rail key={column.id} group={column} reverse={index === 1} onSelect={setSelected} />)}
+        <div className={`${styles.rails} ${paused ? styles.paused : ""}`} aria-label="作品速览">
+          {columns.length === 0 ? <p className={styles.emptyGallery}>还没有作品</p> : columns.map((column, index) => <Rail key={column.id} group={column} reverse={index === 1} paused={paused} onSelect={setSelected} />)}
         </div>
-        <button className={styles.motion} aria-pressed={paused} onClick={() => setPaused(!paused)}>{paused ? "播放动效" : "暂停动效"}</button>
       </>}
       {scene === "pricing" && content.pricing && <section className={styles.pricePanel}><h1>{content.pricing.heading}</h1><p className={styles.priceIntro}>{content.pricing.introduction}</p><div className={styles.packages}>{content.pricing.packages.map((item) => <article key={item.id}><h2>{item.name}</h2><p className={styles.price}>{item.price}</p><p>{item.description}</p><ul>{item.details.map((line, index) => <li key={index}>{line}</li>)}</ul></article>)}</div></section>}
       {scene === "contact" && content.contact && <section className={styles.contactPanel}><div><h1>{content.contact.heading}</h1><p>{content.contact.intro}</p></div><div className={styles.contactCards}>{content.contact.items.map((item) => <article key={item.id}><h2>{item.label}</h2>{item.href && /^(https?:|mailto:)/.test(item.href) ? <a href={item.href} rel="noreferrer">{item.value} ↗</a> : <p>{item.value}</p>}</article>)}</div></section>}
     </main>}
+    {scene === "works" && <button className={styles.motion} aria-pressed={paused} onClick={() => setPaused(!paused)}>{paused ? "播放动效" : "暂停动效"}</button>}
     {scene !== "gallery" && <div className={styles.sceneProgress} aria-label="页面位置"><span>0{available.indexOf(scene) + 1} / {scene === "works" ? "作品画廊" : scene === "pricing" ? "价格与活动" : "联系方式"}</span><div className={styles.progressLine}>{available.map((item) => <button key={item} aria-label={`前往${item === "works" ? "作品画廊" : item === "pricing" ? "价格与活动" : "联系方式"}`} aria-current={scene === item ? "step" : undefined} onClick={() => navigate(item)} />)}</div></div>}
     {selected && <Lightbox photo={selected} onClose={() => setSelected(null)} />}
   </div>;
