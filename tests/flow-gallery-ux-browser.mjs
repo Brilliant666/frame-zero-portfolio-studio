@@ -475,7 +475,11 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
           const frame = now => {
             const root = document.querySelector('[data-flow-scene]'), scene = root?.getAttribute('data-flow-scene');
             const rect = selector => { const r = root?.querySelector(selector)?.getBoundingClientRect(); return r ? { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width } : null; };
-            window.__flowUxCapture.samples.push({ ms: now - start, scene, inner: innerWidth, html: document.documentElement.clientWidth, body: document.body.getBoundingClientRect().width, bodyLeft: document.body.getBoundingClientRect().left, overflow: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth), title: rect('h1'), rails: rect('[aria-label="作品速览"]') });
+            const tracks = [...(root?.querySelectorAll('[style*="--rail-duration"]') ?? [])].map(track => {
+              const style = getComputedStyle(track);
+              return { y: new DOMMatrixReadOnly(style.transform).m42, delay: style.animationDelay, state: style.animationPlayState };
+            });
+            window.__flowUxCapture.samples.push({ ms: now - start, scene, inner: innerWidth, html: document.documentElement.clientWidth, body: document.body.getBoundingClientRect().width, bodyLeft: document.body.getBoundingClientRect().left, overflow: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth), title: rect('h1'), rails: rect('[aria-label="作品速览"]'), tracks });
             if (now - start < 700) requestAnimationFrame(frame); else window.__flowUxCapture.done = true;
           };
           requestAnimationFrame(frame);
@@ -492,6 +496,12 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       for (const field of ['title', 'rails']) {
         assert.ok(works.every(row => row[field]), `${field} exists from the first works frame`);
         for (const key of ['left', 'right', 'top', 'bottom', 'width']) assert.ok(spread(works.map(row => row[field][key])) <= 1, `${from}→works ${field}.${key} shifted (entry translation / scrollbar reflow regression)`);
+      }
+      const early = works.filter(row => row.ms <= works[0].ms + 250);
+      assert.ok(early.length >= 3, 'Capture includes the first 250ms of visible home frames');
+      assert.ok(early.every(row => row.tracks.length === 2 && row.tracks.every(track => track.delay === '0s' && track.state === 'running')), 'Both rails start without a fixed delay');
+      for (let index = 0; index < 2; index++) {
+        assert.ok(Math.abs(early.at(-1).tracks[index].y - early[0].tracks[index].y) > 2, 'Both rails move within the first 250ms');
       }
       report.transitions.push({ from, viewport: publicPage.viewportSize(), durationMs: samples.at(-1).ms, samples });
       await screenshot(publicPage, `public-${from}-return`);
@@ -526,7 +536,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         }
         if (viewport.width > 700) {
           await publicPage.mouse.move(5, 5);
-          await publicPage.waitForFunction(() => [...document.querySelector('[aria-label="作品速览"]').querySelectorAll('[style*="--rail-duration"]')].every(track => track.getAnimations().some(animation => typeof animation.currentTime === 'number' && animation.currentTime > 1700)));
+          await publicPage.waitForFunction(() => [...document.querySelector('[aria-label="作品速览"]').querySelectorAll('[style*="--rail-duration"]')].every(track => track.getAnimations().some(animation => typeof animation.currentTime === 'number' && animation.currentTime > 0)));
           const moving = await trackMotion();
           assert.equal(moving.before.length, 2);
           assert.ok(moving.after.every((track, index) => Math.abs(track.y - moving.before[index].y) > 2), 'Both rails move with normal motion');
