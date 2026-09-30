@@ -571,13 +571,52 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
           assert.equal(hover.before[0].state, 'paused'); assert.equal(hover.before[1].state, 'running');
           assert.ok(Math.abs(hover.after[0].y - hover.before[0].y) <= 1, 'Hovered rail remains stable');
           assert.ok(Math.abs(hover.after[1].y - hover.before[1].y) > 2, 'The other rail continues');
+          const wheelBrowsing = [];
+          for (const index of [0, 1]) {
+            const viewport = rails.locator('[data-flow-rail-window]').nth(index);
+            const bounds = await viewport.boundingBox();
+            await publicPage.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+            await publicPage.waitForFunction(index => getComputedStyle(document.querySelectorAll('[data-flow-rail-window]')[index].firstElementChild).animationPlayState === 'paused', index);
+            assert.equal(await viewport.locator('button').first().evaluate(e => getComputedStyle(e).cursor), 'zoom-in');
+            for (const delta of [360, -360]) {
+              const sample = () => viewport.evaluate(e => {
+                const track = e.firstElementChild;
+                return { y: new DOMMatrixReadOnly(getComputedStyle(track).transform).m42, time: track.getAnimations()[0].currentTime, height: track.firstElementChild.getBoundingClientRect().height };
+              });
+              const before = await sample();
+              await publicPage.mouse.wheel(0, delta);
+              await publicPage.waitForFunction(({ index, time }) => document.querySelectorAll('[data-flow-rail-window]')[index].firstElementChild.getAnimations()[0].currentTime !== time, { index, time: before.time });
+              const after = await sample();
+              const loops = (after.y - before.y + delta) / before.height;
+              assert.ok(Math.abs(loops - Math.round(loops)) < 0.005, `Rail ${index} moves by ${delta}px modulo the photo loop`);
+              assert.equal(new URL(publicPage.url()).hash, '#works', 'Rail wheel must not navigate to prices');
+              wheelBrowsing.push({ index, delta, before, after });
+            }
+          }
+          await publicPage.mouse.move(5, 5);
+          const resumed = await trackMotion();
+          assert.ok(resumed.before.every(t => t.state === 'running'));
+          assert.ok(resumed.after.every((t, i) => Math.abs(t.y - resumed.before[i].y) > 2), 'Leaving a rail resumes both tracks');
+          assert.ok(resumed.after.every((t, i) => Math.abs(t.y - resumed.before[i].y) < 30), 'Resume does not reset the wheel position');
           await publicPage.getByRole('button', { name: '暂停动效', exact: true }).click();
           const paused = await trackMotion();
           assert.ok(paused.before.every(track => track.name === 'none'), 'Pause switches the rails to a stable scrollable list');
           assert.ok(paused.after.every((track, index) => Math.abs(track.y - paused.before[index].y) <= 1));
           assert.equal(new URL(publicPage.url()).hash, '#works', 'Motion controls do not navigate');
+          const staticViewport = rails.locator('[data-flow-rail-window]').first();
+          const staticBounds = await staticViewport.boundingBox();
+          await publicPage.mouse.move(staticBounds.x + staticBounds.width / 2, staticBounds.y + staticBounds.height / 2);
+          await publicPage.mouse.wheel(0, 360);
+          await publicPage.waitForFunction(() => document.querySelector('[data-flow-rail-window]').scrollTop > 0);
+          await staticViewport.evaluate(e => { e.scrollTop = e.scrollHeight; });
+          await publicPage.mouse.wheel(0, 360);
+          assert.equal(new URL(publicPage.url()).hash, '#works', 'Static rail at its end must not navigate');
           await publicPage.getByRole('button', { name: '播放动效', exact: true }).click();
-          report.motion.push({ viewport, moving, hoverTarget, hoverHit, hover, paused });
+          await publicPage.mouse.move(20, 300);
+          await publicPage.mouse.wheel(0, 360);
+          await publicPage.locator('[data-flow-scene="pricing"]').waitFor();
+          await returnToWorks('outside-rail-wheel', publicPage.locator('nav[aria-label="主要导航"] a[href="#works"]'));
+          report.motion.push({ viewport, moving, hoverTarget, hoverHit, hover, wheelBrowsing, resumed, paused });
         }
         await publicPage.getByRole('link', { name: '展开完整作品', exact: true }).click();
         await publicPage.locator('[data-flow-scene="gallery"]').waitFor(); await overflow(publicPage);

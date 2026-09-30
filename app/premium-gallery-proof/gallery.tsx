@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import type { GalleryDocument, GalleryPhoto } from "./model";
 import { galleryScrollport, galleryScrollTop, restoreGalleryScroll } from "./scrollport";
 import { lockGalleryBodyScroll } from "./body-scroll-lock";
+import { railTimeAfterWheel } from "./rail-motion";
 import styles from "./gallery.module.css";
 
 type Scene = "works" | "pricing" | "contact" | "gallery";
@@ -24,10 +25,31 @@ function Rail({ group, reverse, paused, onSelect }: { group: GalleryDocument["gr
   const rail = useRef<HTMLDivElement>(null);
   const railWindow = useRef<HTMLDivElement>(null);
   const copy = useRef<HTMLDivElement>(null);
+  const track = useRef<HTMLDivElement>(null);
   const primaryButtons = useRef(new Map<string, HTMLButtonElement>());
   const [duration, setDuration] = useState(600);
   const keyboardIntent = useRef(false);
   const [keyboardFocused, setKeyboardFocused] = useState(false);
+  useEffect(() => {
+    const viewport = railWindow.current;
+    if (!viewport) return;
+    const wheel = (event: WheelEvent) => {
+      // Keep native scrolling in keyboard, explicit pause and reduced-motion modes.
+      // Even at their ends, a rail must not hand its wheel to scene navigation.
+      event.stopPropagation();
+      if (event.ctrlKey || event.metaKey || !event.deltaY) return;
+      if (getComputedStyle(viewport).overflowY !== "hidden") return;
+      event.preventDefault();
+      const animation = track.current?.getAnimations()[0];
+      const durationMs = animation?.effect?.getComputedTiming().duration;
+      const loopHeight = copy.current?.getBoundingClientRect().height ?? 0;
+      if (!animation || typeof animation.currentTime !== "number" || typeof durationMs !== "number" || durationMs <= 0 || loopHeight <= 0) return;
+      const deltaPixels = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? viewport.clientHeight : 1);
+      animation.currentTime = railTimeAfterWheel(animation.currentTime, durationMs, loopHeight, deltaPixels, reverse);
+    };
+    viewport.addEventListener("wheel", wheel, { passive: false });
+    return () => viewport.removeEventListener("wheel", wheel);
+  }, [reverse]);
   useLayoutEffect(() => {
     if (!paused && !keyboardFocused && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       railWindow.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
@@ -69,7 +91,7 @@ function Rail({ group, reverse, paused, onSelect }: { group: GalleryDocument["gr
     }}
     onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setKeyboardFocused(false); }}>
     <h2 className={styles.railHeading}>{group.name}</h2>
-    <div ref={railWindow} className={styles.railWindow}><div className={`${styles.track} ${reverse ? styles.reverse : ""}`} style={{ "--rail-duration": `${duration}s` } as CSSProperties}>
+    <div ref={railWindow} data-flow-rail-window className={styles.railWindow}><div ref={track} className={`${styles.track} ${reverse ? styles.reverse : ""}`} style={{ "--rail-duration": `${duration}s` } as CSSProperties}>
       {[0, 1].map((repeat) => <div ref={repeat === 0 ? copy : undefined} key={repeat} className={styles.railCopy} aria-hidden={repeat === 1 ? true : undefined}>{group.photos.map((photo) => <button key={photo.id} ref={repeat ? undefined : (button) => { if (button) primaryButtons.current.set(photo.id, button); else primaryButtons.current.delete(photo.id); }} tabIndex={repeat ? -1 : 0} onClick={() => {
         // Loop duplicates disappear in keyboard mode; return to their accessible original.
         if (repeat) primaryButtons.current.get(photo.id)?.focus({ preventScroll: true });
@@ -199,6 +221,7 @@ export default function FlowGallery({ document: content }: { document: GalleryDo
     const element = root.current;
     if (!element || scene === "gallery" || selected) return;
     const wheel = (event: WheelEvent) => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.target instanceof Element && event.target.closest("[data-flow-rail-window]")) return;
       if (window.matchMedia("(max-width: 700px)").matches || Math.abs(event.deltaY) < 18) return;
       const body = sceneBody.current;
       if (body && (event.deltaY > 0 ? body.scrollTop + body.clientHeight < body.scrollHeight - 2 : body.scrollTop > 2)) return;

@@ -32,10 +32,10 @@
 @media(min-width:701px){.introduction{top:clamp(130px,41vh,380px);max-height:calc(var(--gallery-viewport-height,100svh) - clamp(130px,41vh,380px) - 95px);overflow-y:auto;scrollbar-width:thin}.introduction h1{font-size:clamp(44px,5.28vw,76px)}}
 @media(max-width:700px){.works{--rail-top:max(210px,calc(104px + var(--intro-height,58px) + 48px));height:max(var(--gallery-viewport-height,100svh),calc(var(--rail-top) + 390px));min-height:640px}.introduction{max-height:none;overflow:visible;align-items:flex-start}.introduction h1{min-width:0;flex:1}.introduction .expand{flex-shrink:0;margin-top:8px}.rails{top:var(--rail-top);bottom:53px;height:auto;min-height:320px}.railHeading{min-height:16px;line-height:1.5;flex-wrap:nowrap}.galleryHeading h1{min-width:0}.galleryHeading button{flex-shrink:0}}
 
-/* Only the photograph under a fine pointer stops its own rail. */
-.rail button{position:relative;border:1px solid rgba(245,248,237,.18);transition:transform .28s ease,filter .28s ease,border-color .28s ease,box-shadow .28s ease}
+/* A fine pointer holds its rail for wheel browsing, including gaps between photos. */
+.rail button{position:relative;cursor:zoom-in;border:1px solid rgba(245,248,237,.18);transition:transform .28s ease,filter .28s ease,border-color .28s ease,box-shadow .28s ease}
 @media(hover:hover) and (pointer:fine){
-  .rail:has(button:hover) .track{animation-play-state:paused}
+  .railWindow:hover .track{animation-play-state:paused}
   .rail button:hover{z-index:2;transform:scale(1.2);filter:brightness(1.08) saturate(1.06);border-color:rgba(223,255,63,.82);box-shadow:0 20px 46px rgba(0,0,0,.42),0 0 0 2px rgba(223,255,63,.22)}
 }
 @media(prefers-reduced-motion:reduce){.rail button:hover{transform:none}}

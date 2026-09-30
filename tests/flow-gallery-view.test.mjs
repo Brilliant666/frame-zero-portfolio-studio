@@ -19,6 +19,24 @@ const view = await load('app/site-editor/flow-gallery-view.tsx', { '../premium-g
 const state = await load('app/site-editor/flow-gallery-state.ts');
 const scrolling = await load('app/premium-gallery-proof/scrollport.ts');
 const bodyLocks = await load('app/premium-gallery-proof/body-scroll-lock.ts');
+const motion = await load('app/premium-gallery-proof/rail-motion.ts');
+
+test('wheel moves forward and reverse loops in the same visual direction, reversibly across either loop boundary', () => {
+  const height = 1250, duration = 50000;
+  for (const reverse of [false, true]) {
+    for (const start of [0, 100, 25000, 49900]) {
+      for (const delta of [-4000, -360, 360, 4000]) {
+        const next = motion.railTimeAfterWheel(start, duration, height, delta, reverse);
+        assert.ok(next >= 0 && next < duration);
+        const restored = motion.railTimeAfterWheel(next, duration, height, -delta, reverse);
+        assert.ok(Math.abs(restored - start) < 0.001);
+        const visualDelta = (next - start) / duration * height * (reverse ? 1 : -1);
+        const turns = (visualDelta + delta) / height;
+        assert.ok(Math.abs(turns - Math.round(turns)) < 0.001, 'Wheel displacement is exact modulo identical photo copies');
+      }
+    }
+  }
+});
 test('preview and nested lightbox retain body lock regardless of unmount order and restore prior overflow once', () => {
   for (const closeParentFirst of [true, false]) {
     const body = { style: { overflow: 'auto' } };
