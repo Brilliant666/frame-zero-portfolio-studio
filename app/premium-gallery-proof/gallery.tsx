@@ -82,6 +82,11 @@ function Rail({ group, reverse, paused, onSelect }: { group: GalleryDocument["gr
 function Lightbox({ photo, onClose }: { photo: GalleryPhoto; onClose: () => void }) {
   const dialog = useRef<HTMLDivElement>(null);
   const close = useRef<HTMLButtonElement>(null);
+  const zoom = useRef<HTMLButtonElement>(null);
+  const [zoomWidth, setZoomWidth] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    dialog.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [zoomWidth]);
   useLayoutEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     const releaseScroll = lockGalleryBodyScroll(document.body);
@@ -94,14 +99,24 @@ function Lightbox({ photo, onClose }: { photo: GalleryPhoto; onClose: () => void
       });
     };
   }, []);
-  return <div ref={dialog} className={styles.lightbox} role="dialog" aria-modal="true" aria-label={photo.alt}
+  return <div ref={dialog} className={`${styles.lightbox} ${zoomWidth === null ? "" : styles.zoomedLightbox}`} role="dialog" aria-modal="true" aria-label={photo.alt}
     onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
     onKeyDown={(event) => {
       if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); onClose(); }
-      if (event.key === "Tab") { event.preventDefault(); close.current?.focus(); }
+      if (event.key === "Tab") {
+        event.preventDefault();
+        (document.activeElement === close.current ? zoom.current : close.current)?.focus();
+      }
     }}>
     <button ref={close} className={styles.close} onClick={onClose} aria-label="关闭大图">×</button>
-    <Photo photo={photo} className={photo.height > photo.width ? styles.portraitLightbox : styles.landscapeLightbox} />
+    <button ref={zoom} className={styles.zoom} aria-pressed={zoomWidth !== null} onClick={() => {
+      if (zoomWidth !== null) setZoomWidth(null);
+      else {
+        const width = dialog.current?.querySelector("img")?.getBoundingClientRect().width;
+        if (width) setZoomWidth(width * 2);
+      }
+    }}>{zoomWidth === null ? "放大查看" : "适应屏幕"}</button>
+    <Photo photo={photo} className={styles.lightboxPhoto} style={zoomWidth === null ? undefined : { width: zoomWidth }} />
   </div>;
 }
 

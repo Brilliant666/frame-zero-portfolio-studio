@@ -69,7 +69,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
   const report = {
     origin, fixture: SLUG, head: process.env.GITHUB_SHA ?? 'local',
     scope: 'Synthetic third-space UI, memory preview, Published-only rendering and viewport/motion regressions; no physical device acceptance',
-    checkpoints: [], screenshots: [], transitions: [], sceneScroll: [], lightboxReturns: [], motion: [], railWidths: [], network: [], forbiddenRequests: [], pageErrors: [],
+    checkpoints: [], screenshots: [], transitions: [], sceneScroll: [], lightboxReturns: [], lightboxSizing: [], motion: [], railWidths: [], network: [], forbiddenRequests: [], pageErrors: [],
     protectedBefore, protectedAfter: null,
   };
   const persist = () => writeFile(join(output, 'acceptance.json'), JSON.stringify(report, null, 2));
@@ -173,6 +173,60 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       assert.ok(Math.abs(measured.leftPercent - expectedLeftPercent) <= 0.5, `${source} rail proportions: ${JSON.stringify(measured)}`);
       if (expectedLeftPercent === 200 / 3) assert.equal(measured.inlineGrid, '', 'Original proportion deletes the explicit grid override');
       report.railWidths.push({ source, viewport: source === 'public' ? publicPage.viewportSize() : page.viewportSize(), expectedLeftPercent, ...measured });
+    }
+    async function lightboxSizing(p, source) {
+      const dialog = p.locator('[role="dialog"][aria-modal="true"]');
+      const image = dialog.locator('img');
+      await dialog.waitFor();
+      await p.waitForFunction(() => {
+        const image = document.querySelector('[role="dialog"][aria-modal="true"] img');
+        return image?.complete && image.naturalWidth > 0;
+      });
+      async function measure() {
+        return image.evaluate(async element => {
+          await new Promise(resolveFrame => requestAnimationFrame(() => requestAnimationFrame(resolveFrame)));
+          const r = element.getBoundingClientRect();
+          return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height,
+            metadataWidth: Number(element.getAttribute('width')), metadataHeight: Number(element.getAttribute('height')),
+            naturalWidth: element.naturalWidth, naturalHeight: element.naturalHeight, objectFit: getComputedStyle(element).objectFit };
+        });
+      }
+      function intrinsicRatio(bounds) {
+        assert.ok(bounds.width > 0 && bounds.height > 0 && bounds.metadataWidth > 0 && bounds.metadataHeight > 0, 'Lightbox has visible image geometry and intrinsic metadata');
+        const expected = bounds.metadataWidth / bounds.metadataHeight;
+        assert.ok(Math.abs(bounds.naturalWidth / bounds.naturalHeight - expected) <= 0.001, 'Synthetic asset dimensions match content metadata');
+        assert.ok(Math.abs(bounds.width / bounds.height - expected) <= 0.01, `${source} preserves the complete photograph ratio: ${JSON.stringify(bounds)}`);
+      }
+      const fitted = await measure();
+      intrinsicRatio(fitted);
+      const viewport = p.viewportSize();
+      assert.ok(fitted.left >= -1 && fitted.top >= -1 && fitted.right <= viewport.width + 1 && fitted.bottom <= viewport.height + 1,
+        `${source} default image fits the screen: ${JSON.stringify({ viewport, fitted })}`);
+      const close = dialog.getByRole('button', { name: '关闭大图', exact: true });
+      const zoom = dialog.getByRole('button', { name: '放大查看', exact: true });
+      assert.equal(await dialog.getByRole('button').count(), 2, 'Lightbox exposes close and zoom controls');
+      assert.equal(await zoom.getAttribute('aria-pressed'), 'false');
+      await close.focus();
+      await p.keyboard.press('Tab');
+      assert.equal(await zoom.evaluate(element => document.activeElement === element), true, 'Tab moves from close to zoom');
+      await p.keyboard.press('Tab');
+      assert.equal(await close.evaluate(element => document.activeElement === element), true, 'Tab wraps from zoom to close');
+      await p.keyboard.press('Shift+Tab');
+      assert.equal(await zoom.evaluate(element => document.activeElement === element), true, 'Shift+Tab wraps from close to zoom');
+      await zoom.click();
+      const fit = dialog.getByRole('button', { name: '适应屏幕', exact: true });
+      await fit.waitFor();
+      assert.equal(await fit.getAttribute('aria-pressed'), 'true');
+      const enlarged = await measure();
+      intrinsicRatio(enlarged);
+      assert.ok(enlarged.width > fitted.width + 1 || enlarged.height > fitted.height + 1, `${source} explicit zoom enlarges the image`);
+      await fit.click();
+      await zoom.waitFor();
+      assert.equal(await zoom.getAttribute('aria-pressed'), 'false');
+      const restored = await measure();
+      intrinsicRatio(restored);
+      assert.ok(Math.abs(restored.width - fitted.width) <= 1 && Math.abs(restored.height - fitted.height) <= 1, 'Fit restores the original complete-image geometry');
+      report.lightboxSizing.push({ source, viewport, orientation: fitted.metadataHeight > fitted.metadataWidth ? 'portrait' : 'landscape', fitted, enlarged, restored });
     }
     async function modulePreview(id, scene, { temporary = false, title, capture = false, leftPercent } = {}) {
       const before = { draft: await draft(), publication: await publication(), writes: writeCount(), dirty: await root.getAttribute('data-flow-dirty'), hash: new URL(page.url()).hash };
@@ -391,6 +445,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         button.addEventListener('click', () => { window.__flowUxLightboxClose.click = read(); }, { capture: true, once: true });
         return { ...read(), lightboxRect: rect(lightbox), overflow: document.body.style.overflow, width: document.body.getBoundingClientRect().width };
       });
+      await lightboxSizing(page, 'nested-preview');
       await close.click();
       await page.waitForFunction(() => !document.querySelector('[role="dialog"][aria-modal="true"]'));
       diagnostic.actualCloseClick = await page.evaluate(() => window.__flowUxLightboxClose);
@@ -574,6 +629,34 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         assert.ok(Math.abs(clickedTop - before.scroll) <= 2, `Coordinate clicking preserves gallery scroll: before=${before.scroll}, pointerdown=${diagnostic.actualPhotoClick?.pointerdown?.scroll}, click=${clickedTop}`);
         assert.ok(Math.abs(diagnostic.opened.scroll - before.scroll) <= 2, `Opening a public lightbox preserves gallery scroll: before=${before.scroll}, opened=${diagnostic.opened.scroll}`);
         assert.ok(Math.abs(after.scroll - before.scroll) <= 2, `Closing a public lightbox preserves gallery scroll: before=${before.scroll}, opened=${diagnostic.opened.scroll}, restored=${after.scroll}`); assert.equal(after.overflow, before.overflow); assert.equal(after.padding, before.padding); assert.ok(Math.abs(after.width - before.width) <= 1);
+        for (const orientation of ['portrait', 'landscape']) {
+          const photoIndex = await photos.evaluateAll((nodes, requested) => nodes.findIndex(photo => {
+            const image = photo.querySelector('img');
+            return image && (Number(image.getAttribute('height')) > Number(image.getAttribute('width')) ? 'portrait' : 'landscape') === requested;
+          }), orientation);
+          assert.ok(photoIndex >= 0, `Synthetic gallery includes a ${orientation} image`);
+          const photograph = photos.nth(photoIndex);
+          await photograph.evaluate(element => element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' }));
+          await stableScroll(publicPage);
+          const bookmark = await publicPage.evaluate(() => ({ scroll: scrollY, overflow: document.body.style.overflow, padding: document.body.style.paddingRight }));
+          const point = await photograph.evaluate(element => {
+            const r = element.getBoundingClientRect(), x = Math.max(16, r.left) + (Math.min(innerWidth - 16, r.right) - Math.max(16, r.left)) / 2;
+            const top = Math.max(110, r.top), bottom = Math.min(innerHeight - 60, r.bottom);
+            const y = (top + bottom) / 2;
+            return { x, y, visibleHeight: bottom - top, reachesPhoto: document.elementFromPoint(x, y)?.closest('button[aria-label^="查看大图："]') === element };
+          });
+          assert.ok(point.visibleHeight > 40 && point.reachesPhoto, `${orientation} photograph has a visible coordinate click target`);
+          await publicPage.mouse.click(point.x, point.y);
+          await lightboxSizing(publicPage, `public-${orientation}`);
+          await publicPage.keyboard.press('Escape');
+          await publicPage.waitForFunction(() => !document.querySelector('[role="dialog"][aria-modal="true"]'));
+          await stableScroll(publicPage);
+          const returned = await publicPage.evaluate(() => ({ scroll: scrollY, overflow: document.body.style.overflow, padding: document.body.style.paddingRight }));
+          assert.equal(await photograph.evaluate(element => document.activeElement === element), true, 'Escape returns focus to the originating photograph');
+          assert.ok(Math.abs(returned.scroll - bookmark.scroll) <= 2, 'Escape retains the gallery scroll bookmark');
+          assert.equal(returned.overflow, bookmark.overflow); assert.equal(returned.padding, bookmark.padding);
+          report.lightboxReturns.push({ type: `public-${orientation}-escape`, viewport, before: bookmark, restored: returned, focusRestored: true });
+        }
         await returnToWorks('gallery', publicPage.getByRole('button', { name: '返回首页', exact: true }));
       }
     });
