@@ -735,13 +735,17 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       highDensity.on('request', request => requests.push({ method: request.method(), origin: new URL(request.url()).origin }));
       try {
         const p = await highDensity.newPage();
+        // Reduced-motion mode deliberately hides the duplicate animation copy.
+        // Measure the accessible primary photos, which own the actual slots.
+        const primaryImages = '[data-flow-rail-window] > div > div:not([aria-hidden="true"]) img';
         await p.goto(`${origin}/${SLUG}#works`);
-        await p.waitForFunction(() => [...document.querySelectorAll('[data-flow-rail-window] img')].length > 0 && [...document.querySelectorAll('[data-flow-rail-window] img')].every(image => image.complete && image.naturalWidth > 0));
+        await p.waitForFunction(selector => [...document.querySelectorAll(selector)].length > 0 && [...document.querySelectorAll(selector)].every(image => image.complete && image.naturalWidth > 0), primaryImages);
         // A fresh context can finish decoding SSR images before React hydrates.
         // Wait for the measured slot sizes rather than reading the SSR formula.
-        await p.waitForFunction(() => [...document.querySelectorAll('[data-flow-rail-window] img')].every(image => image.complete && image.naturalWidth > 0 && /^\d+px$/.test(image.sizes) && Math.abs(Number.parseFloat(image.sizes) - image.clientWidth) <= 1));
-        const images = await p.locator('[data-flow-rail-window] img').evaluateAll(images => images.map(image => ({ path: new URL(image.currentSrc).pathname, sizes: image.sizes, renderedWidth: image.clientWidth, dpr: devicePixelRatio })));
+        await p.waitForFunction(selector => [...document.querySelectorAll(selector)].every(image => image.complete && image.naturalWidth > 0 && /^\d+px$/.test(image.sizes) && Math.abs(Number.parseFloat(image.sizes) - image.clientWidth) <= 1), primaryImages);
+        const images = await p.locator(primaryImages).evaluateAll(images => images.map(image => ({ path: new URL(image.currentSrc).pathname, sizes: image.sizes, renderedWidth: image.clientWidth, dpr: devicePixelRatio })));
         report.responsiveImages.push({ viewport: VIEWPORTS[0], sample: 'fresh anonymous DPR 2 context', images });
+        assert.equal(images.length, 8, 'The two accessible primary rails retain all eight synthetic photographs');
         for (const image of images) {
           assert.equal(image.dpr, 2);
           assert.ok(Math.abs(Number.parseFloat(image.sizes) - image.renderedWidth) <= 1);
