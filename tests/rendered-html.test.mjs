@@ -109,7 +109,9 @@ test("keeps editable content and eleven lazy template choices in one configurati
     "legacy portfolio rendering must not acquire private editor controls");
   assert.match(adminShell, /"保存修改"/);
   assert.match(adminShell, /ADMIN_SECTIONS\.map/);
-  assert.match(api, /onConflictDoUpdate/);
+  assert.match(api, /LEGACY_WRITE_DISABLED/);
+  assert.match(api, /status: 410/);
+  assert.doesNotMatch(api, /onConflictDoUpdate|db\.(?:insert|update|delete)\(/, "legacy global content must remain a read-only source");
   assert.match(schema, /site_settings/);
   assert.match(hosting, /"d1": "DB"/);
   assert.match(layout, /generateMetadata/);

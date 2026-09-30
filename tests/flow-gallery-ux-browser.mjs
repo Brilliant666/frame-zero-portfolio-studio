@@ -737,14 +737,17 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         const p = await highDensity.newPage();
         await p.goto(`${origin}/${SLUG}#works`);
         await p.waitForFunction(() => [...document.querySelectorAll('[data-flow-rail-window] img')].length > 0 && [...document.querySelectorAll('[data-flow-rail-window] img')].every(image => image.complete && image.naturalWidth > 0));
+        // A fresh context can finish decoding SSR images before React hydrates.
+        // Wait for the measured slot sizes rather than reading the SSR formula.
+        await p.waitForFunction(() => [...document.querySelectorAll('[data-flow-rail-window] img')].every(image => image.complete && image.naturalWidth > 0 && /^\d+px$/.test(image.sizes) && Math.abs(Number.parseFloat(image.sizes) - image.clientWidth) <= 1));
         const images = await p.locator('[data-flow-rail-window] img').evaluateAll(images => images.map(image => ({ path: new URL(image.currentSrc).pathname, sizes: image.sizes, renderedWidth: image.clientWidth, dpr: devicePixelRatio })));
+        report.responsiveImages.push({ viewport: VIEWPORTS[0], sample: 'fresh anonymous DPR 2 context', images });
         for (const image of images) {
           assert.equal(image.dpr, 2);
           assert.ok(Math.abs(Number.parseFloat(image.sizes) - image.renderedWidth) <= 1);
           assert.ok(/\/(?:card|full)$/.test(image.path), 'High-density desktop rail needs a larger source than the synthetic thumbnail');
         }
         assert.ok(requests.every(request => request.origin === origin && ['GET', 'HEAD'].includes(request.method())), 'High-density sample is anonymous and read-only');
-        report.responsiveImages.push({ viewport: VIEWPORTS[0], sample: 'fresh anonymous DPR 2 context', images });
       } finally { await highDensity.close(); }
     });
     assert.deepEqual(await json(draftPath('basic')), basicBefore);
