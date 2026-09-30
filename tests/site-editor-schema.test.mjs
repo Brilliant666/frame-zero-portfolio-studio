@@ -104,6 +104,31 @@ test('flow parser rejects malformed identities, unsafe URLs, unknown fields and 
   }
 });
 
+test('flow rail width accepts bounded integer proportions without rewriting legacy documents or other spaces', async t => {
+  const m = await schema(t), legacy = filledFlow(m), before = structuredClone(legacy);
+  assert.equal(Object.hasOwn(legacy.rails, 'leftWidthPercent'), false);
+  assert.deepEqual(m.parseFlowGalleryDocument(legacy), before, 'Legacy stored content remains byte-shape compatible');
+  assert.deepEqual(legacy, before);
+  assert.equal(Object.hasOwn(m.createEmptyFlowGalleryDocument().rails, 'leftWidthPercent'), false, 'New defaults retain the original 2:1 layout');
+
+  const basic = m.createEmptyBasicContent(), polaroid = m.createEmptyPreviewDocument();
+  const otherBefore = structuredClone({ basic, polaroid });
+  for (const percentage of [30, 50, 65, 70]) {
+    const d = structuredClone(legacy); d.rails.leftWidthPercent = percentage;
+    const parsed = m.parseSpaceContent('premium-flow-gallery', d);
+    assert.equal(parsed.rails.leftWidthPercent, percentage);
+    assert.deepEqual(parsed, d);
+    assert.deepEqual(m.contentAssetIds('premium-flow-gallery', parsed), m.contentAssetIds('premium-flow-gallery', legacy), 'Width is not an asset reference');
+  }
+  for (const percentage of [29, 71, 0, 100, 50.5, NaN, Infinity, -Infinity, '50', null, undefined, true]) {
+    const d = structuredClone(legacy); d.rails.leftWidthPercent = percentage;
+    assert.throws(() => m.parseFlowGalleryDocument(d), /rails\.leftWidthPercent/, String(percentage));
+  }
+  assert.throws(() => m.parseSpaceContent('basic', { ...basic, rails: { leftWidthPercent: 50 } }));
+  assert.throws(() => m.parseSpaceContent('premium-polaroid', { ...polaroid, rails: { leftWidthPercent: 50 } }));
+  assert.deepEqual({ basic, polaroid }, otherBefore);
+});
+
 test('flow bounds reject over-limit arrays and UTF-8 document bodies', async t => {
   const m = await schema(t), original = filledFlow(m);
   for (const change of [

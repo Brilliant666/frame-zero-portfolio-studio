@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { chromium } from 'playwright';
 import { provisionAccount } from '../db/accounts/provision.mjs';
+import { readPublished } from '../db/accounts/publications.mjs';
 import { isSiteSlug } from '../db/accounts/site-slug.mjs';
 
 const SPACE = 'premium-flow-gallery';
@@ -68,7 +69,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
   const report = {
     origin, fixture: SLUG, head: process.env.GITHUB_SHA ?? 'local',
     scope: 'Synthetic third-space UI, memory preview, Published-only rendering and viewport/motion regressions; no physical device acceptance',
-    checkpoints: [], screenshots: [], transitions: [], sceneScroll: [], lightboxReturns: [], motion: [], network: [], forbiddenRequests: [], pageErrors: [],
+    checkpoints: [], screenshots: [], transitions: [], sceneScroll: [], lightboxReturns: [], motion: [], railWidths: [], network: [], forbiddenRequests: [], pageErrors: [],
     protectedBefore, protectedAfter: null,
   };
   const persist = () => writeFile(join(output, 'acceptance.json'), JSON.stringify(report, null, 2));
@@ -161,7 +162,19 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         requestAnimationFrame(frame);
       }), selector);
     }
-    async function modulePreview(id, scene, { temporary = false, title, capture = false } = {}) {
+    async function railWidth(rails, expectedLeftPercent, source) {
+      const measured = await rails.evaluate(element => {
+        const columns = [...element.children].map(column => column.getBoundingClientRect().width);
+        return { columns, inlineGrid: element.style.gridTemplateColumns };
+      });
+      assert.equal(measured.columns.length, 2, 'Home has exactly two rail columns');
+      assert.ok(measured.columns.every(width => width > 0), 'Both rail columns remain visible');
+      measured.leftPercent = measured.columns[0] / (measured.columns[0] + measured.columns[1]) * 100;
+      assert.ok(Math.abs(measured.leftPercent - expectedLeftPercent) <= 0.5, `${source} rail proportions: ${JSON.stringify(measured)}`);
+      if (expectedLeftPercent === 200 / 3) assert.equal(measured.inlineGrid, '', 'Original proportion deletes the explicit grid override');
+      report.railWidths.push({ source, viewport: source === 'public' ? publicPage.viewportSize() : page.viewportSize(), expectedLeftPercent, ...measured });
+    }
+    async function modulePreview(id, scene, { temporary = false, title, capture = false, leftPercent } = {}) {
       const before = { draft: await draft(), publication: await publication(), writes: writeCount(), dirty: await root.getAttribute('data-flow-dirty'), hash: new URL(page.url()).hash };
       const trigger = page.locator(`[data-flow-module-preview="${id}"]`);
       await trigger.click();
@@ -173,6 +186,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       assert.equal(new URL(page.url()).hash, `#${scene}`);
       assert.equal(await preview().locator('[data-flow-preview-temporary]').count(), temporary ? 1 : 0);
       if (title) await preview().getByRole('heading', { name: title, exact: true }).waitFor();
+      if (leftPercent !== undefined) await railWidth(preview().locator('[aria-label="作品速览"]'), leftPercent, 'memory-preview');
       await overflow(page);
       if (capture) await screenshot(page, `preview-${id}`);
       await preview().locator('[data-flow-close-preview]').click();
@@ -188,9 +202,12 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
     async function save() {
       const response = page.waitForResponse(r => new URL(r.url()).pathname === draftPath(SPACE) && r.request().method() === 'PUT');
       await page.getByRole('button', { name: '仅保存草稿', exact: true }).click();
-      assert.equal((await response).status(), 200);
+      const received = await response;
+      assert.equal(received.status(), 200);
+      const receipt = await received.json();
       await page.waitForFunction(() => document.querySelector('[data-flow-editor-section]')?.getAttribute('data-flow-dirty') === 'false');
-      return draft();
+      assert.deepEqual(await draft(), receipt, 'The save receipt matches the persisted draft');
+      return receipt;
     }
 
     let basicBefore, published;
@@ -244,9 +261,13 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       await page.getByRole('textbox', { name: '首页介绍', exact: true }).fill('Synthetic photographs for isolated browser acceptance.');
       await page.getByRole('button', { name: '从图库选择背景', exact: true }).click();
       await page.getByRole('dialog', { name: '从图库选择一张背景', exact: true }).getByRole('button', { name: `选择背景 ${assets[1].id}`, exact: true }).click();
-      await page.getByRole('combobox', { name: '左侧宽轨道', exact: true }).selectOption({ label: 'Anonymous portrait studies' });
-      await page.getByRole('combobox', { name: '右侧窄轨道', exact: true }).selectOption({ label: 'Anonymous landscape studies' });
-      await modulePreview('home', 'works', { title: 'Flow fixture published title' });
+      await page.getByRole('combobox', { name: '左侧轨道', exact: true }).selectOption({ label: 'Anonymous portrait studies' });
+      await page.getByRole('combobox', { name: '右侧轨道', exact: true }).selectOption({ label: 'Anonymous landscape studies' });
+      for (const [name, leftPercent] of [['7∶3', 70], ['5∶5', 50]]) {
+        const preset = page.getByRole('button', { name, exact: true });
+        await preset.click(); assert.equal(await preset.getAttribute('aria-pressed'), 'true');
+        await modulePreview('home', 'works', { title: 'Flow fixture published title', leftPercent });
+      }
       assert.equal((await draft()).revision, 0, 'Editing and preview do not save implicitly');
       assert.equal((await publication()).current, null);
       await module('pricing');
@@ -264,7 +285,17 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       await page.getByRole('textbox', { name: '链接（可选，http / https / mailto）', exact: true }).fill('mailto:flow@example.invalid');
       const saved = await save();
       assert.equal(saved.revision, 1); assert.equal(saved.content.pricing.enabled, false); assert.equal(saved.content.contact.enabled, false);
+      assert.equal(saved.content.rails.leftWidthPercent, 50, 'Save receipt preserves the chosen 5:5 proportion');
       assert.equal((await publication()).current, null, 'Save only preserves the unpublished pointer');
+      await module('home');
+      await page.getByRole('button', { name: '原比例 2∶1', exact: true }).click();
+      await modulePreview('home', 'works', { leftPercent: 200 / 3 });
+      const originalRatio = await save();
+      assert.equal(originalRatio.revision, 2);
+      assert.equal(Object.hasOwn(originalRatio.content.rails, 'leftWidthPercent'), false, 'Saving the original proportion removes the optional persisted field');
+      assert.deepEqual(originalRatio.content.groups, saved.content.groups, 'Resetting width retains categories and photo order');
+      assert.equal((await publication()).current, null);
+      await page.getByRole('button', { name: '5∶5', exact: true }).click();
       for (const [id, title, checkbox] of [['pricing', 'Synthetic pricing', '展示价格与活动页面'], ['contact', 'Synthetic contact', '展示联系页面']]) {
         await module(id); await modulePreview(id, id, { temporary: true, title });
         assert.equal(await page.getByLabel(checkbox, { exact: true }).isChecked(), false);
@@ -279,18 +310,24 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       assert.equal((await response).status(), 200);
       await publicationRegion.getByRole('status').filter({ hasText: '发布成功' }).waitFor();
       published = (await publication()).current;
-      assert.equal(published.space, SPACE); assert.equal(published.templateId, SPACE); assert.equal(published.draftRevision, 2);
+      assert.equal(published.space, SPACE); assert.equal(published.templateId, SPACE); assert.equal(published.draftRevision, 3);
+      const publishedSnapshot = await readPublished(runtime.pool, SLUG);
+      assert.equal(publishedSnapshot.content.rails.leftWidthPercent, 50, 'Explicit publishing freezes the chosen rail proportion');
+      assert.equal((await draft()).content.rails.leftWidthPercent, 50);
       await module('home');
       await page.getByRole('textbox', { name: '首页标题', exact: true }).fill('Unsaved immediate preview title');
+      await page.getByRole('button', { name: '7∶3', exact: true }).click();
       assert.equal(await root.getAttribute('data-flow-dirty'), 'true');
-      await modulePreview('home', 'works', { title: 'Unsaved immediate preview title' });
+      await modulePreview('home', 'works', { title: 'Unsaved immediate preview title', leftPercent: 70 });
       assert.equal(await page.getByRole('textbox', { name: '首页标题', exact: true }).inputValue(), 'Unsaved immediate preview title');
       assert.equal((await draft()).content.profile.title, 'Flow fixture published title');
       assert.equal((await publication()).current.id, published.id);
+      assert.deepEqual(await readPublished(runtime.pool, SLUG), publishedSnapshot, 'Unsaved proportion changes leave the complete Published snapshot unchanged');
       assert.deepEqual(await json(draftPath('basic')), basicBefore, 'Flow editing retains the basic draft');
       await publicPage.goto(`${origin}/${SLUG}`);
       await publicPage.locator('[data-flow-scene="works"]').waitFor();
       await publicPage.getByRole('heading', { name: 'Flow fixture published title', exact: true }).waitFor();
+      await railWidth(publicPage.locator('[aria-label="作品速览"]'), 50, 'public');
       assert.equal(await publicPage.getByText('Unsaved immediate preview title', { exact: true }).count(), 0);
       assert.equal((await anonymous.request.get(`${origin}${draftPath(SPACE)}`)).status(), 401);
     });
@@ -299,7 +336,15 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       for (const viewport of VIEWPORTS) {
         await page.setViewportSize(viewport);
         for (const [id, , scene] of MODULES) {
-          await module(id); await overflow(page); await modulePreview(id, scene, { capture: true });
+          await module(id); await overflow(page);
+          if (id === 'home') {
+            for (const [name, leftPercent] of [['7∶3', 70], ['5∶5', 50], ['原比例 2∶1', 200 / 3]]) {
+              await page.getByRole('button', { name, exact: true }).click();
+              await modulePreview(id, scene, { leftPercent });
+            }
+            await page.getByRole('button', { name: '7∶3', exact: true }).click();
+          }
+          await modulePreview(id, scene, { capture: true, ...(id === 'home' ? { leftPercent: 70 } : {}) });
           await screenshot(page, `editor-${id}`);
         }
         assert.equal(await root.getAttribute('data-flow-dirty'), 'true');
@@ -411,6 +456,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         await publicPage.goto(`${origin}/${SLUG}#works`);
         await publicPage.locator('[data-flow-scene="works"]').waitFor();
         await publicPage.waitForFunction(() => [...document.querySelector('[data-flow-scene]').querySelectorAll('img')].every(image => image.complete && image.naturalWidth > 0));
+        await railWidth(publicPage.locator('[aria-label="作品速览"]'), 50, 'public');
         await overflow(publicPage);
         for (const from of ['pricing', 'contact']) {
           await publicPage.locator(`nav[aria-label="主要导航"] a[href="#${from}"]`).click();

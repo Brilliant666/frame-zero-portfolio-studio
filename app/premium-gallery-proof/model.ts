@@ -13,6 +13,8 @@ export interface GalleryDocument {
   backgroundFocus?: { x: number; y: number };
   /** Omitted only by the anonymous design proof. An explicit null leaves a rail empty. */
   featuredGroupIds?: { left: string | null; right: string | null };
+  /** Omitted documents retain the original 2:1 layout. */
+  leftRailWidthPercent?: number;
   groups: { id: string; name: string; photos: GalleryPhoto[] }[];
   pricing?: {
     heading: string;

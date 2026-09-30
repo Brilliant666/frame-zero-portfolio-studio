@@ -220,7 +220,7 @@ export default function FlowGallery({ document: content }: { document: GalleryDo
       }}>
       {scene === "works" && <>
         <div ref={introduction} className={styles.introduction}><h1>{content.profile.title}</h1><a className={styles.expand} href="#gallery">展开完整作品</a><p>{content.profile.intro}</p></div>
-        <div className={`${styles.rails} ${paused ? styles.paused : ""}`} aria-label="作品速览">
+        <div className={`${styles.rails} ${paused ? styles.paused : ""}`} aria-label="作品速览" style={content.leftRailWidthPercent === undefined ? undefined : { gridTemplateColumns: `minmax(0, ${content.leftRailWidthPercent}fr) minmax(0, ${100 - content.leftRailWidthPercent}fr)` }}>
           {columns.length === 0 ? <p className={styles.emptyGallery}>还没有作品</p> : columns.map((column, index) => column ? <Rail key={`${index}-${column.id}`} group={column} reverse={index === 1} paused={paused} onSelect={setSelected} /> : <div key={`empty-${index}`} className={styles.emptyGallery}>尚未选择{index ? "右" : "左"}侧作品分类</div>)}
         </div>
       </>}

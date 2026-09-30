@@ -81,6 +81,26 @@ test('flow disabled sections cannot leak contact assets or private package conte
   assert.deepEqual(m.preparePublication(m.createEmptyFlowGalleryDocument(), 'premium-flow-gallery').assetIds, []);
 });
 
+test('flow publication retains 5:5 and 7:3 proportions while filtering hidden groups and leaving every independent draft untouched', async t => {
+  const m = await projection(t);
+  const basic = m.createEmptyBasicContent(), polaroid = m.createEmptyPreviewDocument();
+  const otherBefore = structuredClone({ basic, polaroid });
+  for (const percentage of [50, 70]) {
+    const d = m.createEmptyFlowGalleryDocument();
+    d.groups = [{ id: id(10), name: 'Private', assetIds: [id(1)], captions: {}, visible: false }, { id: id(11), name: 'Visible', assetIds: [id(3), id(2)], captions: {}, visible: true }];
+    d.rails = { leftGroupId: id(10), rightGroupId: id(11), leftWidthPercent: percentage };
+    const before = structuredClone(d), prepared = m.preparePublication(d, 'premium-flow-gallery');
+    assert.deepEqual(prepared.content.rails, { leftGroupId: null, rightGroupId: id(11), leftWidthPercent: percentage });
+    assert.deepEqual(prepared.content.groups[0].assetIds, [id(3), id(2)]);
+    assert.deepEqual(prepared.assetIds, [id(3), id(2)]);
+    assert.equal(m.parseSpaceContent('premium-flow-gallery', prepared.content).rails.leftWidthPercent, percentage);
+    assert.deepEqual(d, before);
+  }
+  assert.deepEqual(m.preparePublication(basic, 'basic').content, m.preparePublication(otherBefore.basic, 'basic').content);
+  assert.deepEqual(m.preparePublication(polaroid, 'premium-polaroid').content, m.preparePublication(otherBefore.polaroid, 'premium-polaroid').content);
+  assert.deepEqual({ basic, polaroid }, otherBefore);
+});
+
 test('explicit empty basic layout does not fall back, while missing layout freezes legacy assignment', async t => {
   const m = await projection(t), content = m.createEmptyBasicContent(); content.works = [work(1)];
   assert.deepEqual(m.preparePublication(content, 'basic').assetIds, []);

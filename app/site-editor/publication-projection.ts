@@ -14,7 +14,7 @@ export function preparePublication(value: unknown, space: ContentSpace = "premiu
     const visibleGroup = (id: string | null) => id && groups.some(g => g.id === id) ? id : null;
     const content: FlowGalleryDocumentV1 = {
       ...parsed, groups,
-      rails: { leftGroupId: visibleGroup(parsed.rails.leftGroupId), rightGroupId: visibleGroup(parsed.rails.rightGroupId) },
+      rails: { ...parsed.rails, leftGroupId: visibleGroup(parsed.rails.leftGroupId), rightGroupId: visibleGroup(parsed.rails.rightGroupId) },
       pricing: parsed.pricing.enabled ? { ...parsed.pricing, packages: parsed.pricing.packages.filter(p => p.enabled) } : { enabled: false, heading: "", introduction: "", packages: [] },
       contact: parsed.contact.enabled ? { ...parsed.contact, items: parsed.contact.items.filter(i => i.value.trim() || i.href || i.qrAssetId) } : { enabled: false, heading: "", intro: "", items: [] },
     };

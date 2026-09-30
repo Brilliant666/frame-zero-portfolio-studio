@@ -113,6 +113,19 @@ test('Site renderer resolves only supplied assets and never fills missing resour
   assert.deepEqual(copy(view.resolveFlowGalleryDocument(document(), []).groups[0].photos), []);
   assert.doesNotMatch(JSON.stringify(resolved), /\/photos\/library|\/preview\/flow-gallery|shaomaimai/);
 });
+
+test('Site renderer carries the edited rail width and keeps the original width for legacy content', () => {
+  const legacy = document(), before = copy(legacy);
+  assert.equal(Object.hasOwn(view.resolveFlowGalleryDocument(legacy, [asset()]), 'leftRailWidthPercent'), false, 'Missing width retains the original CSS 2:1 layout');
+  for (const percentage of [30, 50, 70]) {
+    const edited = { ...legacy, rails: { ...legacy.rails, leftWidthPercent: percentage } };
+    const resolved = view.resolveFlowGalleryDocument(edited, [asset()]);
+    assert.equal(resolved.leftRailWidthPercent, percentage);
+    assert.deepEqual(copy(resolved.featuredGroupIds), { left: null, right: GROUP });
+    assert.deepEqual(copy(resolved.groups), copy(view.resolveFlowGalleryDocument(legacy, [asset()]).groups));
+  }
+  assert.deepEqual(copy(legacy), before);
+});
 test('disabled price and contact scenes are omitted; optional QR independently resolves through the Site map', () => {
   const d = document();
   assert.equal(view.resolveFlowGalleryDocument(d, [asset()]).contact, undefined);
@@ -146,6 +159,15 @@ test('removing a member removes its caption; removing a category clears its feat
   assert.deepEqual(copy(next.groups.map(group => group.id)), [HIDDEN]);
   assert.equal(next.background, d.background);
   assert.equal(next.contact, d.contact);
+  schema.parseFlowGalleryDocument(next);
+});
+
+test('removing a featured category keeps the independently chosen rail width and untouched group ordering', () => {
+  const d = document(); d.rails.leftWidthPercent = 50;
+  const before = copy(d), next = state.removeFlowGroup(d, GROUP);
+  assert.deepEqual(copy(next.rails), { leftGroupId: null, rightGroupId: null, leftWidthPercent: 50 });
+  assert.deepEqual(copy(next.groups.map(group => group.id)), [HIDDEN]);
+  assert.deepEqual(copy(d), before);
   schema.parseFlowGalleryDocument(next);
 });
 test('private preview gallery bookmarks and restores its scrollport without moving the admin or notice; public pages retain window scrolling', () => {

@@ -4,7 +4,7 @@ export type FlowGalleryDocumentV1 = {
   profile: { brand: string; title: string; intro: string };
   background: { assetId: string | null; focalPoint: { x: number; y: number } };
   groups: { id: string; name: string; assetIds: string[]; captions: Record<string, string>; visible: boolean }[];
-  rails: { leftGroupId: string | null; rightGroupId: string | null };
+  rails: { leftGroupId: string | null; rightGroupId: string | null; leftWidthPercent?: number };
   pricing: { enabled: boolean; heading: string; introduction: string; packages: { id: string; name: string; price: string; description: string; details: string[]; enabled: boolean }[] };
   contact: { enabled: boolean; heading: string; intro: string; items: { id: string; label: string; value: string; href: string; qrAssetId?: string }[] };
 };
@@ -68,9 +68,10 @@ export function parseFlowGalleryDocument(value: unknown): FlowGalleryDocumentV1 
     return { id: identity(g.id, `${path}.id`), name, assetIds, captions, visible: bool(g.visible, `${path}.visible`) };
   });
   unique(groups.map(g => g.id), "groups（重复分组 ID）");
-  const r = record(d.rails, ["leftGroupId", "rightGroupId"], "rails");
-  const rails = { leftGroupId: nullableIdentity(r.leftGroupId, "rails.leftGroupId"), rightGroupId: nullableIdentity(r.rightGroupId, "rails.rightGroupId") };
-  for (const id of Object.values(rails)) if (id && !groups.some(g => g.id === id)) invalid("rails（轨道分组必须存在）");
+  const r = record(d.rails, ["leftGroupId", "rightGroupId", "leftWidthPercent"], "rails", ["leftWidthPercent"]);
+  if (Object.hasOwn(r, "leftWidthPercent") && (typeof r.leftWidthPercent !== "number" || !Number.isInteger(r.leftWidthPercent) || r.leftWidthPercent < 30 || r.leftWidthPercent > 70)) invalid("rails.leftWidthPercent（须为 30–70 的整数）");
+  const rails = { leftGroupId: nullableIdentity(r.leftGroupId, "rails.leftGroupId"), rightGroupId: nullableIdentity(r.rightGroupId, "rails.rightGroupId"), ...(Object.hasOwn(r, "leftWidthPercent") ? { leftWidthPercent: r.leftWidthPercent as number } : {}) };
+  for (const id of [rails.leftGroupId, rails.rightGroupId]) if (id && !groups.some(g => g.id === id)) invalid("rails（轨道分组必须存在）");
   const pricing = record(d.pricing, ["enabled", "heading", "introduction", "packages"], "pricing");
   const packages = list(pricing.packages, FLOW_GALLERY_LIMITS.packages, "pricing.packages").map((value, index) => {
     const path = `pricing.packages.${index}`, p = record(value, ["id", "name", "price", "description", "details", "enabled"], path);

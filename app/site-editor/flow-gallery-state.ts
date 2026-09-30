@@ -21,5 +21,5 @@ export function removeFlowMember(group: FlowGroup, id: string): FlowGroup {
   return { ...group, assetIds: group.assetIds.filter(value => value !== id), captions };
 }
 export function removeFlowGroup(document: FlowGalleryDocumentV1, id: string): FlowGalleryDocumentV1 {
-  return { ...document, groups: document.groups.filter(group => group.id !== id), rails: { leftGroupId: document.rails.leftGroupId === id ? null : document.rails.leftGroupId, rightGroupId: document.rails.rightGroupId === id ? null : document.rails.rightGroupId } };
+  return { ...document, groups: document.groups.filter(group => group.id !== id), rails: { ...document.rails, leftGroupId: document.rails.leftGroupId === id ? null : document.rails.leftGroupId, rightGroupId: document.rails.rightGroupId === id ? null : document.rails.rightGroupId } };
 }

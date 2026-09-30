@@ -24,13 +24,15 @@ function draft() {
 }
 test('disabled module preview enables only the requested scene in a deep copy without changing dirty content, member order or stored flags', () => {
   for (const section of ['pricing', 'contact']) {
-    const d = draft(), before = state.flowGalleryFingerprint(d);
+    const d = draft(); d.rails.leftWidthPercent = 50;
+    const before = state.flowGalleryFingerprint(d);
     const preview = ui.flowModulePreview(d, section);
     assert.notEqual(preview, d);
     assert.notEqual(preview.groups, d.groups);
     assert.equal(preview[section].enabled, true);
     assert.equal(preview[section === 'pricing' ? 'contact' : 'pricing'].enabled, false);
     assert.equal(preview[section].heading, d[section].heading);
+    assert.equal(preview.rails.leftWidthPercent, 50, 'Module previews retain the edited home proportions');
     preview.groups[0].assetIds.reverse(); preview.groups[0].captions[ASSET] = '临时预览说明';
     assert.equal(state.flowGalleryFingerprint(d), before);
     assert.equal(d.pricing.enabled, false); assert.equal(d.contact.enabled, false);
@@ -41,4 +43,16 @@ test('disabled module preview enables only the requested scene in a deep copy wi
 test('home, complete works and enabled optional module previews retain the exact current content', () => {
   const d = draft(); d.pricing.enabled = true; d.contact.enabled = true;
   for (const section of ['library', 'home', 'groups', 'pricing', 'contact']) assert.equal(ui.flowModulePreview(d, section), d);
+});
+
+test('changing rail width marks an edit and selecting the original ratio returns to the saved legacy state', () => {
+  const d = draft(), saved = state.flowGalleryFingerprint(d);
+  d.rails.leftWidthPercent = 70;
+  const sevenThree = state.flowGalleryFingerprint(d);
+  assert.notEqual(sevenThree, saved);
+  d.rails.leftWidthPercent = 50;
+  assert.notEqual(state.flowGalleryFingerprint(d), sevenThree);
+  assert.equal(ui.flowModulePreview(d, 'home').rails.leftWidthPercent, 50);
+  delete d.rails.leftWidthPercent;
+  assert.equal(state.flowGalleryFingerprint(d), saved);
 });
