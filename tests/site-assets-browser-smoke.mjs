@@ -106,7 +106,7 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
       }
       await expandTools('上传素材与排版建议');
       await page.getByLabel('上传本站照片', { exact: true }).setInputFiles(files);
-      await page.getByText('已上传 3 张；本站两套后台可引用同一资源，无需重复上传。', { exact: true }).waitFor();
+      await page.getByText('已上传 3 张；本站各内容空间可引用同一资源，无需重复上传。', { exact: true }).waitFor();
       const list = await context.request.get(`${origin}/api/sites/${a}/assets`);
       assets = (await list.json()).assets;
       assert.equal(assets.length, 3);
