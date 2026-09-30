@@ -32,6 +32,55 @@ test('preview and nested lightbox retain body lock regardless of unmount order a
     assert.equal(body.style.overflow, 'auto');
   }
 });
+test('body locks retain gallery width for viewport or body scrollbars and restore padding after the final nested release', () => {
+  for (const scrollbarOwner of ['viewport', 'body']) {
+    for (const closeParentFirst of [true, false]) {
+      const body = {
+        style: { overflow: '', overflowX: 'hidden', overflowY: 'auto', paddingRight: 'calc(4px + 2px)' },
+        scrollTop: 844,
+        offsetWidth: scrollbarOwner === 'viewport' ? 1425 : 1440,
+        clientWidth: 1421,
+        ownerDocument: {
+          documentElement: { clientWidth: scrollbarOwner === 'viewport' ? 1425 : 1440, style: { overflow: '', overflowX: 'clip', overflowY: 'visible' } },
+          defaultView: { innerWidth: 1440, getComputedStyle: () => ({ paddingRight: '6px', borderLeftWidth: '2px', borderRightWidth: '2px' }) },
+        },
+      };
+      const original = { ...body.style };
+      const originalRoot = { ...body.ownerDocument.documentElement.style };
+      const releasePreview = bodyLocks.lockGalleryBodyScroll(body);
+      assert.equal(body.ownerDocument.documentElement.style.overflow, 'hidden');
+      assert.equal(body.style.paddingRight, '21px');
+      const releaseLightbox = bodyLocks.lockGalleryBodyScroll(body);
+      assert.equal(body.style.paddingRight, '21px', 'Nested locks must not compensate twice');
+      (closeParentFirst ? releasePreview : releaseLightbox)();
+      assert.equal(body.style.overflow, 'hidden');
+      assert.equal(body.ownerDocument.documentElement.style.overflow, 'hidden');
+      assert.equal(body.style.paddingRight, '21px');
+      (closeParentFirst ? releaseLightbox : releasePreview)();
+      assert.deepEqual(body.style, original);
+      assert.deepEqual(body.ownerDocument.documentElement.style, originalRoot);
+      assert.equal(body.scrollTop, 844);
+      releasePreview(); releaseLightbox();
+      assert.deepEqual(body.style, original);
+    }
+  }
+});
+test('body locking adds no spacing when only borders or overlay scrollbars occupy the body edge', () => {
+  const body = {
+    style: { overflow: 'auto', overflowX: '', overflowY: '', paddingRight: '8px' },
+    offsetWidth: 1440,
+    clientWidth: 1436,
+    ownerDocument: {
+      documentElement: { clientWidth: 1440 },
+      defaultView: { innerWidth: 1440, getComputedStyle: () => ({ paddingRight: '8px', borderLeftWidth: '2px', borderRightWidth: '2px' }) },
+    },
+  };
+  const release = bodyLocks.lockGalleryBodyScroll(body);
+  assert.equal(body.style.paddingRight, '8px');
+  release();
+  assert.equal(body.style.paddingRight, '8px');
+  assert.equal(body.style.overflow, 'auto');
+});
 test('saved receipt object key order does not create dirty state; array order remains an edit', () => {
   const edited = { groups: [{ id: GROUP, name: '新建分类', visible: true, assetIds: [ASSET, MISSING], captions: { [ASSET]: 'A', [MISSING]: 'B' } }], profile: { title: '', brand: '', intro: '' } };
   const receipt = { profile: { brand: '', title: '', intro: '' }, groups: [{ id: GROUP, name: '新建分类', assetIds: [ASSET, MISSING], captions: { [MISSING]: 'B', [ASSET]: 'A' }, visible: true }] };

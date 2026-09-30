@@ -49,10 +49,11 @@ function Rail({ group, reverse, paused, onSelect }: { group: GalleryDocument["gr
       document.removeEventListener("pointerdown", pointerDown, true);
     };
   }, []);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = copy.current;
     if (!element) return;
     // Visible reference samples move about 25–26 px/s, independently of list length.
+    // Measure before paint so a returning rail starts with its final geometry.
     const measure = () => setDuration(Math.max(1, element.getBoundingClientRect().height / 25));
     const observer = new ResizeObserver(measure);
     observer.observe(element);
@@ -81,10 +82,10 @@ function Rail({ group, reverse, paused, onSelect }: { group: GalleryDocument["gr
 function Lightbox({ photo, onClose }: { photo: GalleryPhoto; onClose: () => void }) {
   const dialog = useRef<HTMLDivElement>(null);
   const close = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     const releaseScroll = lockGalleryBodyScroll(document.body);
-    close.current?.focus();
+    close.current?.focus({ preventScroll: true });
     return () => {
       releaseScroll();
       requestAnimationFrame(() => {
@@ -194,7 +195,7 @@ export default function FlowGallery({ document: content }: { document: GalleryDo
     return () => element.removeEventListener("wheel", wheel);
   }, [scene, selected, available, navigate]);
 
-  return <div ref={root} style={{ "--intro-height": `${introHeight}px`, ...(viewportHeight ? { "--gallery-viewport-height": `${viewportHeight}px` } : {}) } as CSSProperties} className={`${styles.root} ${scene === "gallery" ? styles.galleryRoot : ""}`}>
+  return <div ref={root} data-flow-scene={scene} style={{ "--intro-height": `${introHeight}px`, ...(viewportHeight ? { "--gallery-viewport-height": `${viewportHeight}px` } : {}) } as CSSProperties} className={`${styles.root} ${scene === "gallery" ? styles.galleryRoot : ""}`}>
     <div className={styles.background} aria-hidden="true">{content.background && <Photo photo={content.background} style={{ objectPosition: `${content.backgroundFocus?.x ?? 50}% ${content.backgroundFocus?.y ?? 50}%` }} />}</div>
     <header className={styles.navigation}>
       <a className={styles.brand} href="#works" aria-label={content.profile.brand}><span className={styles.avatar} aria-hidden="true">{content.profile.brand.slice(0, 1)}</span><span className={styles.brandName}>{content.profile.brand}</span></a>

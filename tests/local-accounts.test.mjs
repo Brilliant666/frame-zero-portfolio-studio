@@ -455,6 +455,12 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1800000 },
     const { flowGalleryHttpIntegration } = await import('./flow-gallery-http-integration.mjs');
     await flowGalleryHttpIntegration({ runtime, origin: config.origin, password, request, login, readDraft, saveDraft, sitePage, assetRoot });
   });
+  if (process.env.FRAME_ZERO_PUBLICATION_BROWSER_SMOKE === '1') {
+    await t.test('flow gallery scene geometry and independent module previews', { timeout: 240000 }, async browserTest => {
+      const { flowGalleryUxBrowser } = await import('./flow-gallery-ux-browser.mjs');
+      await flowGalleryUxBrowser({ runtime, origin: config.origin, password, signal: browserTest.signal });
+    });
+  }
   await t.test('local acceptance shortcuts require owner, grant and explicit runtime switch', async () => {
     const previous = process.env.FRAME_ZERO_LOCAL_ACCEPTANCE;
     const raw = (route, cookie) => fetch(`${config.origin}${route}`, { redirect: 'manual', headers: cookie ? { cookie } : {}, signal: AbortSignal.timeout(10000) });
