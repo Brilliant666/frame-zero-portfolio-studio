@@ -4,22 +4,30 @@ import { publicSite } from "../site-editor/public-server";
 import { SitePortfolioView } from "../site-editor/premium-view";
 import { SiteBasicView } from "../site-editor/basic-view";
 import { PREVIEW_THEME_BOOTSTRAP_CSS, PREVIEW_THEME_KEY } from "../preview-workspace/preview-theme";
-import { getClientVisiblePortfolioTitle } from "../client-visible-title";
+import { publishedSiteMetadata } from "../site-editor/public-metadata";
+import { getAccountRuntime } from "../../db/accounts/http.mjs";
+import { isContentSpace } from "../site-editor/content-schema";
 export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: Promise<{ siteSlug: string }> }): Promise<Metadata> {
   const result = await publicSite((await params).siteSlug);
-  if (!result?.snapshot) return { title: "作品集尚未发布", robots: { index: false, follow: false } };
-  const { profile } = result.snapshot.content;
-  const title = getClientVisiblePortfolioTitle(profile);
-  return { title, description: profile.intro, openGraph: { title, description: profile.intro }, twitter: { card: "summary", title, description: profile.intro } };
+  if (!result?.snapshot) return { title: { absolute: "作品集尚未发布" }, description: "摄影师尚未发布作品集", openGraph: null, twitter: null, alternates: null, robots: { index: false, follow: false } };
+  if (!isContentSpace(result.snapshot.space)) notFound();
+  return publishedSiteMetadata(result.snapshot, result.assets, getAccountRuntime().config.origin);
 }
 export default async function PublicPortfolio({ params }: { params: Promise<{ siteSlug: string }> }) {
   const result = await publicSite((await params).siteSlug);
   if (!result) notFound();
   if (!result.snapshot && result.acceptanceHref) redirect(result.acceptanceHref);
   if (!result.snapshot) return <main><h1>作品集尚未发布</h1><section data-site-state="unpublished"><p>摄影师尚未发布作品集，请稍后再来。</p><a href="/login">站点所有者登录</a></section></main>;
+  if (result.snapshot.space === "premium-flow-gallery") {
+    const { SiteFlowGalleryView } = await import("../site-editor/flow-gallery-view");
+    return <div data-publication-space="premium-flow-gallery" data-publication-template="premium-flow-gallery" data-publication-id={result.snapshot.id}>
+      <script dangerouslySetInnerHTML={{ __html: "delete document.documentElement.dataset.previewTheme;delete document.documentElement.dataset.starTheme;delete document.documentElement.dataset.publicPortfolio" }} />
+      <SiteFlowGalleryView key={result.snapshot.id} document={result.snapshot.content} assets={result.assets} /></div>;
+  }
   if (result.snapshot.space === "basic") return <div data-publication-space="basic" data-publication-template={result.snapshot.templateId} data-publication-id={result.snapshot.id}>
     <script dangerouslySetInnerHTML={{ __html: "delete document.documentElement.dataset.previewTheme;delete document.documentElement.dataset.starTheme;delete document.documentElement.dataset.publicPortfolio" }} />
     <SiteBasicView key={result.snapshot.id} content={result.snapshot.content} assets={result.assets} /></div>;
-  return <div data-publication-space="premium-polaroid" data-publication-template="premium-polaroid" data-publication-id={result.snapshot.id}><style dangerouslySetInnerHTML={{ __html: PREVIEW_THEME_BOOTSTRAP_CSS }} /><script dangerouslySetInnerHTML={{ __html: `(function(){var t='paper';try{if(localStorage.getItem('${PREVIEW_THEME_KEY}')==='night')t='night'}catch(e){}document.documentElement.dataset.previewTheme=t;document.documentElement.dataset.starTheme=t;document.documentElement.dataset.publicPortfolio='premium-polaroid'})()` }} /><SitePortfolioView document={result.snapshot.content} assets={result.assets} /></div>;
+  if (result.snapshot.space === "premium-polaroid") return <div data-publication-space="premium-polaroid" data-publication-template="premium-polaroid" data-publication-id={result.snapshot.id}><style dangerouslySetInnerHTML={{ __html: PREVIEW_THEME_BOOTSTRAP_CSS }} /><script dangerouslySetInnerHTML={{ __html: `(function(){var t='paper';try{if(localStorage.getItem('${PREVIEW_THEME_KEY}')==='night')t='night'}catch(e){}document.documentElement.dataset.previewTheme=t;document.documentElement.dataset.starTheme=t;document.documentElement.dataset.publicPortfolio='premium-polaroid'})()` }} /><SitePortfolioView document={result.snapshot.content} assets={result.assets} /></div>;
+  notFound();
 }

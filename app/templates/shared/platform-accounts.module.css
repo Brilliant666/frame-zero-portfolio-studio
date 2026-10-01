@@ -46,7 +46,7 @@
 
 .heading p {
   color: var(--accounts-muted);
-  font-size: .64rem;
+  font-size: .8125rem;
   line-height: 1.65;
 }
 
@@ -80,13 +80,13 @@
 
 .identity strong {
   color: var(--accounts-accent);
-  font-size: .68rem;
+  font-size: .8125rem;
   letter-spacing: .06em;
 }
 
 .identity span {
   color: var(--accounts-text);
-  font-size: .7rem;
+  font-size: .8125rem;
   line-height: 1.55;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -104,7 +104,7 @@
   align-items: center;
   gap: .45rem;
   color: var(--accounts-text) !important;
-  font-size: .68rem;
+  font-size: .8125rem;
   font-weight: 750;
   overflow-wrap: anywhere;
   text-decoration: underline;
@@ -152,7 +152,7 @@
 
 .fullImageLink span {
   color: var(--accounts-accent);
-  font-size: .64rem;
+  font-size: .8125rem;
   font-weight: 750;
 }
 

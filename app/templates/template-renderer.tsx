@@ -4,6 +4,7 @@ import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from "re
 import PhotoFallbackController from "../photo-fallback-controller";
 import type { TemplateId } from "./catalog";
 import type { TemplateProps } from "./types";
+import { templateAppearances } from "./appearance";
 
 type TemplateModule = { default: ComponentType<TemplateProps> };
 type TemplateLoader = () => Promise<TemplateModule>;
@@ -32,14 +33,15 @@ export default function TemplateRenderer(props: TemplateProps) {
   const Template = templates[props.templateId] ?? templates["cinematic-light"];
 
   return (
-    <Suspense fallback={<TemplateLoading brand={props.content.profile.brand} />}>
+    <Suspense fallback={<TemplateLoading brand={props.content.profile.brand} templateId={props.templateId} />}>
       <Template key={props.templateId} {...props} />
       <PhotoFallbackController />
     </Suspense>
   );
 }
 
-function TemplateLoading({ brand }: { brand: string }) {
+function TemplateLoading({ brand, templateId }: { brand: string; templateId: TemplateId }) {
+  const appearance = templateAppearances[templateId];
   return (
     <main
       role="status"
@@ -48,8 +50,9 @@ function TemplateLoading({ brand }: { brand: string }) {
         minHeight: "100svh",
         display: "grid",
         placeItems: "center",
-        background: "#f8f5f0",
-        color: "#17120f",
+        background: appearance.background,
+        color: appearance.foreground,
+        colorScheme: appearance.tone,
         fontFamily: "var(--font-geist-mono), monospace",
         letterSpacing: ".12em",
       }}

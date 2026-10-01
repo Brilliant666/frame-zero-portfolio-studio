@@ -1,4 +1,5 @@
 .root {
+  color-scheme: dark;
   --navy: #050914;
   --panel: #091120;
   --panel-soft: #0d1829;
@@ -620,7 +621,7 @@
 .archiveCard:hover img,
 .archiveCard:focus-visible img { filter: saturate(1.08) contrast(1.03); transform: scale(1.045); }
 
-.cardShade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(2, 5, 12, .08) 30%, rgba(2, 5, 12, .88)); }
+.cardShade { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(2, 5, 12, .88)); }
 .cardIndex { position: absolute; top: .75rem; left: .75rem; padding: .35rem .42rem; border: 1px solid rgba(237, 246, 255, .25); background: rgba(5, 9, 20, .4); font: .5rem var(--font-geist-mono), monospace; backdrop-filter: blur(8px); }
 .cardInfo { position: absolute; right: 1rem; bottom: 1rem; left: 1rem; display: grid; gap: .24rem; }
 .cardInfo small,
@@ -628,7 +629,7 @@
 .cardOpen { font: .5rem var(--font-geist-mono), monospace; letter-spacing: .1em; }
 .cardInfo small { color: var(--electric); }
 .cardInfo strong { font-size: clamp(1.1rem, 2.1vw, 2rem); letter-spacing: -.04em; }
-.cardInfo em { overflow: hidden; color: rgba(237, 246, 255, .58); font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
+.cardInfo em { display: none; overflow: hidden; color: rgba(237, 246, 255, .58); font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
 .cardOpen { position: absolute; top: .85rem; right: .85rem; color: var(--electric); opacity: 0; transform: translateY(-.4rem); transition: opacity .25s ease, transform .25s ease; }
 .archiveCard:hover .cardOpen,
 .archiveCard:focus-visible .cardOpen { opacity: 1; transform: none; }
@@ -678,11 +679,11 @@
 .packageCard h3 { margin: 0; font-size: clamp(1.7rem, 3.4vw, 3rem); letter-spacing: -.055em; }
 .packagePrice { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-top: 1.6rem; padding: 1rem 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .packagePrice strong { color: var(--electric); font-size: 1.1rem; }
-.packagePrice span { color: var(--muted); font: .55rem var(--font-geist-mono), monospace; }
+.packagePrice span { color: var(--muted); font: .8125rem var(--font-geist-mono), monospace; }
 .packageDescription { margin: 1.25rem 0 0; color: var(--muted); font-size: .78rem; line-height: 1.8; }
-.packageCard ul { display: grid; gap: .55rem; margin: 1.2rem 0 2rem; padding: 0; color: rgba(237, 246, 255, .72); font: .6rem var(--font-geist-mono), monospace; list-style: none; }
+.packageCard ul { display: grid; gap: .55rem; margin: 1.2rem 0 2rem; padding: 0; color: rgba(237, 246, 255, .72); font: .8125rem var(--font-geist-mono), monospace; list-style: none; }
 .packageCard li::before { content: "+ "; color: var(--violet); }
-.packageCard > a { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding: .9rem; border: 1px solid var(--line-strong); color: var(--electric); font: .56rem var(--font-geist-mono), monospace; letter-spacing: .1em; transition: background .2s ease, color .2s ease; }
+.packageCard > a { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding: .9rem; border: 1px solid var(--line-strong); color: var(--electric); font: .8125rem var(--font-geist-mono), monospace; letter-spacing: .1em; transition: background .2s ease, color .2s ease; }
 .packageCard > a:hover,
 .packageCard > a:focus-visible { background: var(--electric); color: #04101f; }
 .serviceNote { margin: 1rem 0 0; color: var(--muted); font: .5rem var(--font-geist-mono), monospace; }
@@ -741,13 +742,13 @@
 .contactPanel > a:focus-visible { background: rgba(108, 175, 255, .06); }
 .contactPanel > button span,
 .contactPanel > a span { display: grid; min-width: 0; gap: .35rem; }
-.contactPanel small { color: var(--muted); font: .5rem var(--font-geist-mono), monospace; letter-spacing: .1em; }
+.contactPanel small { color: var(--muted); font: .8125rem var(--font-geist-mono), monospace; letter-spacing: .1em; }
 .contactPanel > button strong,
 .contactPanel > a strong { overflow: hidden; font-size: .82rem; text-overflow: ellipsis; }
-.contactPanel b { flex: 0 0 auto; color: var(--electric); font: .52rem var(--font-geist-mono), monospace; }
+.contactPanel b { flex: 0 0 auto; color: var(--electric); font: .8125rem var(--font-geist-mono), monospace; }
 
-.terminal pre { min-height: 19rem; margin: 0; padding: 1.25rem; overflow: auto; color: rgba(237, 246, 255, .7); font: .68rem/1.9 var(--font-geist-mono), monospace; white-space: pre-wrap; }
-.terminal > button { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 1rem; min-height: 3.4rem; padding: .8rem 1rem; border-top: 1px solid var(--electric); background: var(--electric); color: #04101f; cursor: pointer; font: 700 .58rem var(--font-geist-mono), monospace; letter-spacing: .08em; }
+.terminal pre { min-height: 19rem; margin: 0; padding: 1.25rem; overflow: auto; color: rgba(237, 246, 255, .7); font: .8125rem/1.9 var(--font-geist-mono), monospace; white-space: pre-wrap; }
+.terminal > button { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 1rem; min-height: 3.4rem; padding: .8rem 1rem; border-top: 1px solid var(--electric); background: var(--electric); color: #04101f; cursor: pointer; font: 700 .8125rem var(--font-geist-mono), monospace; letter-spacing: .08em; }
 .terminal > button b { font-size: .48rem; opacity: .62; }
 
 .footer { display: grid; grid-template-columns: 1.2fr 1fr 1fr auto; align-items: end; gap: 1rem; padding-top: clamp(5rem, 9vw, 8rem); color: var(--muted); font: .52rem var(--font-geist-mono), monospace; letter-spacing: .08em; }

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import type { TemplateId, Work } from "../site-config";
 import TemplateRenderer from "../templates/template-renderer";
 import Lightbox from "../templates/shared/lightbox";
+import { templateAppearances } from "../templates/appearance";
 import { useTemplateInteractions } from "../templates/shared/use-template-interactions";
 import { useAdmin } from "./admin-provider";
 import { PlatformAssetContext } from "../templates/shared/asset-context";
@@ -148,6 +149,7 @@ export default function TemplatePreviewDialog({
             work={activeWork}
             works={[...lightboxWorks]}
             theme={templateId === "polaroid-field" ? "light" : "dark"}
+            appearance={templateAppearances[templateId].tone}
             frameRef={lightboxRef}
             closeButtonRef={closeButtonRef}
             onMove={moveActiveWork}

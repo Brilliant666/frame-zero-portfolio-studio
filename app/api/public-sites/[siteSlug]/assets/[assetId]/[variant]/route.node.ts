@@ -2,6 +2,7 @@ import { accountJson, accountRequestAllowed, getAccountRuntime } from "../../../
 import { readPublished, readPublishedAssets } from "../../../../../../../db/accounts/publications.mjs";
 import { isSiteSlug } from "../../../../../../../db/accounts/site-slug.mjs";
 import { UUID, readAssetVariant } from "../../../../../../../db/accounts/assets.mjs";
+import { publicAssetResponse } from "../../../../../../../db/accounts/public-asset-response.mjs";
 export const dynamic = "force-dynamic";
 async function serve(request: Request, context: { params: Promise<{ siteSlug: string; assetId: string; variant: string }> }) {
   const { siteSlug, assetId, variant } = await context.params;
@@ -16,7 +17,7 @@ async function serve(request: Request, context: { params: Promise<{ siteSlug: st
     if (!row) return accountJson({ error: "NOT_FOUND" }, 404);
     if (request.headers.has("range")) return accountJson({ error: "RANGE_NOT_SUPPORTED" }, 416);
     const file = await readAssetVariant(row, variant);
-    return new Response(request.method === "HEAD" ? null : new Uint8Array(file.bytes), { headers: { "Content-Type": file.type, "Content-Length": String(file.bytes.length), "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Cross-Origin-Resource-Policy": "same-origin", "Accept-Ranges": "none" } });
+    return publicAssetResponse(request, file);
   } catch { return accountJson({ error: "资源暂不可用" }, 503); }
 }
 export const GET = serve;

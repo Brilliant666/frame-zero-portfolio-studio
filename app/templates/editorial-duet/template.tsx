@@ -105,7 +105,7 @@ export default function EditorialDuetTemplate({
             <span>PHOTOGRAPHY BY<br /><strong>{content.profile.photographer}</strong></span>
             <p>{content.profile.intro}<br />{content.hero.services}</p>
           </div>
-          <a className={styles.coverLink} href="#editorial-folio">ENTER THE EDITION <span>↓</span></a>
+          <a className={styles.coverLink} href="#editorial-folio">浏览作品与章节索引 <span>↓</span></a>
         </div>
 
         <div className={styles.coverVisual}>

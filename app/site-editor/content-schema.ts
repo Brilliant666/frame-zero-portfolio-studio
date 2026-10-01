@@ -1,8 +1,10 @@
 import { isTemplateId, templateCatalog, type SiteContent, type Work } from "../site-config";
 import { parsePreviewDocument, type PreviewPortfolioDocumentV1 } from "../preview-workspace/document";
+import { parseFlowGalleryDocument, type FlowGalleryDocumentV1 } from "./flow-gallery-document";
 
-export type ContentSpace = "basic" | "premium-polaroid";
-export function isContentSpace(value: string): value is ContentSpace { return value === "basic" || value === "premium-polaroid"; }
+export type ContentSpace = "basic" | "premium-polaroid" | "premium-flow-gallery";
+export type SpaceContent = SiteContent | PreviewPortfolioDocumentV1 | FlowGalleryDocumentV1;
+export function isContentSpace(value: string): value is ContentSpace { return value === "basic" || value === "premium-polaroid" || value === "premium-flow-gallery"; }
 export function createEmptyBasicContent(): SiteContent {
   return {
     activeTemplate: "cinematic-light", works: [], templateWorks: Object.fromEntries(templateCatalog.map(t => [t.id, []])),
@@ -64,13 +66,18 @@ function parseWork(value: unknown): Work {
     code: basicText(w.code), title: basicText(w.title), subtitle: basicText(w.subtitle), position: basicText(w.position, 100),
     image: "", preview: "", previewWidth: w.previewWidth as number, previewHeight: w.previewHeight as number, fullWidth: w.fullWidth as number, enabled: w.enabled };
 }
-export function contentAssetIds(space: ContentSpace, content: SiteContent | PreviewPortfolioDocumentV1): string[] {
-  const ids = content.social.flatMap(s => s.qrAssetId ? [s.qrAssetId] : []);
+export function contentAssetIds(space: ContentSpace, content: SpaceContent): string[] {
+  if (space === "premium-flow-gallery") {
+    const d = content as FlowGalleryDocumentV1;
+    return [...new Set([...(d.background.assetId ? [d.background.assetId] : []), ...d.groups.flatMap(g => g.assetIds), ...d.contact.items.flatMap(i => i.qrAssetId ? [i.qrAssetId] : [])])];
+  }
+  const ids = (content as SiteContent | PreviewPortfolioDocumentV1).social.flatMap(s => s.qrAssetId ? [s.qrAssetId] : []);
   if (space === "premium-polaroid") for (const c of (content as PreviewPortfolioDocumentV1).collections) ids.push(...c.assetIds, ...[c.coverAssetId,c.focusAssetId].filter((v): v is string => Boolean(v)));
   else { const c = content as SiteContent; for (const w of [...c.works, ...Object.values(c.templateWorks ?? {}).flat()]) if (w.assetId) ids.push(w.assetId); }
   return [...new Set(ids)];
 }
-export function parseSpaceContent(space: ContentSpace, value: unknown): SiteContent | PreviewPortfolioDocumentV1 {
+export function parseSpaceContent(space: ContentSpace, value: unknown): SpaceContent {
+  if (space === "premium-flow-gallery") return parseFlowGalleryDocument(value);
   if (space === "premium-polaroid") {
     return parseSitePremiumDocument(value);
   }

@@ -83,3 +83,4 @@
   .loginCard { padding: 24px 20px; border-radius: 14px; }
   .loginCard h2 { font-size: 23px; }
 }
+.status[data-tone="error"] { border-left: 3px solid #b42318; background: #fff0ec; color: #8a271e; }

@@ -77,8 +77,8 @@ export default function PrismLiquidTemplate({ content, works, packages, bookingT
       <section id="prism-top" className={styles.hero} data-template-view="works" hidden={activeView !== "works"} tabIndex={-1}>
         <div className={styles.liquidField} aria-hidden="true"><i /><i /><i /></div>
         <div className={styles.heroCopy}>
-          <small>PRISM / LIQUID · COSPLAY PHOTOGRAPHY</small>
-          <h1>COLOR<br /><em>IS A PORTAL.</em></h1>
+          <small>{content.hero.eyebrow}</small>
+          <h1><em>{content.hero.title}</em></h1>
           <p>{content.profile.photographer} · {content.profile.role}<br />{content.profile.intro}</p>
         </div>
 

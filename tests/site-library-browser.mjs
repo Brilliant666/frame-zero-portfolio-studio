@@ -24,6 +24,7 @@ export async function exerciseSiteLibrary({ page, read, published, shot }) {
   const second = (await visibleIds()).find(id => !collection.assetIds.includes(id));
   assert.ok(second && second !== first);
   await library.getByRole('checkbox', { name: `选择照片 ${second}`, exact: true }).check();
+  await library.locator('[data-library-id-search] > summary').click();
   await library.getByRole('searchbox', { name: '按素材 ID 查找', exact: true }).fill(collection.assetIds[0]);
   await library.getByRole('checkbox', { name: `选择照片 ${collection.assetIds[0]}`, exact: true }).check();
   await library.getByRole('button', { name: '查看已选', exact: true }).click();

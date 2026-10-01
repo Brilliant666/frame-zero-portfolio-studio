@@ -5,6 +5,7 @@
   overflow: hidden;
   background: #05070b;
   color: #f7f3ed;
+  color-scheme: dark;
   font-family: var(--font-geist-sans), sans-serif;
 }
 
@@ -31,7 +32,7 @@
 .stars { position: absolute; inset: 0; z-index: -3; opacity: .55; background-image: radial-gradient(circle, rgba(255,255,255,.75) 0 1px, transparent 1.2px), radial-gradient(circle, rgba(142,234,255,.5) 0 1px, transparent 1.3px); background-position: 0 0, 32px 48px; background-size: 89px 89px, 137px 137px; mask-image: linear-gradient(to bottom, #000, transparent 92%); }
 .hero::before { content: ""; position: absolute; z-index: -2; inset: 6rem 15% 6%; background: radial-gradient(circle, rgba(28,126,164,.22), rgba(78,27,111,.12) 36%, transparent 67%); }
 .heroCopy small, .sectionHead > span, .contactCopy > small { color: var(--ice); font: .62rem var(--font-geist-mono), monospace; letter-spacing: .14em; }
-.heroCopy h1 { margin: 1rem 0 1.5rem; font-size: clamp(4rem,7.5vw,8.6rem); line-height: .76; letter-spacing: -.075em; }
+.heroCopy h1 { margin: 1rem 0 1.5rem; font-size: clamp(4rem,7.5vw,8.6rem); line-height: 1.05; letter-spacing: -.055em; overflow-wrap: anywhere; }
 .heroCopy h1 em { color: transparent; font-style: normal; -webkit-text-stroke: 1px var(--orange); text-shadow: 0 0 2rem rgba(255,107,33,.2); }
 .heroCopy p { max-width: 28rem; margin: .45rem 0; color: rgba(255,255,255,.54); line-height: 1.65; }
 .heroCopy > a { display: inline-flex; gap: 2rem; margin-top: 2rem; padding: .85rem 1rem; border: 1px solid rgba(255,107,33,.5); background: rgba(255,107,33,.08); color: var(--orange); font: .68rem var(--font-geist-mono), monospace; }
@@ -85,18 +86,18 @@
 .missions .sectionHead > span { color: var(--ice); }
 .missions .sectionHead p { color: rgba(255,255,255,.5); }
 .missionGrid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; }
-.missionGrid article { position: relative; overflow: hidden; padding: 2rem; border: 1px solid rgba(142,234,255,.22); background: #eef3f3; color: #10151a; box-shadow: 0 1.5rem 4rem rgba(0,0,0,.22); }
-.missionHalo { position: absolute; top: -8rem; right: -7rem; width: 15rem; height: 15rem; border: 1px solid rgba(9,133,157,.18); border-radius: 50%; box-shadow: 0 0 0 2rem rgba(9,133,157,.035),0 0 0 4rem rgba(9,133,157,.02); }
-.missionGrid article > span { color: #0b7183; font: .6rem var(--font-geist-mono), monospace; }
-.missionGrid article > small { float: right; color: rgba(16,21,26,.42); }
+.missionGrid article { position: relative; overflow: hidden; padding: 2rem; border: 1px solid rgba(142,234,255,.22); background: #0d121b; color: #f7f3ed; box-shadow: 0 1.5rem 4rem rgba(0,0,0,.22); }
+.missionHalo { position: absolute; top: -8rem; right: -7rem; width: 15rem; height: 15rem; border: 1px solid rgba(142,234,255,.18); border-radius: 50%; box-shadow: 0 0 0 2rem rgba(142,234,255,.035),0 0 0 4rem rgba(142,234,255,.02); }
+.missionGrid article > span { color: var(--ice); font: .6rem var(--font-geist-mono), monospace; }
+.missionGrid article > small { float: right; color: rgba(247,243,237,.64); }
 .missionGrid h3 { margin: 3rem 0 1rem; font-size: 2rem; }
-.missionGrid p { min-height: 5rem; color: rgba(16,21,26,.58); line-height: 1.7; }
+.missionGrid p { min-height: 5rem; color: rgba(247,243,237,.7); line-height: 1.7; }
 .missionGrid article > div:not(.missionHalo) { display: flex; align-items: baseline; gap: .8rem; }
-.missionGrid strong { color: #d64e14; font-size: 1.8rem; }
-.missionGrid em { color: rgba(16,21,26,.48); font-size: .65rem; font-style: normal; }
-.missionGrid ul { display: grid; gap: .55rem; padding: 1rem 0; border-top: 1px solid rgba(16,21,26,.12); list-style: none; }
-.missionGrid li::before { content: "◉"; margin-right: .5rem; color: #0b7183; }
-.missionGrid a { display: inline-block; padding: .75rem 1rem; background: #10151a; color: #fff; font-size: .65rem; }
+.missionGrid strong { color: #ff976a; font-size: 1.8rem; }
+.missionGrid em { color: rgba(247,243,237,.64); font-size: .8125rem; font-style: normal; }
+.missionGrid ul { display: grid; gap: .55rem; padding: 1rem 0; border-top: 1px solid rgba(142,234,255,.18); list-style: none; }
+.missionGrid li::before { content: "◉"; margin-right: .5rem; color: var(--ice); }
+.missionGrid a { display: inline-block; padding: .75rem 1rem; border: 1px solid rgba(142,234,255,.35); background: #111c27; color: var(--ice); font-size: .8125rem; }
 
 .contact { display: grid; grid-template-columns: 1fr minmax(24rem,.85fr); gap: 7vw; min-height: 85vh; padding: 9vw 6vw; background: radial-gradient(circle at 12% 80%, rgba(255,107,33,.12), transparent 30%), #070a10; }
 .contactCopy { align-self: center; }
@@ -104,11 +105,11 @@
 .contactCopy > p { max-width: 30rem; color: rgba(255,255,255,.5); line-height: 1.7; }
 .contactCopy > button, .contactCopy > a { display: grid; gap: .3rem; width: min(100%,32rem); margin-top: .65rem; padding: .9rem 1rem; border: 1px solid rgba(142,234,255,.16); background: rgba(142,234,255,.04); color: #fff; text-align: left; cursor: pointer; }
 .contactCopy > button span,
-.contactCopy > a span { color: var(--ice); font: .5rem var(--font-geist-mono), monospace; }
+.contactCopy > a span { color: var(--ice); font: .8125rem var(--font-geist-mono), monospace; }
 .console { align-self: center; padding: .8rem; border: 1px solid rgba(142,234,255,.2); background: #0d121b; box-shadow: 0 2rem 5rem rgba(0,0,0,.35); }
 .console > div { display: flex; align-items: center; gap: .4rem; padding: .7rem; color: var(--ice); font: .55rem var(--font-geist-mono), monospace; }
 .console > div span { margin-right: auto; }.console > div i { width: .45rem; height: .45rem; border-radius: 50%; background: rgba(255,255,255,.24); }
-.console pre { min-height: 24rem; margin: 0; padding: 1.2rem; border: 1px solid rgba(255,255,255,.06); background: #080c12; color: rgba(255,255,255,.62); font: .7rem/1.8 var(--font-geist-mono), monospace; white-space: pre-wrap; }
+.console pre { min-height: 24rem; margin: 0; padding: 1.2rem; border: 1px solid rgba(255,255,255,.06); background: #080c12; color: rgba(255,255,255,.62); font: .8125rem/1.8 var(--font-geist-mono), monospace; white-space: pre-wrap; }
 .console button { width: 100%; padding: 1rem; background: var(--orange); color: #1a0902; cursor: pointer; font-weight: 800; }
 .footer { display: grid; grid-template-columns: 1fr auto auto; gap: 2rem; padding: 1.5rem 4vw; border-top: 1px solid rgba(255,255,255,.1); background: #05070b; color: rgba(255,255,255,.42); font: .58rem var(--font-geist-mono), monospace; }
 .footer strong { color: #fff; }

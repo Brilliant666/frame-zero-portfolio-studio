@@ -5,10 +5,15 @@
 .library button { min-height:44px; padding:8px 12px; border:1px solid #aaa49b; background:white; color:inherit; font:inherit; cursor:pointer; }
 .library button:disabled { opacity:.5; cursor:not-allowed; }
 .library :focus-visible { outline:3px solid #a55232; outline-offset:3px; }
-.filters { display:grid; grid-template-columns:2fr repeat(3,minmax(0,1fr)); gap:12px; margin:16px 0 0; border:0; padding:0; min-width:0; }
+.filters { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:16px 0 0; border:0; padding:0; min-width:0; }
 .filters label,.destination label { display:grid; gap:6px; min-width:0; }
 .library select,.library input[type="search"] { min-height:44px; width:100%; min-width:0; padding:8px; font:inherit; color:inherit; background:white; border:1px solid #bdb5ab; }
 .hint { font-size:12px; color:#6e665d; }
+.diagnostics { margin:12px 0; font-size:13px; }
+.diagnostics summary,.metadata summary { cursor:pointer; color:#6e665d; }
+.diagnostics label { display:grid; gap:6px; margin-top:10px; max-width:560px; }
+.metadata { margin-top:4px; min-width:0; font-size:12px; }
+.metadata small { display:block; margin-top:6px; }
 .tools { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:16px 0; }
 .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(185px,1fr)); gap:12px; }
 .card { display:grid; align-content:start; gap:6px; min-width:0; padding:10px; background:white; border:1px solid #d5d0c6; }
