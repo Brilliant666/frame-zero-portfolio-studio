@@ -225,7 +225,7 @@ export default function PolaroidFieldTemplate({
         >
           <div className={styles.sceneIdentity}>
             <small>{content.profile.photographer} · 摄影作品</small>
-            <h1 id="scene-title">{content.profile.photographer}<span>漂浮拍立得星图</span></h1>
+            <h1 id="scene-title">{content.hero.title}<span>漂浮拍立得星图</span></h1>
             <p>{content.profile.intro}</p>
             <p>{content.profile.role} · {content.hero.services}</p>
           </div>

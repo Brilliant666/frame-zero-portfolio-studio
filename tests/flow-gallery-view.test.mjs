@@ -21,6 +21,32 @@ const scrolling = await load('app/premium-gallery-proof/scrollport.ts');
 const bodyLocks = await load('app/premium-gallery-proof/body-scroll-lock.ts');
 const motion = await load('app/premium-gallery-proof/rail-motion.ts');
 const sources = await load('app/premium-gallery-proof/photo-source.ts');
+const gestures = await load('app/premium-gallery-proof/gallery-interaction.ts');
+
+test('scene swipe requires one tracked finger and ignores controls, pinch endings and vertical reading', () => {
+  const touch = (identifier, clientX, clientY = 100) => ({ identifier, clientX, clientY });
+  const start = gestures.beginGallerySwipe([touch(4, 200)], false);
+  assert.equal(gestures.completeGallerySwipe(start, [touch(4, 120)], 0), 1);
+  assert.equal(gestures.completeGallerySwipe(start, [touch(4, 280)], 0), -1);
+  assert.equal(gestures.completeGallerySwipe(start, [touch(4, 150)], 0), null);
+  assert.equal(gestures.completeGallerySwipe(start, [touch(4, 120, 250)], 0), null);
+  assert.equal(gestures.beginGallerySwipe([touch(4, 200)], true), null);
+  assert.equal(gestures.beginGallerySwipe([touch(4, 200), touch(5, 250)], false), null);
+  assert.equal(gestures.completeGallerySwipe(start, [touch(4, 120)], 1), null);
+  assert.equal(gestures.completeGallerySwipe(start, [touch(5, 120)], 0), null);
+  assert.equal(gestures.completeGallerySwipe(null, [touch(4, 120)], 0), null);
+});
+
+test('classification lightbox order wraps without changing the photo scope; single QR remains single', () => {
+  const scope = ['portrait', 'landscape', 'square'];
+  assert.equal(scope[gestures.nextGalleryPhotoIndex(0, scope.length, -1)], 'square');
+  assert.equal(scope[gestures.nextGalleryPhotoIndex(2, scope.length, 1)], 'portrait');
+  let index = 0;
+  for (let i = 0; i < 6; i++) index = gestures.nextGalleryPhotoIndex(index, scope.length, 1);
+  assert.equal(index, 0); assert.deepEqual(scope, ['portrait', 'landscape', 'square']);
+  assert.equal(gestures.nextGalleryPhotoIndex(0, 1, -1), 0);
+  assert.equal(gestures.nextGalleryPhotoIndex(0, 0, 1), 0);
+});
 
 test('wheel moves forward and reverse loops in the same visual direction, reversibly across either loop boundary', () => {
   const height = 1250, duration = 50000;

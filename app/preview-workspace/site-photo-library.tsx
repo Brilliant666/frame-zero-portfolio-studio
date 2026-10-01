@@ -63,11 +63,11 @@ export default function SitePhotoLibrary({ assets, collections, ready, truncated
     <p role="status">{state}</p>
     {truncated && <p className={styles.warning}>当前仅载入部分本站素材（{assets.length} 张）；筛选、排序和分页只覆盖已载入照片。</p>}
     <fieldset className={styles.filters} disabled={filter.onlySelected}>
-      <label>按素材 ID 查找<input type="search" value={filter.query} placeholder="输入素材 ID 的一部分" onChange={event => updateFilter({ query: event.target.value })} /></label>
       <label>照片方向<select value={filter.orientation} onChange={event => updateFilter({ orientation: event.target.value })}><option value="all">全部方向</option><option value="landscape">横图</option><option value="portrait">竖图</option><option value="square">方图</option></select></label>
       <label>加入本站时间<select value={filter.sort} onChange={event => updateFilter({ sort: event.target.value })}><option value="newest">最新在前</option><option value="oldest">最早在前</option></select></label>
       <label>图集关系<select value={filter.membership} disabled={!target} onChange={event => updateFilter({ membership: event.target.value })}><option value="all">全部照片</option><option value="outside">未加入目标图集</option></select></label>
     </fieldset>
+    <details className={styles.diagnostics} data-library-id-search><summary>按素材 ID 查找（可选）</summary><label>按素材 ID 查找<input type="search" disabled={filter.onlySelected} value={filter.query} placeholder="输入已知素材 ID 的一部分" onChange={event => updateFilter({ query: event.target.value })} /></label></details>
     <p className={styles.hint}>加入本站时间不是拍摄时间。按选择顺序追加；跨页、筛选和切换目标图集均保留选择。</p>
     <div className={styles.tools}>
       <button type="button" disabled={!ready || reloading || !visible.some(asset => !pickedIds.has(asset.id))} onClick={() => { setPicked(current => [...new Set([...current, ...visible.map(asset => asset.id)])]); setError(""); setMessage(""); }}>选择本页照片</button>
@@ -82,10 +82,10 @@ export default function SitePhotoLibrary({ assets, collections, ready, truncated
         <label className={styles.pick}><input type="checkbox" aria-label={`选择照片 ${asset.id}`} checked={pickedIds.has(asset.id)} disabled={!ready || reloading} onChange={() => select(asset.id)} />{pickedIds.has(asset.id) ? `已选 ${picked.indexOf(asset.id) + 1}` : "选择照片"}</label>
         <span>{orientationNames[asset.orientation]} · {asset.variants.full.width} × {asset.variants.full.height}</span>
         {target && memberIds.has(asset.id) && <small>已在目标图集</small>}
-        <small>ID {asset.id}</small><small>{asset.createdAt ? new Date(asset.createdAt).toLocaleString("zh-CN", { hour12: false }) : "加入时间未知"}</small>
+        <details className={styles.metadata}><summary>素材详情</summary><small>ID {asset.id}</small><small>{asset.createdAt ? `加入本站：${new Date(asset.createdAt).toLocaleString("zh-CN", { hour12: false })}` : "加入本站时间未知"}</small></details>
       </article>)}
     </div>
-    {ready && !filtered.length && <p>没有符合条件的照片，请调整筛选或清除素材 ID。</p>}
+    {ready && !filtered.length && <p>没有符合条件的照片，请调整筛选{filter.query ? "或展开“按素材 ID 查找”清除搜索" : ""}。</p>}
     <nav className={styles.tools} aria-label="图库分页"><button type="button" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>上一页</button><span>第 {currentPage + 1} / {pages} 页 · {filtered.length} 张匹配</span><button type="button" disabled={currentPage + 1 >= pages} onClick={() => setPage(currentPage + 1)}>下一页</button></nav>
     <footer className={styles.destination}>
       <label>加入高级图集<select value={target?.id ?? ""} onChange={event => { setTargetId(event.target.value); setPage(0); setError(""); setMessage(""); }}><option value="">请选择目标图集</option>{collections.map(item => <option value={item.id} key={item.id}>{item.name || "未命名图集"} · {item.assetIds.length} 张{item.visible ? "" : " · 隐藏"}</option>)}</select></label>

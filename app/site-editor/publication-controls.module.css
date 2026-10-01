@@ -93,3 +93,9 @@
 @media (min-width: 601px) {
   .panel .actions { position: fixed; top: 6px; right: 24px; z-index: 55; flex-wrap: nowrap; }
 }
+.message { border-left: 3px solid #7192b8; background: #f2f6fb; padding: 12px 14px; font-size: 13px; }
+.message strong { display: block; color: #243449; font-size: 14px; }
+.message p { margin: 6px 0 0; }
+.message[data-tone="success"] { border-color: #39815b; background: #edf7f0; color: #285b3f; }
+.message[data-tone="error"] { border-color: #ba4832; background: #fff0eb; color: #8a3023; }
+.message[data-tone="pending"] { border-color: #b88119; background: #fff7e4; color: #775618; }

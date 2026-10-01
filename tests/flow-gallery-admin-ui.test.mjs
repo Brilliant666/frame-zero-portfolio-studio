@@ -56,3 +56,35 @@ test('changing rail width marks an edit and selecting the original ratio returns
   delete d.rails.leftWidthPercent;
   assert.equal(state.flowGalleryFingerprint(d), saved);
 });
+
+test('editor module hashes restore only valid modules and never interpret public preview scenes', () => {
+  for (const section of ['library', 'home', 'groups', 'pricing', 'contact']) assert.equal(ui.flowSectionFromHash(`#edit-${section}`), section);
+  for (const hash of ['', '#works', '#gallery', '#pricing', '#contact', '#edit-unknown', '#edit-home/other']) assert.equal(ui.flowSectionFromHash(hash), null);
+});
+test('undo photo removal restores position and caption without reverting later group edits or rails', () => {
+  const d = draft(), removal = { kind: 'photo', groupId: SECOND, id: ASSET, caption: d.groups[0].captions[ASSET], index: 0 };
+  d.groups[0] = state.removeFlowMember(d.groups[0], ASSET);
+  d.groups[0].name = 'Later name'; d.groups[0].captions[SECOND] = 'Later caption'; d.rails.leftWidthPercent = 70;
+  const restored = state.restoreFlowRemoval(d, removal);
+  assert.equal(restored.groups[0].assetIds.join(','), [ASSET, SECOND].join(','));
+  assert.equal(restored.groups[0].captions[ASSET], '原说明'); assert.equal(restored.groups[0].captions[SECOND], 'Later caption');
+  assert.equal(restored.groups[0].name, 'Later name'); assert.equal(restored.rails.leftWidthPercent, 70);
+  assert.equal(d.groups[0].assetIds.length, 1, 'No mutation of the input');
+  assert.equal(state.restoreFlowRemoval(restored, removal), restored, 'Undo cannot insert a duplicate');
+  assert.throws(() => state.restoreFlowRemoval({ ...d, groups: [] }, removal), /分类已移除/);
+  const full = { ...d, groups: [{ ...d.groups[0], assetIds: Array.from({length: 500}, (_, i) => `photo-${i}`) }] };
+  assert.throws(() => state.restoreFlowRemoval(full, removal), /500/);
+});
+test('undo price and contact removal restores only the deleted entry and respects capacity', () => {
+  for (const kind of ['price', 'contact']) {
+    const d = draft(), key = kind === 'price' ? 'pricing' : 'contact', list = kind === 'price' ? 'packages' : 'items';
+    const item = kind === 'price' ? { id: ASSET, name: 'Original', price: '100', description: '', details: [], enabled: true } : { id: ASSET, label: 'Original', value: 'Email', href: 'mailto:a@example.invalid' };
+    const other = { ...item, id: SECOND };
+    d[key][list] = [other]; d[key].heading = 'Changed heading';
+    const restored = state.restoreFlowRemoval(d, { kind, item, index: 0 });
+    assert.equal(restored[key].heading, 'Changed heading'); assert.equal(restored[key][list][0].id, ASSET); assert.equal(restored[key][list][1].id, SECOND);
+    assert.equal(state.restoreFlowRemoval(restored, { kind, item, index: 0 }), restored);
+    d[key][list] = Array.from({ length: kind === 'price' ? 30 : 20 }, (_, i) => ({...other, id: `item-${i}`}));
+    assert.throws(() => state.restoreFlowRemoval(d, { kind, item, index: 0 }), /上限/);
+  }
+});

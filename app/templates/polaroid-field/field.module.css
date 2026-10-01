@@ -1501,3 +1501,17 @@
     width: auto;
   }
 }
+
+/* Keep the basic content readable without changing the premium collection UI. */
+.shell[data-basic-template] .packageTitle small,
+.shell[data-basic-template] .packageOffer li,
+.shell[data-basic-template] .packageCard > a,
+.shell[data-basic-template] .packageNote,
+.shell[data-basic-template] .bookingIntro > button span,
+.shell[data-basic-template] .bookingIntro > a span,
+.shell[data-basic-template] .bookingIntro > button b,
+.shell[data-basic-template] .bookingIntro > a b,
+.shell[data-basic-template] .contactNote,
+.shell[data-basic-template] .noteCard pre,
+.shell[data-basic-template] .noteCard > button { font-size:.8125rem; }
+.shell[data-basic-template] .sceneIdentity h1 { overflow-wrap:anywhere; line-height:1.08; }

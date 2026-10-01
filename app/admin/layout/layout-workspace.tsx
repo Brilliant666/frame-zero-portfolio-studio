@@ -474,7 +474,7 @@ export default function LayoutWorkspace() {
           aria-live="polite"
           tabIndex={-1}
         >
-          主页模板已切换为「{template.name}」，尚未保存。现在可为它安排素材；已有模板排版不会被自动覆盖。
+          草稿模板已选择「{template.name}」，尚未保存。现在可为它安排素材；已有模板排版不会被自动覆盖。{siteScope && "保存并发布后才会更新公开主页。"}
         </p>
       ) : null}
       <p className={styles.mobileLayoutNote}>手机可查看并完成基础调整；复杂素材排版建议使用桌面端。</p>
@@ -585,6 +585,7 @@ export default function LayoutWorkspace() {
             <div><h3 id="asset-library-heading">素材选择与管理</h3><small>{libraryView === "active" ? `选择后放入当前槽位 ${String(activeSlot + 1).padStart(2, "0")}` : "回收站素材仍保留文件与现有排版引用"}</small></div>
             <span>{filteredItems.length} / {libraryView === "active" ? activeItems.length : archivedAssetCount}</span>
           </div>
+          {siteScope && <div id="basic-photo-upload"><SiteAssetUpload endpoint={siteScope.assetsEndpoint} onUploaded={refreshLibrary} /></div>}
           {localPhotoImportState === "configured" ? (
             <div className={styles.libraryViews} role="group" aria-label="素材库视图">
               <button ref={activeLibraryViewRef} type="button" aria-pressed={libraryView === "active"} onClick={() => { setLibraryView("active"); setAssetPage(0); setArchiveCandidate(null); }}>在库素材 {activeItems.length}</button>
@@ -701,19 +702,22 @@ export default function LayoutWorkspace() {
                 : libraryView === "archived"
                   ? "移入回收站的素材会保留原文件和现有排版引用，并可随时恢复。"
                   : activeItems.length === 0
-                ? localPhotoImportState === "configured"
+                ? siteScope
+                    ? "使用图库上方的上传入口加入照片，再选择素材安排到模板槽位。"
+                    : localPhotoImportState === "configured"
                     ? "使用下方“上传素材与排版建议”把照片或文件夹加入素材库。"
                     : localPhotoImportState === "missing"
                       ? "本地照片导入服务未启动；请使用 npm run dev 启动完整编辑环境。"
                       : "当前没有可用的素材。"
                 : "当前没有可用的素材。"}</p>
+              {siteScope && libraryState !== "error" && libraryView === "active" && activeItems.length === 0 && <button type="button" onClick={() => document.getElementById("basic-photo-upload")?.querySelector<HTMLInputElement>('input[type="file"]')?.click()}>上传第一批照片</button>}
             </div>
           )}
         </section>
       </div>
-      <details className={styles.layoutSecondaryTools}><summary>上传素材与排版建议</summary>
+      <details className={styles.layoutSecondaryTools}><summary>{siteScope ? "排版建议与工具" : "上传素材与排版建议"}</summary>
         <button type="button" onClick={resetLayout}>清空本模板</button>
-      {siteScope ? <><SiteAssetUpload endpoint={siteScope.assetsEndpoint} onUploaded={refreshLibrary} /><p role="status">{libraryMessage}</p></> : <PhotoImportPanel
+      {siteScope ? <p role="status">{libraryMessage}</p> : <PhotoImportPanel
         importing={isImporting}
         libraryMessage={libraryMessage}
         libraryState={libraryState}

@@ -141,6 +141,8 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
     async function module(id) {
       await page.locator(`nav[aria-label="流影视廊后台模块"] [data-flow-section="${id}"]`).click();
       await page.waitForFunction(value => document.querySelector('[data-flow-editor-section]')?.getAttribute('data-flow-editor-section') === value, id);
+      assert.equal(new URL(page.url()).hash, `#edit-${id}`);
+      await page.waitForFunction(() => document.activeElement === document.querySelector('[data-flow-editor-section] h1'));
     }
     async function overflow(p) {
       const dimensions = await p.evaluate(() => ({ width: innerWidth, html: document.documentElement.scrollWidth, body: document.body.scrollWidth }));
@@ -176,7 +178,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       if (expectedLeftPercent === 200 / 3) assert.equal(measured.inlineGrid, '', 'Original proportion deletes the explicit grid override');
       report.railWidths.push({ source, viewport: source === 'public' ? publicPage.viewportSize() : page.viewportSize(), expectedLeftPercent, ...measured });
     }
-    async function lightboxSizing(p, source) {
+    async function lightboxSizing(p, source, expectedBrowsing = true) {
       const dialog = p.locator('[role="dialog"][aria-modal="true"]');
       const image = dialog.locator('img');
       await dialog.waitFor();
@@ -206,15 +208,35 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         `${source} default image fits the screen: ${JSON.stringify({ viewport, fitted })}`);
       const close = dialog.getByRole('button', { name: '关闭大图', exact: true });
       const zoom = dialog.getByRole('button', { name: '放大查看', exact: true });
-      assert.equal(await dialog.getByRole('button').count(), 2, 'Lightbox exposes close and zoom controls');
+      const browsing = dialog.getByRole('group', { name: '当前分类照片，循环浏览', exact: true });
+      const hasBrowsing = await browsing.count() === 1;
+      assert.equal(hasBrowsing, expectedBrowsing, `${source} has the expected category or single-image scope`);
+      assert.equal(await dialog.getByRole('button').count(), expectedBrowsing ? 4 : 2, 'Category lightbox exposes browsing controls; a single image retains close and zoom');
       assert.equal(await zoom.getAttribute('aria-pressed'), 'false');
       await close.focus();
       await p.keyboard.press('Tab');
       assert.equal(await zoom.evaluate(element => document.activeElement === element), true, 'Tab moves from close to zoom');
       await p.keyboard.press('Tab');
-      assert.equal(await close.evaluate(element => document.activeElement === element), true, 'Tab wraps from zoom to close');
-      await p.keyboard.press('Shift+Tab');
-      assert.equal(await zoom.evaluate(element => document.activeElement === element), true, 'Shift+Tab wraps from close to zoom');
+      if (hasBrowsing) {
+        const previous = browsing.getByRole('button', { name: '上一张照片', exact: true });
+        const next = browsing.getByRole('button', { name: '下一张照片', exact: true });
+        assert.equal(await previous.evaluate(element => document.activeElement === element), true, 'Tab moves from zoom to previous photograph');
+        await p.keyboard.press('Tab');
+        assert.equal(await next.evaluate(element => document.activeElement === element), true, 'Tab moves from previous to next photograph');
+        await p.keyboard.press('Tab');
+        assert.equal(await close.evaluate(element => document.activeElement === element), true, 'Tab wraps from next photograph to close');
+        await p.keyboard.press('Shift+Tab');
+        assert.equal(await next.evaluate(element => document.activeElement === element), true, 'Shift+Tab wraps from close to next photograph');
+        const before = await browsing.locator('output').textContent();
+        await p.keyboard.press('ArrowRight');
+        assert.notEqual(await browsing.locator('output').textContent(), before, 'Right arrow advances within the current category');
+        await p.keyboard.press('ArrowLeft');
+        assert.equal(await browsing.locator('output').textContent(), before, 'Left arrow returns to the original photograph');
+      } else {
+        assert.equal(await close.evaluate(element => document.activeElement === element), true, 'Tab wraps from zoom to close');
+        await p.keyboard.press('Shift+Tab');
+        assert.equal(await zoom.evaluate(element => document.activeElement === element), true, 'Shift+Tab wraps from close to zoom');
+      }
       await zoom.click();
       const fit = dialog.getByRole('button', { name: '适应屏幕', exact: true });
       await fit.waitFor();
@@ -228,7 +250,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       const restored = await measure();
       intrinsicRatio(restored);
       assert.ok(Math.abs(restored.width - fitted.width) <= 1 && Math.abs(restored.height - fitted.height) <= 1, 'Fit restores the original complete-image geometry');
-      report.lightboxSizing.push({ source, viewport, orientation: fitted.metadataHeight > fitted.metadataWidth ? 'portrait' : 'landscape', fitted, enlarged, restored });
+      report.lightboxSizing.push({ source, viewport, expectedBrowsing, orientation: fitted.metadataHeight > fitted.metadataWidth ? 'portrait' : 'landscape', fitted, enlarged, restored });
     }
     async function modulePreview(id, scene, { temporary = false, title, capture = false, leftPercent } = {}) {
       const before = { draft: await draft(), publication: await publication(), writes: writeCount(), dirty: await root.getAttribute('data-flow-dirty'), hash: new URL(page.url()).hash };
@@ -281,6 +303,11 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       const rights = await json('/api/account/site');
       assert.deepEqual(rights.templates.premium, [SPACE]);
       await json(draftPath('premium-polaroid'), 403);
+      await page.goto(`${origin}/${SLUG}/admin/${SPACE}#edit-contact`);
+      await page.waitForFunction(() => document.querySelector('[data-flow-editor-section]')?.dataset.flowEditorSection === 'contact');
+      await module('home'); await module('groups');
+      await page.goBack(); await page.waitForFunction(() => document.querySelector('[data-flow-editor-section]')?.dataset.flowEditorSection === 'home');
+      await page.goForward(); await page.waitForFunction(() => document.querySelector('[data-flow-editor-section]')?.dataset.flowEditorSection === 'groups');
       basicBefore = await json(draftPath('basic'));
       assert.equal((await draft()).revision, 0);
       assert.equal((await publication()).current, null);
@@ -301,6 +328,13 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       await page.getByText('本站图库 8 张', { exact: true }).waitFor();
       const assets = (await json(assetsPath)).assets;
       assert.equal(assets.length, 8);
+      await page.getByRole('combobox', { name: '画幅', exact: true }).selectOption('portrait');
+      assert.equal(await page.getByRole('button', {name: /^放大素材 /}).count(), 3);
+      await page.getByRole('combobox', { name: '画幅', exact: true }).selectOption('landscape');
+      assert.equal(await page.getByRole('button', {name: /^放大素材 /}).count(), 5);
+      await page.getByRole('combobox', { name: '画幅', exact: true }).selectOption('all');
+      await page.getByRole('combobox', { name: '加入本站时间', exact: true }).selectOption('oldest');
+      assert.equal(await page.getByRole('button', {name: /^放大素材 /}).count(), 8);
       await module('groups');
       for (const [index, name] of ['Anonymous portrait studies', 'Anonymous landscape studies'].entries()) {
         await page.getByRole('textbox', { name: '分类名称', exact: true }).fill(name);
@@ -311,6 +345,10 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         await picker.getByRole('button', { name: '加入当前图集（4 张）', exact: true }).click();
         await picker.waitFor({ state: 'detached' });
       }
+      await page.getByRole('textbox', { name: '第 1 张照片说明', exact: true }).fill('Caption edited in place');
+      await page.getByRole('button', { name: '移出当前照片', exact: true }).click();
+      await page.getByRole('button', { name: '撤销最近移除', exact: true }).click();
+      assert.equal(await page.getByRole('textbox', { name: '第 1 张照片说明', exact: true }).inputValue(), 'Caption edited in place');
       await module('home');
       await page.getByRole('textbox', { name: '导航品牌名', exact: true }).fill('Anonymous Flow Studio');
       await page.getByRole('textbox', { name: '首页标题', exact: true }).fill('Flow fixture published title');
@@ -332,6 +370,9 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       await page.getByRole('button', { name: '新增价格项目', exact: true }).click();
       await page.getByRole('textbox', { name: '名称', exact: true }).fill('Synthetic session');
       await page.getByRole('textbox', { name: '价格说明', exact: true }).fill('100 fixture units');
+      await page.getByRole('button', { name: '移除此项目', exact: true }).click();
+      await page.getByRole('button', { name: '撤销最近移除', exact: true }).click();
+      assert.equal(await page.getByRole('textbox', { name: '价格说明', exact: true }).inputValue(), '100 fixture units');
       await module('contact');
       await page.getByRole('textbox', { name: '页面标题', exact: true }).fill('Synthetic contact');
       await page.getByRole('textbox', { name: '介绍', exact: true }).fill(Array.from({ length: 70 }, (_, index) => `Contact note ${index + 1}`).join('\n'));
@@ -339,8 +380,17 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       await page.getByRole('textbox', { name: '联系名称', exact: true }).fill('Fixture email');
       await page.getByRole('textbox', { name: '账号或说明', exact: true }).fill('flow@example.invalid');
       await page.getByRole('textbox', { name: '链接（可选，http / https / mailto）', exact: true }).fill('mailto:flow@example.invalid');
+      await page.getByRole('button', { name: '移除此联系方式', exact: true }).click();
+      await page.getByRole('button', { name: '撤销最近移除', exact: true }).click();
+      assert.equal(await page.getByRole('textbox', { name: '联系名称', exact: true }).inputValue(), 'Fixture email');
+      const contactCard = page.locator('section[aria-label="可选联系卡"]');
+      await contactCard.locator('summary').click();
+      await contactCard.getByRole('button', { name: '选择或上传联系卡', exact: true }).click();
+      await contactCard.locator('article').filter({ hasText: assets[0].id }).getByRole('button', { name: '选用此卡片', exact: true }).click();
+      await contactCard.getByRole('link', { name: '查看联系卡大图', exact: true }).waitFor();
       const saved = await save();
       assert.equal(saved.revision, 1); assert.equal(saved.content.pricing.enabled, false); assert.equal(saved.content.contact.enabled, false);
+      assert.equal(saved.content.contact.items[0].qrAssetId, assets[0].id, 'Optional contact QR references an existing anonymous Site asset');
       assert.equal(saved.content.rails.leftWidthPercent, 50, 'Save receipt preserves the chosen 5:5 proportion');
       assert.equal((await publication()).current, null, 'Save only preserves the unpublished pointer');
       await module('home');
@@ -537,15 +587,42 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         report.responsiveImages.push({ viewport, images: responsive });
         await railWidth(publicPage.locator('[aria-label="作品速览"]'), 50, 'public');
         await overflow(publicPage);
+        const expand = publicPage.locator('[data-flow-expand]');
+        const heading = publicPage.locator('[data-flow-scene-heading]');
+        await expand.focus();
+        await publicPage.keyboard.press('Enter');
+        await publicPage.locator('[data-flow-scene="gallery"]').waitFor();
+        assert.equal(await heading.evaluate(element => document.activeElement === element), true, 'Keyboard expansion focuses the complete gallery heading');
+        await publicPage.goBack();
+        await publicPage.locator('[data-flow-scene="works"]').waitFor();
+        assert.equal(await expand.evaluate(element => document.activeElement === element), true, 'History back restores the expand control after the gallery main unmounts');
+        await publicPage.goForward();
+        await publicPage.locator('[data-flow-scene="gallery"]').waitFor();
+        assert.equal(await heading.evaluate(element => document.activeElement === element), true, 'History forward focuses the destination heading');
+        await publicPage.getByRole('button', { name: '返回首页', exact: true }).click();
+        await publicPage.locator('[data-flow-scene="works"]').waitFor();
+        assert.equal(await expand.evaluate(element => document.activeElement === element), true, 'Explicit gallery return restores the expand control');
         for (const from of ['pricing', 'contact']) {
-          await publicPage.locator(`nav[aria-label="主要导航"] a[href="#${from}"]`).click();
+          const navigation = publicPage.locator(`nav[aria-label="主要导航"] a[href="#${from}"]`);
+          await navigation.focus();
+          await publicPage.keyboard.press('Enter');
           await publicPage.locator(`[data-flow-scene="${from}"]`).waitFor(); await overflow(publicPage);
+          assert.equal(await navigation.evaluate(element => document.activeElement === element), true, 'Scene changes preserve focus on persistent navigation');
           const windowBefore = await publicPage.evaluate(() => scrollY);
           await publicPage.mouse.move(viewport.width / 2, viewport.height / 2); await publicPage.mouse.wheel(0, 420);
           await publicPage.waitForFunction(() => document.querySelector('[data-flow-scene] main')?.scrollTop > 100);
           const scroll = await publicPage.evaluate(() => ({ sceneTop: document.querySelector('[data-flow-scene] main').scrollTop, window: scrollY }));
           assert.equal(scroll.window, windowBefore, `${from} long content scrolls inside its scene`);
           report.sceneScroll.push({ scene: from, viewport, ...scroll });
+          if (from === 'contact') {
+            const qr = publicPage.getByRole('button', { name: '查看Fixture email二维码', exact: true });
+            await qr.click();
+            await lightboxSizing(publicPage, 'public-contact-qr', false);
+            await publicPage.keyboard.press('Escape');
+            await publicPage.waitForFunction(() => !document.querySelector('[role="dialog"][aria-modal="true"]'));
+            await publicPage.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === '查看Fixture email二维码');
+            assert.equal(await qr.evaluate(element => document.activeElement === element), true, 'Closing the single-image QR viewer restores its contact control');
+          }
           await returnToWorks(from, publicPage.locator('nav[aria-label="主要导航"] a[href="#works"]'));
         }
         if (viewport.width > 700) {

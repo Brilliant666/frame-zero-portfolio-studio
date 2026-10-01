@@ -1,12 +1,14 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import styles from '../platform-shell.module.css';
 type Account = { user: { username: string; email: string; emailVerified: boolean }; site: { slug: string }; templates: { basic: string[]; premium: string[] } };
 export default function Login() {
   const [account,setAccount] = useState<Account | null>(null);
   const [message,setMessage] = useState('正在读取登录状态…');
   const [busy,setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const passwordRef = useRef<HTMLInputElement>(null);
   async function refresh() {
     try { const r = await fetch('/api/account/site', { cache: 'no-store' });
       if (r.ok) { setAccount(await r.json()); setMessage('已登录本地账号'); }
@@ -24,14 +26,16 @@ export default function Login() {
     return () => { active = false; };
   }, []);
   async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setBusy(true);
+    event.preventDefault(); setBusy(true); setFailed(false);
     const form = event.currentTarget, data = new FormData(form);
     try {
       const r = await fetch('/api/auth/sign-in/username', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: data.get('username'), password: data.get('password') }) });
-      form.reset();
-      if (r.ok) await refresh();
-      else setMessage(r.status === 429 ? '尝试过于频繁，请稍后重试。' : r.status === 503 ? '账号服务未就绪' : '用户名或密码不正确');
-    } catch { setMessage('无法连接本地账号服务'); } finally { setBusy(false); }
+      if (r.ok) { form.reset(); await refresh(); }
+      else { setFailed(true); setMessage(r.status === 429 ? '尝试过于频繁，请稍后重试。' : r.status === 503 ? '账号服务未就绪，请稍后重试。' : '用户名或密码不正确，请核对后重试。'); }
+    } catch { setFailed(true); setMessage('无法连接账号服务，请稍后重试。'); } finally {
+      if (passwordRef.current) { passwordRef.current.value = ''; passwordRef.current.focus(); }
+      setBusy(false);
+    }
   }
   async function logout(all = false) {
     setBusy(true);
@@ -54,12 +58,12 @@ export default function Login() {
         <p className={styles.eyebrow}>{account ? '已登录' : '欢迎回来'}</p>
         <h2 id="login-title">{account ? `${account.user.username} 的工作台` : '受邀账号登录'}</h2>
         <p className={styles.cardDescription}>{account ? `站点 /${account.site.slug} · 选择下方入口继续编辑` : '使用你的账号登录。本站不开放公众注册。'}</p>
-        <p className={styles.status} role="status">{message}</p>
+        <p id="login-feedback" className={styles.status} data-tone={failed ? 'error' : undefined} role={failed ? 'alert' : 'status'}>{message}</p>
         {account ? <>
           <div className={styles.accountActions}><a className={styles.primaryButton} href={`/${encodeURIComponent(account.site.slug)}/admin`}>进入我的站点后台</a><a className={styles.secondaryButton} href={`/${encodeURIComponent(account.site.slug)}`}>查看我的主页</a></div>
           <details className={styles.accountDetails}><summary>账号与会话管理</summary><p>登录邮箱：{account.user.email}（{account.user.emailVerified ? '已验证' : '未验证'}）</p><p>基础模板：{account.templates.basic.length} 套</p><p>高级产品：{account.templates.premium.join('、') || '未授权'}</p><button className={styles.secondaryButton} disabled={busy} onClick={() => void logout(true)}>撤销全部会话</button></details>
           <button className={styles.textButton} disabled={busy} onClick={() => void logout()}>退出登录</button>
-        </> : <form className={styles.loginForm} onSubmit={submit}><label>用户名<input name="username" autoComplete="username" required maxLength={30} placeholder="输入受邀账号用户名" /></label><label>密码<input name="password" type="password" autoComplete="current-password" required maxLength={128} placeholder="输入登录密码" /></label><button className={styles.primaryButton} disabled={busy} type="submit">{busy ? '登录中…' : '登录'}</button></form>}
+        </> : <form className={styles.loginForm} onSubmit={submit}><label>用户名<input name="username" autoComplete="username" required maxLength={30} placeholder="输入受邀账号用户名" /></label><label>密码<input ref={passwordRef} name="password" type="password" autoComplete="current-password" required maxLength={128} aria-describedby="login-feedback" aria-invalid={failed || undefined} placeholder="输入登录密码" /></label><button className={styles.primaryButton} disabled={busy} type="submit">{busy ? '登录中…' : '登录'}</button></form>}
       </section>
     </div>
   </main>;

@@ -216,7 +216,7 @@
 .editorialNote span { grid-column: 2; color: var(--muted); font: .48rem/1.6 var(--font-geist-mono), monospace; letter-spacing: .06em; }
 
 .chapterNav { display: flex; gap: .28rem; margin-top: 1.25rem; overflow-x: auto; }
-.chapterNav a { display: grid; flex: 1 0 1.75rem; gap: .35rem; color: var(--muted); font: .42rem var(--font-geist-mono), monospace; transition: color .2s ease; }
+.chapterNav a { display: grid; flex: 1 0 2.75rem; min-height: 2.75rem; align-content: center; gap: .35rem; color: var(--muted); font: .75rem var(--font-geist-mono), monospace; transition: color .2s ease; }
 .chapterNav i { height: 2px; background: var(--line); transition: background .2s ease, transform .2s ease; transform-origin: left; }
 .chapterNav a:hover,
 .chapterNav a:focus-visible,
@@ -308,12 +308,12 @@
 .rateList article:focus-within { padding-inline: 1.2rem; background: var(--paper-deep); color: var(--ink); box-shadow: inset 3px 0 var(--accent); }
 .rateNumber,
 .rateName small,
-.rateTerms span { color: var(--accent); font: .5rem var(--font-geist-mono), monospace; letter-spacing: .1em; }
+.rateTerms span { color: var(--accent); font: .8125rem var(--font-geist-mono), monospace; letter-spacing: .1em; }
 .rateName h3 { margin: .3rem 0 0; font: italic 500 clamp(1.8rem, 3.2vw, 3.4rem) "Iowan Old Style", "Baskerville", serif; letter-spacing: -.04em; }
 .rateList article > p { margin: 0; color: var(--muted); font-size: .75rem; line-height: 1.75; }
 .rateTerms { display: grid; grid-template-columns: 1fr auto; gap: .35rem 1rem; }
 .rateTerms strong { font-size: 1rem; }
-.rateTerms ul { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: .35rem .8rem; margin: .55rem 0 0; padding: 0; color: var(--muted); font: .5rem var(--font-geist-mono), monospace; list-style: none; }
+.rateTerms ul { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: .35rem .8rem; margin: .55rem 0 0; padding: 0; color: var(--muted); font: .8125rem var(--font-geist-mono), monospace; list-style: none; }
 .rateTerms li::before { content: "+ "; color: var(--accent); }
 .rateList article:hover > p,
 .rateList article:hover .rateTerms ul,
@@ -340,15 +340,15 @@
 .directContact { margin-top: 2.5rem; border-top: 1px solid var(--line); }
 .directContact > button,
 .directContact > a { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr) auto; align-items: center; gap: 1rem; width: 100%; min-height: 4.5rem; padding: .8rem 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; text-align: left; }
-.directContact span { color: var(--muted); font: .5rem var(--font-geist-mono), monospace; letter-spacing: .1em; }
+.directContact span { color: var(--muted); font: .8125rem var(--font-geist-mono), monospace; letter-spacing: .1em; }
 .directContact strong { overflow: hidden; font-size: .78rem; text-overflow: ellipsis; }
-.directContact b { color: var(--accent); font: .5rem var(--font-geist-mono), monospace; }
-.contactNote { display: block; max-width: 31rem; margin-top: 1rem; color: var(--muted); font-size: .64rem; line-height: 1.6; }
+.directContact b { color: var(--accent); font: .8125rem var(--font-geist-mono), monospace; }
+.contactNote { display: block; max-width: 31rem; margin-top: 1rem; color: var(--muted); font-size: .8125rem; line-height: 1.6; }
 
 .bookingSheet { align-self: center; border: 1px solid var(--ink); background: #f8f6f1; box-shadow: 1.2rem 1.2rem 0 var(--accent); }
 .sheetHead { display: flex; justify-content: space-between; gap: 1rem; padding: .8rem 1rem; border-bottom: 1px solid var(--line); color: var(--muted); font: .48rem var(--font-geist-mono), monospace; letter-spacing: .08em; }
-.bookingSheet pre { min-height: 20rem; margin: 0; padding: 1.3rem; color: rgba(21, 20, 17, .72); font: .68rem/1.9 var(--font-geist-mono), monospace; white-space: pre-wrap; }
-.bookingSheet > button { display: flex; width: 100%; min-height: 3.5rem; align-items: center; justify-content: space-between; gap: 1rem; padding: .8rem 1rem; border-top: 1px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer; font: .58rem var(--font-geist-mono), monospace; letter-spacing: .08em; }
+.bookingSheet pre { min-height: 20rem; margin: 0; padding: 1.3rem; color: rgba(21, 20, 17, .72); font: .8125rem/1.9 var(--font-geist-mono), monospace; white-space: pre-wrap; }
+.bookingSheet > button { display: flex; width: 100%; min-height: 3.5rem; align-items: center; justify-content: space-between; gap: 1rem; padding: .8rem 1rem; border-top: 1px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer; font: .8125rem var(--font-geist-mono), monospace; letter-spacing: .08em; }
 .bookingSheet > button b { color: var(--accent); font-size: .48rem; }
 
 .footer { display: grid; grid-template-columns: 1.2fr 1.5fr .8fr auto; align-items: end; gap: 1.5rem; padding: clamp(3rem, 6vw, 6rem) clamp(1rem, 3vw, 3rem); background: var(--paper); color: var(--muted); font: .5rem var(--font-geist-mono), monospace; letter-spacing: .07em; }

@@ -16,6 +16,24 @@ export function introProgress(elapsed: number) {
 
 export function titleCharacterDelay(index: number) { return Math.min(index, 8) * 130; }
 
+/** Isolate the overlay at every ancestor without changing pre-existing inert state. */
+export function isolateIntroBackground(overlay: HTMLElement) {
+  const previous = new Map<HTMLElement, boolean>();
+  let current: HTMLElement = overlay;
+  while (current.parentElement) {
+    const parent = current.parentElement;
+    for (const sibling of Array.from(parent.children)) {
+      if (sibling !== current && "inert" in sibling) {
+        const element = sibling as HTMLElement;
+        previous.set(element, element.inert); element.inert = true;
+      }
+    }
+    current = parent;
+    if (parent.tagName === "BODY") break;
+  }
+  return () => { for (const [element, inert] of previous) element.inert = inert; previous.clear(); };
+}
+
 /** Own every animation handle, including fill-forwards effects on hidden nodes. */
 export function runHomeIntro(root: HTMLElement) {
   const overlay = root.querySelector<HTMLButtonElement>("[data-home-intro]")!;
@@ -26,17 +44,25 @@ export function runHomeIntro(root: HTMLElement) {
   const animations: Animation[] = [];
   const timers: ReturnType<typeof setTimeout>[] = [];
   let raf = 0, stopped = false, revealing = false;
+  let releaseIsolation: (() => void) | undefined;
   const animate = (node: HTMLElement, frames: Keyframe[], options: KeyframeAnimationOptions) => {
     const animation = node.animate(frames, options); animations.push(animation); return animation;
   };
-  const restoreFocus = () => { if (document.activeElement === overlay) root.querySelector<HTMLButtonElement>("[data-home-action]")?.focus({ preventScroll: true }); };
+  const restoreFocus = () => {
+    releaseIsolation?.(); releaseIsolation = undefined;
+    if (document.activeElement === overlay) (root.querySelector<HTMLButtonElement>("[data-home-action]") ?? root.querySelector<HTMLButtonElement>("[data-motion-cover]") ?? root.querySelector<HTMLButtonElement>("[data-home-motion]"))?.focus({ preventScroll: true });
+  };
   const clear = () => {
     cancelAnimationFrame(raf); timers.forEach(clearTimeout); animations.forEach((animation) => animation.cancel());
     restoreFocus(); overlay.hidden = true; root.removeAttribute("data-intro-active");
     overlay.removeEventListener("click", skip); window.removeEventListener("keydown", key); motion.removeEventListener("change", changed);
   };
   const skip = () => { stopped = true; clear(); };
-  const key = (event: KeyboardEvent) => { if (event.key === "Escape") { event.preventDefault(); skip(); } };
+  const key = (event: KeyboardEvent) => {
+    if (overlay.hidden) return;
+    if (event.key === "Escape") { event.preventDefault(); skip(); }
+    else if (event.key === "Tab") { event.preventDefault(); overlay.focus({ preventScroll: true }); }
+  };
   const changed = () => { if (motion.matches) skip(); };
   const burst = () => {
     if (stopped || motion.matches) return;
@@ -61,7 +87,7 @@ export function runHomeIntro(root: HTMLElement) {
   overlay.addEventListener("click", skip); window.addEventListener("keydown", key); motion.addEventListener("change", changed);
   if (motion.matches) skip();
   else {
-    overlay.hidden = false; root.dataset.introActive = "true"; overlay.focus({ preventScroll: true });
+    overlay.hidden = false; root.dataset.introActive = "true"; releaseIsolation = isolateIntroBackground(overlay); overlay.focus({ preventScroll: true });
     animate(star, [{ transform: "rotate(0deg) scale(.6)", opacity: 0 }, { transform: "rotate(180deg) scale(1)", opacity: 1 }], { duration: 900, fill: "forwards", easing: "cubic-bezier(.22,1,.36,1)" });
     const start = performance.now();
     const tick = (now: number) => { if (stopped) return; count.textContent = String(introProgress(now - start)).padStart(2, "0"); if (now - start < 950) raf = requestAnimationFrame(tick); else reveal(); };

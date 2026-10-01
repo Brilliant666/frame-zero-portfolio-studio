@@ -139,7 +139,7 @@ export default function NeonHudTemplate({
           <div className={styles.viewportTopbar}>
             <span><i /> LIVE VIEW</span>
             <span>FRAME {frameNumber} / {frameTotal}</span>
-            <span>RAW + JPG</span>
+            <span>PHOTO ARCHIVE</span>
           </div>
 
           <div className={styles.viewportBody}>
@@ -178,9 +178,9 @@ export default function NeonHudTemplate({
                 <span className={styles.reticleVertical} />
               </div>
               <div className={styles.stageTelemetry} aria-hidden="true">
-                <span>4K 60</span>
-                <span>AF-C</span>
-                <span>+0.3 EV</span>
+                <span>FRAME {frameNumber}</span>
+                <span>{activeStageRatio}</span>
+                <span>PHOTO</span>
               </div>
               <button className={`${styles.arrow} ${styles.arrowLeft}`} type="button" onClick={() => move(-1)} aria-label="上一张作品">←</button>
               <button className={`${styles.arrow} ${styles.arrowRight}`} type="button" onClick={() => move(1)} aria-label="下一张作品">→</button>
@@ -196,11 +196,11 @@ export default function NeonHudTemplate({
                 </p>
               </div>
 
-              <div className={styles.exposureGrid} aria-label="视觉参数">
-                <span><small>ISO</small><strong>{String(200 + safeIndex * 100)}</strong></span>
-                <span><small>SHUTTER</small><strong>1/{125 + safeIndex * 25}</strong></span>
-                <span><small>APERTURE</small><strong>F2.8</strong></span>
-                <span><small>PROFILE</small><strong>CINE-{String.fromCharCode(65 + (safeIndex % 4))}</strong></span>
+              <div className={styles.exposureGrid} aria-label="作品信息">
+                <span><small>FRAME</small><strong>{frameNumber} / {frameTotal}</strong></span>
+                <span><small>RATIO</small><strong>{activeStageRatio}</strong></span>
+                <span><small>WIDTH</small><strong>{activeWork?.previewWidth ?? "—"} PX</strong></span>
+                <span><small>HEIGHT</small><strong>{activeWork?.previewHeight ?? "—"} PX</strong></span>
               </div>
 
               <div className={styles.waveform} aria-hidden="true">

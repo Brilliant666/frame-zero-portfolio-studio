@@ -278,7 +278,7 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
       await page.getByLabel('摄影师名称', { exact: true }).fill('Saved but rejected publication');
       await page.route(`**${publicationPath('basic')}`, route => route.request().method() === 'POST' ? route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ error: 'Synthetic lost authorization' }) }) : route.continue());
       await publicationRegion().getByRole('button', { name: '保存并发布', exact: true }).click();
-      await publicationRegion().getByRole('status').filter({ hasText: /已保存.*发布被拒绝/ }).waitFor();
+      await publicationRegion().getByRole('alert').filter({ hasText: /已保存.*发布被拒绝/ }).waitFor();
       assert.equal((await draft()).content.profile.photographer, 'Saved but rejected publication');
       assert.equal((await publication()).current.id, pointer);
       await page.unroute(`**${publicationPath('basic')}`);
@@ -300,11 +300,11 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
       const beforePost = writes('POST', publicationPath('basic')), pointer = (await publication()).current.id;
       await page.route(`**${publicationPath('basic')}`, route => route.request().method() === 'POST' ? route.abort('failed') : route.continue());
       await publicationRegion().getByRole('button', { name: '保存并发布', exact: true }).click();
-      await publicationRegion().getByRole('status').filter({ hasText: /发布结果待确认；当前公开版本与目标不同/ }).waitFor();
+      await publicationRegion().getByRole('status').filter({ hasText: /公开结果待确认；当前公开版本与目标不同/ }).waitFor();
       assert.equal(await publicationRegion().getByRole('button', { name: '保存并发布', exact: true }).isDisabled(), true);
       // Recovery remains available without expanding publication history.
-      await publicationRegion().getByRole('button', { name: '检查发布结果', exact: true }).waitFor({ state: 'visible' });
-      await publicationRegion().getByRole('button', { name: '检查发布结果', exact: true }).click();
+      await publicationRegion().getByRole('button', { name: '只读检查发布结果', exact: true }).waitFor({ state: 'visible' });
+      await publicationRegion().getByRole('button', { name: '只读检查发布结果', exact: true }).click();
       await publicationRegion().getByRole('status').filter({ hasText: '发布结果仍待确认' }).waitFor();
       assert.equal(writes('POST', publicationPath('basic')) - beforePost, 1); assert.equal((await publication()).current.id, pointer);
       await screenshot(page, 'uncertain-result-no-replay');

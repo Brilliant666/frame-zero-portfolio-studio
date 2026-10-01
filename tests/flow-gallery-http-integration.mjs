@@ -43,6 +43,9 @@ export async function flowGalleryHttpIntegration({ runtime, origin, password, re
   assert.equal((await request(`/${slug}/admin/${space}`, { cookie: outsider })).status, 404);
   const entry = await sitePage(`/${slug}/admin`, 200, cookie);
   assert.ok(entry.includes(`href="/${slug}/admin/${space}"`));
+  assert.match(entry, /data-workspace-public="unpublished"/);
+  assert.equal((await request(`/${slug}/admin`, { cookie: outsider })).status, 403);
+  assert.equal((await request(`/${slug}/admin`)).status, 401);
 
   const empty = await readDraft(slug, space, cookie);
   assert.equal(empty.revision, 0); assert.equal(empty.updatedAt, null);
@@ -93,6 +96,7 @@ export async function flowGalleryHttpIntegration({ runtime, origin, password, re
   assert.deepEqual(await readDraft(slug, 'basic', cookie), savedBasic);
   assert.equal((await readDraft(other, space, outsider)).revision, 0);
   assert.equal(await readPublished(runtime.pool, slug), null, 'Save alone does not move the public pointer');
+  assert.match(await sitePage(`/${slug}/admin`, 200, cookie), /data-workspace-public="unpublished"/);
   assert.match(await sitePage(`/${slug}`, 200), /data-site-state="unpublished"/);
   const preview = await request(`/${slug}/admin/preview/${space}`, { cookie });
   assert.equal(preview.status, 200); assert.match(preview.headers.get('cache-control'), /private/);
@@ -107,6 +111,11 @@ export async function flowGalleryHttpIntegration({ runtime, origin, password, re
   const publishResponse = await publication(cookie, { action: 'publish', expectedDraftRevision: saved.revision, expectedPublicationId: null });
   assert.equal(publishResponse.status, 200); const first = (await publishResponse.json()).publication;
   assert.equal(first.space, space); assert.equal(first.templateId, space); assert.equal(first.draftRevision, saved.revision);
+  const publishedEntry = await sitePage(`/${slug}/admin`, 200, cookie);
+  assert.match(publishedEntry, /data-workspace-public="premium-flow-gallery"/);
+  assert.match(publishedEntry, /当前公开主页：流影视廊/);
+  assert.equal((publishedEntry.match(/data-current-public="true"/g) ?? []).length, 1);
+  assert.doesNotMatch(publishedEntry, /FLOW-PUBLISHED-CAPTION|FLOW-PUBLISHED-INTRO/, 'Workbench never renders draft/snapshot business content');
   const snapshot = await readPublished(runtime.pool, slug);
   assert.equal(snapshot.id, first.id); assert.deepEqual(snapshot.assetIds, [assets[0], assets[2], assets[1], assets[4]]);
   assert.deepEqual(snapshot.content.groups.map(group => group.id), [visibleId]);
@@ -166,18 +175,23 @@ export async function flowGalleryHttpIntegration({ runtime, origin, password, re
   assert.ok(!('content' in currentWithoutGrant.current)); assert.ok(currentWithoutGrant.history.every(row => row.space !== space));
   assert.equal((await request(draftPath(), { cookie })).status, 403);
   assert.match(await (await request(`/${slug}`)).text(), /FLOW-PUBLISHED-TITLE/, 'Revoking an editor grant does not rewrite the public pointer');
+  assert.match(await sitePage(`/${slug}/admin`, 200, cookie), /当前公开主页：流影视廊/, 'Revoked editing grant still exposes read-only current Published summary');
   await grant(owner.siteId);
 
   const unpublished = structuredClone(d); unpublished.profile.title = 'FLOW-NEW-PRIVATE-DRAFT'; unpublished.profile.intro = 'FLOW-NEW-PRIVATE-INTRO';
   const nextResponse = await saveDraft(slug, space, cookie, unpublished, saved.revision); assert.equal(nextResponse.status, 200);
   const nextDraft = await nextResponse.json(); assert.equal(nextDraft.revision, 2);
   assert.equal((await readPublished(runtime.pool, slug)).id, first.id);
+  const afterDraftEntry = await sitePage(`/${slug}/admin`, 200, cookie);
+  assert.match(afterDraftEntry, /当前公开主页：流影视廊/); assert.match(afterDraftEntry, /公开版本对应草稿 v1/);
+  assert.doesNotMatch(afterDraftEntry, /FLOW-NEW-PRIVATE-DRAFT|FLOW-NEW-PRIVATE-INTRO/);
   assert.doesNotMatch(await (await request(`/${slug}`)).text(), /FLOW-NEW-PRIVATE-DRAFT|FLOW-NEW-PRIVATE-INTRO/);
 
   // All three spaces use one address and one pointer while keeping their drafts.
   const basicPublishedResponse = await publication(cookie, { action: 'publish', expectedDraftRevision: savedBasic.revision, expectedPublicationId: first.id }, slug, 'basic');
   assert.equal(basicPublishedResponse.status, 200); const basicPublished = (await basicPublishedResponse.json()).publication;
   assert.match(await (await request(`/${slug}`)).text(), /data-publication-space="basic"/);
+  assert.match(await sitePage(`/${slug}/admin`, 200, cookie), /data-workspace-public="basic"/);
   for (const method of ['GET', 'HEAD']) for (const validator of [cachedFullEtag, '*']) {
     assert.equal((await request(publicAssetPath(assets[1]), { method, headers: { 'if-none-match': validator } })).status, 404, 'Current Published removal wins over a cached validator');
   }

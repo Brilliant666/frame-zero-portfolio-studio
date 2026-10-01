@@ -51,7 +51,7 @@ function contactRenderer() {
     return loadedModule.exports;
   }
   return {
-    render(templateId, collectionWorkspace, overrides = {}) {
+    render(templateId, collectionWorkspace, overrides = {}, propsOverrides = {}) {
       sharedCalls = 0;
       const Template = load(path.resolve(`app/templates/${templateId}/template.tsx`)).default;
       const content = {
@@ -66,7 +66,7 @@ function contactRenderer() {
       const html = renderToStaticMarkup(createElement(Template, {
         templateId, content, works: [], packages: [], bookingTemplate: "测试预约清单",
         booted: true, copiedKey: null, isPreview: true,
-        onCopy: async () => {}, onOpenWork: () => {}, collectionWorkspace,
+        onCopy: async () => {}, onOpenWork: () => {}, collectionWorkspace, ...propsOverrides,
       }));
       return { html, sharedCalls };
     },
@@ -255,4 +255,39 @@ test("Admin treats each uploaded QR as an explicit saved row reference", async (
   assert.match(siteConfig, /qrAssetId\?: string/);
   assert.match(siteConfig, /normalizePlatformQrAssetId\(item\?\.qrAssetId\)/);
   await assert.rejects(fs.stat("app/templates/polaroid-field/social-qr-code.tsx"), { code: "ENOENT" });
+});
+
+
+test("basic main titles render the author's title in the actual heading", () => {
+  const renderer = contactRenderer();
+  for (const templateId of ["prism-liquid", "orbital-portal", "museum-depth", "polaroid-field"]) {
+    const { html } = renderer.render(templateId, undefined, {
+      hero: { eyebrow: "作者简介", title: "林间人像与城市光影", services: "人像摄影" },
+    });
+    assert.match(html, /<h1[^>]*>(?:<em>)?林间人像与城市光影/, templateId);
+  }
+});
+
+test("basic metadata does not invent capture settings or a storage limit", () => {
+  const renderer = contactRenderer();
+  for (const templateId of ["cinematic-light", "neon-hud", "archive-os", "film-rail", "museum-depth"]) {
+    const { html } = renderer.render(templateId);
+    assert.doesNotMatch(html, /ISO 400|4K [/] 60FPS|KODAK PORTRA|40 CAPACITY|ACQ\. 2026|FRAME[/][/]ZERO/, templateId);
+  }
+});
+
+test("museum quick index only links to real works and each target is focusable", () => {
+  const renderer = contactRenderer();
+  const works = Array.from({ length: 3 }, (_, index) => ({
+    code: "review-" + index, title: "作品 " + index, subtitle: "匿名验证", category: "人像",
+    preview: "/review-preview.webp", image: "/review-full.webp", position: "50% 50%",
+    previewWidth: 1200, previewHeight: 800, fullWidth: 2200, fullHeight: 1467,
+  }));
+  const { html } = renderer.render("museum-depth", undefined, {}, { works });
+  const index = html.match(/<nav class="exhibitIndex"[^>]*>(.*?)<\/nav>/)?.[1];
+  assert.ok(index);
+  const targets = [...index.matchAll(/href="#(museum-frame-\d+)"/g)].map((match) => match[1]);
+  assert.ok(targets.length > 0);
+  for (const target of targets) assert.ok(html.includes('id="' + target + '" tabindex="-1"'));
+  assert.doesNotMatch(index, /PENDING|GALLERY/);
 });

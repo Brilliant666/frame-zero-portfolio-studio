@@ -210,7 +210,7 @@ export default function MangaPanelsTemplate({
                     <span className={styles.dotScreen} aria-hidden="true" />
                     <span className={styles.panelNumber}>{String(panelNumber).padStart(2, "0")}</span>
                     <span className={styles.panelMeta}>
-                      <small>{work.code} / {work.subtitle}</small>
+                      <small>{work.code}</small>
                       <strong>{work.title}</strong>
                     </span>
                     <span className={styles.panelSfx} aria-hidden="true">{panelSfx[storyIndex]}</span>

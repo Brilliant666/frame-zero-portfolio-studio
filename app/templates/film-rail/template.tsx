@@ -121,7 +121,7 @@ export default function FilmRailTemplate({
 
       <section className={styles.hero} id="film-top" data-template-view="works" hidden={activeView !== "works"} tabIndex={-1}>
         <div className={styles.heroCopy}>
-          <p className={styles.kicker}>FRAME//ZERO PRESENTS · COSPLAY PHOTOGRAPHY</p>
+          <p className={styles.kicker}>{content.profile.brand} PRESENTS · {content.hero.eyebrow}</p>
           <h1>
             <span>{content.hero.title}</span>
             <em>ONE FRAME<br />AT A TIME.</em>
@@ -133,7 +133,7 @@ export default function FilmRailTemplate({
               <a href="#film-booking">预约拍摄 <span>↘</span></a>
             </div>
           </div>
-          <dl className={styles.heroFacts}>
+          <dl className={styles.heroFacts} hidden={content.trustItems.length === 0}>
             {content.trustItems.map((item) => (
               <div key={item.label}><dt>{item.label}</dt><dd>{item.value}</dd></div>
             ))}
@@ -163,7 +163,7 @@ export default function FilmRailTemplate({
               </button>
             ) : <PhotoPlaceholder slot={leadSlot} className={styles.emptyFrame} tone="dark" label="未曝光主画面" />}
             <div className={styles.heroCaption}>
-              <span>35 MM / COLOR NEGATIVE</span>
+              <span>PHOTO / SELECTED FRAME</span>
               <strong>{leadWork?.title ?? content.profile.brand}</strong>
               <span>FRAME 001</span>
             </div>
@@ -218,7 +218,7 @@ export default function FilmRailTemplate({
                 key={work?.code ?? `film-placeholder-${index}`}
               >
                 <div className={styles.frameTopline}>
-                  <span>KODAK PORTRA 400</span>
+                  <span>PHOTO / {work?.code ?? "PENDING"}</span>
                   <span>{String(index + 1).padStart(2, "0")} / {String(filmSlots.length).padStart(2, "0")}</span>
                   <span>{work?.code ?? "UNEXPOSED"}</span>
                 </div>
@@ -252,7 +252,7 @@ export default function FilmRailTemplate({
               );
             })}
             <div className={styles.endLeader} aria-hidden="true">
-              <span>END OF ROLL</span><i /><span>FRAME//ZERO</span>
+              <span>END OF ROLL</span><i /><span>{content.profile.brand}</span>
             </div>
           </div>
           <div className={`${styles.sprockets} ${styles.sprocketsBottom}`} aria-hidden="true" />
@@ -326,7 +326,7 @@ export default function FilmRailTemplate({
         </div>
 
         <div className={styles.callSheet}>
-          <div className={styles.callSheetHead}><span>CALL_SHEET / 001</span><span>FRAME//ZERO</span></div>
+          <div className={styles.callSheetHead}><span>CALL_SHEET / 001</span><span>{content.profile.brand}</span></div>
           <pre>{bookingTemplate}</pre>
           <button type="button" onClick={() => void onCopy(bookingTemplate, "film-template")}>
             {copiedKey === "film-template" ? "约拍清单已复制 ✓" : "复制完整约拍清单"}

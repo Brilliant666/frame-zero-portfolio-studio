@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { changePublication, publicationHistory, readPublished } from '../db/accounts/publications.mjs';
-import { flowGalleryWorkspaceCard } from '../db/accounts/site-entry.mjs';
+import { flowGalleryWorkspaceCard, publishedWorkspaceSummary } from '../db/accounts/site-entry.mjs';
 
 const flow = 'premium-flow-gallery';
 const polaroid = 'premium-polaroid';
@@ -101,4 +101,16 @@ test('workspace entry requires independent flow grant and escapes Site slug', ()
   assert.doesNotMatch(card([polaroid]), /href=/);
   assert.match(card([flow]), /href="\/fixture\/admin\/premium-flow-gallery"/);
   assert.match(flowGalleryWorkspaceCard({ templates: { premium: [flow] } }, 'unsafe"<'), /unsafe&quot;&lt;/);
+});
+
+test('workspace public summary distinguishes unknown, unpublished and a saved Published snapshot', () => {
+  assert.match(publishedWorkspaceSummary(undefined), /data-workspace-public="unknown"/);
+  assert.doesNotMatch(publishedWorkspaceSummary(undefined), /尚未发布作品集/);
+  assert.match(publishedWorkspaceSummary(null), /data-workspace-public="unpublished"/);
+  const published = { space: 'basic', templateId: 'archive-os', draftRevision: 3 };
+  const html = publishedWorkspaceSummary(published, { 'archive-os': '摄影档案系统' });
+  assert.match(html, /基础版 · 摄影档案系统/); assert.match(html, /草稿 v3/); assert.doesNotMatch(html, /archive-os/);
+  assert.match(publishedWorkspaceSummary({...published, templateId: 'bad"<', space: '<script>'}), /&lt;script&gt;/);
+  assert.match(flowGalleryWorkspaceCard({templates: {premium: [flow]}}, 'fixture', { space: flow }), /data-current-public="true"/);
+  assert.doesNotMatch(flowGalleryWorkspaceCard({templates: {premium: [flow]}}, 'fixture', published), /data-current-public/);
 });

@@ -49,8 +49,8 @@ export default function MuseumDepthTemplate({ content, works, packages, bookingT
       <section id="museum-top" className={styles.hero} data-template-view="works" hidden={activeView !== "works"} tabIndex={-1}>
         <div className={styles.heroNumber}>01</div>
         <div className={styles.heroCopy}>
-          <small>FRAME//ZERO PRESENTS · EXHIBITION 2026</small>
-          <h1>THE ROLE<br /><em>IN DEPTH</em></h1>
+          <small>{content.profile.brand} · {content.hero.eyebrow}</small>
+          <h1>{content.hero.title}</h1>
           <p>{content.profile.photographer} 的角色影像展。沿着光线前行，每一幅作品都是通往另一重现实的展框。</p>
           <a href="#museum-exhibition">进入展厅 ↓</a>
         </div>
@@ -88,11 +88,18 @@ export default function MuseumDepthTemplate({ content, works, packages, bookingT
       <section id="museum-exhibition" className={styles.exhibition} data-template-view="works" hidden={activeView !== "works"} tabIndex={-1}>
         <div className={styles.corridorLines} aria-hidden="true"><i /><i /><i /><i /></div>
         <div className={styles.exhibitionIntro}><span>CURATED ARCHIVE / {exhibitSlots.length} ROOMS</span><h2>向展厅深处<br />缓慢行进。</h2><p>点击任意展框查看完整画幅。滚动时，作品会从空间深处靠近。</p></div>
+        <nav className={styles.exhibitIndex} aria-label="快速定位作品">
+          {exhibitSlots.map((slot, index) => slot.work ? (
+            <a key={`museum-index-${slot.index}`} href={`#museum-frame-${slot.index}`}>
+              <span>{String(index + 2).padStart(2, "0")}</span>{slot.work.title}
+            </a>
+          ) : null)}
+        </nav>
         <div className={styles.exhibitList}>
           {exhibitSlots.map((slot, index) => {
             const work = slot.work;
             return (
-            <article className={styles.exhibit} key={`museum-slot-${slot.index}`} data-photo-slot={slot.index} data-photo-ratio={slot.ratio} style={{ "--exhibit-index": index } as CSSProperties}>
+            <article id={`museum-frame-${slot.index}`} tabIndex={-1} className={styles.exhibit} key={`museum-slot-${slot.index}`} data-photo-slot={slot.index} data-photo-ratio={slot.ratio} style={{ "--exhibit-index": index } as CSSProperties}>
               <div className={styles.wallLabel}>
                 <span>{String(index + 2).padStart(2, "0")}</span><small>ROOM / {work?.code ?? "PENDING"}</small><strong>{work?.title ?? `GALLERY ${String(index + 2).padStart(2, "0")}`}</strong><p>{work?.subtitle ?? "IMAGE PENDING / CURATOR’S NOTE"}</p>
               </div>
@@ -109,7 +116,7 @@ export default function MuseumDepthTemplate({ content, works, packages, bookingT
                   <span className={styles.frameLight} aria-hidden="true" />
                 </div>
               )}
-              <div className={styles.floorMark}>FRAME ZERO COLLECTION · ACQ. 2026</div>
+              <div className={styles.floorMark}>{content.profile.brand} · PHOTO COLLECTION</div>
             </article>
             );
           })}

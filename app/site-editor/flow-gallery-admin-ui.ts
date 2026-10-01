@@ -2,6 +2,11 @@ import type { FlowGalleryDocumentV1 } from "./flow-gallery-document";
 
 export type FlowEditorSection = "library" | "home" | "groups" | "pricing" | "contact";
 export type FlowPreviewScene = "works" | "gallery" | "pricing" | "contact";
+/** Editor hashes are distinct from the public scenes used inside previews. */
+export function flowSectionFromHash(hash: string): FlowEditorSection | null {
+  const section = hash.replace(/^#edit-/, "");
+  return hash.startsWith("#edit-") && ["library", "home", "groups", "pricing", "contact"].includes(section) ? section as FlowEditorSection : null;
+}
 export const FLOW_EDITOR_MODULES: readonly { id: FlowEditorSection; label: string; position: string; purpose: string; scene: FlowPreviewScene }[] = [
   { id: "library", label: "图库", position: "本站共享素材，选入分类或设为背景后展示", purpose: "在这里上传照片；再把需要展示的照片加入完整作品分类。上传本身不改变主页。", scene: "gallery" },
   { id: "home", label: "首页", position: "打开流影视廊后看到的第一屏", purpose: "设置导航名称、首页标题与介绍、全屏背景，以及左右两条作品速览。", scene: "works" },

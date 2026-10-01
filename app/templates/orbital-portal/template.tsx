@@ -71,7 +71,7 @@ export default function OrbitalPortalTemplate({ content, works, packages, bookin
         <div className={styles.stars} aria-hidden="true" />
         <div className={styles.heroCopy}>
           <small>VISUAL GATE / 00—{String(ORBIT_RATIOS.length).padStart(2, "0")}</small>
-          <h1>ENTER<br /><em>THE ROLE</em></h1>
+          <h1><em>{content.hero.title}</em></h1>
           <p>{content.profile.photographer} · {content.profile.role}</p>
           <p>{content.profile.intro} {content.hero.services}</p>
           <a href="#portal-works">开启视觉轨道 <span>↘</span></a>

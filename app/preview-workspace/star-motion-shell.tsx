@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useLayoutEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useContext, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import styles from "./star-motion.module.css";
 import sections from "./theme-sections.module.css";
@@ -10,6 +10,7 @@ import "../templates/polaroid-field/motion-fonts.css";
 import StarSky from "./star-sky";
 import { PREVIEW_THEME_KEY } from "./preview-theme";
 import GlassSegments from "./glass-segments";
+import { StarMotionContext } from "./motion-preference";
 import type { PolaroidView } from "../templates/polaroid-field/navigation";
 import type { MouseEvent } from "react";
 
@@ -34,6 +35,7 @@ export function StarThemeToggle() {
   </svg></button>;
 }
 export default function StarMotionShell({ children }: { children: ReactNode }) {
+  const [paused, setPaused] = useState(false);
   const snapshot=useSyncExternalStore(subscribeTheme,currentTheme,serverTheme);
   const theme:Theme=snapshot==="night"?"night":"paper",enabled=snapshot!=="disabled";
   const transition=useRef<ViewTransition|null>(null),reveal=useRef<Animation|null>(null);
@@ -56,7 +58,7 @@ export default function StarMotionShell({ children }: { children: ReactNode }) {
     const root=document.documentElement;
     reveal.current?.cancel();transition.current?.skipTransition();
     const apply=()=>{if(!mounted.current || !themeRoute())return;root.dataset.previewTheme=next;root.dataset.starTheme=next;window.dispatchEvent(new Event(themeEvent));try{localStorage.setItem(PREVIEW_THEME_KEY,next);}catch{/* Per-visit fallback. */}};
-    if(!document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches){apply();return;}
+    if(paused || !document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches){apply();return;}
     let current:ViewTransition;
     try{current=document.startViewTransition(()=>flushSync(apply));}catch{apply();return;}
     transition.current=current;
@@ -71,8 +73,8 @@ export default function StarMotionShell({ children }: { children: ReactNode }) {
   // Keep the preview subtree mounted while restoring the initial theme; rebuilding
   // it here would replay/consume the first-visit entrance before it can be seen.
   const localPaper=typeof window!=="undefined" && !themeRoute();
-  return <ThemeContext.Provider value={{theme, enabled, change}}><div className={`${styles.shell}${localPaper?"":` ${sections.sections}`}`} data-preview-local-theme={localPaper?"paper":undefined} data-star-theme={localPaper?"paper":undefined}>
-    <StarSky active={theme === "night"} className={styles.stars} />
+  return <StarMotionContext.Provider value={{paused,toggle:()=>setPaused(value=>!value)}}><ThemeContext.Provider value={{theme, enabled, change}}><div className={`${styles.shell}${localPaper?"":` ${sections.sections}`}`} data-preview-local-theme={localPaper?"paper":undefined} data-star-theme={localPaper?"paper":undefined} data-star-motion-paused={paused || undefined}>
+    <StarSky active={theme === "night"} paused={paused} className={styles.stars} />
     {children}
-  </div></ThemeContext.Provider>;
+  </div></ThemeContext.Provider></StarMotionContext.Provider>;
 }

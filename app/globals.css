@@ -636,7 +636,7 @@ dialog[data-template-real-preview] main[data-template]:is(
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 43%, rgba(2,2,3,.88));
+  background: linear-gradient(180deg, transparent 60%, rgba(2,2,3,.88));
   transition: opacity .35s ease;
 }
 
@@ -683,7 +683,7 @@ dialog[data-template-real-preview] main[data-template]:is(
 
 .work-meta small { color: var(--acid); }
 .work-meta strong { color: #fff; font-size: clamp(1.05rem, 2vw, 1.65rem); letter-spacing: -.03em; }
-.work-meta em { color: rgba(255,255,255,.58); font-style: normal; }
+.work-meta em { display: none; color: rgba(255,255,255,.58); font-style: normal; }
 .work-open { right: 1rem; top: 1rem; opacity: 0; transform: translateY(-.5rem); transition: .3s ease; }
 .work-open { color: #fff; }
 .work-card:hover .work-open,
@@ -777,8 +777,9 @@ dialog[data-template-real-preview] main[data-template]:is(
 .package-offer li,
 .pricing-note {
   font-family: var(--font-geist-mono), monospace;
-  font-size: .58rem;
-  letter-spacing: .08em;
+  font-size: .8125rem;
+  letter-spacing: .04em;
+  line-height: 1.65;
 }
 
 .package-offer small {
@@ -915,8 +916,9 @@ dialog[data-template-real-preview] main[data-template]:is(
 .quick-contact span,
 .demo-note {
   font-family: var(--font-geist-mono), monospace;
-  font-size: .54rem;
-  letter-spacing: .08em;
+  font-size: .8125rem;
+  letter-spacing: .04em;
+  line-height: 1.65;
 }
 
 .quick-contact small,
@@ -962,7 +964,7 @@ dialog[data-template-real-preview] main[data-template]:is(
   margin: 0;
   padding: 1.3rem;
   color: rgba(46,29,17,.74);
-  font: .72rem/1.9 var(--font-geist-mono), monospace;
+  font: .8125rem/1.9 var(--font-geist-mono), monospace;
   white-space: pre-wrap;
 }
 
@@ -974,7 +976,7 @@ dialog[data-template-real-preview] main[data-template]:is(
   color: #160900;
   cursor: pointer;
   font-family: var(--font-geist-mono), monospace;
-  font-size: .7rem;
+  font-size: .8125rem;
   font-weight: 700;
   letter-spacing: .1em;
 }

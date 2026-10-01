@@ -113,7 +113,7 @@ export default function ArchiveOsTemplate({
     <main className={styles.shell} data-template={templateId}>
       <a className={styles.skipLink} href="#archive-library">跳到作品资料库</a>
 
-      <section className={styles.desktopWindow} aria-label="FRAME ZERO 摄影档案系统">
+      <section className={styles.desktopWindow} aria-label={`${content.profile.brand} 摄影档案系统`}>
         <header className={styles.titlebar}>
           <div className={styles.windowControls} aria-hidden="true"><i /><i /><i /></div>
           <a className={styles.brand} href="#archive-library">
@@ -171,15 +171,14 @@ export default function ArchiveOsTemplate({
             </div>
 
             <div className={styles.storageCard}>
-              <span>ARCHIVE STORAGE</span>
-              <div><i /></div>
-              <small>{works.length} SELECTED / 40 CAPACITY</small>
+              <span>SELECTED WORKS / 作品数量</span>
+              <small>{works.length} 张作品</small>
             </div>
           </aside>
 
           <section className={styles.library} id="archive-library" data-pane="library" aria-labelledby="library-heading">
             <div className={styles.libraryHeading}>
-              <div><p>FRAME//ZERO / {FILTERS.find((item) => item.id === filter)?.label}</p><h1 id="library-heading">摄影作品档案</h1></div>
+              <div><p>{content.profile.brand} / {FILTERS.find((item) => item.id === filter)?.label}</p><h1 id="library-heading">摄影作品档案</h1></div>
               <span>{content.hero.eyebrow}</span>
             </div>
 
@@ -217,7 +216,7 @@ export default function ArchiveOsTemplate({
                             decoding="async"
                             style={{ objectPosition: work.position }}
                           />
-                          <i aria-hidden="true">{selected ? "SELECTED" : "RAW+"}</i>
+                          <i aria-hidden="true">{selected ? "SELECTED" : "PHOTO"}</i>
                         </span>
                       </span>
                       <span className={styles.assetMeta}>
@@ -283,7 +282,7 @@ export default function ArchiveOsTemplate({
                 </button>
                 <div className={styles.inspectorName}><small>{selectedWork.code}</small><h2>{selectedWork.title}</h2><p>{selectedWork.subtitle}</p></div>
                 <dl className={styles.metadata}>
-                  <div><dt>FORMAT</dt><dd>WEBP / RGB</dd></div>
+                  <div><dt>DISPLAY</dt><dd>PHOTO PREVIEW</dd></div>
                   <div><dt>DIMENSIONS</dt><dd>{selectedWork.fullWidth} PX</dd></div>
                   <div><dt>FOCUS</dt><dd>{selectedWork.position}</dd></div>
                   <div><dt>STATUS</dt><dd><i /> PUBLISHED</dd></div>
