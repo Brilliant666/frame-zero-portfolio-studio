@@ -39,8 +39,14 @@ test("server-renders the platform landing rather than a photographer portfolio",
   assert.match(html, /href="\/preview"/);
   assert.doesNotMatch(html, /id="archive"|FRAMEZERO_DEMO/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|Codex is working/i);
-  assert.doesNotMatch(html, /data-admin-draft-preview-trigger|data-admin-draft-preview-dialog|保存并发布|仅保存草稿/,
+  assert.doesNotMatch(html, /data-admin-draft-preview-trigger|data-admin-draft-preview-dialog|data-site-editor-publication|<form\b/i,
     "the public platform landing must not render private editor actions");
+  // Product prose may explain save/publish. Actual interactive controls must
+  // still exclude these actions and private editor links.
+  const controls = html.match(/<(?:button|a)\b[^>]*>[\s\S]*?<\/(?:button|a)>/gi) ?? [];
+  assert.doesNotMatch(controls.join("\n"), /保存并发布|仅保存草稿|href="\/[^"\s]*admin(?:\/|"|\?)/i,
+    "save/publish descriptions cannot become public editor controls");
+  assert.doesNotMatch(html, /<input\b[^>]*value="(?:保存并发布|仅保存草稿)"/i);
 });
 
 test("keeps editable content and eleven lazy template choices in one configuration", async () => {

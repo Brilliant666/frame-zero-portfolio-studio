@@ -31,11 +31,14 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
     if (url.pathname.startsWith(`/api/sites/${a}/assets`)) network.push({ path: url.pathname, method: response.request().method(), status: response.status() });
   });
   const page = await context.newPage();
-  async function expandTools(title) {
-    const summary = page.getByText(title, { exact: true });
-    // Read the native disclosure state and use its visible control, as a user does.
-    const details = summary.locator('..');
-    if (await details.getAttribute('open') === null) await summary.click();
+  async function visibleUpload() {
+    const uploader = page.locator('#basic-photo-upload [data-site-upload]');
+    const input = uploader.getByLabel('上传本站照片', { exact: true });
+    await input.waitFor({ state: 'visible' });
+    await page.waitForFunction(() => document.querySelector('#basic-photo-upload input[type="file"]')?.matches(':enabled'));
+    assert.equal(await input.isEnabled(), true, 'The visible gallery upload is ready for user input');
+    assert.equal(await input.getAttribute('accept'), 'image/jpeg,image/png,image/webp');
+    await uploader.getByText(/每批最多 8 张 · 每张最多 20 MB · JPEG \/ PNG \/ WebP/).waitFor({ state: 'visible' });
   }
 
   async function login(p, username) {
@@ -104,7 +107,7 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
       for (const [name, width, height, background] of [['landscape', 900, 600, '#476aa3'], ['portrait', 600, 900, '#70a284'], ['square', 700, 700, '#d2ad65']]) {
         files.push({ name: `${name}.png`, mimeType: 'image/png', buffer: await sharp({ create: { width, height, channels: 3, background } }).png().toBuffer() });
       }
-      await expandTools('上传素材与排版建议');
+      await visibleUpload();
       await page.getByLabel('上传本站照片', { exact: true }).setInputFiles(files);
       await page.getByText('已上传 3 张；本站各内容空间可引用同一资源，无需重复上传。', { exact: true }).waitFor();
       const list = await context.request.get(`${origin}/api/sites/${a}/assets`);
@@ -167,8 +170,7 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
       for (const width of [390, 320]) {
         await page.setViewportSize({ width, height: 844 });
         await page.goto(`${origin}${basic}/layout`);
-        await expandTools('上传素材与排版建议');
-        await page.getByLabel('上传本站照片', { exact: true }).waitFor();
+        await visibleUpload();
         await images({ editor: true }); await shot('04-basic-mobile');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 2), false, `Basic editor overflow at ${width}`);
         await page.goto(`${origin}${premium}#edit-collections`);

@@ -113,16 +113,67 @@ export async function exerciseLargeCollections({ page, read, published, shot }) 
           stableFrames = Math.abs(nextScroll - lastScroll) < 1 ? stableFrames + 1 : 0; lastScroll = nextScroll;
         }
         assert.ok(stableFrames >= 3, 'Touch scroll momentum settled');
-        await card(original[1]).scrollIntoViewIfNeeded();
-        const source = await card(original[1]).boundingBox(), target = await card(original[0]).boundingBox();
-        await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: source.x + source.width / 2, y: source.y + source.height / 2 }] });
-        await page.waitForTimeout(450);
-        assert.equal(await card(original[1]).getAttribute('data-dragging'), 'true', 'Long press activates card dragging');
-        await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: target.x + target.width / 4, y: target.y + target.height / 2 }] });
-        await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-        await expectOrder([original[1], original[0], ...original.slice(2)]);
-        await editor.getByRole('button', { name: '撤销最近移动', exact: true }).click();
-        await expectOrder(original);
+        await card(original[1]).evaluate(element => element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' }));
+        const geometry = () => page.evaluate(([sourceId, targetId]) => {
+          const rect = id => {
+            const r = document.querySelector(`[data-member-id="${id}"]`).getBoundingClientRect();
+            return { x: r.x, y: r.y, width: r.width, height: r.height };
+          };
+          return { scroll: scrollY, source: rect(sourceId), target: rect(targetId) };
+        }, [original[1], original[0]]);
+        let previous = await geometry(), stableGeometry = 0;
+        const samples = [previous];
+        for (let attempt = 0; attempt < 20 && stableGeometry < 3; attempt++) {
+          await page.waitForTimeout(50);
+          const next = await geometry(); samples.push(next);
+          const deltas = [Math.abs(next.scroll - previous.scroll), ...['source', 'target'].flatMap(key => ['x', 'y', 'width', 'height'].map(axis => Math.abs(next[key][axis] - previous[key][axis])))];
+          stableGeometry = deltas.every(delta => delta < 1) ? stableGeometry + 1 : 0; previous = next;
+        }
+        assert.ok(stableGeometry >= 3, `Long-press card geometry settled: ${JSON.stringify(samples)}`);
+        const points = await card(original[1]).evaluate((element, targetId) => {
+          const point = (card, fraction) => {
+            const r = card.querySelector(':scope > div').getBoundingClientRect();
+            const left = Math.max(0, r.left), right = Math.min(innerWidth, r.right), top = Math.max(0, r.top), bottom = Math.min(innerHeight, r.bottom);
+            const x = left + (right - left) * fraction, y = (top + bottom) / 2;
+            const hit = document.elementFromPoint(x, y);
+            return { x, y, visibleWidth: right - left, visibleHeight: bottom - top, hitTag: hit?.tagName ?? null, hitMember: hit?.closest('[data-member-id]')?.getAttribute('data-member-id') ?? null, hitButton: Boolean(hit?.closest('button')) };
+          };
+          return { source: point(element, .5), target: point(document.querySelector(`[data-member-id="${targetId}"]`), .25), scroll: scrollY };
+        }, original[0]);
+        for (const [key, id] of [['source', original[1]], ['target', original[0]]]) {
+          assert.ok(points[key].visibleWidth > 10 && points[key].visibleHeight > 10 && points[key].hitMember === id && !points[key].hitButton, `Native touch ${key} reaches the photo area: ${JSON.stringify(points)}`);
+        }
+        await page.evaluate(initial => {
+          const events = [];
+          window.__largeCollectionTouchDiagnostics = { ...initial, events };
+          const record = event => {
+            const target = event.target instanceof Element ? event.target : null;
+            events.push({ type: event.type, at: performance.now(), member: target?.closest('[data-member-id]')?.getAttribute('data-member-id') ?? null, button: Boolean(target?.closest('button')), touches: event.touches?.length ?? null, scroll: scrollY });
+          };
+          for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) document.addEventListener(type, record, { capture: true, passive: true });
+          window.addEventListener('blur', record);
+          window.__largeCollectionTouchCleanup = () => {
+            for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) document.removeEventListener(type, record, true);
+            window.removeEventListener('blur', record);
+          };
+        }, { points, samples });
+        try {
+          await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: points.source.x, y: points.source.y }] });
+          try {
+            await page.waitForFunction(id => document.querySelector(`[data-member-id="${id}"]`)?.getAttribute('data-dragging') === 'true', original[1], { timeout: 1500 });
+          } catch (cause) {
+            const diagnostic = await page.evaluate(() => ({ ...window.__largeCollectionTouchDiagnostics, activeElement: document.activeElement?.tagName, dragging: [...document.querySelectorAll('[data-dragging]')].map(node => node.getAttribute('data-member-id')) }));
+            throw new Error(`Long press did not activate card dragging: ${JSON.stringify(diagnostic)}`, { cause });
+          }
+          assert.equal(await card(original[1]).getAttribute('data-dragging'), 'true', 'Long press activates card dragging');
+          await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: points.target.x, y: points.target.y }] });
+          await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+          await expectOrder([original[1], original[0], ...original.slice(2)]);
+          await editor.getByRole('button', { name: '撤销最近移动', exact: true }).click();
+          await expectOrder(original);
+        } finally {
+          await page.evaluate(() => { window.__largeCollectionTouchCleanup?.(); delete window.__largeCollectionTouchCleanup; });
+        }
       } finally {
         await touch.send('Emulation.setTouchEmulationEnabled', { enabled: false });
         await touch.detach();
