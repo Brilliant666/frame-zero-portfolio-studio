@@ -11,6 +11,7 @@
     radial-gradient(circle at 18% 12%, rgba(17, 16, 14, .09) 0 .7px, transparent .8px) 0 0 / 6px 6px,
     var(--paper);
   color: var(--ink);
+  color-scheme: light;
   font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
   scroll-behavior: smooth;
 }
@@ -720,8 +721,8 @@
   padding: clamp(1.5rem, 4vw, 3.5rem);
   overflow: hidden;
   border: 6px solid var(--ink);
-  background: var(--ink);
-  color: #fff;
+  background: var(--paper-bright);
+  color: var(--ink);
   box-shadow: 10px 10px 0 var(--vermilion);
 }
 
@@ -732,7 +733,7 @@
   width: 52%;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: repeating-conic-gradient(from 0deg, rgba(255,255,255,.22) 0 1deg, transparent 1deg 7deg);
+  background: repeating-conic-gradient(from 0deg, rgba(17,16,14,.14) 0 1deg, transparent 1deg 7deg);
   mask-image: radial-gradient(circle, transparent 0 15%, #000 48%, transparent 75%);
 }
 
@@ -744,6 +745,7 @@
   aspect-ratio: 1;
   place-items: center;
   background: var(--vermilion);
+  color: #fff;
   font-family: serif;
   font-size: clamp(3rem, 7vw, 6.5rem);
   font-weight: 900;
@@ -805,8 +807,8 @@
 }
 
 .packageCard:nth-child(2) {
-  background: var(--ink);
-  color: #fff;
+  background: var(--paper-bright);
+  color: var(--ink);
   box-shadow: 8px 8px 0 var(--vermilion);
   transform: translateY(-1.25rem) rotate(.5deg);
 }
@@ -875,7 +877,7 @@
 }
 
 .packageCard:nth-child(2) > p {
-  color: rgba(255, 255, 255, .64);
+  color: var(--muted);
 }
 
 .packagePrice {
@@ -950,17 +952,17 @@
 
 .bookingChapter {
   background:
-    radial-gradient(circle at 10% 10%, rgba(255,255,255,.12) 0 .8px, transparent 1px) 0 0 / 7px 7px,
-    var(--ink);
-  color: #fff;
+    radial-gradient(circle at 10% 10%, rgba(17,16,14,.09) 0 .8px, transparent 1px) 0 0 / 7px 7px,
+    var(--paper);
+  color: var(--ink);
 }
 
 .bookingChapter .chapterHeading {
-  border-color: #fff;
+  border-color: var(--ink);
 }
 
 .bookingChapter .chapterHeading > span {
-  color: rgba(255, 255, 255, .65);
+  color: var(--muted);
 }
 
 .bookingGrid {
@@ -977,14 +979,15 @@
 .requestPanel {
   position: relative;
   min-width: 0;
-  border: 5px solid #fff;
+  border: 5px solid var(--ink);
 }
 
 .contactPanel {
   grid-area: contact;
   padding: clamp(1.3rem, 3vw, 2.5rem);
-  background: var(--vermilion);
-  box-shadow: 10px 10px 0 #fff;
+  background: var(--paper-bright);
+  color: var(--ink);
+  box-shadow: 10px 10px 0 var(--vermilion);
 }
 
 .bubble {
@@ -1039,6 +1042,7 @@
 }
 
 .contactHeadline small {
+  color: var(--vermilion-dark);
   font: 800 .6rem ui-monospace, SFMono-Regular, Consolas, monospace;
   letter-spacing: .12em;
 }
@@ -1050,13 +1054,14 @@
   font-weight: 1000;
   line-height: .88;
   letter-spacing: -.08em;
-  text-shadow: 4px 4px 0 var(--ink);
+  text-shadow: 4px 4px 0 rgba(214, 60, 47, .2);
 }
 
 .contactIntro {
   margin: 1.5rem 0;
   padding: 1rem 0;
-  border-block: 2px solid rgba(255, 255, 255, .55);
+  border-block: 2px solid rgba(17, 16, 14, .22);
+  color: var(--muted);
   font-size: .75rem;
   line-height: 1.75;
 }
@@ -1137,8 +1142,8 @@
   gap: 1rem;
   padding: 1rem 1.2rem;
   border-bottom: 5px solid var(--ink);
-  background: var(--ink);
-  color: #fff;
+  background: var(--paper);
+  color: var(--ink);
   font: 800 .58rem ui-monospace, SFMono-Regular, Consolas, monospace;
   letter-spacing: .1em;
 }
@@ -1192,7 +1197,8 @@
   align-items: end;
   margin-top: clamp(4rem, 8vw, 8rem);
   padding-top: 1.3rem;
-  border-top: 5px solid #fff;
+  border-top: 5px solid var(--ink);
+  color: var(--ink);
 }
 
 .footer > div {
@@ -1213,7 +1219,7 @@
 
 .footer p {
   margin: 0;
-  color: rgba(255, 255, 255, .68);
+  color: var(--muted);
   font-size: .72rem;
 }
 
@@ -1414,7 +1420,7 @@
   .contactPanel,
   .requestPanel {
     border-width: 4px;
-    box-shadow: 6px 6px 0 #fff;
+    box-shadow: 6px 6px 0 var(--vermilion);
   }
 
   .requestPanel {

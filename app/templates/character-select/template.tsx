@@ -258,7 +258,7 @@ export default function CharacterSelectTemplate({ content, works, packages, book
             {content.contact.wechat.trim() && (<button type="button" onClick={() => void onCopy(content.contact.wechat, "select-wechat")}><small>WECHAT</small><strong>{copiedKey === "select-wechat" ? "已复制 ✓" : content.contact.wechat}</strong></button>)}
             {content.contact.email.trim() && (<a href={`mailto:${content.contact.email}`}><small>EMAIL</small><strong>{content.contact.email}</strong></a>)}
           </div>
-          <PlatformAccounts accounts={content.social} tone="light" />
+          <PlatformAccounts accounts={content.social} tone="dark" />
         </div>
         <div className={styles.missionPanel}>
           <div><span>MISSION DATA</span><b>● LIVE</b></div>

@@ -162,6 +162,12 @@ implemented without a new, explicit human request.
 
 ## PR #25 limited closure and stage review
 
+2026-10-01 design update: the user explicitly requested consistent basic-template
+interface tones and revision of the inverse cards previously allowed by HR25-013.
+The historical row above remains the record of that stage. Its inverse business
+card/rate-interaction allowance is superseded by the current
+[PR34 basic palette rules](PR34_BASIC_PALETTE.md); template photo materials remain.
+
 The PR #25 feature scope is frozen after HR25-013. HR25-014 has not started,
 and no later product issue is selected. The additive audit in
 [pr25-stage-review.md](pr25-stage-review.md) maps every pre-closure commit and

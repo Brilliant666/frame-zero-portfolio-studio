@@ -334,7 +334,7 @@ export default function ArchiveOsTemplate({
             {content.contact.email.trim() && (<a href={`mailto:${content.contact.email}`}><small>EMAIL / NEW MESSAGE</small><strong>{content.contact.email}</strong><span>OPEN ↗</span></a>)}
           </div>
           <p className={styles.note}>{content.contact.note}</p>
-          <PlatformAccounts accounts={content.social} tone="dark" />
+          <PlatformAccounts accounts={content.social} tone="light" />
         </div>
 
         <div className={styles.requestWindow}>

@@ -934,6 +934,40 @@
   display: none;
 }
 
+/* The advanced collection workspace owns its separate paper/night palette. */
+.shell[data-basic-template] {
+  color-scheme: light;
+}
+
+.shell[data-basic-template] .bookingIntro,
+.shell[data-basic-template] .footer {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.shell[data-basic-template] .bookingIntro {
+  --coral: #b34332;
+}
+
+.shell[data-basic-template] .bookingIntro > p:not(.contactNote),
+.shell[data-basic-template] .contactNote,
+.shell[data-basic-template] .footer > small {
+  color: var(--ink-soft);
+}
+
+.shell[data-basic-template] .bookingIntro > button,
+.shell[data-basic-template] .bookingIntro > a {
+  border-color: rgba(24, 34, 39, .28);
+  color: var(--ink);
+}
+
+.shell[data-basic-template] .bookingIntro > button:hover,
+.shell[data-basic-template] .bookingIntro > button:focus-visible,
+.shell[data-basic-template] .bookingIntro > a:hover,
+.shell[data-basic-template] .bookingIntro > a:focus-visible {
+  background: var(--cream);
+}
+
 @media (max-width: 1050px) {
   .packageGrid {
     grid-template-columns: 1fr;

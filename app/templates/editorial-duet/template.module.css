@@ -9,6 +9,7 @@
   overflow: clip;
   background: var(--paper);
   color: var(--ink);
+  color-scheme: light;
 }
 
 .root :where(button, a) { -webkit-tap-highlight-color: transparent; }
@@ -21,8 +22,8 @@
   place-content: center;
   justify-items: center;
   gap: 1rem;
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--paper);
+  color: var(--ink);
   font: .65rem var(--font-geist-mono), monospace;
   letter-spacing: .16em;
   transition: opacity .45s ease, visibility .45s ease;
@@ -276,15 +277,15 @@
   place-content: center;
   padding: clamp(5rem, 10vw, 10rem) clamp(1rem, 5vw, 6rem);
   overflow: hidden;
-  background: var(--accent);
+  background: var(--paper-deep);
   color: var(--ink);
   text-align: center;
 }
 
-.interlude::before { content: "“"; position: absolute; top: -12vw; left: -2vw; color: rgba(242, 239, 232, .22); font: 500 52vw/.8 "Times New Roman", serif; }
+.interlude::before { content: "“"; position: absolute; top: -12vw; left: -2vw; color: rgba(235, 81, 46, .1); font: 500 52vw/.8 "Times New Roman", serif; }
 .interlude p { margin: 0 0 1.2rem; font: .55rem var(--font-geist-mono), monospace; letter-spacing: .16em; }
 .interlude h2 { position: relative; margin: 0; font: 500 clamp(4rem, 10vw, 10rem)/.75 "Iowan Old Style", "Baskerville", "Times New Roman", "Songti SC", serif; letter-spacing: -.07em; }
-.interlude h2 em { color: var(--paper); font-style: italic; }
+.interlude h2 em { color: #a63119; font-style: italic; }
 .interlude > span { margin-top: 2.5rem; font: .5rem var(--font-geist-mono), monospace; letter-spacing: .14em; }
 
 .rates {
@@ -304,7 +305,7 @@
 .rateList { max-width: 110rem; margin: 0 auto; border-top: 1px solid var(--line); }
 .rateList article { display: grid; grid-template-columns: 3rem minmax(11rem, .8fr) minmax(14rem, 1.1fr) minmax(16rem, 1fr) 3rem; align-items: center; gap: clamp(1rem, 3vw, 3rem); padding: 2rem .5rem; border-bottom: 1px solid var(--line); transition: background .25s ease, color .25s ease, padding .25s ease; }
 .rateList article:hover,
-.rateList article:focus-within { padding-inline: 1.2rem; background: var(--ink); color: var(--paper); }
+.rateList article:focus-within { padding-inline: 1.2rem; background: var(--paper-deep); color: var(--ink); box-shadow: inset 3px 0 var(--accent); }
 .rateNumber,
 .rateName small,
 .rateTerms span { color: var(--accent); font: .5rem var(--font-geist-mono), monospace; letter-spacing: .1em; }
@@ -317,7 +318,7 @@
 .rateList article:hover > p,
 .rateList article:hover .rateTerms ul,
 .rateList article:focus-within > p,
-.rateList article:focus-within .rateTerms ul { color: rgba(242,239,232,.62); }
+.rateList article:focus-within .rateTerms ul { color: var(--muted); }
 .rateList article > a { display: grid; width: 2.6rem; height: 2.6rem; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--accent); font: .48rem var(--font-geist-mono), monospace; transition: background .2s ease, color .2s ease; }
 .rateList article > a:hover,
 .rateList article > a:focus-visible { background: var(--accent); color: var(--ink); }

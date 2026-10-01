@@ -61,6 +61,7 @@ a {
 }
 
 .site-shell {
+  color-scheme: light;
   position: relative;
   min-height: 100vh;
   isolation: isolate;
@@ -978,7 +979,7 @@ dialog[data-template-real-preview] main[data-template]:is(
   letter-spacing: .1em;
 }
 
-footer {
+.site-shell footer {
   display: grid;
   grid-template-columns: 1.2fr 1fr 1.5fr auto;
   align-items: end;
@@ -997,12 +998,13 @@ footer {
   letter-spacing: -.06em;
 }
 
-footer p { margin: 0; }
+.site-shell footer p { margin: 0; }
 .mobile-booking-bar {
   display: none;
 }
 
 .lightbox {
+  color-scheme: dark;
   position: fixed;
   inset: 0;
   z-index: 150;
@@ -1088,12 +1090,14 @@ footer p { margin: 0; }
   font-size: .58rem;
 }
 
+.lightbox-light { color-scheme: light; }
 .lightbox-light .lightbox-backdrop { background: rgba(239, 232, 219, .96); }
 .lightbox-light .lightbox-frame { border-color: #bfb6a8; background: #fffdf7; box-shadow: 0 20px 80px #18222735; }
 .lightbox-light .lightbox-stage { background: #f8f4eb; }
 .lightbox-light .lightbox-nav { border-color: #bfb6a8; background: #fffdf7e8; color: #182227; }
 .lightbox-light .lightbox-info { border-top-color: #d9d0c2; color: #182227; }
 .lightbox-light .lightbox-info > span { color: #b2493b; }
+.lightbox-light .lightbox-info small { color: #536066; }
 .lightbox-light .lightbox-controls { color: #536066; }
 .lightbox-light .lightbox-info button { border-color: #bfb6a8; color: #182227; }
 
@@ -1146,7 +1150,7 @@ footer p { margin: 0; }
   .package-offer { grid-column: 2 / 4; }
   .mode-arrow { grid-column: 3; grid-row: 1; }
   .booking-panel { grid-template-columns: 1fr; }
-  footer { grid-template-columns: 1fr 1fr; align-items: start; }
+  .site-shell footer { grid-template-columns: 1fr 1fr; align-items: start; }
 }
 
 @media (max-width: 560px) {
@@ -1186,7 +1190,7 @@ footer p { margin: 0; }
   .booking-panel { padding: 1.2rem; }
   .quick-contact { grid-template-columns: 1fr; }
   .booking-terminal pre { min-height: 14rem; }
-  footer { grid-template-columns: 1fr; gap: 1rem; padding-top: 4rem; }
+  .site-shell footer { grid-template-columns: 1fr; gap: 1rem; padding-top: 4rem; }
   .mobile-booking-bar {
     position: fixed;
     z-index: 90;

@@ -216,7 +216,7 @@ test("manga keeps contact and booking on the left while showing uploaded cards o
   assert.ok(booking.indexOf('className={styles.contactPanel}') < booking.indexOf('className={styles.requestPanel}'));
   assert.ok(booking.indexOf('className={styles.requestPanel}') < booking.indexOf('className={styles.platformPanel}'));
   assert.match(booking, /<aside className=\{styles\.platformPanel\} aria-label="平台账号与二维码">/);
-  assert.match(booking, /<PlatformAccounts accounts=\{content\.social\} layout="stack" tone="dark" \/>/);
+  assert.match(booking, /<PlatformAccounts accounts=\{content\.social\} layout="stack" tone="light" \/>/);
 
   assert.match(booking, /onClick=\{\(\) => void onCopy\(content\.contact\.email, "manga-email"\)\}/);
   assert.match(booking, /<strong>\{content\.contact\.email\}<\/strong>/);

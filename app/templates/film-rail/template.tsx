@@ -322,7 +322,7 @@ export default function FilmRailTemplate({
             </a>)}
           </div>
           <p className={styles.contactNote}>{content.contact.note}</p>
-          <PlatformAccounts accounts={content.social} tone="dark" />
+          <PlatformAccounts accounts={content.social} tone="light" />
         </div>
 
         <div className={styles.callSheet}>
