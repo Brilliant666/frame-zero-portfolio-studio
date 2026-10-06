@@ -146,7 +146,43 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       await page.waitForFunction(() => document.activeElement === document.querySelector('[data-flow-editor-section] h1'));
     }
     async function overflow(p) {
-      const dimensions = await p.evaluate(() => ({ width: innerWidth, html: document.documentElement.scrollWidth, body: document.body.scrollWidth }));
+      const inspection = await p.evaluate(() => {
+        const dimensions = { width: innerWidth, html: document.documentElement.scrollWidth, body: document.body.scrollWidth };
+        if (dimensions.html <= dimensions.width + 1 && dimensions.body <= dimensions.width + 1) return { dimensions, samples: [] };
+        const describe = element => {
+          const r = element.getBoundingClientRect(), style = getComputedStyle(element);
+          return {
+            tag: element.tagName, id: element.id, className: element.getAttribute('class'),
+            rect: { x: r.x, y: r.y, left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height },
+            scrollWidth: element.scrollWidth, clientWidth: element.clientWidth, inlineStyle: element.getAttribute('style'),
+            computed: Object.fromEntries(['position', 'display', 'width', 'minWidth', 'maxWidth', 'boxSizing', 'paddingLeft', 'paddingRight', 'overflowX', 'overflowY', 'transform', 'scrollbarGutter'].map(key => [key, style[key]])),
+          };
+        };
+        const sample = frame => {
+          const viewportWidth = innerWidth;
+          const overflowing = [...document.querySelectorAll('body *')].filter(element => {
+            const r = element.getBoundingClientRect();
+            return r.width > 0 && r.height > 0 && (r.left < -1 || r.right > viewportWidth + 1 || element.scrollWidth > element.clientWidth + 1);
+          });
+          return {
+            frame, ms: performance.now(), viewport: { width: innerWidth, height: innerHeight, layoutWidth: document.documentElement.clientWidth },
+            module: document.querySelector('[data-flow-editor-section]')?.getAttribute('data-flow-editor-section'),
+            scroll: { x: scrollX, y: scrollY }, html: describe(document.documentElement), body: describe(document.body),
+            dialogs: [...document.querySelectorAll('dialog')].map(element => ({ open: element.open, label: element.getAttribute('aria-label'), ...describe(element) })),
+            overflowingCount: overflowing.length, overflowing: overflowing.slice(0, 80).map(element => ({ ...describe(element), parent: element.parentElement ? describe(element.parentElement) : null })),
+          };
+        };
+        const samples = [sample('initial-measurement')];
+        return new Promise(resolveInspection => requestAnimationFrame(() => {
+          samples.push(sample('next-frame-1'));
+          requestAnimationFrame(() => { samples.push(sample('next-frame-2')); resolveInspection({ dimensions, samples }); });
+        }));
+      });
+      const { dimensions } = inspection;
+      if (inspection.samples.length) {
+        report.overflowDiagnostics ??= [];
+        report.overflowDiagnostics.push({ viewport: p.viewportSize(), path: new URL(p.url()).pathname, hash: new URL(p.url()).hash, ...inspection });
+      }
       assert.ok(dimensions.html <= dimensions.width + 1 && dimensions.body <= dimensions.width + 1, `Horizontal overflow: ${JSON.stringify(dimensions)}`);
     }
     async function stableScroll(p, selector = null) {
