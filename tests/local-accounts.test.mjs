@@ -455,6 +455,10 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1800000 },
     const { flowGalleryHttpIntegration } = await import('./flow-gallery-http-integration.mjs');
     await flowGalleryHttpIntegration({ runtime, origin: config.origin, password, request, login, readDraft, saveDraft, sitePage, assetRoot });
   });
+  await t.test('current Published workbench shortcut uses current drafts and real owner/grant boundaries', { timeout: 180000 }, async () => {
+    const { workbenchShortcutHttpIntegration } = await import('./workbench-shortcut-http-integration.mjs');
+    await workbenchShortcutHttpIntegration({ runtime, password, request, login, readDraft, saveDraft, sitePage });
+  });
   if (process.env.FRAME_ZERO_PUBLICATION_BROWSER_SMOKE === '1') {
     await t.test('flow gallery scene geometry and independent module previews', { timeout: 240000 }, async browserTest => {
       const { flowGalleryUxBrowser } = await import('./flow-gallery-ux-browser.mjs');

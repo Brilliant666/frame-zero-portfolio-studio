@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { changePublication, publicationHistory, readPublished } from '../db/accounts/publications.mjs';
-import { flowGalleryWorkspaceCard, publishedWorkspaceSummary } from '../db/accounts/site-entry.mjs';
+import { flowGalleryWorkspaceCard, publishedWorkspaceSummary, publishedDraftTarget } from '../db/accounts/site-entry.mjs';
 
 const flow = 'premium-flow-gallery';
 const polaroid = 'premium-polaroid';
@@ -113,4 +113,31 @@ test('workspace public summary distinguishes unknown, unpublished and a saved Pu
   assert.match(publishedWorkspaceSummary({...published, templateId: 'bad"<', space: '<script>'}), /&lt;script&gt;/);
   assert.match(flowGalleryWorkspaceCard({templates: {premium: [flow]}}, 'fixture', { space: flow }), /data-current-public="true"/);
   assert.doesNotMatch(flowGalleryWorkspaceCard({templates: {premium: [flow]}}, 'fixture', published), /data-current-public/);
+});
+
+test('published draft shortcut maps only known spaces with their independent rights', () => {
+  const account = { site: { slug: 'ownedfixture' }, templates: { basic: ['archive-os'], premium: [polaroid, flow] } };
+  for (const [space, route] of [['basic', 'basic/profile'], [polaroid, polaroid], [flow, flow]]) {
+    const published = { space, templateId: space, draftRevision: 3 };
+    assert.equal(publishedDraftTarget(published, account), `/ownedfixture/admin/${route}`);
+    const html = publishedWorkspaceSummary(published, {}, account);
+    assert.match(html, /编辑此空间草稿/);
+    assert.match(html, /进入该内容空间的当前草稿；历史发布快照保持只读/);
+    assert.ok(html.includes(`href="/ownedfixture/admin/${route}"`));
+    assert.doesNotMatch(html, /returnTo|revisionId|publications\//);
+  }
+  const onlyPolaroid = { ...account, templates: { ...account.templates, premium: [polaroid] } };
+  assert.equal(publishedDraftTarget({ space: flow }, onlyPolaroid), null);
+  assert.doesNotMatch(publishedWorkspaceSummary({ space: flow, draftRevision: 3 }, {}, onlyPolaroid), /href=/);
+  assert.match(publishedWorkspaceSummary({ space: flow, draftRevision: 3 }, {}, onlyPolaroid), /data-published-draft-unavailable/);
+  assert.equal(publishedDraftTarget({ space: flow }, account, false), null, 'History grant recheck overrides an older account grant');
+  assert.doesNotMatch(publishedWorkspaceSummary({ space: flow, draftRevision: 3 }, {}, account, false), /href=/);
+  for (const published of [null, undefined, { space: 'unknown' }, { space: '__proto__' }]) {
+    assert.equal(publishedDraftTarget(published, account), null);
+    assert.doesNotMatch(publishedWorkspaceSummary(published, {}, account), /href=/);
+  }
+  for (const invalid of [null, { ...account, site: { slug: 'star/../other' } }, { ...account, site: { slug: 'admin' } }]) {
+    assert.equal(publishedDraftTarget({ space: flow }, invalid), null);
+  }
+  assert.equal(publishedDraftTarget({ space: 'basic' }, { ...account, templates: { basic: [], premium: [flow] } }), null);
 });
