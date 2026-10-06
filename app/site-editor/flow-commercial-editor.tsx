@@ -12,8 +12,9 @@ type ContactItem = Contact["items"][number];
 type PreviewProps = {
   onPreview: (trigger: HTMLButtonElement) => void;
   previewDisabled?: boolean;
-  /** Clear when a new removal begins, then set to the ID restored by undo. */
+  /** A one-time focus request for the item restored by undo. */
   restoredItemId?: string;
+  onRestoredItemFocus: (id: string) => void;
 };
 
 export type FlowPricingEditorProps = PreviewProps & {
@@ -34,14 +35,14 @@ export type FlowContactEditorProps = PreviewProps & {
   onRemove: (id: string) => void;
 };
 
-function SectionHeader({ title, enabled, onToggle, onPreview, previewDisabled }: PreviewProps & { title: string; enabled: boolean; onToggle: (enabled: boolean) => void }) {
+function SectionHeader({ title, enabled, onToggle, onPreview, previewDisabled }: Pick<PreviewProps, "onPreview" | "previewDisabled"> & { title: string; enabled: boolean; onToggle: (enabled: boolean) => void }) {
   return <header className={styles.sectionHeader}>
     <label className={styles.pageSwitch}><input type="checkbox" aria-label={`展示${title}页面`} aria-describedby={`flow-${title === "联系" ? "contact" : "pricing"}-page-switch-hint`} checked={enabled} onChange={event => onToggle(event.target.checked)} /><span>展示{title}页面</span><small id={`flow-${title === "联系" ? "contact" : "pricing"}-page-switch-hint`}>{enabled ? "发布后出现在导航中" : "页面隐藏，编辑内容保留"}</small></label>
     <button type="button" className={styles.previewButton} disabled={previewDisabled} onClick={event => onPreview(event.currentTarget)}>查看{title === "联系" ? "联系" : "价格"}效果 <span aria-hidden="true">↗</span></button>
   </header>;
 }
 
-function useRestoredItemFocus(restoredItemId: string | undefined, visibleItemId: string | undefined, prefix: string, setSelectedId: Dispatch<SetStateAction<string | null>>) {
+function useRestoredItemFocus(restoredItemId: string | undefined, visibleItemId: string | undefined, prefix: string, setSelectedId: Dispatch<SetStateAction<string | null>>, onRestoredItemFocus: (id: string) => void) {
   useEffect(() => {
     if (!restoredItemId) return;
     const frame = requestAnimationFrame(() => setSelectedId(restoredItemId));
@@ -54,10 +55,11 @@ function useRestoredItemFocus(restoredItemId: string | undefined, visibleItemId:
       if (entry?.isConnected) {
         entry.scrollIntoView({ block: "nearest" });
         entry.focus({ preventScroll: true });
+        if (document.activeElement === entry) onRestoredItemFocus(restoredItemId);
       }
     });
     return () => cancelAnimationFrame(frame);
-  }, [restoredItemId, visibleItemId, prefix]);
+  }, [restoredItemId, visibleItemId, prefix, onRestoredItemFocus]);
 }
 
 function useSelectedItemInView(selectedId: string | undefined) {
@@ -75,12 +77,12 @@ function useSelectedItemInView(selectedId: string | undefined) {
   return navigation;
 }
 
-export function FlowPricingEditor({ value, onPageChange, onItemChange, onAdd, onRemove, onPreview, previewDisabled, restoredItemId }: FlowPricingEditorProps) {
+export function FlowPricingEditor({ value, onPageChange, onItemChange, onAdd, onRemove, onPreview, previewDisabled, restoredItemId, onRestoredItemFocus }: FlowPricingEditorProps) {
   const [selectedId, setSelectedId] = useState<string | null>(value.packages[0]?.id ?? null);
   const selected = value.packages.find(item => item.id === selectedId) ?? value.packages[0];
   const selectedIndex = selected ? value.packages.findIndex(item => item.id === selected.id) : -1;
   const navigation = useSelectedItemInView(selected?.id);
-  useRestoredItemFocus(restoredItemId, selected?.id, "flow-price-", setSelectedId);
+  useRestoredItemFocus(restoredItemId, selected?.id, "flow-price-", setSelectedId, onRestoredItemFocus);
 
   return <section className={styles.editor} aria-label="价格与活动编辑">
     <SectionHeader title="价格与活动" enabled={value.enabled} onToggle={enabled => onPageChange({ enabled })} onPreview={onPreview} previewDisabled={previewDisabled} />
@@ -108,12 +110,12 @@ export function FlowPricingEditor({ value, onPageChange, onItemChange, onAdd, on
   </section>;
 }
 
-export function FlowContactEditor({ value, assetsEndpoint, onPageChange, onItemChange, onQrChange, onAdd, onRemove, onPreview, previewDisabled, restoredItemId }: FlowContactEditorProps) {
+export function FlowContactEditor({ value, assetsEndpoint, onPageChange, onItemChange, onQrChange, onAdd, onRemove, onPreview, previewDisabled, restoredItemId, onRestoredItemFocus }: FlowContactEditorProps) {
   const [selectedId, setSelectedId] = useState<string | null>(value.items[0]?.id ?? null);
   const selected = value.items.find(item => item.id === selectedId) ?? value.items[0];
   const selectedIndex = selected ? value.items.findIndex(item => item.id === selected.id) : -1;
   const navigation = useSelectedItemInView(selected?.id);
-  useRestoredItemFocus(restoredItemId, selected?.id, "flow-contact-", setSelectedId);
+  useRestoredItemFocus(restoredItemId, selected?.id, "flow-contact-", setSelectedId, onRestoredItemFocus);
 
   return <section className={styles.editor} aria-label="联系编辑">
     <SectionHeader title="联系" enabled={value.enabled} onToggle={enabled => onPageChange({ enabled })} onPreview={onPreview} previewDisabled={previewDisabled} />
