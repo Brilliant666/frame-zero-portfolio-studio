@@ -821,17 +821,36 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         await publicPage.goto(`${origin}/${SLUG}#works`);
         await publicPage.locator('[data-flow-scene="works"]').waitFor();
         await publicPage.waitForFunction(() => [...document.querySelector('[data-flow-scene]').querySelectorAll('img')].every(image => image.complete && image.naturalWidth > 0));
+        const primaryImages = '[data-flow-rail-window] > div > div:not([aria-hidden="true"]) img';
+        const readRailSlots = () => publicPage.locator('[data-flow-rail-window] img').evaluateAll(images => images.map(image => ({
+          sizes: image.sizes, clientWidth: image.clientWidth, renderedWidth: image.getBoundingClientRect().width,
+          parentWidth: image.parentElement.getBoundingClientRect().width, complete: image.complete, naturalWidth: image.naturalWidth,
+          path: new URL(image.currentSrc).pathname, primary: !image.closest('[aria-hidden="true"]'),
+        })));
+        const readiness = { viewport, initial: await readRailSlots(), ready: null, durationMs: null };
+        report.railSlotReadiness ??= [];
+        report.railSlotReadiness.push(readiness);
+        const readinessStarted = Date.now();
+        // Decoding SSR images alone does not establish that hydration or the
+        // ResizeObserver has supplied numeric measured slots. Use the same
+        // actual-slot readiness as DPR 2, with the original 15s timeout and 1px
+        // tolerance; later assertions still independently inspect every image.
+        try {
+          await publicPage.waitForFunction(selector => [...document.querySelectorAll(selector)].length > 0 && [...document.querySelectorAll(selector)].every(image => image.complete && image.naturalWidth > 0 && /^\d+px$/.test(image.sizes) && Math.abs(Number.parseFloat(image.sizes) - image.clientWidth) <= 1), primaryImages);
+          readiness.ready = await readRailSlots();
+        } catch (error) { readiness.failed = await readRailSlots(); throw error; }
+        finally { readiness.durationMs = Date.now() - readinessStarted; }
         const responsive = await publicPage.locator('[data-flow-rail-window] img').evaluateAll(images => images.map(image => ({
           path: new URL(image.currentSrc).pathname, srcSet: image.srcset, sizes: image.sizes,
           renderedWidth: image.clientWidth, intrinsicWidth: Number(image.getAttribute('width')), dpr: devicePixelRatio,
         })));
+        report.responsiveImages.push({ viewport, images: responsive });
         const backgroundId = (await readPublished(runtime.pool, SLUG)).content.background.assetId;
         for (const image of responsive) {
           assert.ok(image.srcSet.includes('thumbnail') && image.srcSet.includes('card') && image.srcSet.includes('full'), 'Rail retains display variants for screen density');
           assert.ok(Math.abs(Number.parseFloat(image.sizes) - image.renderedWidth) <= 1, 'Rail sizes follow the actual column width');
           if (viewport.width > 700 && !image.path.includes(`/${backgroundId}/`)) assert.ok(!image.path.endsWith('/full'), 'At DPR 1 these synthetic rail slots use a smaller display variant');
         }
-        report.responsiveImages.push({ viewport, images: responsive });
         await railWidth(publicPage.locator('[aria-label="作品速览"]'), 50, 'public');
         await overflow(publicPage);
         const expand = publicPage.locator('[data-flow-expand]');
