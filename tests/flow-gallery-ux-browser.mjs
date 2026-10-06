@@ -73,7 +73,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
     origin, fixture: SLUG, head: process.env.GITHUB_SHA ?? 'local',
     scope: 'Synthetic third-space UI, memory preview, Published-only rendering and viewport/motion regressions; no physical device acceptance',
     checkpoints: [], screenshots: [], transitions: [], sceneScroll: [], lightboxReturns: [], lightboxSizing: [], motion: [], railWidths: [], network: [], forbiddenRequests: [], pageErrors: [],
-    protectedBefore, protectedAfter: null, metadata: null, responsiveImages: [], routePerformance: [], groupPreviews: [],
+    protectedBefore, protectedAfter: null, metadata: null, responsiveImages: [], routePerformance: [], groupPreviews: [], pickerLookup: [], mobileNavigation: [],
   };
   const persist = () => writeFile(join(output, 'acceptance.json'), JSON.stringify(report, null, 2));
   let browser, page, publicPage;
@@ -256,6 +256,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
     async function modulePreview(id, scene, { temporary = false, title, capture = false, leftPercent } = {}) {
       const before = { draft: await draft(), publication: await publication(), writes: writeCount(), dirty: await root.getAttribute('data-flow-dirty'), hash: new URL(page.url()).hash };
       const trigger = page.locator(`[data-flow-module-preview="${id}"]`);
+      assert.equal(await page.locator('[data-flow-module-preview]').count(), 1, 'The current module has one genuine module-effect entry');
       await trigger.click();
       await preview().waitFor();
       await preview().locator(`[data-flow-scene="${scene}"]`).waitFor();
@@ -298,7 +299,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       await page.getByRole('link', { name: '进入我的站点后台' }).waitFor();
       await page.goto(`${origin}/${SLUG}/admin/${SPACE}`);
       await page.waitForFunction(() => !document.querySelector('fieldset')?.disabled && document.querySelector('[data-flow-editor-section]'));
-      await page.getByRole('button', { name: '查看本模块效果', exact: true }).waitFor({ state: 'visible' });
+      await page.locator('[data-flow-module-preview="library"]').waitFor({ state: 'visible' });
       await page.waitForFunction(() => !document.querySelector('[data-flow-module-preview]')?.disabled);
       assert.deepEqual(await page.locator('nav[aria-label="流影视廊后台模块"] [data-flow-section]').evaluateAll(nodes => nodes.map(node => node.dataset.flowSection)), MODULES.map(([id]) => id));
       const rights = await json('/api/account/site');
@@ -475,6 +476,34 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
     });
 
     await stage('04 editor and module previews at desktop and mobile widths', async () => {
+      for (const viewport of [VIEWPORTS[1], { width: 320, height: 844 }]) {
+        await page.setViewportSize(viewport); await module('library');
+        await page.evaluate(() => scrollTo(0, 0));
+        const nav = page.locator('nav[aria-label="流影视廊后台模块"]');
+        assert.equal(await nav.count(), 1, 'One navigation owns keyboard focus at the mobile breakpoint');
+        const measured = await nav.locator('[data-flow-section]').evaluateAll(nodes => nodes.map(node => {
+          const r = node.getBoundingClientRect(), nav = node.closest('nav');
+          return { id: node.dataset.flowSection, name: node.textContent.trim(), height: r.height, top: r.top, left: r.left, right: r.right, bottom: r.bottom, navWidth: nav.clientWidth, navScrollWidth: nav.scrollWidth, width: innerWidth, focusable: !node.disabled && node.tabIndex >= 0 };
+        }));
+        assert.deepEqual(measured.map(row => row.id), MODULES.map(([id]) => id));
+        assert.equal(new Set(measured.map(row => Math.round(row.top))).size, 2, 'All five named mobile modules occupy two visible rows');
+        for (const [index, row] of measured.entries()) {
+          assert.ok(row.name.includes(MODULES[index][1]), 'Full module labels remain discoverable');
+          assert.ok(row.height >= 44 && row.focusable, 'Each module keeps a keyboard-accessible 44px target');
+          assert.ok(row.left >= -1 && row.right <= row.width + 1 && row.top >= 0 && row.bottom < viewport.height, 'All five navigation entries are visible without horizontal discovery');
+          assert.ok(row.navScrollWidth <= row.navWidth + 1, 'Mobile module navigation does not require horizontal scrolling');
+        }
+        await nav.locator('[data-flow-section="contact"]').focus();
+        await page.keyboard.press('Enter');
+        await page.waitForFunction(() => document.querySelector('[data-flow-editor-section]')?.dataset.flowEditorSection === 'contact' && document.activeElement === document.querySelector('[data-flow-editor-section] h1'));
+        assert.equal(new URL(page.url()).hash, '#edit-contact');
+        await page.goBack();
+        await page.waitForFunction(() => document.querySelector('[data-flow-editor-section]')?.dataset.flowEditorSection === 'library' && document.activeElement === document.querySelector('[data-flow-editor-section] h1'));
+        await page.goForward();
+        await page.waitForFunction(() => document.querySelector('[data-flow-editor-section]')?.dataset.flowEditorSection === 'contact' && document.activeElement === document.querySelector('[data-flow-editor-section] h1'));
+        assert.equal(await root.getAttribute('data-flow-dirty'), 'true', 'Breakpoint and history navigation retain current unsaved edits');
+        report.mobileNavigation.push({ viewport, measured, keyboardAndHistory: 'PASS' });
+      }
       for (const viewport of VIEWPORTS) {
         await page.setViewportSize(viewport);
         for (const [id, , scene] of MODULES) {
@@ -553,7 +582,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         await page.locator('nav[aria-label="作品分类"]').getByRole('button', { name: new RegExp(secondGroup.name) }).click();
         for (const step of ['照片顺序', '分类与说明', '查看效果']) {
           await page.getByRole('button', { name: step, exact: true }).click();
-          const trigger = step === '查看效果' ? page.getByRole('button', { name: /^查看完整作品效果/ }) : page.locator('[data-flow-module-preview="groups"]');
+          const trigger = page.getByRole('button', { name: '当前分类效果', exact: true });
           await trigger.scrollIntoViewIfNeeded(); await trigger.focus(); await stableScroll(page);
           const bookmark = await editorBookmark();
           await trigger.click(); await preview().waitFor();
@@ -567,7 +596,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         }
         // Two same-turn activations exercise the pending-open guard, before React
         // commits a modal. Reopening must reset the previous from-top position.
-        const trigger = page.getByRole('button', { name: /^查看完整作品效果/ });
+        const trigger = page.getByRole('button', { name: '当前分类效果', exact: true });
         await trigger.scrollIntoViewIfNeeded(); await trigger.focus(); await stableScroll(page);
         const bookmark = await editorBookmark();
         await trigger.evaluate(button => { button.click(); button.click(); });
@@ -621,7 +650,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
           assert.equal(await visible.isChecked(), group.visible);
           const membersBefore = await isolatedPage.getByRole('combobox', { name: '选择要编辑的照片', exact: true }).locator('option').evaluateAll(options => options.map(option => option.value));
           await isolatedPage.getByRole('button', { name: '查看效果', exact: true }).click();
-          const trigger = isolatedPage.getByRole('button', { name: /^查看完整作品效果/ });
+          const trigger = isolatedPage.getByRole('button', { name: '当前分类效果', exact: true });
           await trigger.click();
           await isolatedPage.locator('[role="status"][data-feedback="active"]').filter({ hasText: expected }).waitFor();
           assert.equal(await isolatedPage.getByRole('dialog', { name: '当前编辑即时预览', exact: true }).count(), 0, `${state} does not silently preview another category`);
@@ -1012,6 +1041,193 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         }
         assert.ok(requests.every(request => request.origin === origin && ['GET', 'HEAD'].includes(request.method)), 'High-density sample is anonymous and read-only');
       } finally { await highDensity.close(); }
+    });
+
+    await stage('09 Flow library lookup, cross-page selections and explicit save on the isolated Site', async () => {
+      // This runs after the public eight-photo measurements. Additional uploads
+      // and the save belong only to this newly provisioned integration Site;
+      // they are not the read-only layout baseline or a browser response mock.
+      const b1 = await context.newPage();
+      let allowPickerDiscard = false;
+      b1.removeAllListeners('dialog');
+      b1.on('dialog', dialog => {
+        if (dialog.type() === 'beforeunload' || allowPickerDiscard && dialog.type() === 'confirm' && dialog.message().startsWith('放弃本次选片？')) void dialog.accept();
+        else { report.forbiddenRequests.push(`unexpected-b1-dialog:${dialog.type()}`); void dialog.dismiss(); }
+      });
+      const b1root = b1.locator('[data-flow-editor-section]');
+      const picker = b1.getByRole('dialog', { name: '从图库选片', exact: true });
+      const ids = () => picker.getByRole('checkbox', { name: /^选择照片 / }).evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label').slice('选择照片 '.length)));
+      const selectedIds = async () => {
+        await picker.getByRole('button', { name: '查看已选', exact: true }).click();
+        const result = await ids();
+        await picker.getByRole('button', { name: '返回全部结果', exact: true }).click();
+        return result;
+      };
+      async function b1module(id) {
+        await b1.locator(`nav[aria-label="流影视廊后台模块"] [data-flow-section="${id}"]`).click();
+        await b1.waitForFunction(value => document.querySelector('[data-flow-editor-section]')?.dataset.flowEditorSection === value, id);
+      }
+      try {
+        await b1.goto(`${origin}/${SLUG}/admin/${SPACE}#edit-library`);
+        await b1.getByText('本站图库 8 张', { exact: true }).waitFor();
+        const before = { draft: await draft(), publication: await publication() };
+        assert.equal(await b1root.getAttribute('data-flow-dirty'), 'false');
+        // A first group has four existing members: 55 Site assets gives 51
+        // eligible photos and a real second picker page under the normal API.
+        for (let offset = 0; offset < 47; offset += 8) {
+          const batch = await Promise.all(Array.from({ length: Math.min(8, 47 - offset) }, async (_, index) => {
+            const n = offset + index, portrait = n % 2 === 0;
+            return { name: `anonymous-s1b-${n + 1}.png`, mimeType: 'image/png', buffer: await sharp({ create: { width: portrait ? 140 : 210, height: portrait ? 210 : 140, channels: 3, background: { r: 80 + n, g: 150 - n, b: 40 + n * 2 } } }).png().toBuffer() };
+          }));
+          await b1.getByLabel('上传本站照片', { exact: true }).setInputFiles(batch);
+          await b1.getByText(`本站图库 ${8 + offset + batch.length} 张`, { exact: true }).waitFor();
+        }
+        const allAssets = (await json(assetsPath)).assets;
+        assert.equal(allAssets.length, 55, 'The isolated fixture has real cross-page assets');
+        const group = before.draft.content.groups[0];
+        const lookupAsset = allAssets.find(asset => asset.orientation === 'portrait' && !group.assetIds.includes(asset.id));
+        assert.ok(lookupAsset);
+        const sourceQuery = `  ${lookupAsset.id.toUpperCase()}  `;
+        await b1.getByRole('combobox', { name: '画幅', exact: true }).selectOption('portrait');
+        await b1.getByRole('combobox', { name: '加入本站时间', exact: true }).selectOption('oldest');
+        await b1.locator('summary').filter({ hasText: /^按素材 ID 查找/ }).click();
+        await b1.getByRole('textbox', { name: '素材 ID（可选）', exact: true }).fill(sourceQuery);
+        const libraryIds = await b1.getByRole('button', { name: /^放大素材 / }).evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label').slice('放大素材 '.length)));
+        assert.deepEqual(libraryIds, [lookupAsset.id]);
+        await b1module('home');
+        await b1.getByRole('button', { name: '从图库选择背景', exact: true }).click();
+        const backgroundPicker = b1.getByRole('dialog', { name: '从图库选择一张背景', exact: true });
+        await backgroundPicker.waitFor();
+        assert.equal(await backgroundPicker.getByRole('button', { name: '沿用图库查找条件', exact: true }).count(), 0, 'Single-background selection does not inherit category rules');
+        assert.equal(await backgroundPicker.getByRole('combobox', { name: '画幅', exact: true }).inputValue(), 'all');
+        assert.equal(await backgroundPicker.getByRole('textbox', { name: '素材 ID（可选）', exact: true }).inputValue(), '');
+        await backgroundPicker.getByRole('button', { name: '取消', exact: true }).click();
+        await backgroundPicker.waitFor({ state: 'detached' });
+        await b1module('groups');
+        await b1.locator('nav[aria-label="作品分类"]').getByRole('button', { name: new RegExp(group.name) }).click();
+        const open = () => b1.getByRole('button', { name: '从图库选片', exact: true }).click();
+        const noWrite = writeCount();
+        await open(); await picker.waitFor();
+        assert.equal(await picker.getByRole('textbox', { name: '按素材 ID 查找', exact: true }).inputValue(), '', 'Direct selection keeps the original default instead of auto-inheriting lookup');
+        assert.equal(await picker.getByRole('combobox', { name: '照片方向', exact: true }).inputValue(), 'all');
+        assert.equal(await picker.getByRole('combobox', { name: '加入本站时间', exact: true }).inputValue(), 'newest');
+        await picker.getByText('第 1 / 2 页 · 51 张匹配', { exact: true }).waitFor();
+        const first = (await ids())[0];
+        await picker.getByRole('checkbox', { name: `选择照片 ${first}`, exact: true }).check();
+        await picker.getByRole('button', { name: '下一页', exact: true }).click();
+        const second = (await ids())[0];
+        await picker.getByRole('checkbox', { name: `选择照片 ${second}`, exact: true }).check();
+        assert.notEqual(first, second);
+        await picker.getByRole('button', { name: '沿用图库查找条件', exact: true }).click();
+        assert.equal(await picker.getByRole('textbox', { name: '按素材 ID 查找', exact: true }).inputValue(), sourceQuery.trim());
+        assert.equal(await picker.getByRole('combobox', { name: '照片方向', exact: true }).inputValue(), 'portrait');
+        assert.equal(await picker.getByRole('combobox', { name: '分类关系', exact: true }).inputValue(), 'outside');
+        assert.equal(await picker.getByRole('combobox', { name: '加入本站时间', exact: true }).inputValue(), 'oldest');
+        await picker.getByText('第 1 / 1 页 · 1 张匹配', { exact: true }).waitFor();
+        assert.deepEqual(await ids(), libraryIds, 'An explicit inherited ID+orientation lookup finds the same eligible Site photograph');
+        assert.deepEqual(await selectedIds(), [first, second], 'Selections outside the inherited range remain in their original cross-page order');
+        await picker.getByRole('textbox', { name: '按素材 ID 查找', exact: true }).fill('s1b-no-match');
+        await picker.getByRole('status').filter({ hasText: /当前条件：竖图.*素材 ID 包含“s1b-no-match”/ }).waitFor();
+        assert.deepEqual(await ids(), [], 'No-result feedback does not silently broaden filters');
+        await picker.getByRole('button', { name: '查看已选', exact: true }).click();
+        await picker.getByRole('button', { name: '清除查找条件', exact: true }).click();
+        assert.deepEqual(await ids(), [first, second], 'Clearing lookup preserves selected review and selection order');
+        await picker.getByRole('button', { name: '返回全部结果', exact: true }).click();
+        assert.equal(await picker.getByRole('combobox', { name: '分类关系', exact: true }).inputValue(), 'outside');
+        assert.equal(await picker.getByRole('combobox', { name: '加入本站时间', exact: true }).inputValue(), 'oldest');
+        await picker.getByRole('combobox', { name: '加入本站时间', exact: true }).selectOption('newest');
+        await picker.getByRole('combobox', { name: '照片方向', exact: true }).selectOption('landscape');
+        assert.deepEqual(await selectedIds(), [first, second], 'Further filter and sort changes are not overwritten by the library snapshot');
+        allowPickerDiscard = true;
+        await picker.getByRole('button', { name: '取消选片', exact: true }).click();
+        await picker.waitFor({ state: 'detached' }); allowPickerDiscard = false;
+        assert.equal(await b1root.getAttribute('data-flow-dirty'), 'false');
+        assert.equal(writeCount(), noWrite, 'Looking up, reviewing and cancelling selections produces no draft or publish write');
+        assert.deepEqual(await draft(), before.draft); assert.deepEqual(await publication(), before.publication);
+        await b1module('library');
+        assert.equal(await b1.getByRole('textbox', { name: '素材 ID（可选）', exact: true }).inputValue(), sourceQuery, 'Picker edits never back-write library lookup');
+        assert.equal(await b1.getByRole('combobox', { name: '画幅', exact: true }).inputValue(), 'portrait');
+        assert.equal(await b1.getByRole('combobox', { name: '加入本站时间', exact: true }).inputValue(), 'oldest');
+        await b1module('groups'); await open(); await picker.waitFor();
+        assert.equal(await picker.getByRole('checkbox', { name: /^选择照片 / }).evaluateAll(nodes => nodes.filter(node => node.checked).length), 0, 'Cancelled temporary selections do not leak into a new picker');
+        // Deliberately pick in reversed order to distinguish append order from
+        // library sorting, filtering and member order.
+        for (const id of [second, first]) {
+          await picker.getByRole('textbox', { name: '按素材 ID 查找', exact: true }).fill(id);
+          await picker.getByRole('checkbox', { name: `选择照片 ${id}`, exact: true }).check();
+        }
+        await picker.getByRole('button', { name: '沿用图库查找条件', exact: true }).click();
+        assert.deepEqual(await selectedIds(), [second, first]);
+        await picker.getByRole('button', { name: '加入当前分类（2 张）', exact: true }).click();
+        await picker.waitFor({ state: 'detached' });
+        assert.equal(await b1root.getAttribute('data-flow-dirty'), 'true', 'Only confirmation appends to the in-memory category');
+        assert.equal(writeCount(), noWrite, 'Confirming addition still does not implicitly save');
+        assert.deepEqual(await draft(), before.draft);
+        const pending = b1.waitForResponse(response => new URL(response.url()).pathname === draftPath(SPACE) && response.request().method() === 'PUT');
+        await b1.getByRole('button', { name: '仅保存草稿', exact: true }).click();
+        const receipt = await pending; assert.equal(receipt.status(), 200);
+        const saved = await receipt.json();
+        await b1.waitForFunction(() => document.querySelector('[data-flow-editor-section]')?.dataset.flowDirty === 'false');
+        assert.equal(saved.revision, before.draft.revision + 1);
+        assert.deepEqual(saved.content.groups[0].assetIds, [...group.assetIds, second, first]);
+        assert.deepEqual(saved.content.groups.slice(1), before.draft.content.groups.slice(1));
+        assert.deepEqual(await draft(), saved);
+        assert.deepEqual(await publication(), before.publication, 'Save-only preserves the complete existing Published record');
+        await b1.goto(`${origin}/${SLUG}/admin/${SPACE}#edit-library`);
+        await b1.getByText('本站图库 55 张', { exact: true }).waitFor();
+        assert.equal(await b1.getByRole('combobox', { name: '画幅', exact: true }).inputValue(), 'all', 'A new editor session does not persist library conditions in storage');
+        assert.equal(await b1.getByRole('combobox', { name: '加入本站时间', exact: true }).inputValue(), 'recent');
+        await b1module('groups'); await open(); await picker.waitFor();
+        assert.equal(await picker.getByRole('button', { name: '沿用图库查找条件', exact: true }).count(), 0, 'Default library conditions do not create a useless inheritance entry');
+        assert.equal(await picker.getByRole('checkbox', { name: /^选择照片 / }).evaluateAll(nodes => nodes.filter(node => node.checked).length), 0);
+        await picker.getByRole('button', { name: '取消选片', exact: true }).click();
+        await picker.waitFor({ state: 'detached' });
+        for (const status of [401, 403]) {
+          // Browser response injection exercises private UI cleanup only. It is
+          // not evidence that the server revoked a session or checked ownership;
+          // real Site authorization remains covered by HTTP integration.
+          const protectedEditor = { draft: await draft(), publication: await publication(), dirty: await b1root.getAttribute('data-flow-dirty'), writes: writeCount() };
+          await b1module('library');
+          await b1.getByRole('combobox', { name: '画幅', exact: true }).selectOption('portrait');
+          await b1.getByRole('combobox', { name: '加入本站时间', exact: true }).selectOption('oldest');
+          await b1.locator('summary').filter({ hasText: /^按素材 ID 查找/ }).click();
+          await b1.getByRole('textbox', { name: '素材 ID（可选）', exact: true }).fill(lookupAsset.id);
+          await b1module('groups'); await open(); await picker.waitFor();
+          const temporary = (await ids()).slice(0, 2);
+          assert.equal(temporary.length, 2);
+          for (const id of temporary) await picker.getByRole('checkbox', { name: `选择照片 ${id}`, exact: true }).check();
+          await picker.getByRole('button', { name: '沿用图库查找条件', exact: true }).click();
+          const assetsUrl = `${origin}${assetsPath}`;
+          await b1.route(assetsUrl, route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify({ error: `Synthetic session failure ${status}` }) }));
+          try {
+            const failed = b1.waitForResponse(response => response.url() === assetsUrl && response.status() === status);
+            await picker.getByRole('button', { name: '重新读取素材', exact: true }).click();
+            await failed; await picker.waitFor({ state: 'detached' });
+            assert.equal(await b1root.getAttribute('data-flow-dirty'), protectedEditor.dirty, 'Session read failure preserves the draft dirty state');
+            await b1module('library');
+            await b1.getByRole('status').filter({ hasText: '本站素材读取失败，请确认登录状态。' }).waitFor();
+            assert.equal(await b1.getByRole('combobox', { name: '画幅', exact: true }).inputValue(), 'all');
+            assert.equal(await b1.getByRole('combobox', { name: '加入本站时间', exact: true }).inputValue(), 'recent');
+            assert.equal(await b1.locator('input[placeholder="粘贴已知素材 ID"]').inputValue(), '');
+            assert.equal(await b1.getByRole('button', { name: /^放大素材 / }).count(), 0, 'Unavailable session removes cached private photo cards');
+            assert.equal(await b1.getByRole('dialog', { name: '素材大图', exact: true }).count(), 0);
+            assert.equal(await b1.getByRole('dialog', { name: '当前编辑即时预览', exact: true }).count(), 0);
+            assert.equal(writeCount(), protectedEditor.writes, 'Private state cleanup never writes a draft or publication');
+            assert.deepEqual(await draft(), protectedEditor.draft); assert.deepEqual(await publication(), protectedEditor.publication);
+          } finally { await b1.unroute(assetsUrl); }
+          await b1.getByRole('button', { name: '重新读取图库', exact: true }).click();
+          await b1.getByText('本站图库 55 张', { exact: true }).waitFor();
+          assert.equal(await b1.getByRole('button', { name: /^放大素材 / }).count(), 48, 'Removing the synthetic failure restores the normal paged Site assets');
+          await b1module('groups'); await open(); await picker.waitFor();
+          assert.equal(await picker.getByRole('button', { name: '沿用图库查找条件', exact: true }).count(), 0, 'A failed session leaves no inherited lookup');
+          assert.equal(await picker.getByRole('checkbox', { name: /^选择照片 / }).evaluateAll(nodes => nodes.filter(node => node.checked).length), 0, 'A failed session leaves no temporary selection');
+          await picker.getByRole('button', { name: '取消选片', exact: true }).click();
+          await picker.waitFor({ state: 'detached' });
+          assert.equal(await b1root.getAttribute('data-flow-dirty'), protectedEditor.dirty);
+          report.pickerLookup.push({ source: 'browser-only synthetic assets response; not server authorization proof', status, cleanup: 'lookup/temporary selection/cached assets cleared', dirtyPreserved: true, implicitWrites: 0 });
+        }
+        report.pickerLookup.push({ source: 'real isolated upload/API/UI', totalAssets: allAssets.length, eligibleBefore: 51, inheritedId: lookupAsset.id, selectedOrder: [second, first], beforeRevision: before.draft.revision, afterRevision: saved.revision, cancelDirty: false, implicitWrites: 0, publishedUnchanged: true });
+      } finally { await b1.close(); }
     });
     assert.deepEqual(await json(draftPath('basic')), basicBefore);
     assert.equal((await publication()).current.id, published.id);
