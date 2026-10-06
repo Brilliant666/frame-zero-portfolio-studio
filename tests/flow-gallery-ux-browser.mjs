@@ -314,6 +314,24 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       assert.equal((await publication()).current, null);
       for (const [id, , scene] of MODULES) {
         await module(id);
+        if (id === 'groups') {
+          // This fresh account has no category yet. S1a must explain the missing
+          // target rather than opening an unrelated first-category preview.
+          const before = { draft: await draft(), publication: await publication(), writes: writeCount(), dirty: await root.getAttribute('data-flow-dirty'), hash: new URL(page.url()).hash };
+          assert.deepEqual(before.draft.content.groups, [], 'Fresh-account preview exercises an absent current category');
+          const trigger = page.locator('[data-flow-module-preview="groups"]');
+          await trigger.click();
+          await page.locator('[role="status"][data-feedback="active"]').filter({ hasText: '当前分类已不存在，请重新选择分类后查看效果。' }).waitFor();
+          assert.equal(await preview().count(), 0, 'An absent category never silently opens a different artwork');
+          assert.equal(await trigger.evaluate(element => document.activeElement === element), true);
+          assert.equal(await root.getAttribute('data-flow-editor-section'), id);
+          assert.equal(await root.getAttribute('data-flow-dirty'), before.dirty);
+          assert.equal(new URL(page.url()).hash, before.hash);
+          assert.equal(writeCount(), before.writes, 'Missing-category feedback never saves or publishes');
+          assert.deepEqual(await draft(), before.draft);
+          assert.deepEqual(await publication(), before.publication);
+          continue;
+        }
         await modulePreview(id, scene, { temporary: id === 'pricing' || id === 'contact' });
       }
     });
