@@ -375,6 +375,20 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       await page.getByRole('button', { name: '移除此项目', exact: true }).click();
       await page.getByRole('button', { name: '撤销最近移除', exact: true }).click();
       assert.equal(await page.getByRole('textbox', { name: '价格说明', exact: true }).inputValue(), '100 fixture units');
+      // A restored second item must be selected, rather than passing via the
+      // first-item fallback, and later module navigation must own focus again.
+      await page.getByRole('button', { name: '新增价格项目', exact: true }).click();
+      await page.getByRole('textbox', { name: '名称', exact: true }).fill('Restored secondary project');
+      await page.getByRole('button', { name: '移除此项目', exact: true }).click();
+      await page.getByRole('button', { name: '撤销最近移除', exact: true }).click();
+      await page.waitForFunction(name => {
+        const entry = document.activeElement;
+        return entry?.id.startsWith('flow-price-') && entry.querySelector('input')?.value === name;
+      }, 'Restored secondary project');
+      assert.equal(await page.getByRole('textbox', { name: '名称', exact: true }).inputValue(), 'Restored secondary project');
+      await module('home'); await module('pricing');
+      await page.getByRole('button', { name: /Restored secondary project/ }).click();
+      await page.getByRole('button', { name: '移除此项目', exact: true }).click();
       await module('contact');
       await page.getByRole('textbox', { name: '页面标题', exact: true }).fill('Synthetic contact');
       await page.getByRole('textbox', { name: '介绍', exact: true }).fill(Array.from({ length: 70 }, (_, index) => `Contact note ${index + 1}`).join('\n'));
