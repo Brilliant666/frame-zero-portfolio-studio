@@ -124,13 +124,12 @@ export default function CinematicLightTemplate({
         <div className="hero-grid" aria-hidden="true" />
 
         <div className="hud hud-top-left">
-          <span>REC ●</span>
-          <span>4K / 60FPS</span>
+          <span>PHOTO ●</span>
+          <span>{works.length} SELECTED WORKS</span>
         </div>
         <div className="hud hud-top-right">
-          <span>ISO 400</span>
-          <span>1/250</span>
-          <span>F 2.8</span>
+          <span>{heroSlot.work?.code ?? "IMAGE PENDING"}</span>
+          <span>FRAME / {heroSlot.ratio}</span>
         </div>
         <div className="focus-frame" aria-hidden="true"><span /></div>
 

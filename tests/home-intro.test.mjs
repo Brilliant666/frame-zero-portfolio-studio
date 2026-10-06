@@ -55,6 +55,10 @@ test('skip and unmount cancel pending RAF, animations and event listeners', asyn
     globalThis.cancelAnimationFrame = id => cancelled.push(id);
     const dispose = runHomeIntro(root);
     assert.equal(overlay.hidden, false);
+    let prevented = false;
+    globalThis.document.activeElement = { hiddenByOverlay: true };
+    listeners.get('keydown')({ key: 'Tab', preventDefault() { prevented = true; } });
+    assert.equal(prevented, true); assert.equal(globalThis.document.activeElement, overlay);
     listeners.get('click')();
     assert.equal(overlay.hidden, true);
     assert.equal(listeners.size, 0);
@@ -65,4 +69,19 @@ test('skip and unmount cancel pending RAF, animations and event listeners', asyn
   } finally {
     for (const [key, value] of Object.entries(originals)) { if (value === undefined) delete globalThis[key]; else globalThis[key] = value; }
   }
+});
+
+test('opening isolates ancestor siblings and restores existing inert state on every exit', async () => {
+  const { isolateIntroBackground } = await load();
+  const node = (inert = false, tagName = 'DIV') => ({ inert, tagName, children: [], parentElement: null });
+  const attach = (parent, children) => { parent.children = children; children.forEach(child => { child.parentElement = parent; }); };
+  const body = node(false, 'BODY'), header = node(), existingModal = node(true), main = node();
+  const home = node(), footer = node(), overlay = node(), content = node();
+  attach(body, [header, existingModal, main]); attach(main, [home, footer]); attach(home, [overlay, content]);
+  const release = isolateIntroBackground(overlay);
+  for (const item of [header, existingModal, footer, content]) assert.equal(item.inert, true);
+  for (const item of [overlay, home, main, body]) assert.equal(item.inert, false);
+  release(); release();
+  for (const item of [header, footer, content]) assert.equal(item.inert, false);
+  assert.equal(existingModal.inert, true);
 });

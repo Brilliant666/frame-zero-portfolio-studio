@@ -205,8 +205,9 @@ test("Standard Next.js standalone starts over HTTP with current route parity", a
     headers: { "content-type": "application/json" },
     method: "PUT",
   });
-  assert.equal(writeResponse.status, 400);
-  assert.match((await writeResponse.json()).error, /Cloudflare D1 binding `DB` is unavailable/);
+  assert.equal(writeResponse.status, 410);
+  assert.equal((await writeResponse.json()).code, "LEGACY_WRITE_DISABLED");
+  assert.equal(writeResponse.headers.get("cache-control"), "no-store");
 });
 
 test("default production commands and build budget target Standard Next.js Node", async () => {

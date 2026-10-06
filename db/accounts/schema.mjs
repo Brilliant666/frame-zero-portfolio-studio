@@ -30,7 +30,7 @@ export const templateGrants = pgTable('site_template_grants', {
   product: text('product').notNull(),
   source: text('source').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-}, table => [uniqueIndex('site_product_unique').on(table.siteId, table.product), check('known_template_product', sql`${table.product} = 'premium-polaroid'`), check('known_grant_source', sql`${table.source} = 'operator-test'`)]);
+}, table => [uniqueIndex('site_product_unique').on(table.siteId, table.product), check('known_template_product', sql`${table.product} IN ('premium-polaroid', 'premium-flow-gallery')`), check('known_grant_source', sql`${table.source} = 'operator-test'`)]);
 
 export const contentDrafts = pgTable('site_content_drafts', {
   siteId: uuid('site_id').notNull().references(() => sites.id),
@@ -39,7 +39,7 @@ export const contentDrafts = pgTable('site_content_drafts', {
   content: jsonb('content').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, table => [primaryKey({ columns: [table.siteId, table.space] }),
-  check('known_content_space', sql`${table.space} IN ('basic', 'premium-polaroid')`),
+  check('known_content_space', sql`${table.space} IN ('basic', 'premium-polaroid', 'premium-flow-gallery')`),
   check('positive_draft_revision', sql`${table.revision} > 0`)]);
 
 export const siteAssets = pgTable('site_assets', {
@@ -64,7 +64,7 @@ export const publicationRevisions = pgTable('site_publication_revisions', {
   content: jsonb('content').notNull(), assetIds: uuid('asset_ids').array().notNull(),
   publishedAt: timestamp('published_at', {withTimezone:true}).defaultNow().notNull(),
 }, table => [uniqueIndex('publication_site_revision_unique').on(table.siteId,table.id),
-  check('publication_known_space',sql`${table.space} IN ('basic', 'premium-polaroid')`),
+  check('publication_known_space',sql`${table.space} IN ('basic', 'premium-polaroid', 'premium-flow-gallery')`),
   check('publication_positive_revision',sql`${table.draftRevision} > 0`)]);
 export const publications = pgTable('site_publications', {
   siteId: uuid('site_id').primaryKey().references(() => sites.id),

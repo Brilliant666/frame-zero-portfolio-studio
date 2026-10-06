@@ -138,7 +138,7 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   assert.doesNotMatch(template, /比例计划|photoRatios/);
   assert.match(template, /无需单独准备 16:9 素材/);
   assert.doesNotMatch(template, /TemplateCompositionPreview|LayoutCompositionPreview|planTemplateCompositionPreview|applyTemplateCompositionPreview|data-layout-preview-/);
-  assert.match(template, /设为主页并进入素材排版/);
+  assert.match(template, /选为草稿模板并进入素材排版/);
   assert.match(template, /进入素材排版/);
   assert.doesNotMatch(template, /独立预览/);
   assert.doesNotMatch(template, /TemplateEffectPreview|查看模板效果|data-template-candidate-preview/);
@@ -173,7 +173,7 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   assert.match(layout, /templateTransitionRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
   assert.match(layout, /aria-live="polite"/);
   assert.match(layout, /tabIndex=\{-1\}/);
-  assert.match(layout, /主页模板已切换为/);
+  assert.match(layout, /草稿模板已选择/);
   assert.match(layout, /尚未保存。现在可为它安排素材/);
   assert.match(layoutPreview, /planTemplateCompositionPreview/);
   assert.match(layoutPreview, /data-layout-composition-preview=\{templateId\}/);

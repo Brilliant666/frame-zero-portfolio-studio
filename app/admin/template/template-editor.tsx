@@ -46,7 +46,7 @@ export default function TemplateEditor() {
   };
 
   const detailState = inspectedIsDraft
-    ? inspectedIsSaved ? (siteScope ? "已保存草稿模板" : "当前主页模板") : "当前草稿选择 · 未保存"
+    ? inspectedIsSaved ? "已保存草稿模板" : "当前草稿选择 · 未保存"
     : null;
 
   const statusLabels = (templateId: TemplateId) => [
@@ -225,10 +225,10 @@ export default function TemplateEditor() {
                 type="button"
                 onClick={() => continueToLayout(inspectedTemplate.id)}
                 title={inspectedIsDraft
-                  ? "进入当前主页模板的素材排版"
-                  : "将模板写入当前草稿并进入素材排版；不会自动保存"}
+                  ? "进入当前草稿模板的素材排版"
+                  : "将模板写入当前草稿并进入素材排版；不会自动保存或发布"}
               >
-                {inspectedIsDraft ? "进入素材排版" : "设为主页并进入素材排版"}
+                {inspectedIsDraft ? "进入素材排版" : "选为草稿模板并进入素材排版"}
                 <span aria-hidden="true">→</span>
               </button>
             </div>

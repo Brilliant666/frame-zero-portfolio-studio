@@ -7,9 +7,10 @@ import { chromium } from 'playwright';
 import { provisionAccount } from '../db/accounts/provision.mjs';
 import { siteTemplateBrowserMatrix } from './site-template-browser-matrix.mjs';
 
-// Open the actual disclosure before editing; never force visibility or bypass UI.
+// Use an already visible control or open its actual disclosure; never force visibility.
 async function expandControl(page, control) {
   await control.waitFor({ state: 'attached' });
+  if (await control.isVisible()) return;
   const ancestors = page.locator('details').filter({ has: control });
   assert.ok(await ancestors.count() > 0, 'Expected an existing disclosure for this control');
   const disclosure = ancestors.last();
@@ -147,6 +148,15 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
     await step(`upload ${file.name} complete`);
     return value;
   }
+  async function visibleUpload() {
+    const uploader = page.locator('#basic-photo-upload [data-site-upload]');
+    const input = uploader.getByLabel('上传本站照片', { exact: true });
+    await input.waitFor({ state: 'visible' });
+    await page.waitForFunction(() => document.querySelector('#basic-photo-upload input[type="file"]')?.matches(':enabled'));
+    assert.equal(await input.isEnabled(), true, 'Upload is available directly in the gallery');
+    assert.equal(await input.getAttribute('accept'), 'image/jpeg,image/png,image/webp');
+    await uploader.getByText(/每批最多 8 张 · 每张最多 20 MB · JPEG \/ PNG \/ WebP/).waitFor({ state: 'visible' });
+  }
   const makeFile = async (name, width, height, color) => ({ name: `${name}.png`, mimeType: 'image/png', buffer: await sharp({ create: { width, height, channels: 3, background: color } }).png().toBuffer() });
   let firstBasic, secondBasic, firstPremium, originalCard, photoAssets;
   try {
@@ -166,7 +176,7 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
       await page.getByLabel('品牌名', { exact: true }).fill('PUBLICATION FIXTURE');
       await step('profile filled, navigate layout');
       await nav('layout');
-      await expandControl(page, page.getByLabel('上传本站照片', { exact: true }));
+      await visibleUpload();
       photoAssets = [await upload(await makeFile('landscape', 900, 600, '#557799')), await upload(await makeFile('landscape-second', 960, 640, '#997755')), await upload(await makeFile('portrait', 600, 900, '#667755'))];
       await nav('contact');
       await step('contact section ready');
@@ -278,7 +288,7 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
       await page.getByLabel('摄影师名称', { exact: true }).fill('Saved but rejected publication');
       await page.route(`**${publicationPath('basic')}`, route => route.request().method() === 'POST' ? route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ error: 'Synthetic lost authorization' }) }) : route.continue());
       await publicationRegion().getByRole('button', { name: '保存并发布', exact: true }).click();
-      await publicationRegion().getByRole('status').filter({ hasText: /已保存.*发布被拒绝/ }).waitFor();
+      await publicationRegion().getByRole('alert').filter({ hasText: /已保存.*发布被拒绝/ }).waitFor();
       assert.equal((await draft()).content.profile.photographer, 'Saved but rejected publication');
       assert.equal((await publication()).current.id, pointer);
       await page.unroute(`**${publicationPath('basic')}`);
@@ -300,11 +310,11 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
       const beforePost = writes('POST', publicationPath('basic')), pointer = (await publication()).current.id;
       await page.route(`**${publicationPath('basic')}`, route => route.request().method() === 'POST' ? route.abort('failed') : route.continue());
       await publicationRegion().getByRole('button', { name: '保存并发布', exact: true }).click();
-      await publicationRegion().getByRole('status').filter({ hasText: /发布结果待确认；当前公开版本与目标不同/ }).waitFor();
+      await publicationRegion().getByRole('status').filter({ hasText: /公开结果待确认；当前公开版本与目标不同/ }).waitFor();
       assert.equal(await publicationRegion().getByRole('button', { name: '保存并发布', exact: true }).isDisabled(), true);
       // Recovery remains available without expanding publication history.
-      await publicationRegion().getByRole('button', { name: '检查发布结果', exact: true }).waitFor({ state: 'visible' });
-      await publicationRegion().getByRole('button', { name: '检查发布结果', exact: true }).click();
+      await publicationRegion().getByRole('button', { name: '只读检查发布结果', exact: true }).waitFor({ state: 'visible' });
+      await publicationRegion().getByRole('button', { name: '只读检查发布结果', exact: true }).click();
       await publicationRegion().getByRole('status').filter({ hasText: '发布结果仍待确认' }).waitFor();
       assert.equal(writes('POST', publicationPath('basic')) - beforePost, 1); assert.equal((await publication()).current.id, pointer);
       await screenshot(page, 'uncertain-result-no-replay');

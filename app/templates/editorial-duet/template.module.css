@@ -9,6 +9,7 @@
   overflow: clip;
   background: var(--paper);
   color: var(--ink);
+  color-scheme: light;
 }
 
 .root :where(button, a) { -webkit-tap-highlight-color: transparent; }
@@ -21,8 +22,8 @@
   place-content: center;
   justify-items: center;
   gap: 1rem;
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--paper);
+  color: var(--ink);
   font: .65rem var(--font-geist-mono), monospace;
   letter-spacing: .16em;
   transition: opacity .45s ease, visibility .45s ease;
@@ -215,7 +216,7 @@
 .editorialNote span { grid-column: 2; color: var(--muted); font: .48rem/1.6 var(--font-geist-mono), monospace; letter-spacing: .06em; }
 
 .chapterNav { display: flex; gap: .28rem; margin-top: 1.25rem; overflow-x: auto; }
-.chapterNav a { display: grid; flex: 1 0 1.75rem; gap: .35rem; color: var(--muted); font: .42rem var(--font-geist-mono), monospace; transition: color .2s ease; }
+.chapterNav a { display: grid; flex: 1 0 2.75rem; min-height: 2.75rem; align-content: center; gap: .35rem; color: var(--muted); font: .75rem var(--font-geist-mono), monospace; transition: color .2s ease; }
 .chapterNav i { height: 2px; background: var(--line); transition: background .2s ease, transform .2s ease; transform-origin: left; }
 .chapterNav a:hover,
 .chapterNav a:focus-visible,
@@ -276,15 +277,15 @@
   place-content: center;
   padding: clamp(5rem, 10vw, 10rem) clamp(1rem, 5vw, 6rem);
   overflow: hidden;
-  background: var(--accent);
+  background: var(--paper-deep);
   color: var(--ink);
   text-align: center;
 }
 
-.interlude::before { content: "“"; position: absolute; top: -12vw; left: -2vw; color: rgba(242, 239, 232, .22); font: 500 52vw/.8 "Times New Roman", serif; }
+.interlude::before { content: "“"; position: absolute; top: -12vw; left: -2vw; color: rgba(235, 81, 46, .1); font: 500 52vw/.8 "Times New Roman", serif; }
 .interlude p { margin: 0 0 1.2rem; font: .55rem var(--font-geist-mono), monospace; letter-spacing: .16em; }
 .interlude h2 { position: relative; margin: 0; font: 500 clamp(4rem, 10vw, 10rem)/.75 "Iowan Old Style", "Baskerville", "Times New Roman", "Songti SC", serif; letter-spacing: -.07em; }
-.interlude h2 em { color: var(--paper); font-style: italic; }
+.interlude h2 em { color: #a63119; font-style: italic; }
 .interlude > span { margin-top: 2.5rem; font: .5rem var(--font-geist-mono), monospace; letter-spacing: .14em; }
 
 .rates {
@@ -304,20 +305,20 @@
 .rateList { max-width: 110rem; margin: 0 auto; border-top: 1px solid var(--line); }
 .rateList article { display: grid; grid-template-columns: 3rem minmax(11rem, .8fr) minmax(14rem, 1.1fr) minmax(16rem, 1fr) 3rem; align-items: center; gap: clamp(1rem, 3vw, 3rem); padding: 2rem .5rem; border-bottom: 1px solid var(--line); transition: background .25s ease, color .25s ease, padding .25s ease; }
 .rateList article:hover,
-.rateList article:focus-within { padding-inline: 1.2rem; background: var(--ink); color: var(--paper); }
+.rateList article:focus-within { padding-inline: 1.2rem; background: var(--paper-deep); color: var(--ink); box-shadow: inset 3px 0 var(--accent); }
 .rateNumber,
 .rateName small,
-.rateTerms span { color: var(--accent); font: .5rem var(--font-geist-mono), monospace; letter-spacing: .1em; }
+.rateTerms span { color: var(--accent); font: .8125rem var(--font-geist-mono), monospace; letter-spacing: .1em; }
 .rateName h3 { margin: .3rem 0 0; font: italic 500 clamp(1.8rem, 3.2vw, 3.4rem) "Iowan Old Style", "Baskerville", serif; letter-spacing: -.04em; }
 .rateList article > p { margin: 0; color: var(--muted); font-size: .75rem; line-height: 1.75; }
 .rateTerms { display: grid; grid-template-columns: 1fr auto; gap: .35rem 1rem; }
 .rateTerms strong { font-size: 1rem; }
-.rateTerms ul { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: .35rem .8rem; margin: .55rem 0 0; padding: 0; color: var(--muted); font: .5rem var(--font-geist-mono), monospace; list-style: none; }
+.rateTerms ul { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: .35rem .8rem; margin: .55rem 0 0; padding: 0; color: var(--muted); font: .8125rem var(--font-geist-mono), monospace; list-style: none; }
 .rateTerms li::before { content: "+ "; color: var(--accent); }
 .rateList article:hover > p,
 .rateList article:hover .rateTerms ul,
 .rateList article:focus-within > p,
-.rateList article:focus-within .rateTerms ul { color: rgba(242,239,232,.62); }
+.rateList article:focus-within .rateTerms ul { color: var(--muted); }
 .rateList article > a { display: grid; width: 2.6rem; height: 2.6rem; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--accent); font: .48rem var(--font-geist-mono), monospace; transition: background .2s ease, color .2s ease; }
 .rateList article > a:hover,
 .rateList article > a:focus-visible { background: var(--accent); color: var(--ink); }
@@ -339,15 +340,15 @@
 .directContact { margin-top: 2.5rem; border-top: 1px solid var(--line); }
 .directContact > button,
 .directContact > a { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr) auto; align-items: center; gap: 1rem; width: 100%; min-height: 4.5rem; padding: .8rem 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; text-align: left; }
-.directContact span { color: var(--muted); font: .5rem var(--font-geist-mono), monospace; letter-spacing: .1em; }
+.directContact span { color: var(--muted); font: .8125rem var(--font-geist-mono), monospace; letter-spacing: .1em; }
 .directContact strong { overflow: hidden; font-size: .78rem; text-overflow: ellipsis; }
-.directContact b { color: var(--accent); font: .5rem var(--font-geist-mono), monospace; }
-.contactNote { display: block; max-width: 31rem; margin-top: 1rem; color: var(--muted); font-size: .64rem; line-height: 1.6; }
+.directContact b { color: var(--accent); font: .8125rem var(--font-geist-mono), monospace; }
+.contactNote { display: block; max-width: 31rem; margin-top: 1rem; color: var(--muted); font-size: .8125rem; line-height: 1.6; }
 
 .bookingSheet { align-self: center; border: 1px solid var(--ink); background: #f8f6f1; box-shadow: 1.2rem 1.2rem 0 var(--accent); }
 .sheetHead { display: flex; justify-content: space-between; gap: 1rem; padding: .8rem 1rem; border-bottom: 1px solid var(--line); color: var(--muted); font: .48rem var(--font-geist-mono), monospace; letter-spacing: .08em; }
-.bookingSheet pre { min-height: 20rem; margin: 0; padding: 1.3rem; color: rgba(21, 20, 17, .72); font: .68rem/1.9 var(--font-geist-mono), monospace; white-space: pre-wrap; }
-.bookingSheet > button { display: flex; width: 100%; min-height: 3.5rem; align-items: center; justify-content: space-between; gap: 1rem; padding: .8rem 1rem; border-top: 1px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer; font: .58rem var(--font-geist-mono), monospace; letter-spacing: .08em; }
+.bookingSheet pre { min-height: 20rem; margin: 0; padding: 1.3rem; color: rgba(21, 20, 17, .72); font: .8125rem/1.9 var(--font-geist-mono), monospace; white-space: pre-wrap; }
+.bookingSheet > button { display: flex; width: 100%; min-height: 3.5rem; align-items: center; justify-content: space-between; gap: 1rem; padding: .8rem 1rem; border-top: 1px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer; font: .8125rem var(--font-geist-mono), monospace; letter-spacing: .08em; }
 .bookingSheet > button b { color: var(--accent); font-size: .48rem; }
 
 .footer { display: grid; grid-template-columns: 1.2fr 1.5fr .8fr auto; align-items: end; gap: 1.5rem; padding: clamp(3rem, 6vw, 6rem) clamp(1rem, 3vw, 3rem); background: var(--paper); color: var(--muted); font: .5rem var(--font-geist-mono), monospace; letter-spacing: .07em; }

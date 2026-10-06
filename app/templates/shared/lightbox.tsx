@@ -13,12 +13,14 @@ type LightboxProps = {
   onMove: (direction: -1 | 1) => void;
   onClose: () => void;
   theme?: "light" | "dark";
+  /** Appearance is independent of the existing photo-information presentation. */
+  appearance?: "light" | "dark";
   safeMissingImage?: boolean;
   separateControls?: boolean;
   motionOrigin?: { left: number; top: number; width: number; height: number } | null;
 };
 
-export default function Lightbox({ work, works, frameRef, closeButtonRef, onMove, onClose, theme = "dark", safeMissingImage = false, separateControls = false, motionOrigin }: LightboxProps) {
+export default function Lightbox({ work, works, frameRef, closeButtonRef, onMove, onClose, theme = "dark", appearance = theme, safeMissingImage = false, separateControls = false, motionOrigin }: LightboxProps) {
   const [unavailable, setUnavailable] = useState<string[]>([]);
   const photoRef = useRef<HTMLDivElement>(null), entered = useRef(false);
   useEffect(() => {
@@ -33,7 +35,7 @@ export default function Lightbox({ work, works, frameRef, closeButtonRef, onMove
   return (
     <div
       ref={frameRef}
-      className={`lightbox ${theme === "light" ? "lightbox-light" : ""}`}
+      className={`lightbox ${appearance === "light" ? "lightbox-light" : ""}`}
       data-separated={separateControls || undefined}
       role="dialog"
       aria-modal="true"

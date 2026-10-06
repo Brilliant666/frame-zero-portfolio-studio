@@ -72,6 +72,13 @@
 /* Version details stay in flow; only the two save actions stay on screen. */
 .panel { padding: 12px 16px; }
 .tools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; margin-top: 10px; }
+.toolDisclosure { margin-top: 6px; }
+.toolDisclosure > summary { width: fit-content; cursor: pointer; min-height: 32px; line-height: 32px; color: #435b77; }
+.panel:has(> .toolDisclosure) { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; }
+.panel:has(> .toolDisclosure) > .row { grid-column: 1 / -1; }
+.panel:has(> .toolDisclosure) > .toolDisclosure { grid-column: 1 / -1; grid-row: 2; padding-right: 100px; }
+.panel:has(> .toolDisclosure) > .refresh { grid-column: 2; grid-row: 2; align-self: start; margin-top: 12px; }
+.panel:has(> .toolDisclosure) > .message { grid-column: 1 / -1; }
 .tools :is(a, button, summary) { font: inherit; min-height: 32px; color: #435b77; }
 .tools button { border: 1px solid #cdd6e2; background: #fff; border-radius: 6px; padding: 5px 9px; }
 .tools details > div { display: flex; gap: 8px; flex-wrap: wrap; padding: 8px 0; }
@@ -93,3 +100,9 @@
 @media (min-width: 601px) {
   .panel .actions { position: fixed; top: 6px; right: 24px; z-index: 55; flex-wrap: nowrap; }
 }
+.message { border-left: 3px solid #7192b8; background: #f2f6fb; padding: 12px 14px; font-size: 13px; }
+.message strong { display: block; color: #243449; font-size: 14px; }
+.message p { margin: 6px 0 0; }
+.message[data-tone="success"] { border-color: #39815b; background: #edf7f0; color: #285b3f; }
+.message[data-tone="error"] { border-color: #ba4832; background: #fff0eb; color: #8a3023; }
+.message[data-tone="pending"] { border-color: #b88119; background: #fff7e4; color: #775618; }

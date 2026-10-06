@@ -161,6 +161,7 @@ export default function PolaroidFieldTemplate({
     <main
       className={`${styles.shell} ${booted ? styles.ready : ""}`}
       data-template={templateId}
+      data-basic-template={!collectionWorkspace || undefined}
       data-collection-proof={collectionProof ? (isPreview ? "preview" : "public") : undefined}
       data-polaroid-active-view={activeView}
     >
@@ -224,7 +225,7 @@ export default function PolaroidFieldTemplate({
         >
           <div className={styles.sceneIdentity}>
             <small>{content.profile.photographer} · 摄影作品</small>
-            <h1 id="scene-title">{content.profile.photographer}<span>漂浮拍立得星图</span></h1>
+            <h1 id="scene-title">{content.hero.title}<span>漂浮拍立得星图</span></h1>
             <p>{content.profile.intro}</p>
             <p>{content.profile.role} · {content.hero.services}</p>
           </div>
@@ -467,7 +468,7 @@ export default function PolaroidFieldTemplate({
             <strong>{content.profile.brand}</strong>
             <span>{content.profile.photographer} · {content.profile.role}</span>
           </div>
-          <PlatformAccounts accounts={content.social} tone="dark" />
+          <PlatformAccounts accounts={content.social} tone={collectionWorkspace ? "dark" : "light"} />
           <p>{content.statement.lineOne}{content.statement.lineTwo}</p>
           <small>© 2026 / EVERY MEMORY HAS COORDINATES.</small>
         </footer>}

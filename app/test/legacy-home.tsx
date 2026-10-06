@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getClientVisiblePortfolioTitle } from "../client-visible-title";
 import { isTemplateId, normalizeSiteContent, siteConfig, type SiteContent, type TemplateId } from "../site-config";
 import Lightbox from "../templates/shared/lightbox";
+import { templateAppearances } from "../templates/appearance";
 import { useTemplateWorks } from "../templates/shared/use-template-works";
 import { useTemplateInteractions } from "../templates/shared/use-template-interactions";
 import TemplateRenderer from "../templates/template-renderer";
@@ -111,6 +112,7 @@ export default function Home() {
           work={activeWork}
           works={[...lightboxWorks]}
           theme={templateId === "polaroid-field" ? "light" : "dark"}
+          appearance={templateAppearances[templateId].tone}
           frameRef={lightboxRef}
           closeButtonRef={closeButtonRef}
           onMove={moveActiveWork}

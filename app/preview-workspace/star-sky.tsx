@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 /** Decorative sky owns its own clock; never updates React on animation frames. */
-export default function StarSky({ active, className }: { active: boolean; className: string }) {
+export default function StarSky({ active, paused = false, className }: { active: boolean; paused?: boolean; className: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current, ctx = canvas?.getContext("2d");
@@ -14,10 +14,10 @@ export default function StarSky({ active, className }: { active: boolean; classN
     let stars: { x: number; y: number; z: number; phase: number; gold: boolean }[] = [];
     const draw = (now: number) => {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, width, height);
-      const boost = !reduced.matches && now < boostEnd ? Math.sin(Math.PI * (now - boostStart) / (boostEnd - boostStart)) : 0;
+      const boost = !paused && !reduced.matches && now < boostEnd ? Math.sin(Math.PI * (now - boostStart) / (boostEnd - boostStart)) : 0;
       for (const star of stars) {
         const x = star.x * width, y = star.y * height;
-        ctx.globalAlpha = reduced.matches ? .55 : .35 + .3 * (1 + Math.sin(now * .0006 + star.phase));
+        ctx.globalAlpha = paused || reduced.matches ? .55 : .35 + .3 * (1 + Math.sin(now * .0006 + star.phase));
         ctx.fillStyle = star.gold ? highlightColor : starColor;
         const radius = .35 + star.z * 1.2;
         if (boost > .02) {
@@ -29,7 +29,7 @@ export default function StarSky({ active, className }: { active: boolean; classN
     };
     const tick = (now: number) => {
       frame = 0;
-      if (document.hidden || reduced.matches) return;
+      if (document.hidden || paused || reduced.matches) return;
       if (now - last >= 30) { draw(now); last = now; }
       frame = requestAnimationFrame(tick);
     };
@@ -37,7 +37,7 @@ export default function StarSky({ active, className }: { active: boolean; classN
       cancelAnimationFrame(frame); frame = 0;
       if (document.hidden) return;
       draw(performance.now());
-      if (!reduced.matches) frame = requestAnimationFrame(tick);
+      if (!paused && !reduced.matches) frame = requestAnimationFrame(tick);
     };
     const resize = () => {
       const box = canvas.getBoundingClientRect(); width = box.width; height = box.height;
@@ -47,12 +47,12 @@ export default function StarSky({ active, className }: { active: boolean; classN
       canvas.dataset.particles = String(count); resume();
     };
     const boost = (event: Event) => {
-      if (reduced.matches || document.hidden) return;
+      if (paused || reduced.matches || document.hidden) return;
       boostStart = performance.now(); boostEnd = boostStart + Math.max(0, Math.min(1500, Number((event as CustomEvent).detail?.duration) || 1100));
     };
     const observer = new ResizeObserver(resize); observer.observe(canvas); resize();
     document.addEventListener("visibilitychange", resume); reduced.addEventListener("change", resume); window.addEventListener("preview:star-boost", boost);
     return () => { cancelAnimationFrame(frame); observer.disconnect(); document.removeEventListener("visibilitychange", resume); reduced.removeEventListener("change", resume); window.removeEventListener("preview:star-boost", boost); ctx.clearRect(0, 0, canvas.width, canvas.height); };
-  }, [active]);
+  }, [active, paused]);
   return <canvas ref={ref} className={className} aria-hidden="true" />;
 }

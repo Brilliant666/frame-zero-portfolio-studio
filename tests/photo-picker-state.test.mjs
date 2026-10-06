@@ -9,12 +9,13 @@ import ts from "typescript";
 async function picker(t) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "site-photo-picker-"));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
-  for (const [name, sourcePath] of [["catalog", "templates/catalog"], ["document", "preview-workspace/document"], ["schema", "site-editor/content-schema"], ["picker", "preview-workspace/photo-picker-state"]]) {
+  for (const [name, sourcePath] of [["catalog", "templates/catalog"], ["document", "preview-workspace/document"], ["flow", "site-editor/flow-gallery-document"], ["schema", "site-editor/content-schema"], ["picker", "preview-workspace/photo-picker-state"]]) {
     const source = await fs.readFile(new URL(`../app/${sourcePath}.ts`, import.meta.url), "utf8");
     // site-config reexports the same catalog functions; legacy defaults are unrelated.
     const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText
       .replace('"../site-config"', '"./catalog.mjs"')
       .replace('"../preview-workspace/document"', '"./document.mjs"')
+      .replace('"./flow-gallery-document"', '"./flow.mjs"')
       .replace('"../site-editor/content-schema"', '"./schema.mjs"')
       .replace('"./document"', '"./document.mjs"');
     await fs.writeFile(path.join(directory, `${name}.mjs`), js);

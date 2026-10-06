@@ -113,16 +113,108 @@ export async function exerciseLargeCollections({ page, read, published, shot }) 
           stableFrames = Math.abs(nextScroll - lastScroll) < 1 ? stableFrames + 1 : 0; lastScroll = nextScroll;
         }
         assert.ok(stableFrames >= 3, 'Touch scroll momentum settled');
-        await card(original[1]).scrollIntoViewIfNeeded();
-        const source = await card(original[1]).boundingBox(), target = await card(original[0]).boundingBox();
-        await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: source.x + source.width / 2, y: source.y + source.height / 2 }] });
-        await page.waitForTimeout(450);
-        assert.equal(await card(original[1]).getAttribute('data-dragging'), 'true', 'Long press activates card dragging');
-        await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: target.x + target.width / 4, y: target.y + target.height / 2 }] });
-        await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-        await expectOrder([original[1], original[0], ...original.slice(2)]);
-        await editor.getByRole('button', { name: '撤销最近移动', exact: true }).click();
-        await expectOrder(original);
+        await card(original[1]).evaluate(element => element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' }));
+        const geometry = () => page.evaluate(([sourceId, targetId]) => {
+          const rect = id => {
+            const r = document.querySelector(`[data-member-id="${id}"]`).getBoundingClientRect();
+            return { x: r.x, y: r.y, width: r.width, height: r.height };
+          };
+          return { scroll: scrollY, source: rect(sourceId), target: rect(targetId) };
+        }, [original[1], original[0]]);
+        async function settleCards() {
+          let previous = await geometry(), stableGeometry = 0;
+          const samples = [previous];
+          for (let attempt = 0; attempt < 20 && stableGeometry < 3; attempt++) {
+            await page.waitForTimeout(50);
+            const next = await geometry(); samples.push(next);
+            const deltas = [Math.abs(next.scroll - previous.scroll), ...['source', 'target'].flatMap(key => ['x', 'y', 'width', 'height'].map(axis => Math.abs(next[key][axis] - previous[key][axis])))];
+            stableGeometry = deltas.every(delta => delta < 1) ? stableGeometry + 1 : 0; previous = next;
+          }
+          assert.ok(stableGeometry >= 3, `Long-press card geometry settled: ${JSON.stringify(samples)}`);
+          return samples;
+        }
+        const samples = await settleCards();
+        const points = await card(original[1]).evaluate((element, targetId) => {
+          const point = (card, fraction) => {
+            const r = card.querySelector(':scope > div').getBoundingClientRect();
+            const left = Math.max(0, r.left), right = Math.min(innerWidth, r.right), top = Math.max(0, r.top), bottom = Math.min(innerHeight, r.bottom);
+            const x = left + (right - left) * fraction, y = (top + bottom) / 2;
+            const hit = document.elementFromPoint(x, y);
+            return { x, y, visibleWidth: right - left, visibleHeight: bottom - top, hitTag: hit?.tagName ?? null, hitMember: hit?.closest('[data-member-id]')?.getAttribute('data-member-id') ?? null, hitButton: Boolean(hit?.closest('button')) };
+          };
+          const zoom = element.querySelector('[data-member-zoom]').getBoundingClientRect();
+          return { source: point(element, .5), target: point(document.querySelector(`[data-member-id="${targetId}"]`), .25), zoom: { x: zoom.x, y: zoom.y, width: zoom.width, height: zoom.height }, scroll: scrollY };
+        }, original[0]);
+        for (const [key, id] of [['source', original[1]], ['target', original[0]]]) {
+          assert.ok(points[key].visibleWidth > 10 && points[key].visibleHeight > 10 && points[key].hitMember === id && !points[key].hitButton, `Native touch ${key} reaches the photo area: ${JSON.stringify(points)}`);
+        }
+        await page.evaluate(initial => {
+          const events = [];
+          window.__largeCollectionTouchDiagnostics = { ...initial, events };
+          const record = event => {
+            const target = event.target instanceof Element ? event.target : null;
+            const touch = event.touches?.[0] ?? event.changedTouches?.[0];
+            events.push({ type: event.type, at: performance.now(), member: target?.closest('[data-member-id]')?.getAttribute('data-member-id') ?? null, button: Boolean(target?.closest('button')), touches: event.touches?.length ?? null, point: touch ? { x: touch.clientX, y: touch.clientY, radiusX: touch.radiusX, radiusY: touch.radiusY } : null, scroll: scrollY });
+          };
+          for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) document.addEventListener(type, record, { capture: true, passive: true });
+          window.addEventListener('blur', record);
+          window.__largeCollectionTouchCleanup = () => {
+            for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) document.removeEventListener(type, record, true);
+            window.removeEventListener('blur', record);
+          };
+        }, { points, samples });
+        async function waitForDrag(stage) {
+          try {
+            await page.waitForFunction(id => document.querySelector(`[data-member-id="${id}"]`)?.getAttribute('data-dragging') === 'true', original[1], { timeout: 1500 });
+          } catch (cause) {
+            const diagnostic = await page.evaluate(() => ({ ...window.__largeCollectionTouchDiagnostics, activeElement: document.activeElement?.tagName, dragging: [...document.querySelectorAll('[data-dragging]')].map(node => node.getAttribute('data-member-id')) }));
+            throw new Error(`${stage} did not activate card dragging: ${JSON.stringify(diagnostic)}`, { cause });
+          }
+        }
+        const photoDialog = page.getByRole('dialog', { name: '成员照片大图', exact: true });
+        try {
+          await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: points.source.x, y: points.source.y }] });
+          await waitForDrag('Photo-center long press');
+          assert.equal(await card(original[1]).getAttribute('data-dragging'), 'true', 'Long press activates card dragging');
+          await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: points.target.x, y: points.target.y }] });
+          await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+          await expectOrder([original[1], original[0], ...original.slice(2)]);
+          assert.equal(await photoDialog.count(), 0, 'Photo-center long press sorts without opening the adjusted zoom button');
+          await editor.getByRole('button', { name: '撤销最近移动', exact: true }).click();
+          await expectOrder(original);
+          await card(original[1]).evaluate(element => element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' }));
+          await settleCards();
+          const zoomButton = card(original[1]).locator('[data-member-zoom]');
+          const zoomPoint = async () => zoomButton.evaluate(element => {
+            const r = element.getBoundingClientRect(), x = r.x + r.width / 2, y = r.y + r.height / 2;
+            return { x, y, rect: { x: r.x, y: r.y, width: r.width, height: r.height }, reachesZoom: document.elementFromPoint(x, y)?.closest('[data-member-zoom]') === element };
+          });
+          const tappedZoom = await zoomPoint();
+          assert.equal(tappedZoom.reachesZoom, true, `Short touch reaches the actual zoom button: ${JSON.stringify(tappedZoom)}`);
+          await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: tappedZoom.x, y: tappedZoom.y }] });
+          await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+          await photoDialog.waitFor();
+          await expectOrder(original);
+          assert.equal(await editor.locator('[data-dragging]').count(), 0, 'Zoom short touch opens the viewer without sorting');
+          await photoDialog.getByRole('button', { name: '关闭大图', exact: true }).click();
+          await photoDialog.waitFor({ state: 'detached' });
+          assert.equal(await zoomButton.evaluate(element => document.activeElement === element), true, 'Closing the viewer restores the zoom control');
+          await card(original[1]).evaluate(element => element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' }));
+          await settleCards();
+          const heldZoom = await zoomPoint(), destination = await card(original[0]).boundingBox();
+          assert.equal(heldZoom.reachesZoom, true, `Long touch reaches the actual zoom button: ${JSON.stringify(heldZoom)}`);
+          await page.evaluate(zoom => { window.__largeCollectionTouchDiagnostics.heldZoom = zoom; }, heldZoom);
+          await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: heldZoom.x, y: heldZoom.y }] });
+          await waitForDrag('Zoom-button long press');
+          await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: destination.x + destination.width / 4, y: destination.y + destination.height / 2 }] });
+          await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+          await expectOrder([original[1], original[0], ...original.slice(2)]);
+          assert.equal(await photoDialog.count(), 0, 'Zoom long press sorts without triggering a viewer click');
+          await editor.getByRole('button', { name: '撤销最近移动', exact: true }).click();
+          await expectOrder(original);
+        } finally {
+          await page.evaluate(() => { window.__largeCollectionTouchCleanup?.(); delete window.__largeCollectionTouchCleanup; });
+        }
       } finally {
         await touch.send('Emulation.setTouchEmulationEnabled', { enabled: false });
         await touch.detach();

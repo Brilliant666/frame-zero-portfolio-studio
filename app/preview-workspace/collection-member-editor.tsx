@@ -90,9 +90,12 @@ export default function CollectionMemberEditor({ collection, assets, onChange, o
     const start = (event: TouchEvent) => {
       if (event.touches.length !== 1) { cancelDrag(); return; }
       const element = event.target instanceof Element ? event.target : null;
-      if (element?.closest("button")) return;
       const card = element?.closest<HTMLElement>("[data-member-id]");
       if (!card?.dataset.memberId || !node.contains(card)) return;
+      const button = element?.closest("button");
+      // Chrome can adjust a photo touch to its nearby zoom button. A short tap
+      // still opens it; holding this card's own zoom also sorts the whole card.
+      if (button && (button.parentElement !== card || !button.hasAttribute("data-member-zoom"))) return;
       const touch = event.touches[0];
       begin(card.dataset.memberId, touch.clientX, touch.clientY, touch.identifier);
       holdTimer.current = setTimeout(activate, 350);
@@ -187,7 +190,7 @@ export default function CollectionMemberEditor({ collection, assets, onChange, o
       const asset = assetMap.get(id);
       return <li className={styles.card} key={id} ref={node => { if (node) cards.current.set(id, node); else cards.current.delete(id); }} data-member-id={id} data-sort-card={mode === "sort" || undefined} tabIndex={mode === "sort" ? 0 : undefined} aria-label={mode === "sort" ? `照片 ${index + 1}，拖动调整顺序` : undefined} aria-describedby={mode === "sort" ? helpId : undefined} data-selected={mode === "manage" && selectedIds.includes(id) || undefined} data-dragging={dragView?.id === id || undefined} data-drop-target={dragView?.target === id && dragView.id !== id || undefined} data-drop-side={dragView?.target === id && dragView.id !== id ? dragView.side : undefined}
         onKeyDown={mode === "sort" ? event => keyboard(event, id, index) : undefined} onPointerDown={mode === "sort" ? event => startPointer(event, id) : undefined} onPointerMove={mode === "sort" ? movePointer : undefined} onPointerUp={mode === "sort" ? endPointer : undefined} onPointerCancel={event => { if (event.pointerType !== "touch") cancelDrag(); }} onLostPointerCapture={event => { if (event.pointerType !== "touch" && drag.current?.id === id) cancelDrag(); }} onContextMenu={mode === "sort" ? event => event.preventDefault() : undefined}>
-        {mode === "sort" ? <><div className={styles.photo}>{asset ? <img src={asset.variants.thumbnail.src} alt="" loading="lazy" draggable={false} /> : <span>素材暂不可用<br />引用保留</span>}<span className={styles.number}>{index + 1}</span></div><button type="button" className={styles.zoom} disabled={!asset} aria-label={`查看成员 ${index + 1} 大图`} onClick={() => { if (asset) onView(asset); }}>⤢</button></> : <>
+        {mode === "sort" ? <><div className={styles.photo}>{asset ? <img src={asset.variants.thumbnail.src} alt="" loading="lazy" draggable={false} /> : <span>素材暂不可用<br />引用保留</span>}<span className={styles.number}>{index + 1}</span></div><button type="button" data-member-zoom className={styles.zoom} disabled={!asset} aria-label={`查看成员 ${index + 1} 大图`} onClick={() => { if (asset) onView(asset); }}>⤢</button></> : <>
           <button type="button" className={styles.photo} disabled={!asset} aria-label={`查看成员 ${index + 1} 大图`} onClick={() => { if (asset) onView(asset); }}>{asset ? <img src={asset.variants.thumbnail.src} alt="" loading="lazy" draggable={false} /> : <span>素材暂不可用<br />引用保留</span>}<span className={styles.number}>{index + 1}</span>{collection.coverAssetId === id && <span className={styles.view}>封面</span>}</button>
           <div className={styles.cardBar}><label className={styles.select}><input type="checkbox" checked={selectedIds.includes(id)} onChange={() => toggle(id)} aria-label={`选择成员 ${index + 1}`} /><span>选择</span></label></div>
         </>}

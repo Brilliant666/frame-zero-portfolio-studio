@@ -934,6 +934,40 @@
   display: none;
 }
 
+/* The advanced collection workspace owns its separate paper/night palette. */
+.shell[data-basic-template] {
+  color-scheme: light;
+}
+
+.shell[data-basic-template] .bookingIntro,
+.shell[data-basic-template] .footer {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.shell[data-basic-template] .bookingIntro {
+  --coral: #b34332;
+}
+
+.shell[data-basic-template] .bookingIntro > p:not(.contactNote),
+.shell[data-basic-template] .contactNote,
+.shell[data-basic-template] .footer > small {
+  color: var(--ink-soft);
+}
+
+.shell[data-basic-template] .bookingIntro > button,
+.shell[data-basic-template] .bookingIntro > a {
+  border-color: rgba(24, 34, 39, .28);
+  color: var(--ink);
+}
+
+.shell[data-basic-template] .bookingIntro > button:hover,
+.shell[data-basic-template] .bookingIntro > button:focus-visible,
+.shell[data-basic-template] .bookingIntro > a:hover,
+.shell[data-basic-template] .bookingIntro > a:focus-visible {
+  background: var(--cream);
+}
+
 @media (max-width: 1050px) {
   .packageGrid {
     grid-template-columns: 1fr;
@@ -1467,3 +1501,17 @@
     width: auto;
   }
 }
+
+/* Keep the basic content readable without changing the premium collection UI. */
+.shell[data-basic-template] .packageTitle small,
+.shell[data-basic-template] .packageOffer li,
+.shell[data-basic-template] .packageCard > a,
+.shell[data-basic-template] .packageNote,
+.shell[data-basic-template] .bookingIntro > button span,
+.shell[data-basic-template] .bookingIntro > a span,
+.shell[data-basic-template] .bookingIntro > button b,
+.shell[data-basic-template] .bookingIntro > a b,
+.shell[data-basic-template] .contactNote,
+.shell[data-basic-template] .noteCard pre,
+.shell[data-basic-template] .noteCard > button { font-size:.8125rem; }
+.shell[data-basic-template] .sceneIdentity h1 { overflow-wrap:anywhere; line-height:1.08; }
