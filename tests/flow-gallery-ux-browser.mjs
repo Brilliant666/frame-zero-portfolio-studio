@@ -383,7 +383,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       await page.getByRole('button', { name: '撤销最近移除', exact: true }).click();
       await page.waitForFunction(name => {
         const entry = document.activeElement;
-        return entry?.id.startsWith('flow-price-') && entry.querySelector('input')?.value === name;
+        return entry?.id.startsWith('flow-price-') && entry.querySelector('input:not([type="checkbox"])')?.value === name;
       }, 'Restored secondary project');
       assert.equal(await page.getByRole('textbox', { name: '名称', exact: true }).inputValue(), 'Restored secondary project');
       await module('home'); await module('pricing');
