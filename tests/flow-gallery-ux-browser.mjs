@@ -1225,7 +1225,10 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         assert.deepEqual(saved.content.groups.slice(1), before.draft.content.groups.slice(1));
         assert.deepEqual(await draft(), saved);
         assert.deepEqual(await publication(), before.publication, 'Save-only preserves the complete existing Published record');
-        await b1.goto(`${origin}/${SLUG}/admin/${SPACE}#edit-library`);
+        // Changing only this route's hash retains the current editing session.
+        // A real reload mounts a new session and must discard transient lookup.
+        await b1.reload();
+        await b1module('library');
         await b1.getByText('本站图库 55 张', { exact: true }).waitFor();
         assert.equal(await b1.getByRole('combobox', { name: '画幅', exact: true }).inputValue(), 'all', 'A new editor session does not persist library conditions in storage');
         assert.equal(await b1.getByRole('combobox', { name: '加入本站时间', exact: true }).inputValue(), 'recent');
