@@ -70,6 +70,23 @@
 .uploadRegion ul{margin:10px 0 0;padding-left:20px;font-size:12px}
 .libraryToolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}
 .libraryToolbar>span{font-size:13px;font-weight:500}.libraryToolbar>div{display:flex;gap:18px;align-items:center}.libraryToolbar button{font-size:12px!important}
+.libraryPanel{margin-top:16px}
+.libraryTaskHeader{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.libraryTaskTitle{display:flex;align-items:center;gap:16px;flex-wrap:wrap;min-width:0}
+.workspace .libraryTaskTitle h1{font-size:28px}
+.libraryTaskTitle>span{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.libraryTaskActions{display:flex;gap:10px;flex-wrap:wrap}
+.libraryPanel .libraryPurpose{margin:10px 0 4px;font-size:12px;line-height:1.7}
+.libraryUtilities{display:flex;align-items:center;justify-content:space-between;gap:8px 20px;flex-wrap:wrap;margin-bottom:8px}
+.libraryPanel .libraryUtilities p{margin:0;font-size:12px;line-height:1.7}
+.libraryUtilities>div{display:flex;gap:16px;flex-wrap:wrap}
+.root .libraryUtilities button{font-size:12px;padding-inline:0}
+.libraryPanel .photoFilters{padding-block:12px}
+.libraryPanel .library{margin-top:16px}
+.previewTarget{position:fixed;z-index:199;bottom:70px;left:50%;transform:translateX(-50%);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;max-width:calc(100% - 32px);border-radius:5px;background:#fffefbf5;color:var(--ink);font:13px/1.6 "Segoe UI","Microsoft YaHei",sans-serif;box-shadow:0 2px 12px #0002}
+.previewTarget span{overflow-wrap:anywhere;min-width:0}
+.previewTarget button{flex-shrink:0}
+@media(max-width:760px){.libraryPanel{margin-top:10px}.libraryTaskHeader{gap:10px}.libraryTaskTitle{gap:12px}.workspace .libraryTaskTitle h1{font-size:26px}.libraryTaskActions{width:100%;gap:10px}.libraryTaskActions button{flex:1;padding-inline:10px}.libraryPanel .libraryPurpose{margin-top:10px}.libraryUtilities{gap:4px}.libraryUtilities>div{gap:20px}.libraryPanel .photoFilters{padding-block:10px}.previewTarget{width:calc(100% - 32px);box-sizing:border-box;font-size:12px}.root .previewTarget button{font-size:12px;padding:8px 10px}}
 .photoFilters{display:grid;grid-template-columns:1fr 1.1fr 1.6fr;gap:18px;padding:18px 0;border-block:1px solid var(--line)}
 .photoFilters label{margin:0;font-size:12px;color:var(--muted)}
 .photoFilters :is(input,select){width:100%;min-height:44px;padding:10px 12px;border:1px solid #d2d9cd;background:#fff;border-radius:5px;color:var(--ink);font:inherit}

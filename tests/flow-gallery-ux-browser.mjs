@@ -20,6 +20,7 @@ const MODULES = [
   ['contact', '联系', 'contact'],
 ];
 const VIEWPORTS = [{ width: 1440, height: 900 }, { width: 390, height: 844 }];
+const GROUP_PREVIEW_VIEWPORTS = [...VIEWPORTS, { width: 1280, height: 720 }, { width: 1920, height: 1080 }, { width: 320, height: 844 }];
 const outside = (root, target) => {
   const from = relative(root, target);
   return from.startsWith(`..${sep}`) || from === '..' || isAbsolute(from);
@@ -72,7 +73,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
     origin, fixture: SLUG, head: process.env.GITHUB_SHA ?? 'local',
     scope: 'Synthetic third-space UI, memory preview, Published-only rendering and viewport/motion regressions; no physical device acceptance',
     checkpoints: [], screenshots: [], transitions: [], sceneScroll: [], lightboxReturns: [], lightboxSizing: [], motion: [], railWidths: [], network: [], forbiddenRequests: [], pageErrors: [],
-    protectedBefore, protectedAfter: null, metadata: null, responsiveImages: [], routePerformance: [],
+    protectedBefore, protectedAfter: null, metadata: null, responsiveImages: [], routePerformance: [], groupPreviews: [],
   };
   const persist = () => writeFile(join(output, 'acceptance.json'), JSON.stringify(report, null, 2));
   let browser, page, publicPage;
@@ -472,6 +473,153 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         }
         assert.equal(await root.getAttribute('data-flow-dirty'), 'true');
       }
+    });
+
+    await stage('04a current second-category preview and editor return at five widths', async () => {
+      const beforeData = { draft: await draft(), publication: await publication(), writes: writeCount() };
+      const [firstGroup, secondGroup] = beforeData.draft.content.groups;
+      assert.ok(firstGroup && secondGroup, 'Targeting requires a real second group, beyond first-group fallback');
+      const selectedGroup = () => page.locator('nav[aria-label="作品分类"] button[aria-current="page"]');
+      const selectedStep = () => page.locator('nav[aria-label="分类编辑步骤"] button[aria-current="step"]');
+      async function editorBookmark() {
+        return {
+          group: await selectedGroup().innerText(), step: await selectedStep().innerText(),
+          dirty: await root.getAttribute('data-flow-dirty'), hash: new URL(page.url()).hash,
+          ...await page.evaluate(() => ({ scroll: scrollY, overflow: document.body.style.overflow, padding: document.body.style.paddingRight })),
+        };
+      }
+      async function assertEditorReturn(trigger, before) {
+        await preview().waitFor({ state: 'detached' });
+        await page.waitForFunction(() => document.activeElement?.closest('[data-flow-editor-section]') !== null);
+        await stableScroll(page);
+        assert.equal(await trigger.evaluate(element => document.activeElement === element), true, 'Preview closes with focus on its actual trigger');
+        const after = await editorBookmark();
+        assert.equal(after.group, before.group, 'Closing retains the selected second category');
+        assert.equal(after.step, before.step, 'Closing retains the editing step');
+        assert.equal(after.dirty, before.dirty); assert.equal(after.hash, before.hash);
+        assert.equal(after.overflow, before.overflow); assert.equal(after.padding, before.padding);
+        assert.ok(Math.abs(after.scroll - before.scroll) <= 2, `Closing retains the editor scroll bookmark: ${JSON.stringify({ before, after })}`);
+        return after;
+      }
+      async function targetGeometry() {
+        const section = preview().locator(`[data-flow-group-id="${secondGroup.id}"]`);
+        await section.getByRole('heading', { name: secondGroup.name, exact: true }).waitFor();
+        await page.waitForFunction(id => {
+          const image = [...document.querySelectorAll('dialog [data-flow-group-id]')].find(group => group.getAttribute('data-flow-group-id') === id)?.querySelector('img');
+          return image?.complete && image.naturalWidth > 0;
+        }, secondGroup.id);
+        await stableScroll(page, 'dialog [data-flow-scrollport]');
+        const measured = await section.evaluate(element => {
+          const port = element.closest('[data-flow-scrollport]'), heading = element.querySelector('h2');
+          const rect = node => { const r = node.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, width: r.width, height: r.height }; };
+          const viewport = rect(port), nav = rect(port.querySelector('nav')), title = rect(heading);
+          const safeTop = Math.max(viewport.top, nav.bottom), safeBottom = viewport.bottom;
+          const photos = [...element.querySelectorAll('button[aria-label^="查看大图："]')].map(photo => {
+            const r = rect(photo), image = photo.querySelector('img');
+            return { ...r, visibleHeight: Math.min(r.bottom, safeBottom) - Math.max(r.top, safeTop), ready: Boolean(image?.complete && image.naturalWidth > 0) };
+          });
+          return { viewport, nav, title, photos, safeTop, safeBottom, focused: document.activeElement === heading, scroll: port.scrollTop };
+        });
+        assert.equal(await section.getAttribute('data-flow-preview-current'), 'true', 'Stable second-group ID identifies the current preview target');
+        assert.equal(measured.focused, true, 'Opening the current category focuses its heading');
+        assert.ok(measured.title.top >= measured.safeTop - 1 && measured.title.bottom <= measured.safeBottom + 1, `The target heading is readable below navigation: ${JSON.stringify(measured)}`);
+        assert.ok(measured.photos.some(photo => photo.ready && photo.visibleHeight > 40), `A decoded target photograph is visible on opening: ${JSON.stringify(measured)}`);
+        assert.ok(measured.scroll > 100, 'Second-category preview advances beyond the beginning of complete works');
+        const firstHeading = await preview().locator(`[data-flow-group-id="${firstGroup.id}"] h2`).boundingBox();
+        assert.ok(firstHeading && firstHeading.y + firstHeading.height <= measured.safeTop, 'Opening the second category does not land on the first category');
+        assert.deepEqual(await preview().locator('[data-flow-group-id]').evaluateAll(nodes => nodes.map(node => node.dataset.flowGroupId)), [firstGroup.id, secondGroup.id], 'Targeted preview retains the full original group order');
+        return measured;
+      }
+      for (const viewport of GROUP_PREVIEW_VIEWPORTS) {
+        await page.setViewportSize(viewport); await module('groups');
+        await page.locator('nav[aria-label="作品分类"]').getByRole('button', { name: new RegExp(secondGroup.name) }).click();
+        for (const step of ['照片顺序', '分类与说明', '查看效果']) {
+          await page.getByRole('button', { name: step, exact: true }).click();
+          const trigger = step === '查看效果' ? page.getByRole('button', { name: /^查看完整作品效果/ }) : page.locator('[data-flow-module-preview="groups"]');
+          await trigger.scrollIntoViewIfNeeded(); await trigger.focus(); await stableScroll(page);
+          const bookmark = await editorBookmark();
+          await trigger.click(); await preview().waitFor();
+          const geometry = await targetGeometry();
+          await overflow(page);
+          // Alternate the two supported close paths across actual edit steps.
+          if (step === '分类与说明') await page.keyboard.press('Escape');
+          else await preview().locator('[data-flow-close-preview]').click();
+          const returned = await assertEditorReturn(trigger, bookmark);
+          report.groupPreviews.push({ viewport, step, groupId: secondGroup.id, geometry, bookmark, returned });
+        }
+        // Two same-turn activations exercise the pending-open guard, before React
+        // commits a modal. Reopening must reset the previous from-top position.
+        const trigger = page.getByRole('button', { name: /^查看完整作品效果/ });
+        await trigger.scrollIntoViewIfNeeded(); await trigger.focus(); await stableScroll(page);
+        const bookmark = await editorBookmark();
+        await trigger.evaluate(button => { button.click(); button.click(); });
+        await preview().waitFor();
+        assert.equal(await preview().count(), 1, 'Rapid repeated activation opens one preview');
+        await targetGeometry();
+        await preview().getByRole('button', { name: '从头看完整作品', exact: true }).click();
+        await stableScroll(page, 'dialog [data-flow-scrollport]');
+        const top = await preview().locator('[data-flow-scrollport]').evaluate(port => port.scrollTop);
+        assert.ok(top <= 2, 'From-top control returns to the beginning of complete works');
+        assert.equal(await preview().locator('[data-flow-preview-current="true"]').count(), 0, 'From-top clears the current-category marker');
+        await preview().locator('[data-flow-close-preview]').click();
+        await assertEditorReturn(trigger, bookmark);
+        await trigger.click(); await preview().waitFor(); await targetGeometry();
+        await page.keyboard.press('Escape'); await assertEditorReturn(trigger, bookmark);
+      }
+      assert.equal(writeCount(), beforeData.writes, 'Targeted, repeated and from-top previews never save or publish');
+      assert.deepEqual(await draft(), beforeData.draft, 'All targeted preview paths retain the persisted draft');
+      assert.deepEqual(await publication(), beforeData.publication, 'All targeted preview paths retain Published');
+      await page.setViewportSize(VIEWPORTS[1]);
+    });
+
+    await stage('04b unavailable current categories explain the block without rewriting data', async () => {
+      const before = { draft: await draft(), publication: await publication(), writes: writeCount() };
+      for (const state of ['hidden', 'empty', 'unavailable-assets']) {
+        const memory = structuredClone(before.draft), group = memory.content.groups[1];
+        if (state === 'hidden') group.visible = false;
+        else { group.assetIds = state === 'empty' ? [] : [randomUUID()]; group.captions = {}; }
+        const expected = state === 'hidden'
+          ? '当前分类已隐藏，完整作品中不会展示。请先在分类设置中决定是否展示。'
+          : '当前分类没有可展示的照片，请先从本站图库选片或核对素材后查看效果。';
+        const isolatedPage = await context.newPage(), writes = [];
+        try {
+          await isolatedPage.route('**/*', async route => {
+            const request = route.request(), url = new URL(request.url());
+            if (!['GET', 'HEAD'].includes(request.method())) {
+              writes.push({ method: request.method(), path: url.pathname });
+              return route.abort();
+            }
+            if (url.origin === origin && url.pathname === draftPath(SPACE) && request.method() === 'GET') {
+              return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(memory) });
+            }
+            await route.fallback();
+          });
+          await isolatedPage.setViewportSize(VIEWPORTS[1]);
+          await isolatedPage.goto(`${origin}/${SLUG}/admin/${SPACE}#edit-groups`);
+          await isolatedPage.waitForFunction(() => document.querySelector('[data-flow-editor-section]')?.getAttribute('data-flow-editor-section') === 'groups' && !document.querySelector('fieldset')?.disabled);
+          await isolatedPage.locator('nav[aria-label="作品分类"]').getByRole('button', { name: new RegExp(group.name) }).click();
+          await isolatedPage.getByRole('button', { name: '分类与说明', exact: true }).click();
+          const visible = isolatedPage.getByRole('checkbox', { name: '在完整作品页展示此分类', exact: true });
+          assert.equal(await visible.isChecked(), group.visible);
+          const membersBefore = await isolatedPage.getByRole('combobox', { name: '选择要编辑的照片', exact: true }).locator('option').evaluateAll(options => options.map(option => option.value));
+          await isolatedPage.getByRole('button', { name: '查看效果', exact: true }).click();
+          const trigger = isolatedPage.getByRole('button', { name: /^查看完整作品效果/ });
+          await trigger.click();
+          await isolatedPage.locator('[role="status"][data-feedback="active"]').filter({ hasText: expected }).waitFor();
+          assert.equal(await isolatedPage.getByRole('dialog', { name: '当前编辑即时预览', exact: true }).count(), 0, `${state} does not silently preview another category`);
+          assert.ok((await isolatedPage.locator('nav[aria-label="作品分类"] button[aria-current="page"]').innerText()).includes(group.name), 'Blocked preview retains the selected second category');
+          assert.equal(await trigger.getAttribute('data-flow-group-preview'), group.id, 'Blocked preview retains the same stable target ID');
+          assert.equal(await isolatedPage.locator('[data-flow-editor-section]').getAttribute('data-flow-dirty'), 'false', `${state} preview feedback does not edit the fixture document`);
+          await isolatedPage.getByRole('button', { name: '分类与说明', exact: true }).click();
+          assert.equal(await visible.isChecked(), group.visible, 'Preview feedback never enables a hidden category');
+          assert.deepEqual(await isolatedPage.getByRole('combobox', { name: '选择要编辑的照片', exact: true }).locator('option').evaluateAll(options => options.map(option => option.value)), membersBefore, 'Preview feedback preserves the exact member references');
+          assert.deepEqual(writes, [], 'Unavailable-category preview sends no mutating requests');
+          report.groupPreviews.push({ state, viewport: VIEWPORTS[1], groupId: group.id, feedback: expected, memberCount: group.assetIds.length, visible: group.visible });
+        } finally { await isolatedPage.close(); }
+      }
+      assert.equal(writeCount(), before.writes);
+      assert.deepEqual(await draft(), before.draft, 'Browser-only unavailable fixtures preserve the stored draft');
+      assert.deepEqual(await publication(), before.publication, 'Browser-only unavailable fixtures preserve Published');
     });
 
     await stage('05 nested preview lightbox retains its scrollport and body lock', async () => {

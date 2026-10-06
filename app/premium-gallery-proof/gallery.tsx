@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { GalleryDocument, GalleryPhoto } from "./model";
 import { galleryScrollport, galleryScrollTop, restoreGalleryScroll } from "./scrollport";
+import { scrollToGalleryGroup } from "./group-preview";
 import { lockGalleryBodyScroll } from "./body-scroll-lock";
 import { railTimeAfterWheel } from "./rail-motion";
 import { galleryPhotoSource } from "./photo-source";
@@ -174,8 +175,8 @@ function Lightbox({ photo: initialPhoto, photos, onClose }: { photo: GalleryPhot
   </div>;
 }
 
-export default function FlowGallery({ document: content }: { document: GalleryDocument }) {
-  const [scene, setScene] = useState<Scene>("works");
+export default function FlowGallery({ document: content, previewGroupId }: { document: GalleryDocument; previewGroupId?: string }) {
+  const [scene, setScene] = useState<Scene>(previewGroupId ? "gallery" : "works");
   const [paused, setPaused] = useState(false);
   const [selected, setSelected] = useState<GalleryPhoto | null>(null);
   const [selectedScope, setSelectedScope] = useState<readonly GalleryPhoto[]>([]);
@@ -191,6 +192,8 @@ export default function FlowGallery({ document: content }: { document: GalleryDo
   const galleryScroll = useRef(0);
   const activeScene = useRef<Scene>("works");
   const restoringScroll = useRef(false);
+  const groupHeadings = useRef(new Map<string, HTMLHeadingElement>());
+  const previewTargetApplied = useRef<string | null>(null);
   const groups = content.groups.filter((group) => group.photos.length > 0);
   const columns = content.featuredGroupIds
     ? [content.featuredGroupIds.left, content.featuredGroupIds.right].map(id => groups.find(group => group.id === id) ?? null)
@@ -252,6 +255,19 @@ export default function FlowGallery({ document: content }: { document: GalleryDo
     return () => cancelAnimationFrame(frame);
   }, [scene]);
   useLayoutEffect(() => {
+    if (!previewGroupId || scene !== "gallery" || previewTargetApplied.current === previewGroupId) return;
+    // The containing native dialog opens in the editor effect. Measure after it
+    // becomes visible, once per opening, so ordinary browsing keeps its bookmark.
+    const frame = requestAnimationFrame(() => {
+      const heading = groupHeadings.current.get(previewGroupId);
+      if (!root.current || !heading) return;
+      galleryScroll.current = scrollToGalleryGroup(root.current, heading, window);
+      heading.focus({ preventScroll: true });
+      previewTargetApplied.current = previewGroupId;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [scene, previewGroupId]);
+  useLayoutEffect(() => {
     const port = galleryScrollport(root.current);
     if (!port) return;
     const measure = () => setViewportHeight(port.clientHeight);
@@ -306,8 +322,8 @@ export default function FlowGallery({ document: content }: { document: GalleryDo
     {scene === "gallery" ? <main className={styles.fullGallery}>
       <div className={styles.galleryHeading}><button onClick={() => navigate("works", "expand")} aria-label="返回首页">↶</button><h1 data-flow-scene-heading tabIndex={-1}>{content.profile.title}</h1></div>
       {groups.length === 0 && <p className={styles.emptyGallery}>还没有作品</p>}
-      {groups.map((group) => <section key={group.id} className={styles.group} aria-labelledby={`group-${group.id}`}>
-        <h2 id={`group-${group.id}`}>{group.name}</h2>
+      {groups.map((group) => <section key={group.id} className={styles.group} data-flow-group-id={group.id} data-flow-preview-current={previewGroupId === group.id ? "true" : undefined} aria-labelledby={`group-${group.id}`}>
+        <h2 ref={node => { if (node) groupHeadings.current.set(group.id, node); else groupHeadings.current.delete(group.id); }} id={`group-${group.id}`} tabIndex={previewGroupId === group.id ? -1 : undefined}>{group.name}</h2>
         <div className={styles.photoGrid}>{group.photos.map((photo) => <button key={photo.id} className={photo.height > photo.width ? styles.tall : ""} onClick={() => openPhoto(photo, group.photos)} aria-label={`查看大图：${photo.alt}`}><Photo photo={photo} lazy sizes={gridPhotoWidth ? `${gridPhotoWidth}px` : "(max-width: 700px) calc((100vw - 45px) / 2), calc((100vw - 130px) / 3)"} /></button>)}</div>
       </section>)}
     </main> : <main ref={sceneBody} key={scene} className={`${styles.scene} ${styles[scene]}`}

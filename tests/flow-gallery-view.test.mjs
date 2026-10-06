@@ -22,6 +22,8 @@ const bodyLocks = await load('app/premium-gallery-proof/body-scroll-lock.ts');
 const motion = await load('app/premium-gallery-proof/rail-motion.ts');
 const sources = await load('app/premium-gallery-proof/photo-source.ts');
 const gestures = await load('app/premium-gallery-proof/gallery-interaction.ts');
+const previewTargets = await load('app/site-editor/flow-gallery-preview.ts');
+const groupScrolling = await load('app/premium-gallery-proof/group-preview.ts', { './scrollport': scrolling });
 
 test('scene swipe requires one tracked finger and ignores controls, pinch endings and vertical reading', () => {
   const touch = (identifier, clientX, clientY = 100) => ({ identifier, clientX, clientY });
@@ -174,6 +176,44 @@ test('Site renderer carries the edited rail width and keeps the original width f
   }
   assert.deepEqual(copy(legacy), before);
 });
+
+test('current-group preview uses stable identity after reorder and rejects hidden, empty or removed targets without changing content', () => {
+  const d = document();
+  const second = { id: MISSING, name: '第二分类', assetIds: [ASSET], captions: {}, visible: true };
+  d.groups.push(second);
+  for (const groups of [d.groups, [...d.groups].reverse()]) {
+    const edited = { ...d, groups };
+    const before = state.flowGalleryFingerprint(edited);
+    assert.deepEqual(copy(previewTargets.resolveFlowGroupPreview(edited, [asset()], MISSING)), { status: 'ready', groupId: MISSING, name: '第二分类' });
+    assert.equal(state.flowGalleryFingerprint(edited), before);
+  }
+  const before = copy(d);
+  for (const id of [null, 'removed-id']) {
+    const result = previewTargets.resolveFlowGroupPreview(d, [asset()], id);
+    assert.equal(result.status, 'missing'); assert.match(result.message, /已不存在/);
+  }
+  const hidden = previewTargets.resolveFlowGroupPreview(d, [asset()], HIDDEN);
+  assert.equal(hidden.status, 'hidden'); assert.match(hidden.message, /已隐藏/);
+  const unavailable = previewTargets.resolveFlowGroupPreview(d, [], GROUP);
+  assert.equal(unavailable.status, 'empty'); assert.match(unavailable.message, /没有可展示的照片/);
+  const emptyDocument = { ...d, groups: [{ ...second, assetIds: [] }] };
+  assert.equal(previewTargets.resolveFlowGroupPreview(emptyDocument, [asset()], MISSING).status, 'empty');
+  assert.deepEqual(copy(d), before);
+});
+
+test('targeted preview forwards its opening identity while retaining all visible groups, original order and rail configuration', () => {
+  const d = document();
+  d.groups.push({ id: MISSING, name: '第二分类', assetIds: [ASSET], captions: {}, visible: true });
+  const before = copy(d);
+  const targeted = view.SiteFlowGalleryView({ document: d, assets: [asset()], previewGroupId: MISSING });
+  assert.equal(targeted.props.previewGroupId, MISSING);
+  assert.deepEqual(copy(targeted.props.document.groups.map(group => group.id)), [GROUP, MISSING]);
+  assert.deepEqual(copy(targeted.props.document.featuredGroupIds), { left: before.rails.leftGroupId, right: before.rails.rightGroupId });
+  const fromTop = view.SiteFlowGalleryView({ document: d, assets: [asset()] });
+  assert.equal(fromTop.props.previewGroupId, undefined);
+  assert.deepEqual(copy(fromTop.props.document), copy(targeted.props.document));
+  assert.deepEqual(copy(d), before);
+});
 test('disabled price and contact scenes are omitted; optional QR independently resolves through the Site map', () => {
   const d = document();
   assert.equal(view.resolveFlowGalleryDocument(d, [asset()]).contact, undefined);
@@ -249,4 +289,21 @@ test('private preview gallery bookmarks and restores its scrollport without movi
   assert.equal(scrolling.galleryScrollTop(publicPort, viewport), 120);
   scrolling.restoreGalleryScroll(publicPort, viewport, 120);
   assert.equal(calls[2][0], 'window');
+});
+
+test('current-group positioning accounts for the preview viewport origin and navigation height without scrolling the editor', () => {
+  const calls = [];
+  const viewport = { scrollY: 588, scrollTo: options => calls.push(['editor', copy(options)]) };
+  const port = { scrollTop: 250, getBoundingClientRect: () => ({ top: 64 }), scrollTo(options) { this.scrollTop = Math.min(options.top, 1800); calls.push(['preview', copy(options)]); } };
+  const root = { closest: () => port, querySelector: () => ({ getBoundingClientRect: () => ({ bottom: 142 }) }) };
+  const heading = { getBoundingClientRect: () => ({ top: 1190 }) };
+  const bookmark = groupScrolling.scrollToGalleryGroup(root, heading, viewport);
+  assert.equal(bookmark, 1282);
+  assert.equal(viewport.scrollY, 588);
+  assert.deepEqual(calls, [['preview', { top: 1282, left: 0, behavior: 'instant' }]]);
+  // A short final group may clamp to the end; remember the achieved position.
+  port.scrollTop = 0;
+  assert.equal(groupScrolling.scrollToGalleryGroup(root, { getBoundingClientRect: () => ({ top: 2500 }) }, viewport), 1800);
+  port.scrollTop = 0;
+  assert.equal(groupScrolling.scrollToGalleryGroup(root, { getBoundingClientRect: () => ({ top: 50 }) }, viewport), 0);
 });

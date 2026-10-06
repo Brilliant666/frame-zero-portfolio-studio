@@ -17,6 +17,7 @@ import { lockGalleryBodyScroll } from "../premium-gallery-proof/body-scroll-lock
 import { addFlowMembers, flowGalleryFingerprint, removeFlowGroup, removeFlowMember, restoreFlowRemoval, type FlowRemoval, type FlowGroup } from "./flow-gallery-state";
 import { FLOW_EDITOR_MODULES, flowModulePreview, flowSectionFromHash, type FlowEditorSection as Section, type FlowPreviewScene } from "./flow-gallery-admin-ui";
 import { PhotoFilters, PhotoMetadata, PhotoCaptionEditor, filterFlowPhotos, focusFlowEntry, type PhotoOrientation, type PhotoOrder } from "./flow-gallery-admin-tools";
+import { resolveFlowGroupPreview } from "./flow-gallery-preview";
 import styles from "./flow-gallery-admin.module.css";
 
 const SPACE = "premium-flow-gallery";
@@ -132,6 +133,10 @@ export default function FlowGalleryAdmin({ siteScope }: { siteScope: SiteEditorS
   const previewDialog = useRef<HTMLDialogElement>(null);
   const previewHash = useRef("");
   const previewTrigger = useRef<HTMLButtonElement>(null);
+  const previewOpening = useRef(false);
+  const previewReturnScroll = useRef({ x: 0, y: 0 });
+  const [previewGroupId, setPreviewGroupId] = useState<string>();
+  const [previewGroupName, setPreviewGroupName] = useState("");
   const [query, setQuery] = useState("");
   const [libraryPage, setLibraryPage] = useState(0);
   const [enlarged, setEnlarged] = useState<string | null>(null);
@@ -223,11 +228,29 @@ export default function FlowGalleryAdmin({ siteScope }: { siteScope: SiteEditorS
     return () => { node?.close(); releaseScroll(); if (previous?.isConnected) previous.focus(); };
   }, [creatingGroup]);
   function closePreview() {
+    const scroll = previewReturnScroll.current;
+    const trigger = previewTrigger.current;
     previewDialog.current?.close(); setPreview(false);
+    previewOpening.current = false;
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${previewHash.current}`);
-    requestAnimationFrame(() => previewTrigger.current?.focus());
+    requestAnimationFrame(() => {
+      if (previewOpening.current) return;
+      window.scrollTo({ left: scroll.x, top: scroll.y, behavior: "instant" });
+      if (trigger?.isConnected) trigger.focus({ preventScroll: true });
+    });
   }
   function openPreview(scene: FlowPreviewScene, trigger: HTMLButtonElement, moduleId: Section | null = null) {
+    if (previewOpening.current) return;
+    let targetId: string | undefined;
+    let targetName = "";
+    if (moduleId === "groups") {
+      const target = resolveFlowGroupPreview(current.current, manifest.assets, activeGroup ?? group?.id ?? null);
+      if (target.status !== "ready") { setMessage(target.message); return; }
+      targetId = target.groupId; targetName = target.name;
+    }
+    previewOpening.current = true;
+    previewReturnScroll.current = { x: window.scrollX, y: window.scrollY };
+    setPreviewGroupId(targetId); setPreviewGroupName(targetName);
     previewHash.current = window.location.hash;
     previewTrigger.current = trigger;
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#${scene}`);
@@ -271,17 +294,18 @@ export default function FlowGalleryAdmin({ siteScope }: { siteScope: SiteEditorS
           draftAction={<button type="button" disabled={blocked || !dirty} onClick={() => void save()}>仅保存草稿</button>}
           tools={<><button type="button" disabled={loadState !== "ready" || !assetsReady || Boolean(picker)} onClick={event => openPreview("works", event.currentTarget)}>预览当前编辑</button><a href={siteScope.previewHref} target="_blank" rel="noreferrer">预览已保存草稿 ↗</a><button type="button" onClick={exportDraft}>导出当前草稿</button><button type="button" disabled={saving || loadState === "loading"} onClick={reloadExplicitly}>重新读取草稿</button></>} />}
       </div>
-      <div className={styles.pageHeading}><div><p className={styles.eyebrow}>{section === "library" ? "SITE PHOTO LIBRARY" : section === "groups" ? "WORK COLLECTIONS" : section === "home" ? "HOMEPAGE" : section === "pricing" ? "PRICING & EVENTS" : "CONTACT"}</p><h1 ref={moduleHeading} tabIndex={-1}>{activeModule.label}</h1></div><span className={styles.moduleNumber}>{String(FLOW_EDITOR_MODULES.findIndex(item => item.id === section) + 1).padStart(2, "0")} / 05</span></div>
+      {section !== "library" && <div className={styles.pageHeading}><div><p className={styles.eyebrow}>{section === "groups" ? "WORK COLLECTIONS" : section === "home" ? "HOMEPAGE" : section === "pricing" ? "PRICING & EVENTS" : "CONTACT"}</p><h1 ref={moduleHeading} tabIndex={-1}>{activeModule.label}</h1></div><span className={styles.moduleNumber}>{String(FLOW_EDITOR_MODULES.findIndex(item => item.id === section) + 1).padStart(2, "0")} / 05</span></div>}
       <p role="status" className={styles.status} data-feedback={message ? "active" : undefined}>{message}{updatedAt && <small>上次保存 {new Date(updatedAt).toLocaleString()}</small>}</p>
       {undoRemoval && <div className={styles.undoRemoval} role="status"><span>{undoRemoval.kind === "photo" ? "照片已移出当前分类，图库原片保留。" : undoRemoval.kind === "price" ? "价格项目已从当前草稿移除。" : "联系方式已从当前草稿移除。"}</span><button type="button" disabled={loadState !== "ready" || saving || Boolean(picker) || preview || Boolean(enlarged)} onClick={() => { try { const removal = undoRemoval; update(restoreFlowRemoval(current.current, removal)); setUndoRemoval(null); setMessage("已恢复最近移除的内容，其他编辑保留；仍需保存。"); if (removal.kind === "photo") { setActiveGroup(removal.groupId); setGroupStep("settings"); changeSection("groups"); requestAnimationFrame(() => focusFlowEntry(`flow-caption-${removal.groupId}`)); } else { changeSection(removal.kind === "price" ? "pricing" : "contact"); setRestoredItemId(removal.item.id); } } catch (cause) { setMessage(cause instanceof Error ? cause.message : "暂时无法恢复。"); } }}>撤销最近移除</button></div>}
       {pending && <button type="button" disabled={saving} onClick={() => void checkSave()}>检查保存结果</button>}
       {(pending || conflict || loadState === "error") && <div className={styles.recovery}><strong>请先核对当前版本</strong><p>当前编辑保留。导出留存后再读取核对，系统不会自动重试写入。</p><button type="button" onClick={exportDraft}>导出当前编辑</button><button type="button" disabled={saving} onClick={reloadExplicitly}>重新读取并核对</button></div>}
       <fieldset className={styles.editor} disabled={loadState !== "ready" || saving}>
-        <section className={styles.moduleGuide} aria-label={`${activeModule.label}用途与效果`}><div><p className={styles.position}>显示位置 · {activeModule.position}</p><p>{activeModule.purpose}</p></div><button type="button" data-flow-module-preview={section} disabled={!assetsReady || Boolean(picker)} onClick={event => openPreview(activeModule.scene, event.currentTarget, section)}>查看本模块效果 <span aria-hidden="true">↗</span></button></section>
-        {section === "library" && <section className={styles.panel}>
-          <div className={styles.sectionHeading}><div><h2>本站图库</h2><p>JPEG / PNG / WebP · 每批最多 8 张 · 每张最多 20 MB</p></div><button type="button" className={styles.primary} aria-label="添加照片" aria-expanded={uploadOpen || !manifest.assets.length} aria-controls="flow-site-upload" onClick={() => { setUploadOpen(true); uploadRegion.current?.querySelector<HTMLInputElement>('input[type="file"]')?.click(); }}><span aria-hidden="true">＋ </span>添加照片</button></div>
+        {section !== "library" && <section className={styles.moduleGuide} aria-label={`${activeModule.label}用途与效果`}><div><p className={styles.position}>显示位置 · {activeModule.position}</p><p>{activeModule.purpose}</p></div><button type="button" data-flow-module-preview={section} disabled={!assetsReady || Boolean(picker)} onClick={event => openPreview(activeModule.scene, event.currentTarget, section)}>查看本模块效果 <span aria-hidden="true">↗</span></button></section>}
+        {section === "library" && <section className={`${styles.panel} ${styles.libraryPanel}`} aria-labelledby="flow-library-heading">
+          <header className={styles.libraryTaskHeader}><div className={styles.libraryTaskTitle}><h1 id="flow-library-heading" ref={moduleHeading} tabIndex={-1}>图库</h1><span role="status">{assetState}</span></div><div className={styles.libraryTaskActions}><button type="button" className={styles.primary} aria-label="添加照片" aria-describedby="flow-upload-rules" aria-expanded={uploadOpen || !manifest.assets.length} aria-controls="flow-site-upload" onClick={() => { setUploadOpen(true); uploadRegion.current?.querySelector<HTMLInputElement>('input[type="file"]')?.click(); }}><span aria-hidden="true">＋ </span>添加照片</button><button type="button" aria-label="进入完整作品：新建分类并选片" onClick={() => changeSection("groups")}>完整作品 <span aria-hidden="true">→</span></button></div></header>
+          <p className={styles.libraryPurpose}>本站模板共享照片；上传后加入完整作品分类或设为背景，上传本身不会发布。</p>
+          <div className={styles.libraryUtilities}><p id="flow-upload-rules">JPEG / PNG / WebP · 每批最多 8 张 · 每张最多 20 MB</p><div><button type="button" className={styles.textButton} onClick={() => void reloadAssets()}>重新读取图库</button><button type="button" className={styles.textButton} data-flow-module-preview="library" disabled={!assetsReady || Boolean(picker)} onClick={event => openPreview(activeModule.scene, event.currentTarget, "library")}>查看本模块效果 <span aria-hidden="true">↗</span></button></div></div>
           <div id="flow-site-upload" ref={uploadRegion} className={styles.uploadRegion} hidden={!uploadOpen && Boolean(manifest.assets.length)} onChangeCapture={() => setUploadOpen(true)}><SiteAssetUpload endpoint={siteScope.assetsEndpoint} onUploaded={reloadAssets} /></div>
-          <div className={styles.libraryToolbar}><span role="status">{assetState}</span><div><button type="button" className={styles.textButton} onClick={() => void reloadAssets()}>重新读取图库</button><button type="button" aria-label="进入完整作品：新建分类并选片" onClick={() => changeSection("groups")}>完整作品 <span aria-hidden="true">→</span></button></div></div>
           {manifest.truncated && <p role="alert">超过 10,000 张，当前筛选只覆盖已载入素材。</p>}
           <PhotoFilters compactId query={query} orientation={orientation} order={order} onQuery={value => { setQuery(value); setLibraryPage(0); }} onOrientation={value => { setOrientation(value); setLibraryPage(0); }} onOrder={value => { setOrder(value); setLibraryPage(0); }} />
           <div className={styles.library}>{filtered.slice(page * 48, (page + 1) * 48).map(asset => <article key={asset.id}><button type="button" aria-label={`放大素材 ${asset.id}`} onClick={() => setEnlarged(asset.id)}><img src={asset.variants.thumbnail.src} alt="" loading="lazy" /><span aria-hidden="true">↗</span></button><PhotoMetadata asset={asset} /></article>)}</div>
@@ -300,7 +324,7 @@ export default function FlowGalleryAdmin({ siteScope }: { siteScope: SiteEditorS
                 <section><h3>分类信息</h3><label>名称<input value={group.name} maxLength={120} onChange={event => changeGroup(group.id, value => ({ ...value, name: event.target.value }))} /></label><label className={styles.checkbox}><input type="checkbox" checked={group.visible} onChange={event => changeGroup(group.id, value => ({ ...value, visible: event.target.checked }))} />在完整作品页展示此分类</label><p>隐藏分类后，引用它的首页轨道也不展示；照片和说明保留。</p><div className={styles.groupOrder}><span>分类位置 {draft.groups.indexOf(group) + 1} / {draft.groups.length}</span><div>{[-1, 1].map(direction => <button type="button" key={direction} disabled={draft.groups.indexOf(group) + direction < 0 || draft.groups.indexOf(group) + direction >= draft.groups.length} onClick={() => { const items = [...current.current.groups], index = items.findIndex(item => item.id === group.id); [items[index], items[index + direction]] = [items[index + direction], items[index]]; update({ ...current.current, groups: items }); }}>{direction < 0 ? "分类上移" : "分类下移"}</button>)}</div></div><button type="button" className={styles.dangerButton} onClick={() => { if (confirm(`删除分类「${group.name}」？仅移除本草稿的分类与引用，图库照片保留。`)) { update(removeFlowGroup(current.current, group.id)); setActiveGroup(null); } }}>删除此分类</button></section>
                 <PhotoCaptionEditor key={group.id} group={group} assets={assetMap} onView={setEnlarged} onCaption={(id, caption) => changeGroup(group.id, value => ({ ...value, captions: { ...value.captions, [id]: caption } }))} onRemove={id => { const latest = current.current.groups.find(value => value.id === group.id); if (!latest || !latest.assetIds.includes(id)) return; setUndoRemoval({ kind: "photo", groupId: group.id, id, caption: latest.captions[id], index: latest.assetIds.indexOf(id) }); changeGroup(group.id, value => removeFlowMember(value, id)); }} />
               </div><div className={styles.nextStep}><p>逐张说明显示在大图浏览中，未填写时不强制展示。</p><button type="button" onClick={() => setGroupStep("effect")}>下一步：查看效果 →</button></div></>}
-              {groupStep === "effect" && <><div className={styles.effectTeaser}><div><p className={styles.eyebrow}>CURRENT EDIT</p><h3>完整作品的真实效果</h3><p>直接使用当前分类、照片顺序和说明。预览不会保存或发布。</p><button type="button" className={styles.primary} disabled={!assetsReady} onClick={event => openPreview("gallery", event.currentTarget, "groups")}>查看完整作品效果 ↗</button><small>{group.visible ? "当前分类将在完整作品页展示。" : "当前分类已隐藏；可以在分类与说明中开启。"}</small></div><div>{group.assetIds.slice(0, 3).map(id => { const asset = assetMap.get(id); return asset ? <img key={id} src={asset.variants.card.src} alt="分类照片示意" /> : null; })}</div></div><div className={styles.nextStep}><p>首页左右轨道可分别引用作品分类。</p><button type="button" onClick={() => changeSection("home")}>下一步：配置首页轨道 →</button></div></>}
+              {groupStep === "effect" && <><div className={styles.effectTeaser}><div><p className={styles.eyebrow}>CURRENT EDIT</p><h3>完整作品的真实效果</h3><p>直接使用当前分类、照片顺序和说明。预览不会保存或发布。</p><button type="button" className={styles.primary} data-flow-group-preview={group.id} disabled={!assetsReady} onClick={event => openPreview("gallery", event.currentTarget, "groups")}>查看完整作品效果 ↗</button><small>{group.visible ? "当前分类将在完整作品页展示。" : "当前分类已隐藏；可以在分类与说明中开启。"}</small></div><div>{group.assetIds.slice(0, 3).map(id => { const asset = assetMap.get(id); return asset ? <img key={id} src={asset.variants.card.src} alt="分类照片示意" /> : null; })}</div></div><div className={styles.nextStep}><p>首页左右轨道可分别引用作品分类。</p><button type="button" onClick={() => changeSection("home")}>下一步：配置首页轨道 →</button></div></>}
             </section> : <section className={styles.panel}><div className={styles.emptyState}><h2>建立第一个作品分类</h2><p>为分类命名，从本站图库选片，再确认照片顺序与展示效果。</p></div></section>}
           </div>
         </>}
@@ -320,7 +344,7 @@ export default function FlowGalleryAdmin({ siteScope }: { siteScope: SiteEditorS
       changeGroup(picker, value => addFlowMembers(value, ids, new Set(assetMap.keys())));
       setPicker(null);
     }} />}
-    {preview && <dialog ref={previewDialog} data-flow-preview={previewModule ?? "all"} className={styles.preview} aria-label="当前编辑即时预览" onCancel={event => { event.preventDefault(); closePreview(); }}>{previewOnlyScene && <p className={styles.previewNote} data-flow-preview-temporary>{FLOW_EDITOR_MODULES.find(item => item.id === previewModule)?.label}尚未启用；仅本次预览临时显示，草稿设置保持不变。</p>}<button className={styles.closePreview} data-flow-close-preview type="button" onClick={closePreview}>关闭当前编辑预览</button><div className={styles.previewScrollport} data-flow-scrollport><SiteFlowGalleryView document={previewDocument} assets={manifest.assets} /></div></dialog>}
+    {preview && <dialog ref={previewDialog} data-flow-preview={previewModule ?? "all"} className={styles.preview} aria-label="当前编辑即时预览" onCancel={event => { event.preventDefault(); closePreview(); }}>{previewOnlyScene && <p className={styles.previewNote} data-flow-preview-temporary>{FLOW_EDITOR_MODULES.find(item => item.id === previewModule)?.label}尚未启用；仅本次预览临时显示，草稿设置保持不变。</p>}{previewModule === "groups" && <div className={styles.previewTarget}><span role="status">{previewGroupId ? `当前编辑：${previewGroupName}` : "完整作品 · 从头浏览"}</span><button type="button" disabled={!previewGroupId} onClick={() => { setPreviewGroupId(undefined); setPreviewGroupName(""); }}>从头看完整作品</button></div>}<button className={styles.closePreview} data-flow-close-preview type="button" onClick={closePreview}>关闭当前编辑预览</button><div className={styles.previewScrollport} data-flow-scrollport><SiteFlowGalleryView key={previewGroupId ?? "all"} document={previewDocument} assets={manifest.assets} previewGroupId={previewGroupId} /></div></dialog>}
     {enlarged && <dialog ref={largeDialog} className={styles.large} aria-label="素材大图" onCancel={() => setEnlarged(null)}><button type="button" autoFocus onClick={() => { largeDialog.current?.close(); setEnlarged(null); }}>关闭大图</button>{large ? <img src={large.variants.full.src} alt="本站素材大图" /> : <p>素材暂不可用，请重新读取图库。</p>}</dialog>}
   </div>;
 }

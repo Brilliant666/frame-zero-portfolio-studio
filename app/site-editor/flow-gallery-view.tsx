@@ -30,6 +30,6 @@ export function resolveFlowGalleryDocument(document: FlowGalleryDocumentV1, asse
 }
 
 const EMPTY: readonly PhotoAsset[] = [];
-export function SiteFlowGalleryView({ document, assets = EMPTY }: { document: FlowGalleryDocumentV1; assets?: readonly PhotoAsset[] }) {
-  return <FlowGallery document={resolveFlowGalleryDocument(document, assets)} />;
+export function SiteFlowGalleryView({ document, assets = EMPTY, previewGroupId }: { document: FlowGalleryDocumentV1; assets?: readonly PhotoAsset[]; previewGroupId?: string }) {
+  return <FlowGallery document={resolveFlowGalleryDocument(document, assets)} previewGroupId={previewGroupId} />;
 }
