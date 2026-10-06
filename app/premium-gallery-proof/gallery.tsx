@@ -323,7 +323,7 @@ export default function FlowGallery({ document: content, previewGroupId }: { doc
       <div className={styles.galleryHeading}><button onClick={() => navigate("works", "expand")} aria-label="返回首页">↶</button><h1 data-flow-scene-heading tabIndex={-1}>{content.profile.title}</h1></div>
       {groups.length === 0 && <p className={styles.emptyGallery}>还没有作品</p>}
       {groups.map((group) => <section key={group.id} className={styles.group} data-flow-group-id={group.id} data-flow-preview-current={previewGroupId === group.id ? "true" : undefined} aria-labelledby={`group-${group.id}`}>
-        <h2 ref={node => { if (node) groupHeadings.current.set(group.id, node); else groupHeadings.current.delete(group.id); }} id={`group-${group.id}`} tabIndex={previewGroupId === group.id ? -1 : undefined}>{group.name}</h2>
+        <h2 ref={node => { if (node) groupHeadings.current.set(group.id, node); else groupHeadings.current.delete(group.id); }} id={`group-${group.id}`} tabIndex={previewGroupId === group.id ? -1 : undefined}><span className={styles.groupName}>{group.name}</span></h2>
         <div className={styles.photoGrid}>{group.photos.map((photo) => <button key={photo.id} className={photo.height > photo.width ? styles.tall : ""} onClick={() => openPhoto(photo, group.photos)} aria-label={`查看大图：${photo.alt}`}><Photo photo={photo} lazy sizes={gridPhotoWidth ? `${gridPhotoWidth}px` : "(max-width: 700px) calc((100vw - 45px) / 2), calc((100vw - 130px) / 3)"} /></button>)}</div>
       </section>)}
     </main> : <main ref={sceneBody} key={scene} className={`${styles.scene} ${styles[scene]}`}

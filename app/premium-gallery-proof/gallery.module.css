@@ -50,11 +50,10 @@
 .zoomedLightbox .lightboxPhoto{max-width:none;max-height:none;margin:0 auto}
 @media(max-width:700px){.lightbox{padding:72px 12px 32px}.zoom{right:72px;top:17px}}
 
-/* Local text surfaces stay readable even when the chosen photograph is bright. */
-.introduction,.galleryHeading,.contactPanel>div:first-child{background:rgba(7,14,11,.82);border-radius:14px;box-shadow:0 0 0 14px rgba(7,14,11,.82)}
-.railHeading{background:rgba(7,14,11,.82);border-radius:6px;padding:4px 6px}
-.group h2,.contactCards article{background:rgba(7,14,11,.82)}
-.sceneProgress>span,.emptyGallery{background:rgba(7,14,11,.82);border-radius:6px;padding:4px 6px}
+/* Keep the photograph visible behind copy; only the category name has a local label. */
+.introduction h1,.introduction p,.galleryHeading h1,.contactPanel h1,.contactPanel>div>p,.railHeading,.sceneProgress>span{text-shadow:0 2px 8px rgba(0,0,0,.5),0 1px 2px rgba(0,0,0,.5)}
+.groupName{display:inline-block;max-width:100%;padding:8px 18px;background:rgba(7,18,15,.7);border-radius:12px;overflow-wrap:anywhere}
+.emptyGallery{background:rgba(7,14,11,.82);border-radius:6px;padding:4px 6px}
 .browsingLightbox{padding-bottom:92px}
 .browsingLightbox .lightboxPhoto{max-height:calc(var(--gallery-viewport-height,100svh) - 164px)}
 .browsingLightbox.zoomedLightbox .lightboxPhoto{max-height:none}
