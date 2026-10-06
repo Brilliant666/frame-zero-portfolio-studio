@@ -7,6 +7,7 @@ import { scrollToGalleryGroup } from "./group-preview";
 import { lockGalleryBodyScroll } from "./body-scroll-lock";
 import { railTimeAfterWheel } from "./rail-motion";
 import { galleryPhotoSource } from "./photo-source";
+import { galleryRailLayout, galleryRailSizes } from "./rail-layout";
 import { beginGallerySwipe, completeGallerySwipe, nextGalleryPhotoIndex, type GallerySwipe } from "./gallery-interaction";
 import styles from "./gallery.module.css";
 
@@ -24,7 +25,7 @@ function Photo({ photo, className, style, sizes = "100vw", full = false, lazy = 
   return <img className={className} style={style} {...galleryPhotoSource(photo, sizes, full)} loading={lazy ? "lazy" : "eager"} decoding="async" width={photo.width} height={photo.height} alt={photo.alt} draggable={false} />;
 }
 
-function Rail({ group, reverse, paused, onSelect, widthPercent }: { group: GalleryDocument["groups"][number]; reverse: boolean; paused: boolean; onSelect: (photo: GalleryPhoto) => void; widthPercent: number }) {
+function Rail({ group, reverse, paused, onSelect, widthPercent, single }: { group: GalleryDocument["groups"][number]; reverse: boolean; paused: boolean; onSelect: (photo: GalleryPhoto) => void; widthPercent: number; single: boolean }) {
   const rail = useRef<HTMLDivElement>(null);
   const railWindow = useRef<HTMLDivElement>(null);
   const copy = useRef<HTMLDivElement>(null);
@@ -32,8 +33,7 @@ function Rail({ group, reverse, paused, onSelect, widthPercent }: { group: Galle
   const primaryButtons = useRef(new Map<string, HTMLButtonElement>());
   const [duration, setDuration] = useState(600);
   const [photoWidth, setPhotoWidth] = useState<number | null>(null);
-  const ratio = widthPercent / 100;
-  const photoSizes = photoWidth ? `${photoWidth}px` : `(max-width: 700px) calc((100vw - 52px) * ${ratio}), calc((55vw - 17px) * ${ratio})`;
+  const photoSizes = galleryRailSizes(widthPercent, single, photoWidth);
   const keyboardIntent = useRef(false);
   const [keyboardFocused, setKeyboardFocused] = useState(false);
   useLayoutEffect(() => {
@@ -195,9 +195,7 @@ export default function FlowGallery({ document: content, previewGroupId }: { doc
   const groupHeadings = useRef(new Map<string, HTMLHeadingElement>());
   const previewTargetApplied = useRef<string | null>(null);
   const groups = content.groups.filter((group) => group.photos.length > 0);
-  const columns = content.featuredGroupIds
-    ? [content.featuredGroupIds.left, content.featuredGroupIds.right].map(id => groups.find(group => group.id === id) ?? null)
-    : groups.slice(0, 2);
+  const railLayout = galleryRailLayout(content);
   const available = useMemo(() => scenes.filter((item) => item === "works" || item === "pricing" && Boolean(content.pricing) || item === "contact" && Boolean(content.contact)), [content.pricing, content.contact]);
   const navigate = useCallback((next: Scene, focus?: "heading" | "expand") => {
     if (focus) sceneFocus.current = focus;
@@ -343,8 +341,8 @@ export default function FlowGallery({ document: content, previewGroupId }: { doc
       }}>
       {scene === "works" && <>
         <div ref={introduction} className={styles.introduction}><h1 data-flow-scene-heading tabIndex={-1}>{content.profile.title}</h1><a data-flow-expand className={styles.expand} href="#gallery" onClick={event => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) sceneFocus.current = "heading"; }}>展开完整作品</a><p>{content.profile.intro}</p></div>
-        <div className={`${styles.rails} ${paused ? styles.paused : ""}`} aria-label="作品速览" style={content.leftRailWidthPercent === undefined ? undefined : { gridTemplateColumns: `minmax(0, ${content.leftRailWidthPercent}fr) minmax(0, ${100 - content.leftRailWidthPercent}fr)` }}>
-          {columns.length === 0 ? <p className={styles.emptyGallery}>还没有作品</p> : columns.map((column, index) => column ? <Rail key={`${index}-${column.id}`} group={column} reverse={index === 1} paused={paused} onSelect={photo => openPhoto(photo, column.photos)} widthPercent={index === 0 ? content.leftRailWidthPercent ?? 200 / 3 : 100 - (content.leftRailWidthPercent ?? 200 / 3)} /> : <div key={`empty-${index}`} className={styles.emptyGallery}>尚未选择{index ? "右" : "左"}侧作品分类</div>)}
+        <div className={`${styles.rails} ${railLayout.mode === "single" ? styles.singleRail : ""} ${paused ? styles.paused : ""}`} data-flow-rail-layout={railLayout.mode} aria-label="作品速览" style={railLayout.mode !== "dual" || content.leftRailWidthPercent === undefined ? undefined : { gridTemplateColumns: `minmax(0, ${content.leftRailWidthPercent}fr) minmax(0, ${100 - content.leftRailWidthPercent}fr)` }}>
+          {railLayout.mode === "empty" ? <p className={styles.emptyGallery}>还没有作品</p> : railLayout.columns.map(({ group, side, widthPercent }) => <Rail key={`${side}-${group.id}`} group={group} reverse={side === 1} paused={paused} onSelect={photo => openPhoto(photo, group.photos)} widthPercent={widthPercent} single={railLayout.mode === "single"} />)}
         </div>
       </>}
       {scene === "pricing" && content.pricing && <section className={styles.pricePanel}><h1 data-flow-scene-heading tabIndex={-1}>{content.pricing.heading}</h1><p className={styles.priceIntro}>{content.pricing.introduction}</p><div className={styles.packages}>{content.pricing.packages.map((item) => <article key={item.id}><h2>{item.name}</h2><p className={styles.price}>{item.price}</p><p>{item.description}</p><ul>{item.details.map((line, index) => <li key={index}>{line}</li>)}</ul></article>)}</div></section>}

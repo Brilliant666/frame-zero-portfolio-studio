@@ -73,7 +73,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
     origin, fixture: SLUG, head: process.env.GITHUB_SHA ?? 'local',
     scope: 'Synthetic third-space UI, memory preview, Published-only rendering and viewport/motion regressions; no physical device acceptance',
     checkpoints: [], screenshots: [], transitions: [], sceneScroll: [], lightboxReturns: [], lightboxSizing: [], motion: [], railWidths: [], network: [], forbiddenRequests: [], pageErrors: [],
-    protectedBefore, protectedAfter: null, metadata: null, responsiveImages: [], routePerformance: [], groupPreviews: [], pickerLookup: [], mobileNavigation: [],
+    protectedBefore, protectedAfter: null, metadata: null, responsiveImages: [], routePerformance: [], groupPreviews: [], pickerLookup: [], mobileNavigation: [], singleRails: [],
   };
   const persist = () => writeFile(join(output, 'acceptance.json'), JSON.stringify(report, null, 2));
   let browser, page, publicPage;
@@ -415,6 +415,48 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       await page.getByRole('dialog', { name: '从图库选择一张背景', exact: true }).getByRole('button', { name: `选择背景 ${assets[1].id}`, exact: true }).click();
       await page.getByRole('combobox', { name: '左侧轨道', exact: true }).selectOption({ label: 'Anonymous portrait studies' });
       await page.getByRole('combobox', { name: '右侧轨道', exact: true }).selectOption({ label: 'Anonymous landscape studies' });
+      const originalViewport = page.viewportSize();
+      const railChoices = [page.getByRole('combobox', { name: '左侧轨道', exact: true }), page.getByRole('combobox', { name: '右侧轨道', exact: true })];
+      const originalIds = await Promise.all(railChoices.map(choice => choice.inputValue()));
+      const beforeSingle = { draft: await draft(), publication: await publication(), writes: writeCount() };
+      for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 320, height: 844 }, { width: 700, height: 900 }, { width: 701, height: 900 }]) {
+        await page.setViewportSize(viewport);
+        for (const side of [0, 1, null]) {
+          await railChoices[0].selectOption(side === 0 ? originalIds[0] : '');
+          await railChoices[1].selectOption(side === 1 ? originalIds[1] : '');
+          await page.locator('[data-flow-module-preview="home"]').click();
+          const area = preview().locator('[aria-label="作品速览"]');
+          await area.waitFor();
+          assert.equal(await area.getAttribute('data-flow-rail-layout'), side === null ? 'empty' : 'single');
+          const windows = area.locator('[data-flow-rail-window]');
+          assert.equal(await windows.count(), side === null ? 0 : 1);
+          if (side === null) {
+            await area.getByText('还没有作品', { exact: true }).waitFor();
+          } else {
+            await page.waitForFunction(() => {
+              const img = document.querySelector('dialog [data-flow-rail-window] img');
+              return img?.complete && img.naturalWidth > 0 && /^\d+px$/.test(img.sizes) && Math.abs(parseFloat(img.sizes) - img.clientWidth) <= 1;
+            });
+            const measured = await area.evaluate(element => {
+              const area = element.getBoundingClientRect(), window = element.querySelector('[data-flow-rail-window]').getBoundingClientRect();
+              const track = element.querySelector('[style*="--rail-duration"]');
+              return { width: window.width, centerError: Math.abs((window.left + window.right - area.left - area.right) / 2), areaWidth: area.width, reverse: track.className.includes('reverse'), count: element.querySelectorAll('[data-flow-rail-window] button[tabindex="0"]').length };
+            });
+            assert.ok(Math.abs(measured.width - Math.min(measured.areaWidth, viewport.width <= 700 ? 300 : 500)) <= 1, 'Single rail uses the actual works area and bounded width');
+            assert.ok(measured.centerError <= 1, 'Single rail is centered within the works area');
+            assert.equal(measured.reverse, side === 1, 'Right-only selection preserves the right rail direction');
+            assert.equal(measured.count, 4, 'Single selection retains its complete accessible photo scope');
+            report.singleRails.push({ viewport, side, ...measured });
+          }
+          await overflow(page);
+          await preview().locator('[data-flow-close-preview]').click();
+          await preview().waitFor({ state: 'detached' });
+        }
+      }
+      await railChoices[0].selectOption(originalIds[0]); await railChoices[1].selectOption(originalIds[1]);
+      await page.setViewportSize(originalViewport);
+      assert.equal(writeCount(), beforeSingle.writes, 'Single-rail previews never save or publish');
+      assert.deepEqual(await draft(), beforeSingle.draft); assert.deepEqual(await publication(), beforeSingle.publication);
       for (const [name, leftPercent] of [['7∶3', 70], ['5∶5', 50]]) {
         const preset = page.getByRole('button', { name, exact: true });
         await preset.click(); assert.equal(await preset.getAttribute('aria-pressed'), 'true');

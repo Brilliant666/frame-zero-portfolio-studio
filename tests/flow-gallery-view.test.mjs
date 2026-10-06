@@ -21,9 +21,41 @@ const scrolling = await load('app/premium-gallery-proof/scrollport.ts');
 const bodyLocks = await load('app/premium-gallery-proof/body-scroll-lock.ts');
 const motion = await load('app/premium-gallery-proof/rail-motion.ts');
 const sources = await load('app/premium-gallery-proof/photo-source.ts');
+const rails = await load('app/premium-gallery-proof/rail-layout.ts');
 const gestures = await load('app/premium-gallery-proof/gallery-interaction.ts');
 const previewTargets = await load('app/site-editor/flow-gallery-preview.ts');
 const groupScrolling = await load('app/premium-gallery-proof/group-preview.ts', { './scrollport': scrolling });
+
+test('valid rail projection preserves selected side, photo scope and saved configuration', () => {
+  const first = { id: 'first', name: 'First', photos: [{ id: 'a' }, { id: 'b' }] };
+  const second = { id: 'second', name: 'Second', photos: [{ id: 'c' }] };
+  const content = { groups: [first, { id: 'empty', photos: [] }, second], leftRailWidthPercent: 70 };
+  for (const [left, right, mode, sides] of [
+    ['first', null, 'single', [0]], [null, 'second', 'single', [1]],
+    ['first', 'second', 'dual', [0, 1]], ['first', 'first', 'dual', [0, 1]],
+    [null, null, 'empty', []], ['missing', 'empty', 'empty', []],
+    ['first', 'missing', 'single', [0]], ['empty', 'second', 'single', [1]],
+  ]) {
+    const document = { ...content, featuredGroupIds: { left, right } }, before = JSON.stringify(document);
+    const result = rails.galleryRailLayout(document);
+    assert.equal(result.mode, mode);
+    assert.deepEqual(copy(result.columns.map(column => column.side)), sides);
+    assert.deepEqual(copy(result.columns.map(column => column.widthPercent)), mode === 'single' ? [100] : mode === 'dual' ? [70, 30] : []);
+    for (const column of result.columns) assert.strictEqual(column.group, column.group.id === 'first' ? first : second, 'Lightbox scope retains the exact selected group and member order');
+    assert.equal(JSON.stringify(document), before, 'Rendering never fills an unassigned side or overwrites the saved proportion');
+  }
+  assert.deepEqual(copy(rails.galleryRailLayout(content).columns.map(column => column.group.id)), ['first', 'second'], 'Only the anonymous proof falls back to the first two nonempty groups');
+  assert.equal(rails.galleryRailLayout({ groups: [] }).mode, 'empty');
+  assert.equal(rails.galleryRailLayout({ groups: [first] }).mode, 'single');
+  assert.equal(rails.galleryRailLayout({ groups: [first, second] }).columns[0].widthPercent, 200 / 3);
+});
+
+test('single rail responsive source hints use bounded width until actual image measurement', () => {
+  assert.equal(rails.galleryRailSizes(100, true, null), '(max-width: 700px) min(300px, calc(100vw - 40px)), min(500px, 55vw)');
+  assert.equal(rails.galleryRailSizes(70, false, null), '(max-width: 700px) calc((100vw - 52px) * 0.7), calc((55vw - 17px) * 0.7)');
+  assert.equal(rails.galleryRailSizes(100, true, 278), '278px');
+  assert.equal(rails.galleryRailSizes(70, false, 496), '496px');
+});
 
 test('scene swipe requires one tracked finger and ignores controls, pinch endings and vertical reading', () => {
   const touch = (identifier, clientX, clientY = 100) => ({ identifier, clientX, clientY });

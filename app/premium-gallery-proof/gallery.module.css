@@ -61,3 +61,8 @@
 .photoNavigation button{min-height:44px;padding:8px 14px;border:1px solid #ffffff40;background:transparent;border-radius:22px;font-size:14px}
 .photoNavigation output{min-width:50px;text-align:center;font-size:13px}
 @media(max-width:700px){.photoNavigation{bottom:16px;gap:8px}.photoNavigation button{padding:8px 10px}}
+
+/* A single valid selection is centered inside the existing works area. */
+.rails.singleRail{grid-template-columns:minmax(0,1fr);gap:0;justify-items:center}
+.singleRail .rail{width:min(100%,500px)}
+@media(max-width:700px){.singleRail .rail{width:min(100%,300px)}}
