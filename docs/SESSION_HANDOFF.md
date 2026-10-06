@@ -1,5 +1,15 @@
 # 会话交接
 
+## 最新检查点：PR34 合并与只读评审（2026-10-06）
+
+PR34 已按用户明确授权 Ready 并锁定 `eaa38048a5207c4092686ae8284bf433ddc839e2` Squash，main 为 `03affa8c0a9485a3c4a3ff356cce2f3e621905c6`；五项 main push 检查通过，Squash 文件树与已接受 Head 一致。只接受阶段功能，不补写实体手机、客户或最终审美验收。
+
+当前独立分支 `review/impeccable-interface-assessment` 只做 Impeccable critique／audit 与中文方案，见[评审](design/IMPECCABLE_REVIEW.md)、[范围](design/IMPECCABLE_REVIEW_BRIEF.md)及[固定工具版本](design/IMPECCABLE_TOOLING.md)。新 PR 保持 OPEN + DRAFT，产品实施未开始；报告完成后停止，等用户确认。禁止旧 Mission 自动继续、产品改版、业务写入、合并新 PR、日常切换或远程部署。
+
+日常冻结 `a78bca9` 尚未接入最终可访问名称／撤销焦点修复，与 main 不完全等价。本轮日常3001及真实库保持原状，不启动或覆盖；临时实例和原始截图／检测结果仅存本机私有运维目录，结束只停止本轮应用，必要匿名测试数据库保留。既有工作区编辑、私人照片、账号、草稿及 Published 受保护。正常登录可能产生会话／访问记录，不能称数据库绝对零变化。
+
+旧 PR34 Draft、未提交／推送与端口 PID 均是历史快照；恢复前现场核对，不重放旧启停或迁移。
+
 ## 最新收口：完整浅色后台提交到PR34（2026-10-06）
 
 用户授权将当前最新版本提交并推送到PR34；代码、封闭设计候选、隔离测试及文档纳入本轮提交。详见[CURRENT_STATUS](CURRENT_STATUS.md)和[完整后台记录](PR34_FLOW_ADMIN_FULL.md)。提交前49项相关纯测试通过，CI按最新PR Head核对，不复用旧Head通过记录。
