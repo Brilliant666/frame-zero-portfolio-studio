@@ -337,14 +337,16 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       assert.equal(await page.getByRole('button', {name: /^放大素材 /}).count(), 8);
       await module('groups');
       for (const [index, name] of ['Anonymous portrait studies', 'Anonymous landscape studies'].entries()) {
+        await page.getByRole('button', { name: '新建分类', exact: true }).click();
         await page.getByRole('textbox', { name: '分类名称', exact: true }).fill(name);
         await page.getByRole('button', { name: '新建并从图库选片', exact: true }).click();
         const picker = page.getByRole('dialog', { name: '从图库选片', exact: true });
         await picker.waitFor();
         for (const asset of assets.slice(index * 4, index * 4 + 4)) await picker.getByLabel(`选择照片 ${asset.id}`, { exact: true }).check();
-        await picker.getByRole('button', { name: '加入当前图集（4 张）', exact: true }).click();
+        await picker.getByRole('button', { name: '加入当前分类（4 张）', exact: true }).click();
         await picker.waitFor({ state: 'detached' });
       }
+      await page.getByRole('button', { name: '分类与说明', exact: true }).click();
       await page.getByRole('textbox', { name: '第 1 张照片说明', exact: true }).fill('Caption edited in place');
       await page.getByRole('button', { name: '移出当前照片', exact: true }).click();
       await page.getByRole('button', { name: '撤销最近移除', exact: true }).click();

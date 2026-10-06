@@ -9,7 +9,7 @@ import styles from "./publication-controls.module.css";
 
 export type PublicationEditorProps = {
   revision: number; dirty: boolean; disabled: boolean; templateId: string;
-  draftAction?: ReactNode; tools?: ReactNode; draftStatus?: string;
+  draftAction?: ReactNode; tools?: ReactNode; draftStatus?: string; compactTools?: boolean;
   saveDraft: (options?: DraftSaveOptions) => Promise<DraftSaveReceipt | null>;
 };
 type PublicationState = { current: Publication | null; history: Publication[] };
@@ -22,7 +22,7 @@ function parseState(value: unknown): PublicationState {
   return value as PublicationState;
 }
 
-export default function PublicationControls({ endpoint, publicHref, space, revision, templateId, dirty, disabled, saveDraft, draftAction, tools, draftStatus }: PublicationEditorProps & { endpoint: string; publicHref: string; space: ContentSpace }) {
+export default function PublicationControls({ endpoint, publicHref, space, revision, templateId, dirty, disabled, saveDraft, draftAction, tools, draftStatus, compactTools }: PublicationEditorProps & { endpoint: string; publicHref: string; space: ContentSpace }) {
   const [state, setState] = useState<PublicationState | null>(null);
   const [busy, setBusy] = useState(false), [message, setMessage] = useState("");
   const [feedbackTone, setFeedbackTone] = useState<"info" | "success" | "error" | "pending">("info");
@@ -96,15 +96,15 @@ export default function PublicationControls({ endpoint, publicHref, space, revis
   const { modalOpen, keyboardOpen } = useEditorActionVisibility();
   const synced = publicationSynced(state?.current ?? null, space, templateId, revision, dirty);
   const status = pending ? "结果待确认" : !state ? "发布状态暂不可用" : dirty ? "有修改待保存发布" : synced ? "已同步" : state.current ? "当前编辑尚未发布" : "尚未发布";
+  const toolsContent = <div className={styles.tools} aria-label="预览与草稿工具">{tools}<a className={styles.secondary} href={publicHref} target="_blank" rel="noreferrer">查看公开主页 ↗</a>
+    <details className={styles.history}><summary>发布历史与回退 {state?.history.length ?? 0}</summary><div className={styles.historyContent}>
+      {!!state?.history.length && <ul>{state.history.map(item => <li key={item.id}><span>{title(item)} · {new Date(item.publishedAt).toLocaleString()}</span>{state.current?.id === item.id ? <span className={styles.current}>当前公开</span> : <button className={styles.secondary} type="button" disabled={busy || disabled || !!pending} onClick={() => void publish(item)}>恢复此公开版本</button>}</li>)}</ul>}
+    </div></details>
+  </div>;
   return <section className={styles.panel} aria-label="公开发布"><div className={styles.row}>
     <div className={styles.overview}><div className={styles.versions}><strong>{spaceName(space)}草稿 v{revision} · {draftStatus ?? (dirty ? "未保存修改" : "已保存")}</strong><span>{!state ? "公开状态待确认" : state.current ? `公开：${title(state.current)}` : "暂无公开版本"}</span><span className={synced ? styles.synced : styles.status}>{status}</span></div>
     </div><div className={styles.actions} data-editor-save-actions="true" data-keyboard-open={keyboardOpen || undefined} data-modal-open={modalOpen || undefined} inert={modalOpen || undefined}>
       {draftAction}<button className={styles.primary} type="button" disabled={!state || busy || disabled || !!pending || !dirty && revision === 0} onClick={() => void publish()}>{busy ? "正在处理…" : "保存并发布"}</button>
     </div>
-  </div><div className={styles.tools} aria-label="预览与草稿工具">{tools}<a className={styles.secondary} href={publicHref} target="_blank" rel="noreferrer">查看公开主页 ↗</a>
-    <details className={styles.history}><summary>发布历史与回退 {state?.history.length ?? 0}</summary><div className={styles.historyContent}>
-      {!!state?.history.length && <ul>{state.history.map(item => <li key={item.id}><span>{title(item)} · {new Date(item.publishedAt).toLocaleString()}</span>{state.current?.id === item.id ? <span className={styles.current}>当前公开</span> : <button className={styles.secondary} type="button" disabled={busy || disabled || !!pending} onClick={() => void publish(item)}>恢复此公开版本</button>}</li>)}</ul>}
-    </div></details>
-
-  </div>{message && <div className={styles.message} data-tone={feedbackTone} role={feedbackTone === "error" ? "alert" : "status"}><strong>{feedbackTitle}</strong><p>{message}</p></div>}<button className={styles.refresh} type="button" disabled={busy} onClick={() => void refresh()}>{pending ? "只读检查发布结果" : "刷新公开状态"}</button></section>;
+  </div>{compactTools ? <details className={styles.toolDisclosure} open={Boolean(pending || message && (feedbackTone === "pending" || feedbackTone === "error"))}><summary>预览与草稿工具</summary>{toolsContent}</details> : toolsContent}{message && <div className={styles.message} data-tone={feedbackTone} role={feedbackTone === "error" ? "alert" : "status"}><strong>{feedbackTitle}</strong><p>{message}</p></div>}<button className={styles.refresh} type="button" disabled={busy} onClick={() => void refresh()}>{pending ? "只读检查发布结果" : "刷新公开状态"}</button></section>;
 }

@@ -72,6 +72,13 @@
 /* Version details stay in flow; only the two save actions stay on screen. */
 .panel { padding: 12px 16px; }
 .tools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; margin-top: 10px; }
+.toolDisclosure { margin-top: 6px; }
+.toolDisclosure > summary { width: fit-content; cursor: pointer; min-height: 32px; line-height: 32px; color: #435b77; }
+.panel:has(> .toolDisclosure) { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; }
+.panel:has(> .toolDisclosure) > .row { grid-column: 1 / -1; }
+.panel:has(> .toolDisclosure) > .toolDisclosure { grid-column: 1 / -1; grid-row: 2; padding-right: 100px; }
+.panel:has(> .toolDisclosure) > .refresh { grid-column: 2; grid-row: 2; align-self: start; margin-top: 12px; }
+.panel:has(> .toolDisclosure) > .message { grid-column: 1 / -1; }
 .tools :is(a, button, summary) { font: inherit; min-height: 32px; color: #435b77; }
 .tools button { border: 1px solid #cdd6e2; background: #fff; border-radius: 6px; padding: 5px 9px; }
 .tools details > div { display: flex; gap: 8px; flex-wrap: wrap; padding: 8px 0; }
