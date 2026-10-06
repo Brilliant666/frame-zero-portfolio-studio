@@ -1115,6 +1115,10 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
             const n = offset + index, portrait = n % 2 === 0;
             return { name: `anonymous-s1b-${n + 1}.png`, mimeType: 'image/png', buffer: await sharp({ create: { width: portrait ? 140 : 210, height: portrait ? 210 : 140, channels: 3, background: { r: 80 + n, g: 150 - n, b: 40 + n * 2 } } }).png().toBuffer() };
           }));
+          await b1.waitForFunction(() => {
+            const input = document.querySelector('input[type="file"][aria-label="上传本站照片"]');
+            return input && !input.disabled;
+          });
           await b1.getByLabel('上传本站照片', { exact: true }).setInputFiles(batch);
           await b1.getByText(`本站图库 ${8 + offset + batch.length} 张`, { exact: true }).waitFor();
         }
@@ -1154,6 +1158,18 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         const second = (await ids())[0];
         await picker.getByRole('checkbox', { name: `选择照片 ${second}`, exact: true }).check();
         assert.notEqual(first, second);
+        for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 844 }, VIEWPORTS[0]]) {
+          await b1.setViewportSize(viewport);
+          assert.equal(await b1.locator('dialog[open]').count(), 1, 'A breakpoint change retains one actual open selection dialog');
+          assert.equal(await picker.evaluate(dialog => dialog.open && dialog.contains(document.activeElement)), true, 'Resizing keeps keyboard focus inside the active picker');
+          assert.deepEqual(await selectedIds(), [first, second], 'Cross-page temporary selections keep their order across mobile and desktop breakpoints');
+          const actionBar = b1.locator('[data-editor-save-actions]');
+          assert.equal(await actionBar.getAttribute('data-modal-open'), 'true', 'The save bar remains aware of the active modal after resizing');
+          assert.equal(await actionBar.evaluate(element => element.inert), true, 'The save bar cannot take modal keyboard focus at either breakpoint');
+          assert.equal(await b1root.getAttribute('data-flow-dirty'), 'false', 'Resizing and selected review do not edit the draft');
+          assert.equal(writeCount(), noWrite, 'Resizing preserves selection without draft or publish writes');
+          report.pickerLookup.push({ source: 'real isolated cross-page picker', viewport, selectedOrder: [first, second], dialogCount: 1, modalFocusRetained: true, saveBarInert: true, dirty: false, implicitWrites: 0 });
+        }
         await picker.getByRole('button', { name: '沿用图库查找条件', exact: true }).click();
         assert.equal(await picker.getByRole('textbox', { name: '按素材 ID 查找', exact: true }).inputValue(), sourceQuery.trim());
         assert.equal(await picker.getByRole('combobox', { name: '照片方向', exact: true }).inputValue(), 'portrait');
