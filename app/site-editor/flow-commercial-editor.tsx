@@ -36,7 +36,7 @@ export type FlowContactEditorProps = PreviewProps & {
 
 function SectionHeader({ title, enabled, onToggle, onPreview, previewDisabled }: PreviewProps & { title: string; enabled: boolean; onToggle: (enabled: boolean) => void }) {
   return <header className={styles.sectionHeader}>
-    <label className={styles.pageSwitch}><input type="checkbox" checked={enabled} onChange={event => onToggle(event.target.checked)} /><span>展示{title}页面</span><small>{enabled ? "发布后出现在导航中" : "页面隐藏，编辑内容保留"}</small></label>
+    <label className={styles.pageSwitch}><input type="checkbox" aria-label={`展示${title}页面`} aria-describedby={`flow-${title === "联系" ? "contact" : "pricing"}-page-switch-hint`} checked={enabled} onChange={event => onToggle(event.target.checked)} /><span>展示{title}页面</span><small id={`flow-${title === "联系" ? "contact" : "pricing"}-page-switch-hint`}>{enabled ? "发布后出现在导航中" : "页面隐藏，编辑内容保留"}</small></label>
     <button type="button" className={styles.previewButton} disabled={previewDisabled} onClick={event => onPreview(event.currentTarget)}>查看{title === "联系" ? "联系" : "价格"}效果 <span aria-hidden="true">↗</span></button>
   </header>;
 }
