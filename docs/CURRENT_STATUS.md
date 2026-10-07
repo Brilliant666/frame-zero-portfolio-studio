@@ -1,4 +1,10 @@
-# 当前检查点：PR35 Flow局部修正已交付3001
+# 当前检查点：PR35 基础版与高级拍立得补评完成，等待设计选择
+
+## 最新：只读补评与方案（2026-10-07）
+
+见 [基础与拍立得主报告](design/IMPECCABLE_BASIC_AND_POLAROID_REVIEW.md) 与 [BP 证据索引](design/IMPECCABLE_EVIDENCE_INDEX.md#基础与高级拍立得补评-bp2026-10-07)。基础后台六分区、11 套非空基础前台逐套桌面／手机、高级拍立得后台与三构图／两主题前台均 COMPLETE_WITH_LIMITS。建议先局部修中文标题，再分别调整基础操作入口和拍立得图库／设置，不统一为 Flow 风格。
+
+本轮只改脱敏文档。PG55436 经正常流程准备 11 个匿名 Site 的固定 v1 样本，之后只读；日常 3001 业务不改，5 行草稿与 1 行 Published 前后 MATCH，实例未重启／替换。输入基线 b3a4286 五项 CI 成功，文档推送的新 Head 另看实际检查。PR35 保持 Draft，不合并、不部署、不自动实施方案；NEXT = WAITING_FOR_USER_DESIGN_CONFIRMATION。Flow 已有成果保留，S3 仍取消。下文为既有交付记录。
 
 ## 本次提交收口（2026-10-07）
 

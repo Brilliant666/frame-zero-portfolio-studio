@@ -72,3 +72,40 @@ B使用独立Chrome评审标签，结束恢复视口并关闭标签。A的应用
 仍未覆盖：高级拍立得当前授权内容现场、实体手机和软键盘、读屏、200%文字、正式长距离排序、真实照片与长文／最大数量组合、写失败恢复。保存草稿独立预览已在D19/D20实际打开；其余不得用历史记录、空库或代码推断补写为通过。
 
 本索引与[主报告](IMPECCABLE_REVIEW.md)、[工具说明](IMPECCABLE_TOOLING.md)一起使用；全部建议等待用户确认，产品实现未开始。
+
+## 基础与高级拍立得补评 BP（2026-10-07）
+
+上述初评／桌面补评是历史证据。新增 [BP 主报告](IMPECCABLE_BASIC_AND_POLAROID_REVIEW.md) 补齐两个独立空间，不改写旧日期和限制。基线 Head `b3a42869b89b8c7e7cabac14a0e4f91ecf19fccb`；3001 BUILD_ID `hfHktDwyj1CsVa1PpEQhY`，312 个产品文件一致；3004 旧构建 `_IMi_qZR_VdbUxheAVKWo`，151 个本次相关文件一致。没有部署或重启。
+
+原图和业务 DOM 只存本机私有评审目录。下列名称是脱敏检索键，不是公开图片链接。私人照片、Site 地址、凭据、数据库完整行及原始检测 JSON 不入库；本机另有 `review.html` 导览，组织已有截图而非新增重复截图。
+
+| ID／本机检索键 | 实际证据 | 用途与限制 |
+| --- | --- | --- |
+| BP-baseline／review-baseline | 分支、运行版本、产品文件对应、CSS 主视口 | 当前 PR 与旧构建按范围对应，不能以相关源码一致宣称整个 3004 等于新 Head |
+| BP-prep／basic-fixtures | 正常流程新增 11 个隔离 Site、44 素材、11 个 v1 草稿及公开快照；来源与冻结回执 | 本阶段有授权测试库写入；准备前的素材／草稿／公开指针原行摘要保持；之后业务只读 |
+| BP-A-basic／a-basic-* | 基础六分区、资料／套餐／联系、三列排版与手机堆叠 | 日常已填内容，兼容作品区空态仅补充。排除 a-basic-template-desktop 的即时视口切换长图，不从该图判断稳定版式 |
+| BP-A-admin／a-premium-library、members、settings 等 | 高级五模块、11 张成员、设置／封面、当前图集预览 | 整卡排序入口已存在，未真正排序／选片／保存；图集预览及照片关闭回焦点 |
+| BP-A-front／a-premium-constellation、scatter、editorial 等 | 同图集纸面／夜空、三构图、主角／总览、大图和桌面镜头；套餐联系 | 11 张图集主链；另外 13／1 张图集未穷举内部。相纸与胶带保留，不能把检测偏好当风格缺陷 |
+| BP-F01／f01-* | cinematic-light 双主视口、完整作品、照片开关、套餐联系 | 手机中文右裁切；人像在横图右侧的手机裁切另记为素材／焦点条件 |
+| BP-F02／f02-* | neon-hud 双主视口、作品和分区路径 | 中文紧行距；保留 HUD。路径记录包含实际栏目，截图不是纯实验室空态 |
+| BP-F03／f03-* | film-rail 双主视口、全轨道及末帧、大图返回、服务联系 | early works 长图有懒加载状态；以 rail-complete 补充，不误判坏图。首图 Y=905.59 为 CSS 值 |
+| BP-F04／f04-* | manga-panels 双主视口、漫画章节／作品大图、服务联系 | 保留漫画构成，无强制改版结论 |
+| BP-F05／f05-* | prism-liquid 双主视口、作品大图、服务联系 | 保留折射／液态视觉；编号看起来小不等于实测命中区失败 |
+| BP-F06／f06-* | orbital-portal 双主视口、作品大图、服务联系 | 保留轨道构图，未做数值对比度结论 |
+| BP-F07／f07-* | archive-os 双主视口、档案／检查器／Quick Look／关闭、约拍 | **mobile-initial** 为初始图；mobile-home 是此前选中竖图后的检查器，不拿两种状态作首屏比较 |
+| BP-F08／f08-* | editorial-duet 双主视口、完整滚动、照片开关、服务联系 | 中文行距问题；低高度照片需要滚动不等于图片裁切失败 |
+| BP-F09／f09-* | 基础 polaroid-field 双主视口、照片大图、总览、服务联系 | **mobile-initial** 为初始图；mobile-home 保留总览／滚动状态。不能替代高级拍立得覆盖 |
+| BP-F10／f10-* | character-select 双主视口、九格选图／大图／关闭、服务联系 | 主图与选择册合理重排；DOM 第一张图是缩略图，不用它代替主图位置 |
+| BP-F11／f11-* | museum-depth 双主视口、完整展厅浏览／大图／返回、服务联系 | 展厅节奏保留；收尾中文行距可局部改进 |
+| BP-paths／front-evidence、front-paths、photo、sections | CSS 视口、滚动、图片解码、实际 DOM、开关照片与返回 | 所有 11 套主要桌面／手机都非空；部分服务联系证据为 DOM 与路径，并非每个分区都单独截图。整页截图中途固定栏是拼接位置，不当作产品重复导航 |
+| BP-B-basic／B-basic-template、B-basic-layout | 390／1280／1920 模板入口；390 推荐排版可见 summary 的 rect 与 scrollY | 进入排版 Y=2071.80／1508.18／1739.48；推荐标题 Y=5550.13。弃用 A 早期隐藏内容容器 Y=5647.13，不混淆可见入口 |
+| BP-B-library／B-premium-library | 390／1280／1920 初始首张解码照片 | Y=1213.09／737.66／737.66；前两视口首屏照片面积 0。由 CSS rect、scrollY 与可见高度判断，不从缩放截图测量 |
+| BP-B-type／B-cinematic、neon、film、editorial | 320 中文边界；editorial 1280／1920 | 标题裁切／紧行距与稳定截图、字号行高互相印证，仅对实测内容条件成立 |
+| BP-B-extra／B-archive、B-premium-profile、packages、contact、night | Archive320名称／焦点，高级手机三表单、夜空首页→图集→大图→关闭→返回 | Archive aria 为空但 tag/text 证明回触发按钮；不能误报丢焦点。软键盘、真实触屏仍未验 |
+| BP-B-motion／B-*-reduced-motion | 两前台媒体模拟 true 下入口与开关可用，随后清除模拟 | 未取得完整动画列表，不作为全模板动画停用或性能证明 |
+| BP-detector／assessment-b、detector | A 封存后汇总 B；15 个旧命中文件 blob 一致，复用 31 条；两组件定向补扫零提示 | 许多提示是状态／字体／纸面身份；布局动画仅源码风险，不等于现场卡顿 |
+| BP-protect／protected-result | 2026-10-07 06:14 UTC，日常全部 5 草稿／1 Published 前后完整行 MATCH | 本轮无日常资源写操作；只核对业务范围，不称登录等系统表零变化 |
+
+主视口 CSS 1440×900／390×844，相关边界 1280×720／1920×1080／320×844；截图文件像素可能缩放。A 的部分 .png 实际是 JPEG 字节，原件保留；依据 DOM 测量。代理各自恢复视口／查看主题并关闭临时标签，用户原标签保持。
+
+补评状态：基础后台、十一基础前台逐套、高级拍立得后台／前台均 COMPLETE_WITH_LIMITS；实体手机、软键盘、读屏、全键盘／全主题／全部数量组合、性能、写入与故障恢复未覆盖。**产品新修改 NONE；日常业务与 Published UNCHANGED；PR35 OPEN + DRAFT；等待设计选择。**
