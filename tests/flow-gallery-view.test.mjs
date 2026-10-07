@@ -15,7 +15,8 @@ const copy = value => JSON.parse(JSON.stringify(value));
 const ASSET = '11111111-1111-4111-8111-111111111111', MISSING = '22222222-2222-4222-8222-222222222222';
 const GROUP = '33333333-3333-4333-8333-333333333333', HIDDEN = '44444444-4444-4444-8444-444444444444';
 const schema = await load('app/site-editor/flow-gallery-document.ts');
-const view = await load('app/site-editor/flow-gallery-view.tsx', { '../premium-gallery-proof/gallery': { default: 'Gallery' }, 'react/jsx-runtime': { jsx: (type, props) => ({ type, props }) } });
+const photoNames = await load('app/site-editor/flow-gallery-photo-names.ts');
+const view = await load('app/site-editor/flow-gallery-view.tsx', { './flow-gallery-photo-names': photoNames, '../premium-gallery-proof/gallery': { default: 'Gallery' }, 'react/jsx-runtime': { jsx: (type, props) => ({ type, props }) } });
 const state = await load('app/site-editor/flow-gallery-state.ts');
 const scrolling = await load('app/premium-gallery-proof/scrollport.ts');
 const bodyLocks = await load('app/premium-gallery-proof/body-scroll-lock.ts');
@@ -194,6 +195,25 @@ test('Site renderer resolves only supplied assets and never fills missing resour
   assert.equal(resolved.groups[0].photos[0].height, 2200);
   assert.deepEqual(copy(view.resolveFlowGalleryDocument(document(), []).groups[0].photos), []);
   assert.doesNotMatch(JSON.stringify(resolved), /\/photos\/library|\/preview\/flow-gallery|shaomaimai/);
+});
+
+
+test('Flow photo names preserve captions and identify the category and displayed order after missing assets are removed', () => {
+  const d = document();
+  d.groups[0].assetIds = [HIDDEN, ASSET, MISSING];
+  d.groups[0].captions = { [ASSET]: '  已填写的说明  ', [MISSING]: '   ' };
+  d.groups.push({ id: MISSING, name: '另一分类', assetIds: [MISSING, ASSET], captions: {}, visible: true });
+  const before = JSON.stringify(d);
+  const resolved = view.resolveFlowGalleryDocument(d, [asset(), asset(MISSING)]);
+  assert.deepEqual(copy(resolved.groups.map(group => group.photos.map(photo => [photo.id, photo.alt]))), [
+    [[ASSET, '  已填写的说明  '], [MISSING, '独立分类 · 第 2 张照片']],
+    [[MISSING, '另一分类 · 第 1 张照片'], [ASSET, '另一分类 · 第 2 张照片']],
+  ]);
+  assert.equal(JSON.stringify(d), before, 'Accessible fallbacks do not write captions or alter member order');
+  for (const [orientation, name] of [['landscape', '横幅'], ['portrait', '竖幅'], ['square', '方幅']]) {
+    assert.equal(photoNames.flowAssetName({ orientation }, 0), `第 1 张照片，${name}`);
+    assert.equal(photoNames.flowAssetName({ orientation }, 48), `第 49 张照片，${name}`, 'Later pages continue the filtered result numbering');
+  }
 });
 
 test('Site renderer carries the edited rail width and keeps the original width for legacy content', () => {

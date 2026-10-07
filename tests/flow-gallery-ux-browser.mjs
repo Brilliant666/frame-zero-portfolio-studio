@@ -385,12 +385,12 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       const assets = (await json(assetsPath)).assets;
       assert.equal(assets.length, 8);
       await page.getByRole('combobox', { name: '画幅', exact: true }).selectOption('portrait');
-      assert.equal(await page.getByRole('button', {name: /^放大素材 /}).count(), 3);
+      assert.equal(await page.getByRole('button', {name: /^放大照片：/}).count(), 3);
       await page.getByRole('combobox', { name: '画幅', exact: true }).selectOption('landscape');
-      assert.equal(await page.getByRole('button', {name: /^放大素材 /}).count(), 5);
+      assert.equal(await page.getByRole('button', {name: /^放大照片：/}).count(), 5);
       await page.getByRole('combobox', { name: '画幅', exact: true }).selectOption('all');
       await page.getByRole('combobox', { name: '加入本站时间', exact: true }).selectOption('oldest');
-      assert.equal(await page.getByRole('button', {name: /^放大素材 /}).count(), 8);
+      assert.equal(await page.getByRole('button', {name: /^放大照片：/}).count(), 8);
       await module('groups');
       for (const [index, name] of ['Anonymous portrait studies', 'Anonymous landscape studies'].entries()) {
         await page.getByRole('button', { name: '新建分类', exact: true }).click();
@@ -398,7 +398,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         await page.getByRole('button', { name: '新建并从图库选片', exact: true }).click();
         const picker = page.getByRole('dialog', { name: '从图库选片', exact: true });
         await picker.waitFor();
-        for (const asset of assets.slice(index * 4, index * 4 + 4)) await picker.getByLabel(`选择照片 ${asset.id}`, { exact: true }).check();
+        for (const asset of assets.slice(index * 4, index * 4 + 4)) await picker.locator(`[data-flow-asset-id="${asset.id}"]`).getByRole('checkbox', { name: /^选择照片：第 \d+ 张照片，(横幅|竖幅|方幅)$/ }).check();
         await picker.getByRole('button', { name: '加入当前分类（4 张）', exact: true }).click();
         await picker.waitFor({ state: 'detached' });
       }
@@ -412,7 +412,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       await page.getByRole('textbox', { name: '首页标题', exact: true }).fill('Flow fixture published title');
       await page.getByRole('textbox', { name: '首页介绍', exact: true }).fill('Synthetic photographs for isolated browser acceptance.');
       await page.getByRole('button', { name: '从图库选择背景', exact: true }).click();
-      await page.getByRole('dialog', { name: '从图库选择一张背景', exact: true }).getByRole('button', { name: `选择背景 ${assets[1].id}`, exact: true }).click();
+      await page.getByRole('dialog', { name: '从图库选择一张背景', exact: true }).locator(`[data-flow-asset-id="${assets[1].id}"]`).getByRole('button', { name: /^选择背景：第 \d+ 张照片，(横幅|竖幅|方幅)$/ }).click();
       await page.getByRole('combobox', { name: '左侧轨道', exact: true }).selectOption({ label: 'Anonymous portrait studies' });
       await page.getByRole('combobox', { name: '右侧轨道', exact: true }).selectOption({ label: 'Anonymous landscape studies' });
       const originalViewport = page.viewportSize();
@@ -1111,6 +1111,38 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         await returnToWorks('gallery', publicPage.getByRole('button', { name: '返回首页', exact: true }));
       }
     });
+    await stage('06a distinct photo names, separate hit targets and first-group rhythm', async () => {
+      report.s2 = [];
+      const snapshot = await readPublished(runtime.pool, SLUG);
+      for (const viewport of [...GROUP_PREVIEW_VIEWPORTS, { width: 1280, height: 600 }]) {
+        await publicPage.setViewportSize(viewport);
+        await publicPage.goto(`${origin}/${SLUG}#works`);
+        await publicPage.locator('[data-flow-scene="works"]').waitFor();
+        const controls = await publicPage.locator('[data-flow-expand], button[aria-pressed], [aria-label="页面位置"] button').evaluateAll(nodes => {
+          const rect = element => { const r = element.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height }; };
+          const photos = [...document.querySelectorAll('[data-flow-rail-window]')].map(rect);
+          return nodes.map(node => { const bounds = rect(node); return { name: node.getAttribute('aria-label') ?? node.textContent, ...bounds, centerHit: node.contains(document.elementFromPoint((bounds.left + bounds.right) / 2, (bounds.top + bounds.bottom) / 2)), overlapsPhoto: photos.some(photo => bounds.left < photo.right && bounds.right > photo.left && bounds.top < photo.bottom && bounds.bottom > photo.top) }; });
+        });
+        assert.equal(controls.length, 5);
+        for (const control of controls) {
+          assert.ok(control.width >= 44 && control.height >= 44, `${control.name} has a full 44px hit target`);
+          assert.ok(control.centerHit && !control.overlapsPhoto, `${control.name} is hittable without covering the photo window`);
+        }
+        await publicPage.locator('[data-flow-expand]').click();
+        await publicPage.locator('[data-flow-scene="gallery"]').waitFor();
+        const first = publicPage.locator('[data-flow-group-id]').first();
+        const photo = await first.locator('button').first().boundingBox();
+        assert.ok(photo.y < (viewport.width <= 700 ? viewport.height * .55 : viewport.height <= 760 ? 340 : 470), 'First-group photograph appears within the expected viewport rhythm');
+        const names = await first.locator('button').evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label')));
+        for (const group of snapshot.content.groups.filter(group => group.visible)) {
+          const expected = group.assetIds.map((id, index) => `查看大图：${group.captions[id]?.trim() ? group.captions[id] : `${group.name} · 第 ${index + 1} 张照片`}`);
+          assert.deepEqual(await publicPage.locator(`[data-flow-group-id="${group.id}"] button`).evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label'))), expected, 'Names preserve captions and identify the exact Published category order');
+        }
+        report.s2.push({ viewport, controls, firstPhoto: photo, names });
+        await overflow(publicPage);
+      }
+    });
+
     await stage('07 advanced public and admin cold/warm route resource measurements', async () => {
       for (const viewport of VIEWPORTS) report.routePerformance.push(...await measureFlowGalleryRoutes({ browser, origin, fixtureSlug: SLUG, ownerStorageState: await context.storageState(), viewport, signal }));
     });
@@ -1153,7 +1185,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       });
       const b1root = b1.locator('[data-flow-editor-section]');
       const picker = b1.getByRole('dialog', { name: '从图库选片', exact: true });
-      const ids = () => picker.getByRole('checkbox', { name: /^选择照片 / }).evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label').slice('选择照片 '.length)));
+      const ids = () => picker.getByRole('checkbox', { name: /^选择照片：第 \d+ 张照片，(横幅|竖幅|方幅)$/ }).evaluateAll(nodes => nodes.map(node => node.closest('[data-flow-asset-id]').dataset.flowAssetId));
       const selectedIds = async () => {
         await picker.getByRole('button', { name: '查看已选', exact: true }).click();
         const result = await ids();
@@ -1193,7 +1225,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         await b1.getByRole('combobox', { name: '加入本站时间', exact: true }).selectOption('oldest');
         await b1.locator('summary').filter({ hasText: /^按素材 ID 查找/ }).click();
         await b1.getByRole('textbox', { name: '素材 ID（可选）', exact: true }).fill(sourceQuery);
-        const libraryIds = await b1.getByRole('button', { name: /^放大素材 / }).evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label').slice('放大素材 '.length)));
+        const libraryIds = await b1.getByRole('button', { name: /^放大照片：第 \d+ 张照片，(横幅|竖幅|方幅)$/ }).evaluateAll(nodes => nodes.map(node => node.closest('[data-flow-asset-id]').dataset.flowAssetId));
         assert.deepEqual(libraryIds, [lookupAsset.id]);
         await b1module('home');
         await b1.getByRole('button', { name: '从图库选择背景', exact: true }).click();
@@ -1214,10 +1246,10 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         assert.equal(await picker.getByRole('combobox', { name: '加入本站时间', exact: true }).inputValue(), 'newest');
         await picker.getByText('第 1 / 2 页 · 51 张匹配', { exact: true }).waitFor();
         const first = (await ids())[0];
-        await picker.getByRole('checkbox', { name: `选择照片 ${first}`, exact: true }).check();
+        await picker.locator(`[data-flow-asset-id="${first}"]`).getByRole('checkbox', { name: /^选择照片：第 \d+ 张照片，(横幅|竖幅|方幅)$/ }).check();
         await picker.getByRole('button', { name: '下一页', exact: true }).click();
         const second = (await ids())[0];
-        await picker.getByRole('checkbox', { name: `选择照片 ${second}`, exact: true }).check();
+        await picker.locator(`[data-flow-asset-id="${second}"]`).getByRole('checkbox', { name: /^选择照片：第 \d+ 张照片，(横幅|竖幅|方幅)$/ }).check();
         assert.notEqual(first, second);
         for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 844 }, VIEWPORTS[0]]) {
           await b1.setViewportSize(viewport);
@@ -1262,12 +1294,12 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         assert.equal(await b1.getByRole('combobox', { name: '画幅', exact: true }).inputValue(), 'portrait');
         assert.equal(await b1.getByRole('combobox', { name: '加入本站时间', exact: true }).inputValue(), 'oldest');
         await b1module('groups'); await open(); await picker.waitFor();
-        assert.equal(await picker.getByRole('checkbox', { name: /^选择照片 / }).evaluateAll(nodes => nodes.filter(node => node.checked).length), 0, 'Cancelled temporary selections do not leak into a new picker');
+        assert.equal(await picker.getByRole('checkbox', { name: /^选择照片：/ }).evaluateAll(nodes => nodes.filter(node => node.checked).length), 0, 'Cancelled temporary selections do not leak into a new picker');
         // Deliberately pick in reversed order to distinguish append order from
         // library sorting, filtering and member order.
         for (const id of [second, first]) {
           await picker.getByRole('textbox', { name: '按素材 ID 查找', exact: true }).fill(id);
-          await picker.getByRole('checkbox', { name: `选择照片 ${id}`, exact: true }).check();
+          await picker.locator(`[data-flow-asset-id="${id}"]`).getByRole('checkbox', { name: /^选择照片：第 \d+ 张照片，(横幅|竖幅|方幅)$/ }).check();
         }
         await picker.getByRole('button', { name: '沿用图库查找条件', exact: true }).click();
         assert.deepEqual(await selectedIds(), [second, first]);
@@ -1295,7 +1327,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         assert.equal(await b1.getByRole('combobox', { name: '加入本站时间', exact: true }).inputValue(), 'recent');
         await b1module('groups'); await open(); await picker.waitFor();
         assert.equal(await picker.getByRole('button', { name: '沿用图库查找条件', exact: true }).count(), 0, 'Default library conditions do not create a useless inheritance entry');
-        assert.equal(await picker.getByRole('checkbox', { name: /^选择照片 / }).evaluateAll(nodes => nodes.filter(node => node.checked).length), 0);
+        assert.equal(await picker.getByRole('checkbox', { name: /^选择照片：/ }).evaluateAll(nodes => nodes.filter(node => node.checked).length), 0);
         await picker.getByRole('button', { name: '取消选片', exact: true }).click();
         await picker.waitFor({ state: 'detached' });
         for (const status of [401, 403]) {
@@ -1311,7 +1343,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
           await b1module('groups'); await open(); await picker.waitFor();
           const temporary = (await ids()).slice(0, 2);
           assert.equal(temporary.length, 2);
-          for (const id of temporary) await picker.getByRole('checkbox', { name: `选择照片 ${id}`, exact: true }).check();
+          for (const id of temporary) await picker.locator(`[data-flow-asset-id="${id}"]`).getByRole('checkbox', { name: /^选择照片：第 \d+ 张照片，(横幅|竖幅|方幅)$/ }).check();
           await picker.getByRole('button', { name: '沿用图库查找条件', exact: true }).click();
           const assetsUrl = `${origin}${assetsPath}`;
           await b1.route(assetsUrl, route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify({ error: `Synthetic session failure ${status}` }) }));
@@ -1325,18 +1357,18 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
             assert.equal(await b1.getByRole('combobox', { name: '画幅', exact: true }).inputValue(), 'all');
             assert.equal(await b1.getByRole('combobox', { name: '加入本站时间', exact: true }).inputValue(), 'recent');
             assert.equal(await b1.locator('input[placeholder="粘贴已知素材 ID"]').inputValue(), '');
-            assert.equal(await b1.getByRole('button', { name: /^放大素材 / }).count(), 0, 'Unavailable session removes cached private photo cards');
-            assert.equal(await b1.getByRole('dialog', { name: '素材大图', exact: true }).count(), 0);
+            assert.equal(await b1.getByRole('button', { name: /^放大照片：/ }).count(), 0, 'Unavailable session removes cached private photo cards');
+            assert.equal(await b1.getByRole('dialog', { name: /^照片大图：/ }).count(), 0);
             assert.equal(await b1.getByRole('dialog', { name: '当前编辑即时预览', exact: true }).count(), 0);
             assert.equal(writeCount(), protectedEditor.writes, 'Private state cleanup never writes a draft or publication');
             assert.deepEqual(await draft(), protectedEditor.draft); assert.deepEqual(await publication(), protectedEditor.publication);
           } finally { await b1.unroute(assetsUrl); }
           await b1.getByRole('button', { name: '重新读取图库', exact: true }).click();
           await b1.getByText('本站图库 55 张', { exact: true }).waitFor();
-          assert.equal(await b1.getByRole('button', { name: /^放大素材 / }).count(), 48, 'Removing the synthetic failure restores the normal paged Site assets');
+          assert.equal(await b1.getByRole('button', { name: /^放大照片：/ }).count(), 48, 'Removing the synthetic failure restores the normal paged Site assets');
           await b1module('groups'); await open(); await picker.waitFor();
           assert.equal(await picker.getByRole('button', { name: '沿用图库查找条件', exact: true }).count(), 0, 'A failed session leaves no inherited lookup');
-          assert.equal(await picker.getByRole('checkbox', { name: /^选择照片 / }).evaluateAll(nodes => nodes.filter(node => node.checked).length), 0, 'A failed session leaves no temporary selection');
+          assert.equal(await picker.getByRole('checkbox', { name: /^选择照片：/ }).evaluateAll(nodes => nodes.filter(node => node.checked).length), 0, 'A failed session leaves no temporary selection');
           await picker.getByRole('button', { name: '取消选片', exact: true }).click();
           await picker.waitFor({ state: 'detached' });
           assert.equal(await b1root.getAttribute('data-flow-dirty'), protectedEditor.dirty);
