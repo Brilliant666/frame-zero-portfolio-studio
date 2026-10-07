@@ -8,6 +8,7 @@ import { lockGalleryBodyScroll } from "./body-scroll-lock";
 import { railTimeAfterWheel } from "./rail-motion";
 import { galleryPhotoSource } from "./photo-source";
 import { galleryRailLayout, galleryRailSizes } from "./rail-layout";
+import ContactCopy from "./contact-copy";
 import { beginGallerySwipe, completeGallerySwipe, nextGalleryPhotoIndex, type GallerySwipe } from "./gallery-interaction";
 import styles from "./gallery.module.css";
 
@@ -346,7 +347,7 @@ export default function FlowGallery({ document: content, previewGroupId }: { doc
         </div>
       </>}
       {scene === "pricing" && content.pricing && <section className={styles.pricePanel}><h1 data-flow-scene-heading tabIndex={-1}>{content.pricing.heading}</h1><p className={styles.priceIntro}>{content.pricing.introduction}</p><div className={styles.packages}>{content.pricing.packages.map((item) => <article key={item.id}><h2>{item.name}</h2><p className={styles.price}>{item.price}</p><p>{item.description}</p><ul>{item.details.map((line, index) => <li key={index}>{line}</li>)}</ul></article>)}</div></section>}
-      {scene === "contact" && content.contact && <section className={styles.contactPanel}><div><h1 data-flow-scene-heading tabIndex={-1}>{content.contact.heading}</h1><p>{content.contact.intro}</p></div><div className={styles.contactCards}>{content.contact.items.map((item) => <article key={item.id}><h2>{item.label}</h2>{item.href && /^(https?:|mailto:)/.test(item.href) ? <a href={item.href} rel="noreferrer">{item.value} ↗</a> : <p>{item.value}</p>}{item.qrPhoto && <button className={styles.contactQr} aria-label={`查看${item.label}二维码`} onClick={() => openPhoto(item.qrPhoto!)}><Photo photo={item.qrPhoto} sizes="96px" /></button>}</article>)}</div></section>}
+      {scene === "contact" && content.contact && <section className={styles.contactPanel}><div><h1 data-flow-scene-heading tabIndex={-1}>{content.contact.heading}</h1><p>{content.contact.intro}</p></div><div className={styles.contactCards}>{content.contact.items.map((item) => <article key={item.id}><h2>{item.label}</h2>{item.href && /^(https?:|mailto:)/.test(item.href) ? <a href={item.href} rel="noreferrer">{item.value} ↗</a> : <p>{item.value}</p>}<ContactCopy key={`${item.label}:${item.value}`} label={item.label} value={item.value} />{item.qrPhoto && <button className={styles.contactQr} aria-label={`查看${item.label}二维码`} onClick={() => openPhoto(item.qrPhoto!)}><Photo photo={item.qrPhoto} sizes="96px" /></button>}</article>)}</div></section>}
     </main>}
     {scene === "works" && <button className={styles.motion} aria-pressed={paused} onClick={() => setPaused(!paused)}>{paused ? "播放动效" : "暂停动效"}</button>}
     {scene !== "gallery" && <div className={styles.sceneProgress} aria-label="页面位置"><span>0{available.indexOf(scene) + 1} / {scene === "works" ? "作品画廊" : scene === "pricing" ? "价格与活动" : "联系方式"}</span><div className={styles.progressLine}>{available.map((item) => <button key={item} aria-label={`前往${item === "works" ? "作品画廊" : item === "pricing" ? "价格与活动" : "联系方式"}`} aria-current={scene === item ? "step" : undefined} onClick={() => navigate(item)} />)}</div></div>}
