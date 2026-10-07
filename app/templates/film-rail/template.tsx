@@ -8,6 +8,7 @@ import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/
 import PlatformAccounts from "../shared/platform-accounts";
 import { useTemplateSectionNavigation } from "../shared/use-template-section-navigation";
 import type { TemplateProps } from "../types";
+import { hasCjkText } from "../shared/display-text";
 import styles from "./film-rail.module.css";
 import { splitFilmRailSlots } from "./slot-plan";
 
@@ -123,7 +124,7 @@ export default function FilmRailTemplate({
         <div className={styles.heroCopy}>
           <p className={styles.kicker}>{content.profile.brand} PRESENTS · {content.hero.eyebrow}</p>
           <h1>
-            <span>{content.hero.title}</span>
+            <span data-cjk={hasCjkText(content.hero.title) || undefined}>{content.hero.title}</span>
             <em>ONE FRAME<br />AT A TIME.</em>
           </h1>
           <div className={styles.heroLead}>
@@ -279,7 +280,7 @@ export default function FilmRailTemplate({
 
       <section className={styles.intertitle} data-template-view="works" hidden={activeView !== "works"} aria-label="摄影宣言">
         <p>{content.statement.eyebrow}</p>
-        <h2>{content.statement.lineOne}<br /><em>{content.statement.lineTwo}</em></h2>
+        <h2 data-cjk={hasCjkText(content.statement.lineOne + content.statement.lineTwo) || undefined}>{content.statement.lineOne}<br /><em>{content.statement.lineTwo}</em></h2>
         <span>— {content.profile.photographer} / {content.profile.role}</span>
       </section>
 

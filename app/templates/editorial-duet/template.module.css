@@ -467,3 +467,17 @@
   .photoChapter button:hover img,
   .photoChapter button:focus-visible img { transform: none; }
 }
+
+/* Preserve the italic editorial face while separating full-height CJK lines. */
+.coverCopy h1[data-cjk],
+.interlude h2[data-cjk] {
+  min-width: 0;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+  line-break: strict;
+}
+.coverCopy h1[data-cjk] { max-width: min(8ch, 100%); }
+
+@media (max-width: 760px) {
+  .coverCopy h1[data-cjk] { font-size: clamp(3.6rem, 17.5vw, 5.75rem); }
+}

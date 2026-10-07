@@ -360,6 +360,42 @@ dialog[data-template-real-preview] main[data-template]:is(
   pointer-events: none;
 }
 
+/* Only cinematic's editable CJK title: keep its Latin lockup and glitch treatment. */
+.site-shell[data-template="cinematic-light"] .glitch[data-cjk] {
+  width: fit-content;
+  max-width: 100%;
+  line-height: 1.1;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  line-break: strict;
+}
+
+/* Long titles grow the scene instead of escaping an absolutely positioned copy block. */
+.site-shell[data-template="cinematic-light"] .hero:has(.glitch[data-cjk]) {
+  display: grid;
+  align-items: end;
+  height: auto;
+  min-height: max(100svh, 46rem);
+  padding: 16rem clamp(1.5rem, 6vw, 7rem) clamp(5.5rem, 10vh, 8rem);
+}
+
+.site-shell[data-template="cinematic-light"] .hero-copy:has(.glitch[data-cjk]) {
+  position: relative;
+  inset: auto;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .site-shell[data-template="cinematic-light"] .glitch[data-cjk] {
+    font-size: clamp(2.5rem, 12vw, 6rem);
+  }
+  .site-shell[data-template="cinematic-light"] .hero:has(.glitch[data-cjk]) {
+    min-height: max(100svh, 44rem);
+    padding-inline: 1.25rem;
+    padding-bottom: 4.5rem;
+  }
+}
+
 .hero-bottomline {
   display: flex;
   align-items: end;

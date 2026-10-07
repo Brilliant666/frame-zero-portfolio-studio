@@ -1,4 +1,10 @@
-# 当前检查点：PR35 基础版与高级拍立得补评完成，等待设计选择
+# 当前检查点：PR35 基础中文排版候选完成，等待效果确认
+
+## 最新：基础中文排版切片（2026-10-07）
+
+按用户确认，仅修 cinematic-light、neon-hud、film-rail、editorial-duet 的指定中文展示文字及复核后确认有问题的 museum-depth 收尾。见[实现、取舍与验收](design/PR35_BASIC_CHINESE_TYPOGRAPHY.md)。保留字体／斜体／色彩／照片／动效身份，纯英文沿用原样；无原文、业务数据、schema、权限或保存发布改动。
+
+原问题 17 组视口、每阶段 68 组标题变体，私有索引含 99 对截图；标题及相关检查、lint、类型与独立构建通过。3004 为隔离候选，3001／日常 PG 未启动或替换；新 Head 五项 CI 按实际远端结果核对。原补评与 Flow 记录继续保留。PR35 保持 OPEN + DRAFT，NEXT = WAITING_FOR_BASIC_TYPOGRAPHY_ACCEPTANCE；不自动开始基础或拍立得后台切片。
 
 ## 最新：只读补评与方案（2026-10-07）
 
