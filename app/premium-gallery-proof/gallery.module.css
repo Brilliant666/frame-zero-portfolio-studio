@@ -87,6 +87,11 @@
 .progressLine button::before{inset:auto;top:calc(50% - .5px);left:0;right:0;height:1px;background:#ffffff40;pointer-events:none}
 .progressLine button[aria-current]{background:transparent}
 .progressLine button[aria-current]::before{background:#fff}
+/* Match Flow's palette without inheriting the platform's orange text selection. */
+.root::selection,.root ::selection{background:var(--lime);color:#26362d;text-shadow:none}
+/* Keep the transparent price surface without a redundant backdrop-filter inside
+   the opacity-animated scroller. The fixed navigation retains its own glass. */
+.pricePanel{backdrop-filter:none}
 /* Long scenes scroll above the fixed progress controls, never beneath them. */
 .root[data-flow-scene="pricing"] .scene,.root[data-flow-scene="contact"] .scene{height:calc(var(--gallery-viewport-height,100svh) - 80px)}
 @media(max-width:700px){.root[data-flow-scene="pricing"] .scene,.root[data-flow-scene="contact"] .scene{height:calc(var(--gallery-viewport-height,100svh) - 100px)}}
