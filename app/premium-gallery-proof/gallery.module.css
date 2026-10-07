@@ -81,6 +81,11 @@
 .progressLine button::before{inset:auto;top:calc(50% - .5px);left:0;right:0;height:1px;background:#ffffff40;pointer-events:none}
 .progressLine button[aria-current]{background:transparent}
 .progressLine button[aria-current]::before{background:#fff}
+@media(min-width:701px){
+  .introduction{display:flex;flex-direction:column}
+  .introduction h1,.introduction p{flex:0 1 auto;min-height:0;overflow-y:auto;scrollbar-width:thin}
+  .introduction .expand{flex-shrink:0;align-self:flex-start}
+}
 @media(max-width:700px){
   .expand{height:44px}
   .motion,.sceneProgress{bottom:16px}

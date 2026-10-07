@@ -1123,6 +1123,8 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
           const photos = [...document.querySelectorAll('[data-flow-rail-window]')].map(rect);
           return nodes.map(node => { const bounds = rect(node); return { name: node.getAttribute('aria-label') ?? node.textContent, ...bounds, centerHit: node.contains(document.elementFromPoint((bounds.left + bounds.right) / 2, (bounds.top + bounds.bottom) / 2)), overlapsPhoto: photos.some(photo => bounds.left < photo.right && bounds.right > photo.left && bounds.top < photo.bottom && bounds.bottom > photo.top) }; });
         });
+        const sample = { viewport, controls };
+        report.s2.push(sample);
         assert.equal(controls.length, 5);
         for (const control of controls) {
           assert.ok(control.width >= 44 && control.height >= 44, `${control.name} has a full 44px hit target`);
@@ -1138,7 +1140,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
           const expected = group.assetIds.map((id, index) => `查看大图：${group.captions[id]?.trim() ? group.captions[id] : `${group.name} · 第 ${index + 1} 张照片`}`);
           assert.deepEqual(await publicPage.locator(`[data-flow-group-id="${group.id}"] button`).evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label'))), expected, 'Names preserve captions and identify the exact Published category order');
         }
-        report.s2.push({ viewport, controls, firstPhoto: photo, names });
+        Object.assign(sample, { firstPhoto: photo, names });
         await overflow(publicPage);
       }
     });
