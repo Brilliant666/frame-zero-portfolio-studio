@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { SiteAsset } from "./assets-client";
 import type { FlowGroup } from "./flow-gallery-state";
 import { compareSiteAssetTimes, siteAssetTimeLabel } from "./asset-metadata";
+import { flowPhotoName } from "./flow-gallery-photo-names";
 import styles from "./flow-gallery-admin.module.css";
 
 export type PhotoOrientation = "all" | "portrait" | "landscape" | "square";
@@ -24,7 +25,8 @@ export function PhotoCaptionEditor({ group, assets, onCaption, onRemove, onView 
   const id = group.assetIds.includes(selected) ? selected : group.assetIds[0];
   if (!id) return <p>选片后可在这里填写照片说明。</p>;
   const asset = assets.get(id), index = group.assetIds.indexOf(id);
-  return <section id={`flow-caption-${group.id}`} tabIndex={-1} className={styles.captionEditor} aria-label="当前照片说明"><h3>照片说明与移除</h3><p>说明显示在完整作品的照片预览中。选择一张就地编辑，移出分类保留图库原片。</p><label>选择要编辑的照片<select value={id} onChange={event => setSelected(event.target.value)}>{group.assetIds.map((photo, number) => <option key={photo} value={photo}>第 {number + 1} 张{group.captions[photo] ? ` · ${group.captions[photo].slice(0, 40)}` : " · 未填写说明"}</option>)}</select></label><div className={styles.captionPhoto}>{asset ? <button type="button" aria-label={`查看第 ${index + 1} 张大图`} onClick={() => onView(id)}><img src={asset.variants.thumbnail.src} alt={`第 ${index + 1} 张`} /></button> : <p role="alert">这张素材暂不可用，请重新读取图库。</p>}<label>第 {index + 1} 张照片说明<textarea rows={3} maxLength={2000} value={group.captions[id] ?? ""} onChange={event => onCaption(id, event.target.value)} /></label></div><button type="button" onClick={() => onRemove(id)}>移出当前照片</button></section>;
+  const photoName = flowPhotoName(group.name, index, group.captions[id]);
+  return <section id={`flow-caption-${group.id}`} tabIndex={-1} className={styles.captionEditor} aria-label="当前照片说明"><h3>照片说明与移除</h3><p>说明显示在完整作品的照片预览中。选择一张就地编辑，移出分类保留图库原片。</p><label>选择要编辑的照片<select value={id} onChange={event => setSelected(event.target.value)}>{group.assetIds.map((photo, number) => <option key={photo} value={photo}>第 {number + 1} 张{group.captions[photo] ? ` · ${group.captions[photo].slice(0, 40)}` : " · 未填写说明"}</option>)}</select></label><div className={styles.captionPhoto}>{asset ? <button type="button" aria-label={`查看大图：${photoName}`} onClick={() => onView(id)}><img src={asset.variants.thumbnail.src} alt={photoName} /></button> : <p role="alert">这张素材暂不可用，请重新读取图库。</p>}<label>第 {index + 1} 张照片说明<textarea rows={3} maxLength={2000} value={group.captions[id] ?? ""} onChange={event => onCaption(id, event.target.value)} /></label></div><button type="button" onClick={() => onRemove(id)}>移出当前照片</button></section>;
 }
 export function focusFlowEntry(id: string) {
   const target = document.getElementById(id);

@@ -4,6 +4,7 @@
 
 import { useMemo, type CSSProperties } from "react";
 import type { TemplateProps } from "../types";
+import { hasCjkText } from "../shared/display-text";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import PlatformAccounts from "../shared/platform-accounts";
@@ -138,7 +139,7 @@ export default function MuseumDepthTemplate({ content, works, packages, bookingT
       </section>
 
       <section className={styles.statement} data-template-view="works" hidden={activeView !== "works"}>
-        <span>{content.statement.eyebrow}</span><h2>{content.statement.lineOne}<br />{content.statement.lineTwo}</h2><p>{content.profile.brand} · PERMANENT COLLECTION</p>
+        <span>{content.statement.eyebrow}</span><h2 data-cjk={hasCjkText(content.statement.lineOne + content.statement.lineTwo) || undefined}>{content.statement.lineOne}<br />{content.statement.lineTwo}</h2><p>{content.profile.brand} · PERMANENT COLLECTION</p>
       </section>
 
       <section id="museum-visit" className={styles.visit} data-template-view="contact" hidden={activeView !== "contact"} tabIndex={-1}>

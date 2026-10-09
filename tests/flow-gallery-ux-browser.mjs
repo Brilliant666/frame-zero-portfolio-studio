@@ -20,6 +20,7 @@ const MODULES = [
   ['contact', '联系', 'contact'],
 ];
 const VIEWPORTS = [{ width: 1440, height: 900 }, { width: 390, height: 844 }];
+const GROUP_PREVIEW_VIEWPORTS = [...VIEWPORTS, { width: 1280, height: 720 }, { width: 1920, height: 1080 }, { width: 320, height: 844 }];
 const outside = (root, target) => {
   const from = relative(root, target);
   return from.startsWith(`..${sep}`) || from === '..' || isAbsolute(from);
@@ -72,7 +73,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
     origin, fixture: SLUG, head: process.env.GITHUB_SHA ?? 'local',
     scope: 'Synthetic third-space UI, memory preview, Published-only rendering and viewport/motion regressions; no physical device acceptance',
     checkpoints: [], screenshots: [], transitions: [], sceneScroll: [], lightboxReturns: [], lightboxSizing: [], motion: [], railWidths: [], network: [], forbiddenRequests: [], pageErrors: [],
-    protectedBefore, protectedAfter: null, metadata: null, responsiveImages: [], routePerformance: [],
+    protectedBefore, protectedAfter: null, metadata: null, responsiveImages: [], routePerformance: [], groupPreviews: [], pickerLookup: [], mobileNavigation: [], singleRails: [],
   };
   const persist = () => writeFile(join(output, 'acceptance.json'), JSON.stringify(report, null, 2));
   let browser, page, publicPage;
@@ -145,7 +146,43 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       await page.waitForFunction(() => document.activeElement === document.querySelector('[data-flow-editor-section] h1'));
     }
     async function overflow(p) {
-      const dimensions = await p.evaluate(() => ({ width: innerWidth, html: document.documentElement.scrollWidth, body: document.body.scrollWidth }));
+      const inspection = await p.evaluate(() => {
+        const dimensions = { width: innerWidth, html: document.documentElement.scrollWidth, body: document.body.scrollWidth };
+        if (dimensions.html <= dimensions.width + 1 && dimensions.body <= dimensions.width + 1) return { dimensions, samples: [] };
+        const describe = element => {
+          const r = element.getBoundingClientRect(), style = getComputedStyle(element);
+          return {
+            tag: element.tagName, id: element.id, className: element.getAttribute('class'),
+            rect: { x: r.x, y: r.y, left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height },
+            scrollWidth: element.scrollWidth, clientWidth: element.clientWidth, inlineStyle: element.getAttribute('style'),
+            computed: Object.fromEntries(['position', 'display', 'width', 'minWidth', 'maxWidth', 'boxSizing', 'paddingLeft', 'paddingRight', 'overflowX', 'overflowY', 'transform', 'scrollbarGutter'].map(key => [key, style[key]])),
+          };
+        };
+        const sample = frame => {
+          const viewportWidth = innerWidth;
+          const overflowing = [...document.querySelectorAll('body *')].filter(element => {
+            const r = element.getBoundingClientRect();
+            return r.width > 0 && r.height > 0 && (r.left < -1 || r.right > viewportWidth + 1 || element.scrollWidth > element.clientWidth + 1);
+          });
+          return {
+            frame, ms: performance.now(), viewport: { width: innerWidth, height: innerHeight, layoutWidth: document.documentElement.clientWidth },
+            module: document.querySelector('[data-flow-editor-section]')?.getAttribute('data-flow-editor-section'),
+            scroll: { x: scrollX, y: scrollY }, html: describe(document.documentElement), body: describe(document.body),
+            dialogs: [...document.querySelectorAll('dialog')].map(element => ({ open: element.open, label: element.getAttribute('aria-label'), ...describe(element) })),
+            overflowingCount: overflowing.length, overflowing: overflowing.slice(0, 80).map(element => ({ ...describe(element), parent: element.parentElement ? describe(element.parentElement) : null })),
+          };
+        };
+        const samples = [sample('initial-measurement')];
+        return new Promise(resolveInspection => requestAnimationFrame(() => {
+          samples.push(sample('next-frame-1'));
+          requestAnimationFrame(() => { samples.push(sample('next-frame-2')); resolveInspection({ dimensions, samples }); });
+        }));
+      });
+      const { dimensions } = inspection;
+      if (inspection.samples.length) {
+        report.overflowDiagnostics ??= [];
+        report.overflowDiagnostics.push({ viewport: p.viewportSize(), path: new URL(p.url()).pathname, hash: new URL(p.url()).hash, ...inspection });
+      }
       assert.ok(dimensions.html <= dimensions.width + 1 && dimensions.body <= dimensions.width + 1, `Horizontal overflow: ${JSON.stringify(dimensions)}`);
     }
     async function stableScroll(p, selector = null) {
@@ -255,6 +292,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
     async function modulePreview(id, scene, { temporary = false, title, capture = false, leftPercent } = {}) {
       const before = { draft: await draft(), publication: await publication(), writes: writeCount(), dirty: await root.getAttribute('data-flow-dirty'), hash: new URL(page.url()).hash };
       const trigger = page.locator(`[data-flow-module-preview="${id}"]`);
+      assert.equal(await page.locator('[data-flow-module-preview]').count(), 1, 'The current module has one genuine module-effect entry');
       await trigger.click();
       await preview().waitFor();
       await preview().locator(`[data-flow-scene="${scene}"]`).waitFor();
@@ -297,7 +335,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       await page.getByRole('link', { name: '进入我的站点后台' }).waitFor();
       await page.goto(`${origin}/${SLUG}/admin/${SPACE}`);
       await page.waitForFunction(() => !document.querySelector('fieldset')?.disabled && document.querySelector('[data-flow-editor-section]'));
-      await page.getByRole('button', { name: '查看本模块效果', exact: true }).waitFor({ state: 'visible' });
+      await page.locator('[data-flow-module-preview="library"]').waitFor({ state: 'visible' });
       await page.waitForFunction(() => !document.querySelector('[data-flow-module-preview]')?.disabled);
       assert.deepEqual(await page.locator('nav[aria-label="流影视廊后台模块"] [data-flow-section]').evaluateAll(nodes => nodes.map(node => node.dataset.flowSection)), MODULES.map(([id]) => id));
       const rights = await json('/api/account/site');
@@ -313,6 +351,24 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       assert.equal((await publication()).current, null);
       for (const [id, , scene] of MODULES) {
         await module(id);
+        if (id === 'groups') {
+          // This fresh account has no category yet. S1a must explain the missing
+          // target rather than opening an unrelated first-category preview.
+          const before = { draft: await draft(), publication: await publication(), writes: writeCount(), dirty: await root.getAttribute('data-flow-dirty'), hash: new URL(page.url()).hash };
+          assert.deepEqual(before.draft.content.groups, [], 'Fresh-account preview exercises an absent current category');
+          const trigger = page.locator('[data-flow-module-preview="groups"]');
+          await trigger.click();
+          await page.locator('[role="status"][data-feedback="active"]').filter({ hasText: '当前分类已不存在，请重新选择分类后查看效果。' }).waitFor();
+          assert.equal(await preview().count(), 0, 'An absent category never silently opens a different artwork');
+          assert.equal(await trigger.evaluate(element => document.activeElement === element), true);
+          assert.equal(await root.getAttribute('data-flow-editor-section'), id);
+          assert.equal(await root.getAttribute('data-flow-dirty'), before.dirty);
+          assert.equal(new URL(page.url()).hash, before.hash);
+          assert.equal(writeCount(), before.writes, 'Missing-category feedback never saves or publishes');
+          assert.deepEqual(await draft(), before.draft);
+          assert.deepEqual(await publication(), before.publication);
+          continue;
+        }
         await modulePreview(id, scene, { temporary: id === 'pricing' || id === 'contact' });
       }
     });
@@ -329,12 +385,12 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       const assets = (await json(assetsPath)).assets;
       assert.equal(assets.length, 8);
       await page.getByRole('combobox', { name: '画幅', exact: true }).selectOption('portrait');
-      assert.equal(await page.getByRole('button', {name: /^放大素材 /}).count(), 3);
+      assert.equal(await page.getByRole('button', {name: /^放大照片：/}).count(), 3);
       await page.getByRole('combobox', { name: '画幅', exact: true }).selectOption('landscape');
-      assert.equal(await page.getByRole('button', {name: /^放大素材 /}).count(), 5);
+      assert.equal(await page.getByRole('button', {name: /^放大照片：/}).count(), 5);
       await page.getByRole('combobox', { name: '画幅', exact: true }).selectOption('all');
       await page.getByRole('combobox', { name: '加入本站时间', exact: true }).selectOption('oldest');
-      assert.equal(await page.getByRole('button', {name: /^放大素材 /}).count(), 8);
+      assert.equal(await page.getByRole('button', {name: /^放大照片：/}).count(), 8);
       await module('groups');
       for (const [index, name] of ['Anonymous portrait studies', 'Anonymous landscape studies'].entries()) {
         await page.getByRole('button', { name: '新建分类', exact: true }).click();
@@ -342,7 +398,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         await page.getByRole('button', { name: '新建并从图库选片', exact: true }).click();
         const picker = page.getByRole('dialog', { name: '从图库选片', exact: true });
         await picker.waitFor();
-        for (const asset of assets.slice(index * 4, index * 4 + 4)) await picker.getByLabel(`选择照片 ${asset.id}`, { exact: true }).check();
+        for (const asset of assets.slice(index * 4, index * 4 + 4)) await picker.locator(`[data-flow-asset-id="${asset.id}"]`).getByRole('checkbox', { name: /^选择照片：第 \d+ 张照片，(横幅|竖幅|方幅)$/ }).check();
         await picker.getByRole('button', { name: '加入当前分类（4 张）', exact: true }).click();
         await picker.waitFor({ state: 'detached' });
       }
@@ -356,9 +412,51 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       await page.getByRole('textbox', { name: '首页标题', exact: true }).fill('Flow fixture published title');
       await page.getByRole('textbox', { name: '首页介绍', exact: true }).fill('Synthetic photographs for isolated browser acceptance.');
       await page.getByRole('button', { name: '从图库选择背景', exact: true }).click();
-      await page.getByRole('dialog', { name: '从图库选择一张背景', exact: true }).getByRole('button', { name: `选择背景 ${assets[1].id}`, exact: true }).click();
+      await page.getByRole('dialog', { name: '从图库选择一张背景', exact: true }).locator(`[data-flow-asset-id="${assets[1].id}"]`).getByRole('button', { name: /^选择背景：第 \d+ 张照片，(横幅|竖幅|方幅)$/ }).click();
       await page.getByRole('combobox', { name: '左侧轨道', exact: true }).selectOption({ label: 'Anonymous portrait studies' });
       await page.getByRole('combobox', { name: '右侧轨道', exact: true }).selectOption({ label: 'Anonymous landscape studies' });
+      const originalViewport = page.viewportSize();
+      const railChoices = [page.getByRole('combobox', { name: '左侧轨道', exact: true }), page.getByRole('combobox', { name: '右侧轨道', exact: true })];
+      const originalIds = await Promise.all(railChoices.map(choice => choice.inputValue()));
+      const beforeSingle = { draft: await draft(), publication: await publication(), writes: writeCount() };
+      for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 320, height: 844 }, { width: 700, height: 900 }, { width: 701, height: 900 }]) {
+        await page.setViewportSize(viewport);
+        for (const side of [0, 1, null]) {
+          await railChoices[0].selectOption(side === 0 ? originalIds[0] : '');
+          await railChoices[1].selectOption(side === 1 ? originalIds[1] : '');
+          await page.locator('[data-flow-module-preview="home"]').click();
+          const area = preview().locator('[aria-label="作品速览"]');
+          await area.waitFor();
+          assert.equal(await area.getAttribute('data-flow-rail-layout'), side === null ? 'empty' : 'single');
+          const windows = area.locator('[data-flow-rail-window]');
+          assert.equal(await windows.count(), side === null ? 0 : 1);
+          if (side === null) {
+            await area.getByText('还没有作品', { exact: true }).waitFor();
+          } else {
+            await page.waitForFunction(() => {
+              const img = document.querySelector('dialog [data-flow-rail-window] img');
+              return img?.complete && img.naturalWidth > 0 && /^\d+px$/.test(img.sizes) && Math.abs(parseFloat(img.sizes) - img.clientWidth) <= 1;
+            });
+            const measured = await area.evaluate(element => {
+              const area = element.getBoundingClientRect(), window = element.querySelector('[data-flow-rail-window]').getBoundingClientRect();
+              const track = element.querySelector('[style*="--rail-duration"]');
+              return { width: window.width, centerError: Math.abs((window.left + window.right - area.left - area.right) / 2), areaWidth: area.width, reverse: track.className.includes('reverse'), count: element.querySelectorAll('[data-flow-rail-window] button[tabindex="0"]').length };
+            });
+            assert.ok(Math.abs(measured.width - Math.min(measured.areaWidth, viewport.width <= 700 ? 300 : 500)) <= 1, 'Single rail uses the actual works area and bounded width');
+            assert.ok(measured.centerError <= 1, 'Single rail is centered within the works area');
+            assert.equal(measured.reverse, side === 1, 'Right-only selection preserves the right rail direction');
+            assert.equal(measured.count, 4, 'Single selection retains its complete accessible photo scope');
+            report.singleRails.push({ viewport, side, ...measured });
+          }
+          await overflow(page);
+          await preview().locator('[data-flow-close-preview]').click();
+          await preview().waitFor({ state: 'detached' });
+        }
+      }
+      await railChoices[0].selectOption(originalIds[0]); await railChoices[1].selectOption(originalIds[1]);
+      await page.setViewportSize(originalViewport);
+      assert.equal(writeCount(), beforeSingle.writes, 'Single-rail previews never save or publish');
+      assert.deepEqual(await draft(), beforeSingle.draft); assert.deepEqual(await publication(), beforeSingle.publication);
       for (const [name, leftPercent] of [['7∶3', 70], ['5∶5', 50]]) {
         const preset = page.getByRole('button', { name, exact: true });
         await preset.click(); assert.equal(await preset.getAttribute('aria-pressed'), 'true');
@@ -456,6 +554,34 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
     });
 
     await stage('04 editor and module previews at desktop and mobile widths', async () => {
+      for (const viewport of [VIEWPORTS[1], { width: 320, height: 844 }]) {
+        await page.setViewportSize(viewport); await module('library');
+        await page.evaluate(() => scrollTo(0, 0));
+        const nav = page.locator('nav[aria-label="流影视廊后台模块"]');
+        assert.equal(await nav.count(), 1, 'One navigation owns keyboard focus at the mobile breakpoint');
+        const measured = await nav.locator('[data-flow-section]').evaluateAll(nodes => nodes.map(node => {
+          const r = node.getBoundingClientRect(), nav = node.closest('nav');
+          return { id: node.dataset.flowSection, name: node.textContent.trim(), height: r.height, top: r.top, left: r.left, right: r.right, bottom: r.bottom, navWidth: nav.clientWidth, navScrollWidth: nav.scrollWidth, width: innerWidth, focusable: !node.disabled && node.tabIndex >= 0 };
+        }));
+        assert.deepEqual(measured.map(row => row.id), MODULES.map(([id]) => id));
+        assert.equal(new Set(measured.map(row => Math.round(row.top))).size, 2, 'All five named mobile modules occupy two visible rows');
+        for (const [index, row] of measured.entries()) {
+          assert.ok(row.name.includes(MODULES[index][1]), 'Full module labels remain discoverable');
+          assert.ok(row.height >= 44 && row.focusable, 'Each module keeps a keyboard-accessible 44px target');
+          assert.ok(row.left >= -1 && row.right <= row.width + 1 && row.top >= 0 && row.bottom < viewport.height, 'All five navigation entries are visible without horizontal discovery');
+          assert.ok(row.navScrollWidth <= row.navWidth + 1, 'Mobile module navigation does not require horizontal scrolling');
+        }
+        await nav.locator('[data-flow-section="contact"]').focus();
+        await page.keyboard.press('Enter');
+        await page.waitForFunction(() => document.querySelector('[data-flow-editor-section]')?.dataset.flowEditorSection === 'contact' && document.activeElement === document.querySelector('[data-flow-editor-section] h1'));
+        assert.equal(new URL(page.url()).hash, '#edit-contact');
+        await page.goBack();
+        await page.waitForFunction(() => document.querySelector('[data-flow-editor-section]')?.dataset.flowEditorSection === 'library' && document.activeElement === document.querySelector('[data-flow-editor-section] h1'));
+        await page.goForward();
+        await page.waitForFunction(() => document.querySelector('[data-flow-editor-section]')?.dataset.flowEditorSection === 'contact' && document.activeElement === document.querySelector('[data-flow-editor-section] h1'));
+        assert.equal(await root.getAttribute('data-flow-dirty'), 'true', 'Breakpoint and history navigation retain current unsaved edits');
+        report.mobileNavigation.push({ viewport, measured, keyboardAndHistory: 'PASS' });
+      }
       for (const viewport of VIEWPORTS) {
         await page.setViewportSize(viewport);
         for (const [id, , scene] of MODULES) {
@@ -472,6 +598,153 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         }
         assert.equal(await root.getAttribute('data-flow-dirty'), 'true');
       }
+    });
+
+    await stage('04a current second-category preview and editor return at five widths', async () => {
+      const beforeData = { draft: await draft(), publication: await publication(), writes: writeCount() };
+      const [firstGroup, secondGroup] = beforeData.draft.content.groups;
+      assert.ok(firstGroup && secondGroup, 'Targeting requires a real second group, beyond first-group fallback');
+      const selectedGroup = () => page.locator('nav[aria-label="作品分类"] button[aria-current="page"]');
+      const selectedStep = () => page.locator('nav[aria-label="分类编辑步骤"] button[aria-current="step"]');
+      async function editorBookmark() {
+        return {
+          group: await selectedGroup().innerText(), step: await selectedStep().innerText(),
+          dirty: await root.getAttribute('data-flow-dirty'), hash: new URL(page.url()).hash,
+          ...await page.evaluate(() => ({ scroll: scrollY, overflow: document.body.style.overflow, padding: document.body.style.paddingRight })),
+        };
+      }
+      async function assertEditorReturn(trigger, before) {
+        await preview().waitFor({ state: 'detached' });
+        await page.waitForFunction(() => document.activeElement?.closest('[data-flow-editor-section]') !== null);
+        await stableScroll(page);
+        assert.equal(await trigger.evaluate(element => document.activeElement === element), true, 'Preview closes with focus on its actual trigger');
+        const after = await editorBookmark();
+        assert.equal(after.group, before.group, 'Closing retains the selected second category');
+        assert.equal(after.step, before.step, 'Closing retains the editing step');
+        assert.equal(after.dirty, before.dirty); assert.equal(after.hash, before.hash);
+        assert.equal(after.overflow, before.overflow); assert.equal(after.padding, before.padding);
+        assert.ok(Math.abs(after.scroll - before.scroll) <= 2, `Closing retains the editor scroll bookmark: ${JSON.stringify({ before, after })}`);
+        return after;
+      }
+      async function targetGeometry() {
+        const section = preview().locator(`[data-flow-group-id="${secondGroup.id}"]`);
+        await section.getByRole('heading', { name: secondGroup.name, exact: true }).waitFor();
+        await page.waitForFunction(id => {
+          const image = [...document.querySelectorAll('dialog [data-flow-group-id]')].find(group => group.getAttribute('data-flow-group-id') === id)?.querySelector('img');
+          return image?.complete && image.naturalWidth > 0;
+        }, secondGroup.id);
+        await stableScroll(page, 'dialog [data-flow-scrollport]');
+        const measured = await section.evaluate(element => {
+          const port = element.closest('[data-flow-scrollport]'), heading = element.querySelector('h2');
+          const rect = node => { const r = node.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, width: r.width, height: r.height }; };
+          const viewport = rect(port), nav = rect(port.querySelector('nav')), title = rect(heading);
+          const safeTop = Math.max(viewport.top, nav.bottom), safeBottom = viewport.bottom;
+          const photos = [...element.querySelectorAll('button[aria-label^="查看大图："]')].map(photo => {
+            const r = rect(photo), image = photo.querySelector('img');
+            return { ...r, visibleHeight: Math.min(r.bottom, safeBottom) - Math.max(r.top, safeTop), ready: Boolean(image?.complete && image.naturalWidth > 0) };
+          });
+          return { viewport, nav, title, photos, safeTop, safeBottom, focused: document.activeElement === heading, scroll: port.scrollTop };
+        });
+        assert.equal(await section.getAttribute('data-flow-preview-current'), 'true', 'Stable second-group ID identifies the current preview target');
+        assert.equal(measured.focused, true, 'Opening the current category focuses its heading');
+        assert.ok(measured.title.top >= measured.safeTop - 1 && measured.title.bottom <= measured.safeBottom + 1, `The target heading is readable below navigation: ${JSON.stringify(measured)}`);
+        assert.ok(measured.photos.some(photo => photo.ready && photo.visibleHeight > 40), `A decoded target photograph is visible on opening: ${JSON.stringify(measured)}`);
+        assert.ok(measured.scroll > 100, 'Second-category preview advances beyond the beginning of complete works');
+        const firstHeading = await preview().locator(`[data-flow-group-id="${firstGroup.id}"] h2`).boundingBox();
+        assert.ok(firstHeading && firstHeading.y + firstHeading.height <= measured.safeTop, 'Opening the second category does not land on the first category');
+        assert.deepEqual(await preview().locator('[data-flow-group-id]').evaluateAll(nodes => nodes.map(node => node.dataset.flowGroupId)), [firstGroup.id, secondGroup.id], 'Targeted preview retains the full original group order');
+        return measured;
+      }
+      for (const viewport of GROUP_PREVIEW_VIEWPORTS) {
+        await page.setViewportSize(viewport); await module('groups');
+        await page.locator('nav[aria-label="作品分类"]').getByRole('button', { name: new RegExp(secondGroup.name) }).click();
+        for (const step of ['照片顺序', '分类与说明', '查看效果']) {
+          await page.getByRole('button', { name: step, exact: true }).click();
+          const trigger = page.getByRole('button', { name: '当前分类效果', exact: true });
+          await trigger.scrollIntoViewIfNeeded(); await trigger.focus(); await stableScroll(page);
+          const bookmark = await editorBookmark();
+          await trigger.click(); await preview().waitFor();
+          const geometry = await targetGeometry();
+          await overflow(page);
+          // Alternate the two supported close paths across actual edit steps.
+          if (step === '分类与说明') await page.keyboard.press('Escape');
+          else await preview().locator('[data-flow-close-preview]').click();
+          const returned = await assertEditorReturn(trigger, bookmark);
+          report.groupPreviews.push({ viewport, step, groupId: secondGroup.id, geometry, bookmark, returned });
+        }
+        // Two same-turn activations exercise the pending-open guard, before React
+        // commits a modal. Reopening must reset the previous from-top position.
+        const trigger = page.getByRole('button', { name: '当前分类效果', exact: true });
+        await trigger.scrollIntoViewIfNeeded(); await trigger.focus(); await stableScroll(page);
+        const bookmark = await editorBookmark();
+        await trigger.evaluate(button => { button.click(); button.click(); });
+        await preview().waitFor();
+        assert.equal(await preview().count(), 1, 'Rapid repeated activation opens one preview');
+        await targetGeometry();
+        await preview().getByRole('button', { name: '从头看完整作品', exact: true }).click();
+        await stableScroll(page, 'dialog [data-flow-scrollport]');
+        const top = await preview().locator('[data-flow-scrollport]').evaluate(port => port.scrollTop);
+        assert.ok(top <= 2, 'From-top control returns to the beginning of complete works');
+        assert.equal(await preview().locator('[data-flow-preview-current="true"]').count(), 0, 'From-top clears the current-category marker');
+        await preview().locator('[data-flow-close-preview]').click();
+        await assertEditorReturn(trigger, bookmark);
+        await trigger.click(); await preview().waitFor(); await targetGeometry();
+        await page.keyboard.press('Escape'); await assertEditorReturn(trigger, bookmark);
+      }
+      assert.equal(writeCount(), beforeData.writes, 'Targeted, repeated and from-top previews never save or publish');
+      assert.deepEqual(await draft(), beforeData.draft, 'All targeted preview paths retain the persisted draft');
+      assert.deepEqual(await publication(), beforeData.publication, 'All targeted preview paths retain Published');
+      await page.setViewportSize(VIEWPORTS[1]);
+    });
+
+    await stage('04b unavailable current categories explain the block without rewriting data', async () => {
+      const before = { draft: await draft(), publication: await publication(), writes: writeCount() };
+      for (const state of ['hidden', 'empty', 'unavailable-assets']) {
+        const memory = structuredClone(before.draft), group = memory.content.groups[1];
+        if (state === 'hidden') group.visible = false;
+        else { group.assetIds = state === 'empty' ? [] : [randomUUID()]; group.captions = {}; }
+        const expected = state === 'hidden'
+          ? '当前分类已隐藏，完整作品中不会展示。请先在分类设置中决定是否展示。'
+          : '当前分类没有可展示的照片，请先从本站图库选片或核对素材后查看效果。';
+        const isolatedPage = await context.newPage(), writes = [];
+        try {
+          await isolatedPage.route('**/*', async route => {
+            const request = route.request(), url = new URL(request.url());
+            if (!['GET', 'HEAD'].includes(request.method())) {
+              writes.push({ method: request.method(), path: url.pathname });
+              return route.abort();
+            }
+            if (url.origin === origin && url.pathname === draftPath(SPACE) && request.method() === 'GET') {
+              return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(memory) });
+            }
+            await route.fallback();
+          });
+          await isolatedPage.setViewportSize(VIEWPORTS[1]);
+          await isolatedPage.goto(`${origin}/${SLUG}/admin/${SPACE}#edit-groups`);
+          await isolatedPage.waitForFunction(() => document.querySelector('[data-flow-editor-section]')?.getAttribute('data-flow-editor-section') === 'groups' && !document.querySelector('fieldset')?.disabled);
+          await isolatedPage.locator('nav[aria-label="作品分类"]').getByRole('button', { name: new RegExp(group.name) }).click();
+          await isolatedPage.getByRole('button', { name: '分类与说明', exact: true }).click();
+          const visible = isolatedPage.getByRole('checkbox', { name: '在完整作品页展示此分类', exact: true });
+          assert.equal(await visible.isChecked(), group.visible);
+          const membersBefore = await isolatedPage.getByRole('combobox', { name: '选择要编辑的照片', exact: true }).locator('option').evaluateAll(options => options.map(option => option.value));
+          await isolatedPage.getByRole('button', { name: '查看效果', exact: true }).click();
+          const trigger = isolatedPage.getByRole('button', { name: '当前分类效果', exact: true });
+          await trigger.click();
+          await isolatedPage.locator('[role="status"][data-feedback="active"]').filter({ hasText: expected }).waitFor();
+          assert.equal(await isolatedPage.getByRole('dialog', { name: '当前编辑即时预览', exact: true }).count(), 0, `${state} does not silently preview another category`);
+          assert.ok((await isolatedPage.locator('nav[aria-label="作品分类"] button[aria-current="page"]').innerText()).includes(group.name), 'Blocked preview retains the selected second category');
+          assert.equal(await trigger.getAttribute('data-flow-group-preview'), group.id, 'Blocked preview retains the same stable target ID');
+          assert.equal(await isolatedPage.locator('[data-flow-editor-section]').getAttribute('data-flow-dirty'), 'false', `${state} preview feedback does not edit the fixture document`);
+          await isolatedPage.getByRole('button', { name: '分类与说明', exact: true }).click();
+          assert.equal(await visible.isChecked(), group.visible, 'Preview feedback never enables a hidden category');
+          assert.deepEqual(await isolatedPage.getByRole('combobox', { name: '选择要编辑的照片', exact: true }).locator('option').evaluateAll(options => options.map(option => option.value)), membersBefore, 'Preview feedback preserves the exact member references');
+          assert.deepEqual(writes, [], 'Unavailable-category preview sends no mutating requests');
+          report.groupPreviews.push({ state, viewport: VIEWPORTS[1], groupId: group.id, feedback: expected, memberCount: group.assetIds.length, visible: group.visible });
+        } finally { await isolatedPage.close(); }
+      }
+      assert.equal(writeCount(), before.writes);
+      assert.deepEqual(await draft(), before.draft, 'Browser-only unavailable fixtures preserve the stored draft');
+      assert.deepEqual(await publication(), before.publication, 'Browser-only unavailable fixtures preserve Published');
     });
 
     await stage('05 nested preview lightbox retains its scrollport and body lock', async () => {
@@ -543,12 +816,16 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
           const start = performance.now();
           const frame = now => {
             const root = document.querySelector('[data-flow-scene]'), scene = root?.getAttribute('data-flow-scene');
-            const rect = selector => { const r = root?.querySelector(selector)?.getBoundingClientRect(); return r ? { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width } : null; };
-            const tracks = [...(root?.querySelectorAll('[style*="--rail-duration"]') ?? [])].map(track => {
+            // Crossfades keep the aria-hidden outgoing scene before the active
+            // scene in the DOM. Measure the destination from its first frame,
+            // without waiting for the outgoing scene to disappear.
+            const active = root?.querySelector('[data-flow-active-scene]');
+            const rect = selector => { const r = active?.querySelector(selector)?.getBoundingClientRect(); return r ? { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width } : null; };
+            const tracks = [...(active?.querySelectorAll('[style*="--rail-duration"]') ?? [])].map(track => {
               const style = getComputedStyle(track);
               return { y: new DOMMatrixReadOnly(style.transform).m42, delay: style.animationDelay, state: style.animationPlayState };
             });
-            window.__flowUxCapture.samples.push({ ms: now - start, scene, inner: innerWidth, html: document.documentElement.clientWidth, body: document.body.getBoundingClientRect().width, bodyLeft: document.body.getBoundingClientRect().left, overflow: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth), title: rect('h1'), rails: rect('[aria-label="作品速览"]'), tracks });
+            window.__flowUxCapture.samples.push({ ms: now - start, scene, measuredScene: active?.getAttribute('data-flow-active-scene'), outgoingScene: root?.querySelector('[data-flow-exiting]')?.getAttribute('data-flow-exiting') ?? null, inner: innerWidth, html: document.documentElement.clientWidth, body: document.body.getBoundingClientRect().width, bodyLeft: document.body.getBoundingClientRect().left, overflow: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth), title: rect('h1'), rails: rect('[aria-label="作品速览"]'), tracks });
             if (now - start < 700) requestAnimationFrame(frame); else window.__flowUxCapture.done = true;
           };
           requestAnimationFrame(frame);
@@ -558,7 +835,9 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       await publicPage.waitForFunction(() => window.__flowUxCapture?.done);
       const samples = await publicPage.evaluate(() => window.__flowUxCapture.samples);
       const works = samples.filter(row => row.scene === 'works');
+      report.transitions.push({ from, viewport: publicPage.viewportSize(), durationMs: samples.at(-1).ms, samples });
       assert.ok(works.length >= 5 && samples.at(-1).ms >= 700, 'Capture includes multiple first-scene rAF frames across 700ms');
+      assert.ok(works.every(row => row.measuredScene === 'works'), 'Geometry belongs to the active home scene from its first committed frame');
       const spread = values => Math.max(...values) - Math.min(...values);
       for (const key of ['html', 'body', 'bodyLeft']) assert.ok(spread(samples.map(row => row[key])) <= 1, `${from}→works ${key} changed during transition`);
       for (const row of samples) assert.ok(row.overflow <= row.inner + 1, `${from}→works transient horizontal overflow`);
@@ -572,7 +851,6 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       for (let index = 0; index < 2; index++) {
         assert.ok(Math.abs(early.at(-1).tracks[index].y - early[0].tracks[index].y) > 2, 'Both rails move within the first 250ms');
       }
-      report.transitions.push({ from, viewport: publicPage.viewportSize(), durationMs: samples.at(-1).ms, samples });
       await screenshot(publicPage, `public-${from}-return`);
     }
     async function trackMotion(milliseconds = 400) {
@@ -590,17 +868,36 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         await publicPage.goto(`${origin}/${SLUG}#works`);
         await publicPage.locator('[data-flow-scene="works"]').waitFor();
         await publicPage.waitForFunction(() => [...document.querySelector('[data-flow-scene]').querySelectorAll('img')].every(image => image.complete && image.naturalWidth > 0));
+        const primaryImages = '[data-flow-rail-window] > div > div:not([aria-hidden="true"]) img';
+        const readRailSlots = () => publicPage.locator('[data-flow-rail-window] img').evaluateAll(images => images.map(image => ({
+          sizes: image.sizes, clientWidth: image.clientWidth, renderedWidth: image.getBoundingClientRect().width,
+          parentWidth: image.parentElement.getBoundingClientRect().width, complete: image.complete, naturalWidth: image.naturalWidth,
+          path: new URL(image.currentSrc).pathname, primary: !image.closest('[aria-hidden="true"]'),
+        })));
+        const readiness = { viewport, initial: await readRailSlots(), ready: null, durationMs: null };
+        report.railSlotReadiness ??= [];
+        report.railSlotReadiness.push(readiness);
+        const readinessStarted = Date.now();
+        // Decoding SSR images alone does not establish that hydration or the
+        // ResizeObserver has supplied numeric measured slots. Use the same
+        // actual-slot readiness as DPR 2, with the original 15s timeout and 1px
+        // tolerance; later assertions still independently inspect every image.
+        try {
+          await publicPage.waitForFunction(selector => [...document.querySelectorAll(selector)].length > 0 && [...document.querySelectorAll(selector)].every(image => image.complete && image.naturalWidth > 0 && /^\d+px$/.test(image.sizes) && Math.abs(Number.parseFloat(image.sizes) - image.clientWidth) <= 1), primaryImages);
+          readiness.ready = await readRailSlots();
+        } catch (error) { readiness.failed = await readRailSlots(); throw error; }
+        finally { readiness.durationMs = Date.now() - readinessStarted; }
         const responsive = await publicPage.locator('[data-flow-rail-window] img').evaluateAll(images => images.map(image => ({
           path: new URL(image.currentSrc).pathname, srcSet: image.srcset, sizes: image.sizes,
           renderedWidth: image.clientWidth, intrinsicWidth: Number(image.getAttribute('width')), dpr: devicePixelRatio,
         })));
+        report.responsiveImages.push({ viewport, images: responsive });
         const backgroundId = (await readPublished(runtime.pool, SLUG)).content.background.assetId;
         for (const image of responsive) {
           assert.ok(image.srcSet.includes('thumbnail') && image.srcSet.includes('card') && image.srcSet.includes('full'), 'Rail retains display variants for screen density');
           assert.ok(Math.abs(Number.parseFloat(image.sizes) - image.renderedWidth) <= 1, 'Rail sizes follow the actual column width');
           if (viewport.width > 700 && !image.path.includes(`/${backgroundId}/`)) assert.ok(!image.path.endsWith('/full'), 'At DPR 1 these synthetic rail slots use a smaller display variant');
         }
-        report.responsiveImages.push({ viewport, images: responsive });
         await railWidth(publicPage.locator('[aria-label="作品速览"]'), 50, 'public');
         await overflow(publicPage);
         const expand = publicPage.locator('[data-flow-expand]');
@@ -819,6 +1116,40 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         await returnToWorks('gallery', publicPage.getByRole('button', { name: '返回首页', exact: true }));
       }
     });
+    await stage('06a distinct photo names, separate hit targets and first-group rhythm', async () => {
+      report.s2 = [];
+      const snapshot = await readPublished(runtime.pool, SLUG);
+      for (const viewport of [...GROUP_PREVIEW_VIEWPORTS, { width: 1280, height: 600 }]) {
+        await publicPage.setViewportSize(viewport);
+        await publicPage.goto(`${origin}/${SLUG}#works`);
+        await publicPage.locator('[data-flow-scene="works"]').waitFor();
+        const controls = await publicPage.locator('[data-flow-expand], button[aria-pressed], [aria-label="页面位置"] button').evaluateAll(nodes => {
+          const rect = element => { const r = element.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height }; };
+          const photos = [...document.querySelectorAll('[data-flow-rail-window]')].map(rect);
+          return nodes.map(node => { const bounds = rect(node); return { name: node.getAttribute('aria-label') ?? node.textContent, ...bounds, centerHit: node.contains(document.elementFromPoint((bounds.left + bounds.right) / 2, (bounds.top + bounds.bottom) / 2)), overlapsPhoto: photos.some(photo => bounds.left < photo.right && bounds.right > photo.left && bounds.top < photo.bottom && bounds.bottom > photo.top) }; });
+        });
+        const sample = { viewport, controls };
+        report.s2.push(sample);
+        assert.equal(controls.length, 5);
+        for (const control of controls) {
+          assert.ok(control.width >= 44 && control.height >= 44, `${control.name} has a full 44px hit target`);
+          assert.ok(control.centerHit && !control.overlapsPhoto, `${control.name} is hittable without covering the photo window`);
+        }
+        await publicPage.locator('[data-flow-expand]').click();
+        await publicPage.locator('[data-flow-scene="gallery"]').waitFor();
+        const first = publicPage.locator('[data-flow-group-id]').first();
+        const photo = await first.locator('button').first().boundingBox();
+        assert.ok(photo.y < (viewport.width <= 700 ? viewport.height * .55 : viewport.height <= 760 ? 340 : 470), 'First-group photograph appears within the expected viewport rhythm');
+        const names = await first.locator('button').evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label')));
+        for (const group of snapshot.content.groups.filter(group => group.visible)) {
+          const expected = group.assetIds.map((id, index) => `查看大图：${group.captions[id]?.trim() ? group.captions[id] : `${group.name} · 第 ${index + 1} 张照片`}`);
+          assert.deepEqual(await publicPage.locator(`[data-flow-group-id="${group.id}"] button`).evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label'))), expected, 'Names preserve captions and identify the exact Published category order');
+        }
+        Object.assign(sample, { firstPhoto: photo, names });
+        await overflow(publicPage);
+      }
+    });
+
     await stage('07 advanced public and admin cold/warm route resource measurements', async () => {
       for (const viewport of VIEWPORTS) report.routePerformance.push(...await measureFlowGalleryRoutes({ browser, origin, fixtureSlug: SLUG, ownerStorageState: await context.storageState(), viewport, signal }));
     });
@@ -846,6 +1177,222 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         }
         assert.ok(requests.every(request => request.origin === origin && ['GET', 'HEAD'].includes(request.method)), 'High-density sample is anonymous and read-only');
       } finally { await highDensity.close(); }
+    });
+
+    await stage('09 Flow library lookup, cross-page selections and explicit save on the isolated Site', async () => {
+      // This runs after the public eight-photo measurements. Additional uploads
+      // and the save belong only to this newly provisioned integration Site;
+      // they are not the read-only layout baseline or a browser response mock.
+      const b1 = await context.newPage();
+      let allowPickerDiscard = false;
+      b1.removeAllListeners('dialog');
+      b1.on('dialog', dialog => {
+        if (dialog.type() === 'beforeunload' || allowPickerDiscard && dialog.type() === 'confirm' && dialog.message().startsWith('放弃本次选片？')) void dialog.accept();
+        else { report.forbiddenRequests.push(`unexpected-b1-dialog:${dialog.type()}`); void dialog.dismiss(); }
+      });
+      const b1root = b1.locator('[data-flow-editor-section]');
+      const picker = b1.getByRole('dialog', { name: '从图库选片', exact: true });
+      const ids = () => picker.getByRole('checkbox', { name: /^选择照片：第 \d+ 张照片，(横幅|竖幅|方幅)$/ }).evaluateAll(nodes => nodes.map(node => node.closest('[data-flow-asset-id]').dataset.flowAssetId));
+      const selectedIds = async () => {
+        await picker.getByRole('button', { name: '查看已选', exact: true }).click();
+        const result = await ids();
+        await picker.getByRole('button', { name: '返回全部结果', exact: true }).click();
+        return result;
+      };
+      async function b1module(id) {
+        await b1.locator(`nav[aria-label="流影视廊后台模块"] [data-flow-section="${id}"]`).click();
+        await b1.waitForFunction(value => document.querySelector('[data-flow-editor-section]')?.dataset.flowEditorSection === value, id);
+      }
+      try {
+        await b1.goto(`${origin}/${SLUG}/admin/${SPACE}#edit-library`);
+        await b1.getByText('本站图库 8 张', { exact: true }).waitFor();
+        const before = { draft: await draft(), publication: await publication(), snapshot: await readPublished(runtime.pool, SLUG) };
+        assert.equal(await b1root.getAttribute('data-flow-dirty'), 'false');
+        // A first group has four existing members: 55 Site assets gives 51
+        // eligible photos and a real second picker page under the normal API.
+        for (let offset = 0; offset < 47; offset += 8) {
+          const batch = await Promise.all(Array.from({ length: Math.min(8, 47 - offset) }, async (_, index) => {
+            const n = offset + index, portrait = n % 2 === 0;
+            return { name: `anonymous-s1b-${n + 1}.png`, mimeType: 'image/png', buffer: await sharp({ create: { width: portrait ? 140 : 210, height: portrait ? 210 : 140, channels: 3, background: { r: 80 + n, g: 150 - n, b: 40 + n * 2 } } }).png().toBuffer() };
+          }));
+          await b1.waitForFunction(() => {
+            const input = document.querySelector('input[type="file"][aria-label="上传本站照片"]');
+            return input && !input.disabled;
+          });
+          await b1.getByLabel('上传本站照片', { exact: true }).setInputFiles(batch);
+          await b1.getByText(`本站图库 ${8 + offset + batch.length} 张`, { exact: true }).waitFor();
+        }
+        const allAssets = (await json(assetsPath)).assets;
+        assert.equal(allAssets.length, 55, 'The isolated fixture has real cross-page assets');
+        const group = before.draft.content.groups[0];
+        const lookupAsset = allAssets.find(asset => asset.orientation === 'portrait' && !group.assetIds.includes(asset.id));
+        assert.ok(lookupAsset);
+        const sourceQuery = `  ${lookupAsset.id.toUpperCase()}  `;
+        await b1.getByRole('combobox', { name: '画幅', exact: true }).selectOption('portrait');
+        await b1.getByRole('combobox', { name: '加入本站时间', exact: true }).selectOption('oldest');
+        await b1.locator('summary').filter({ hasText: /^按素材 ID 查找/ }).click();
+        await b1.getByRole('textbox', { name: '素材 ID（可选）', exact: true }).fill(sourceQuery);
+        const libraryIds = await b1.getByRole('button', { name: /^放大照片：第 \d+ 张照片，(横幅|竖幅|方幅)$/ }).evaluateAll(nodes => nodes.map(node => node.closest('[data-flow-asset-id]').dataset.flowAssetId));
+        assert.deepEqual(libraryIds, [lookupAsset.id]);
+        await b1module('home');
+        await b1.getByRole('button', { name: '从图库选择背景', exact: true }).click();
+        const backgroundPicker = b1.getByRole('dialog', { name: '从图库选择一张背景', exact: true });
+        await backgroundPicker.waitFor();
+        assert.equal(await backgroundPicker.getByRole('button', { name: '沿用图库查找条件', exact: true }).count(), 0, 'Single-background selection does not inherit category rules');
+        assert.equal(await backgroundPicker.getByRole('combobox', { name: '画幅', exact: true }).inputValue(), 'all');
+        assert.equal(await backgroundPicker.getByRole('textbox', { name: '素材 ID（可选）', exact: true }).inputValue(), '');
+        await backgroundPicker.getByRole('button', { name: '取消', exact: true }).click();
+        await backgroundPicker.waitFor({ state: 'detached' });
+        await b1module('groups');
+        await b1.locator('nav[aria-label="作品分类"]').getByRole('button', { name: new RegExp(group.name) }).click();
+        const open = () => b1.getByRole('button', { name: '从图库选片', exact: true }).click();
+        const noWrite = writeCount();
+        await open(); await picker.waitFor();
+        assert.equal(await picker.getByRole('textbox', { name: '按素材 ID 查找', exact: true }).inputValue(), '', 'Direct selection keeps the original default instead of auto-inheriting lookup');
+        assert.equal(await picker.getByRole('combobox', { name: '照片方向', exact: true }).inputValue(), 'all');
+        assert.equal(await picker.getByRole('combobox', { name: '加入本站时间', exact: true }).inputValue(), 'newest');
+        await picker.getByText('第 1 / 2 页 · 51 张匹配', { exact: true }).waitFor();
+        const first = (await ids())[0];
+        await picker.locator(`[data-flow-asset-id="${first}"]`).getByRole('checkbox', { name: /^选择照片：第 \d+ 张照片，(横幅|竖幅|方幅)$/ }).check();
+        await picker.getByRole('button', { name: '下一页', exact: true }).click();
+        const second = (await ids())[0];
+        await picker.locator(`[data-flow-asset-id="${second}"]`).getByRole('checkbox', { name: /^选择照片：第 \d+ 张照片，(横幅|竖幅|方幅)$/ }).check();
+        assert.notEqual(first, second);
+        for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 844 }, VIEWPORTS[0]]) {
+          await b1.setViewportSize(viewport);
+          assert.equal(await b1.locator('dialog[open]').count(), 1, 'A breakpoint change retains one actual open selection dialog');
+          assert.equal(await picker.evaluate(dialog => dialog.open && dialog.contains(document.activeElement)), true, 'Resizing keeps keyboard focus inside the active picker');
+          assert.deepEqual(await selectedIds(), [first, second], 'Cross-page temporary selections keep their order across mobile and desktop breakpoints');
+          const actionBar = b1.locator('[data-editor-save-actions]');
+          assert.equal(await actionBar.getAttribute('data-modal-open'), 'true', 'The save bar remains aware of the active modal after resizing');
+          assert.equal(await actionBar.evaluate(element => element.inert), true, 'The save bar cannot take modal keyboard focus at either breakpoint');
+          assert.equal(await b1root.getAttribute('data-flow-dirty'), 'false', 'Resizing and selected review do not edit the draft');
+          assert.equal(writeCount(), noWrite, 'Resizing preserves selection without draft or publish writes');
+          report.pickerLookup.push({ source: 'real isolated cross-page picker', viewport, selectedOrder: [first, second], dialogCount: 1, modalFocusRetained: true, saveBarInert: true, dirty: false, implicitWrites: 0 });
+        }
+        await picker.getByRole('button', { name: '沿用图库查找条件', exact: true }).click();
+        assert.equal(await picker.getByRole('textbox', { name: '按素材 ID 查找', exact: true }).inputValue(), sourceQuery.trim());
+        assert.equal(await picker.getByRole('combobox', { name: '照片方向', exact: true }).inputValue(), 'portrait');
+        assert.equal(await picker.getByRole('combobox', { name: '分类关系', exact: true }).inputValue(), 'outside');
+        assert.equal(await picker.getByRole('combobox', { name: '加入本站时间', exact: true }).inputValue(), 'oldest');
+        await picker.getByText('第 1 / 1 页 · 1 张匹配', { exact: true }).waitFor();
+        assert.deepEqual(await ids(), libraryIds, 'An explicit inherited ID+orientation lookup finds the same eligible Site photograph');
+        assert.deepEqual(await selectedIds(), [first, second], 'Selections outside the inherited range remain in their original cross-page order');
+        await picker.getByRole('textbox', { name: '按素材 ID 查找', exact: true }).fill('s1b-no-match');
+        await picker.getByRole('status').filter({ hasText: /当前条件：竖图.*素材 ID 包含“s1b-no-match”/ }).waitFor();
+        assert.deepEqual(await ids(), [], 'No-result feedback does not silently broaden filters');
+        await picker.getByRole('button', { name: '查看已选', exact: true }).click();
+        await picker.getByRole('button', { name: '清除查找条件', exact: true }).click();
+        assert.deepEqual(await ids(), [first, second], 'Clearing lookup preserves selected review and selection order');
+        await picker.getByRole('button', { name: '返回全部结果', exact: true }).click();
+        assert.equal(await picker.getByRole('combobox', { name: '分类关系', exact: true }).inputValue(), 'outside');
+        assert.equal(await picker.getByRole('combobox', { name: '加入本站时间', exact: true }).inputValue(), 'oldest');
+        await picker.getByRole('combobox', { name: '加入本站时间', exact: true }).selectOption('newest');
+        await picker.getByRole('combobox', { name: '照片方向', exact: true }).selectOption('landscape');
+        assert.deepEqual(await selectedIds(), [first, second], 'Further filter and sort changes are not overwritten by the library snapshot');
+        allowPickerDiscard = true;
+        await picker.getByRole('button', { name: '取消选片', exact: true }).click();
+        await picker.waitFor({ state: 'detached' }); allowPickerDiscard = false;
+        assert.equal(await b1root.getAttribute('data-flow-dirty'), 'false');
+        assert.equal(writeCount(), noWrite, 'Looking up, reviewing and cancelling selections produces no draft or publish write');
+        assert.deepEqual(await draft(), before.draft); assert.deepEqual(await publication(), before.publication);
+        await b1module('library');
+        assert.equal(await b1.getByRole('textbox', { name: '素材 ID（可选）', exact: true }).inputValue(), sourceQuery, 'Picker edits never back-write library lookup');
+        assert.equal(await b1.getByRole('combobox', { name: '画幅', exact: true }).inputValue(), 'portrait');
+        assert.equal(await b1.getByRole('combobox', { name: '加入本站时间', exact: true }).inputValue(), 'oldest');
+        await b1module('groups'); await open(); await picker.waitFor();
+        assert.equal(await picker.getByRole('checkbox', { name: /^选择照片：/ }).evaluateAll(nodes => nodes.filter(node => node.checked).length), 0, 'Cancelled temporary selections do not leak into a new picker');
+        // Deliberately pick in reversed order to distinguish append order from
+        // library sorting, filtering and member order.
+        for (const id of [second, first]) {
+          await picker.getByRole('textbox', { name: '按素材 ID 查找', exact: true }).fill(id);
+          await picker.locator(`[data-flow-asset-id="${id}"]`).getByRole('checkbox', { name: /^选择照片：第 \d+ 张照片，(横幅|竖幅|方幅)$/ }).check();
+        }
+        await picker.getByRole('button', { name: '沿用图库查找条件', exact: true }).click();
+        assert.deepEqual(await selectedIds(), [second, first]);
+        await picker.getByRole('button', { name: '加入当前分类（2 张）', exact: true }).click();
+        await picker.waitFor({ state: 'detached' });
+        assert.equal(await b1root.getAttribute('data-flow-dirty'), 'true', 'Only confirmation appends to the in-memory category');
+        assert.equal(writeCount(), noWrite, 'Confirming addition still does not implicitly save');
+        assert.deepEqual(await draft(), before.draft);
+        const pending = b1.waitForResponse(response => new URL(response.url()).pathname === draftPath(SPACE) && response.request().method() === 'PUT');
+        await b1.getByRole('button', { name: '仅保存草稿', exact: true }).click();
+        const receipt = await pending; assert.equal(receipt.status(), 200);
+        const saved = await receipt.json();
+        await b1.waitForFunction(() => document.querySelector('[data-flow-editor-section]')?.dataset.flowDirty === 'false');
+        assert.equal(saved.revision, before.draft.revision + 1);
+        assert.deepEqual(saved.content.groups[0].assetIds, [...group.assetIds, second, first]);
+        assert.deepEqual(saved.content.groups.slice(1), before.draft.content.groups.slice(1));
+        assert.deepEqual(await draft(), saved);
+        assert.deepEqual(await readPublished(runtime.pool, SLUG), before.snapshot, 'Save-only preserves the complete existing Published snapshot, content and asset references');
+        // Draft-match metadata is derived from the current saved draft, not a
+        // field stored in the immutable Published record. Added members make
+        // this space unmatched; every persisted history field must stay equal.
+        assert.equal(before.publication.current.matchedDraftRevision, before.draft.revision);
+        const unmatched = row => row?.space === SPACE ? { ...row, matchedDraftRevision: null } : row;
+        assert.deepEqual(await publication(), {
+          ...before.publication,
+          current: unmatched(before.publication.current),
+          history: before.publication.history.map(unmatched),
+        }, 'Only computed draft-match metadata changes after save-only; pointer and complete history stay equal');
+        // Changing only this route's hash retains the current editing session.
+        // A real reload mounts a new session and must discard transient lookup.
+        await b1.reload();
+        await b1module('library');
+        await b1.getByText('本站图库 55 张', { exact: true }).waitFor();
+        assert.equal(await b1.getByRole('combobox', { name: '画幅', exact: true }).inputValue(), 'all', 'A new editor session does not persist library conditions in storage');
+        assert.equal(await b1.getByRole('combobox', { name: '加入本站时间', exact: true }).inputValue(), 'recent');
+        await b1module('groups'); await open(); await picker.waitFor();
+        assert.equal(await picker.getByRole('button', { name: '沿用图库查找条件', exact: true }).count(), 0, 'Default library conditions do not create a useless inheritance entry');
+        assert.equal(await picker.getByRole('checkbox', { name: /^选择照片：/ }).evaluateAll(nodes => nodes.filter(node => node.checked).length), 0);
+        await picker.getByRole('button', { name: '取消选片', exact: true }).click();
+        await picker.waitFor({ state: 'detached' });
+        for (const status of [401, 403]) {
+          // Browser response injection exercises private UI cleanup only. It is
+          // not evidence that the server revoked a session or checked ownership;
+          // real Site authorization remains covered by HTTP integration.
+          const protectedEditor = { draft: await draft(), publication: await publication(), dirty: await b1root.getAttribute('data-flow-dirty'), writes: writeCount() };
+          await b1module('library');
+          await b1.getByRole('combobox', { name: '画幅', exact: true }).selectOption('portrait');
+          await b1.getByRole('combobox', { name: '加入本站时间', exact: true }).selectOption('oldest');
+          await b1.locator('summary').filter({ hasText: /^按素材 ID 查找/ }).click();
+          await b1.getByRole('textbox', { name: '素材 ID（可选）', exact: true }).fill(lookupAsset.id);
+          await b1module('groups'); await open(); await picker.waitFor();
+          const temporary = (await ids()).slice(0, 2);
+          assert.equal(temporary.length, 2);
+          for (const id of temporary) await picker.locator(`[data-flow-asset-id="${id}"]`).getByRole('checkbox', { name: /^选择照片：第 \d+ 张照片，(横幅|竖幅|方幅)$/ }).check();
+          await picker.getByRole('button', { name: '沿用图库查找条件', exact: true }).click();
+          const assetsUrl = `${origin}${assetsPath}`;
+          await b1.route(assetsUrl, route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify({ error: `Synthetic session failure ${status}` }) }));
+          try {
+            const failed = b1.waitForResponse(response => response.url() === assetsUrl && response.status() === status);
+            await picker.getByRole('button', { name: '重新读取素材', exact: true }).click();
+            await failed; await picker.waitFor({ state: 'detached' });
+            assert.equal(await b1root.getAttribute('data-flow-dirty'), protectedEditor.dirty, 'Session read failure preserves the draft dirty state');
+            await b1module('library');
+            await b1.getByRole('status').filter({ hasText: '本站素材读取失败，请确认登录状态。' }).waitFor();
+            assert.equal(await b1.getByRole('combobox', { name: '画幅', exact: true }).inputValue(), 'all');
+            assert.equal(await b1.getByRole('combobox', { name: '加入本站时间', exact: true }).inputValue(), 'recent');
+            assert.equal(await b1.locator('input[placeholder="粘贴已知素材 ID"]').inputValue(), '');
+            assert.equal(await b1.getByRole('button', { name: /^放大照片：/ }).count(), 0, 'Unavailable session removes cached private photo cards');
+            assert.equal(await b1.getByRole('dialog', { name: /^照片大图：/ }).count(), 0);
+            assert.equal(await b1.getByRole('dialog', { name: '当前编辑即时预览', exact: true }).count(), 0);
+            assert.equal(writeCount(), protectedEditor.writes, 'Private state cleanup never writes a draft or publication');
+            assert.deepEqual(await draft(), protectedEditor.draft); assert.deepEqual(await publication(), protectedEditor.publication);
+          } finally { await b1.unroute(assetsUrl); }
+          await b1.getByRole('button', { name: '重新读取图库', exact: true }).click();
+          await b1.getByText('本站图库 55 张', { exact: true }).waitFor();
+          assert.equal(await b1.getByRole('button', { name: /^放大照片：/ }).count(), 48, 'Removing the synthetic failure restores the normal paged Site assets');
+          await b1module('groups'); await open(); await picker.waitFor();
+          assert.equal(await picker.getByRole('button', { name: '沿用图库查找条件', exact: true }).count(), 0, 'A failed session leaves no inherited lookup');
+          assert.equal(await picker.getByRole('checkbox', { name: /^选择照片：/ }).evaluateAll(nodes => nodes.filter(node => node.checked).length), 0, 'A failed session leaves no temporary selection');
+          await picker.getByRole('button', { name: '取消选片', exact: true }).click();
+          await picker.waitFor({ state: 'detached' });
+          assert.equal(await b1root.getAttribute('data-flow-dirty'), protectedEditor.dirty);
+          report.pickerLookup.push({ source: 'browser-only synthetic assets response; not server authorization proof', status, cleanup: 'lookup/temporary selection/cached assets cleared', dirtyPreserved: true, implicitWrites: 0 });
+        }
+        report.pickerLookup.push({ source: 'real isolated upload/API/UI', totalAssets: allAssets.length, eligibleBefore: 51, inheritedId: lookupAsset.id, selectedOrder: [second, first], beforeRevision: before.draft.revision, afterRevision: saved.revision, cancelDirty: false, implicitWrites: 0, publishedUnchanged: true });
+      } finally { await b1.close(); }
     });
     assert.deepEqual(await json(draftPath('basic')), basicBefore);
     assert.equal((await publication()).current.id, published.id);

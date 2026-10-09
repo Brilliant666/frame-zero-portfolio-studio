@@ -41,9 +41,13 @@ export function parseSiteAssets(value: unknown, endpoint: string): SiteAssetMani
   return { ...checked, ...(typeof raw.truncated === "boolean" ? { truncated: raw.truncated } : {}), assets: checked.assets.map(asset => createdTimes.has(asset.id) ? { ...asset, createdAt: createdTimes.get(asset.id)! } : asset) };
 }
 
+export class SiteAssetRequestError extends Error {
+  constructor(readonly status: number) { super("本站素材读取失败，请确认登录状态。"); }
+}
+
 export async function loadSiteAssets(endpoint: string) {
   const response = await fetch(endpoint, { cache: "no-store" });
-  if (!response.ok) throw new Error("本站素材读取失败，请确认登录状态。");
+  if (!response.ok) throw new SiteAssetRequestError(response.status);
   const manifest = parseSiteAssets(await response.json(), endpoint);
   if (!manifest) throw new Error("本站素材响应无效，未读取其他图库。");
   return manifest;

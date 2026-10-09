@@ -36,9 +36,10 @@ export type FlowContactEditorProps = PreviewProps & {
 };
 
 function SectionHeader({ title, enabled, onToggle, onPreview, previewDisabled }: Pick<PreviewProps, "onPreview" | "previewDisabled"> & { title: string; enabled: boolean; onToggle: (enabled: boolean) => void }) {
+  const moduleId = title === "联系" ? "contact" : "pricing";
   return <header className={styles.sectionHeader}>
-    <label className={styles.pageSwitch}><input type="checkbox" aria-label={`展示${title}页面`} aria-describedby={`flow-${title === "联系" ? "contact" : "pricing"}-page-switch-hint`} checked={enabled} onChange={event => onToggle(event.target.checked)} /><span>展示{title}页面</span><small id={`flow-${title === "联系" ? "contact" : "pricing"}-page-switch-hint`}>{enabled ? "发布后出现在导航中" : "页面隐藏，编辑内容保留"}</small></label>
-    <button type="button" className={styles.previewButton} disabled={previewDisabled} onClick={event => onPreview(event.currentTarget)}>查看{title === "联系" ? "联系" : "价格"}效果 <span aria-hidden="true">↗</span></button>
+    <div className={styles.sectionContext}><label className={styles.pageSwitch}><input type="checkbox" aria-label={`展示${title}页面`} aria-describedby={`flow-${moduleId}-page-switch-hint`} checked={enabled} onChange={event => onToggle(event.target.checked)} /><span>展示{title}页面</span><small id={`flow-${moduleId}-page-switch-hint`}>{enabled ? "发布后出现在导航中" : "页面隐藏，编辑内容保留"}</small></label><p>显示位置 · {title}页面；预览使用当前编辑。</p></div>
+    <button type="button" className={styles.previewButton} data-flow-module-preview={moduleId} disabled={previewDisabled} onClick={event => onPreview(event.currentTarget)}>{title === "联系" ? "联系" : "价格"}页面效果 <span aria-hidden="true">↗</span></button>
   </header>;
 }
 
@@ -127,7 +128,7 @@ export function FlowContactEditor({ value, assetsEndpoint, onPageChange, onItemC
       </aside>
       {selected ? <article className={styles.itemEditor} id={`flow-contact-${selected.id}`} tabIndex={-1}>
         <div className={styles.itemHeading}><div><p className={styles.eyebrow}>CONTACT {String(selectedIndex + 1).padStart(2, "0")}</p><h3>{selected.label || "编辑联系方式"}</h3></div><span className={styles.optionalBadge}>二维码可选</span></div>
-        <label className={styles.field}>联系名称<input aria-label="联系名称" maxLength={100} value={selected.label} onChange={event => onItemChange(selected.id, { label: event.target.value })} /><small>例如微信、邮箱或预约咨询。</small></label>
+        <label className={`${styles.field} ${styles.shortField}`}>联系名称<input aria-label="联系名称" maxLength={100} value={selected.label} onChange={event => onItemChange(selected.id, { label: event.target.value })} /><small>例如微信、邮箱或预约咨询。</small></label>
         <label className={styles.field}>账号或说明<textarea rows={3} maxLength={2000} value={selected.value} onChange={event => onItemChange(selected.id, { value: event.target.value })} /></label>
         <label className={styles.field}>链接 <span>可选</span><input aria-label="链接（可选，http / https / mailto）" maxLength={2000} type="text" inputMode="url" value={selected.href} onChange={event => onItemChange(selected.id, { href: event.target.value })} /><small>支持完整 http / https 网址或 mailto 邮箱链接。</small></label>
         <div className={styles.contactCard}><SiteContactCard key={selected.id} assetsEndpoint={assetsEndpoint} targetKey={selected.id} assetId={selected.qrAssetId} onChange={assetId => onQrChange(selected.id, assetId)} /></div>

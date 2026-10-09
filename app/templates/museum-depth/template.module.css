@@ -40,3 +40,12 @@
 .exhibitIndex span { color:#625f59; font-family:var(--font-geist-mono),monospace; }
 .exhibitIndex a:focus-visible { outline:2px solid #171716; outline-offset:3px; }
 .exhibit { scroll-margin-top:7.5rem; }
+
+/* Only the editable closing statement; exhibition titles keep their own rhythm. */
+.statement h2[data-cjk] {
+  min-width: 0;
+  max-width: 100%;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+  line-break: strict;
+}

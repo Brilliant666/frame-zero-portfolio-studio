@@ -35,6 +35,7 @@ export async function flowGalleryDatabaseIntegration({ runtime }) {
     const migration = await readFile(new URL('../drizzle-accounts/0005_flow_gallery_space.sql', import.meta.url), 'utf8');
     await client.query(migration);
     await client.query(migration);
+    await client.query(await readFile(new URL('../drizzle-accounts/0006_publication_history_retention.sql', import.meta.url), 'utf8'));
     assert.deepEqual((await client.query('SELECT * FROM site_content_drafts ORDER BY space')).rows, beforeDrafts);
     assert.deepEqual((await client.query('SELECT * FROM site_template_grants ORDER BY product')).rows, beforeGrants);
     assert.deepEqual((await client.query('SELECT * FROM site_publication_revisions WHERE id=$1', [old.id])).rows[0], old);

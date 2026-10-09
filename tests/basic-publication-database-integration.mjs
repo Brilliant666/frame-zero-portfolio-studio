@@ -28,6 +28,7 @@ export async function basicPublicationDatabaseIntegration({ runtime }) {
     await client.query('INSERT INTO site_publications(site_id,revision_id) VALUES($1,$2)', [siteId, old.id]);
     await assert.rejects(client.query("INSERT INTO site_publication_revisions(site_id,space,draft_revision,content,asset_ids) VALUES($1,'basic',1,'{}','{}')", [siteId]), /space_check/);
     await client.query(await readFile(new URL('../drizzle-accounts/0004_basic_publications.sql', import.meta.url), 'utf8'));
+    await client.query(await readFile(new URL('../drizzle-accounts/0006_publication_history_retention.sql', import.meta.url), 'utf8'));
     const pool = { query: (...args) => client.query(...args), connect: async () => ({ query: (...args) => client.query(...args), release() {} }) };
     const upgraded = await readPublished(pool, 'upgradefixture');
     assert.equal(upgraded.id, old.id); assert.deepEqual(upgraded.content, oldContent); assert.equal(upgraded.templateId, 'premium-polaroid');

@@ -1,5 +1,235 @@
 # 会话交接
 
+## 提交交接（2026-10-10）
+
+用户授权推送现有PR35，本次纳入此前四渠道、顶部发布区修正和历史去重实现／验收文档。基线d6964ec之后的最终Head与五项CI请现场查询PR35，不能用旧Head成功替代。PR保持OPEN+DRAFT；本次不部署、不迁移、不保存发布或合并。日常运行仍为下节已验收的 `EgQnDSFrm2zmO7f2EMfPn`；提交后不因Git Head变化重建日常版本。
+
+## 最新：发布历史去重版日常3001（2026-10-10）
+
+用户已确认可重启。当前3001 PID56856仅本轮快照，cwd `local-m3/pr35-publication-retention-daily-20261010/release`，BUILD_ID `EgQnDSFrm2zmO7f2EMfPn`。从已验收3004原样复制，35080文件集合／长度／时间、1441关键哈希一致；沿用Node24、原 `credentials/accounts.env` 和 `scripts/start-local-accounts.mjs --daily`。登录／公开页200、12运行资源匹配，浏览器只读确认草稿已保存、无待发布改动、11条历史。六表／135素材元信息／配置前后MATCH。
+
+0006迁移已在上一轮安装，本轮只读确认，不重跑迁移或清理。旧 `pr35-polaroid-contact-channels-daily-20261009/release`（BUILD_ID `8S-kdoN9WnG-nT2iOvjgs`）保留；应用回退只换cwd，沿用原配置，先现场核对→停止→确认退出→隐藏启动→独立健康检查，不回灌数据库。3003、3004与两PG保持。私有交接已备份更新；新daily父目录保留验证收据及 `browser-status.png`。本轮未提交／推送／合并。
+
+## 最新：发布历史保留策略与限定清理（2026-10-10）
+
+详见[实施记录](design/PR35_PUBLICATION_HISTORY_RETENTION.md)。当前3004 cwd `local-m3/pr35-publication-retention-20261010/candidate`，BUILD_ID `EgQnDSFrm2zmO7f2EMfPn`，PID61808仅本次快照；旧r4保留。沿用原隔离启动配置与PG55436，fixture `polaroidheadermv0wnz73` 最终草稿v4、公开原v2、历史2条，内容一致。浏览器已验证重复发布、回退不覆盖草稿及复用原快照。
+
+用户明确允许清理现有历史：先完整dump／精确删除计划，后在PG55434及55436安装0006兼容DDL，再仅清理daily star21→11及本fixture4→2。日常当前Published、所有草稿、其他Site及素材保持；隔离浏览器写入仅本fixture草稿revision4。私有证据根 `local-m3/pr35-publication-retention-ops-20261010`，含备份、删除行清单、迁移／清理结果及 `final-browser-verification.json`。私有SESSION_HANDOFF.local.md已更新并保留修改前副本，不含凭据。不要重新执行旧删除计划或回灌数据库。
+
+3001仍运行 `pr35-polaroid-contact-channels-daily-20261009/release`，BUILD_ID `8S-kdoN9WnG-nT2iOvjgs`，PID29084；3003及两PG保持。本轮只做获授权历史清理，没有部署新3001应用。旧应用可能再次创建重复记录；新策略须在后续获授权切换后持续生效。任何启停先重新核对PID、路径和版本。工作区HEAD仍d6964ec，本轮及此前修改均未提交；PR35保持OPEN+DRAFT。
+
+## 最新：公开主页入口对齐r4（2026-10-09）
+
+3004 cwd `local-m3/pr35-polaroid-header-20261009/candidate-r4`，BUILD_ID `-HrsUPNwoqMWxpUCouH3_`，PID49948仅本轮快照；原启动配置、隔离数据库、fixture及旧构建保持。仅publication-controls.module.css修正compactTools文字居中，桌面和窄屏复核见link-alignment-*私有证据。3001／3003／两PG未动，无保存发布或迁移，未提交推送。后续先现场核对PID，不直接沿用快照。
+
+## 最新：短内容分区顶部对齐候选r3（2026-10-09）
+
+3004当前cwd `local-m3/pr35-polaroid-header-20261009/candidate-r3`，BUILD_ID `is8zuik9ToTGKVUt2GhnC`，PID61408仅本轮快照。仅premium正文CSS新增margin-block:0与align-self:start的等效规则，修复图集／套餐垂直居中；浏览器五区四视口通过，截图见私有root alignment-*。沿用r2相同隔离配置与启动方式，旧构建保留，fixture仍草稿v2／公开v2／历史4条，无业务写入。3001PID29084、3003PID9440及两PG不动。后续先现场核对，不根据旧PID直接操作；本轮未提交／推送或部署3001。
+
+## 最新：拍立得顶部发布区候选（2026-10-09）
+
+本轮仅候选实现，详情见[验收记录](design/PR35_POLAROID_PUBLICATION_HEADER.md)。工作区仍为 `review/impeccable-interface-assessment`，HEAD `d6964ec`，保留四渠道未提交修改。本轮新代码亦未提交／推送；后续不要直接覆盖3001。
+
+3004最终cwd为 `local-m3/pr35-polaroid-header-20261009/candidate-r2`，BUILD_ID `g6A8cu9OgEIxFKJXfQP69`，PID43980仅本次快照；原candidate保留。Node24沿用 `pr34-flow-admin-full-20261001/.env.full.local`，运行 `scripts/start-local-accounts.mjs --test`，隔离PG55436保持。匿名验收入口 `/polaroidheadermv0wnz73/admin/premium-polaroid#edit-library`，草稿／公开v2，历史4条；旧六表原行指纹MATCH。登录材料、截图及构建清单位于本轮私有父目录，不提交凭据。浏览器登录cookie仅作用于该fixture路径与该fixture API路径，未替换日常登录。
+
+日常3001 PID29084仍运行下述四渠道构建，3003 PID9440、PG55434 PID34532、PG55436 PID39232保持。本轮不迁移、不改日常草稿／Published／照片。后续操作先现场核对PID与路径，不沿用本次PID直接启停。
+
+## 最新：高级拍立得四渠道日常3001（2026-10-09）
+
+用户确认未保存编辑已处理后，停止核实过的原3001 PID42456，单独确认退出及端口释放，再隐藏启动新release。当前3001 PID29084为本次快照；cwd `local-m3/pr35-polaroid-contact-channels-daily-20261009/release`，BUILD_ID `8S-kdoN9WnG-nT2iOvjgs`。使用原Node24和 `--env-file=<local-m3>/credentials/accounts.env scripts/start-local-accounts.mjs --daily`，新目录保留独立日志。
+
+35073文件双向集合／长度／时间MATCH，1438关键SHA256一致，无私照、env或隔离数据复制。登录／公开页200，12项运行资产哈希一致。六表、135素材元信息与配置前后MATCH；浏览器实际显示原Wechat和两个平台昵称，未填QQ隐藏，二维码区已移除。3003 PID9440、3004 PID49300、PG55434 PID34532和PG55436 PID39232保持；后续先现场复核，不沿用PID直接操作。
+
+回退只将cwd换回 `local-m3/pr35-flow-contact-icons-small-daily-20261009/release`（BUILD_ID `oHABQTaKO8PhJXSg0-a-N`），沿用原配置及daily参数，按核对→停止→确认退出→启动→独立健康检查执行。不回灌数据库或覆盖后续编辑。本轮无迁移、保存发布、提交推送或合并。私有旧SESSION_HANDOFF.local.md已只读核对但仍过时，以本段与现场为准。证据位于新daily父目录：release-manifest、file-set-verification、http-check、protected-before/result及after-booking.png。
+
+## 最新：高级拍立得四渠道候选（2026-10-09）
+
+当前工作区基线 `d6964ec`，本轮修改尚未提交。详见[实施记录](design/PR35_POLAROID_CONTACT_CHANNELS.md)。最终3004目录为 `local-m3/pr35-polaroid-contact-channels-20261009/candidate-final`，BUILD_ID `8S-kdoN9WnG-nT2iOvjgs`；初版candidate及旧构建均保留。44项相关测试、正常build含类型与全lint通过，672输入MATCH。
+
+3004 PID49300、隔离PG55436 PID39232仅为本轮快照。PG使用 `local-m3/pr34-flow-admin-full-20261001/pgdata`，原pgsql程序及55436；应用沿用该目录 `.env.full.local` 与Node24，参数 `scripts/start-local-accounts.mjs --test`，cwd为本轮candidate-final，隐藏启动。后续先现场复核，分步操作，不使用旧premium-reference-proof数据库目录，不初始化或迁移。
+
+仅新建匿名 `polaroidcontactsmv0vcbed` 一站及两份匿名素材，旧隔离六表行指纹保持。API保存发布v1后，浏览器QQ编辑仅保存为草稿v2；公开v1仍显示旧QQ，两个二维码引用与旧邮箱保留。fixture登录材料留在本轮私有目录，勿提交或输出。前台可从 `/polaroidcontactsmv0vcbed#polaroid-booking` 验收，后台同站点 `/admin/premium-polaroid#edit-contact`。
+
+日常3001 PID42456、3003 PID9440、PG55434 PID34532未变；没有日常业务写入或应用替换。浏览器临时视口与剪贴板测试覆盖已清除。等待用户验收，不自动部署、填充真实渠道或发布；PR保持Draft，本轮未提交／推送。
+
+## 提交交接（2026-10-09）
+
+用户要求将当前成果提交到PR35。本次包含基础配色与灯箱、Flow套餐首屏适配、滚轮持续输入修正、联系卡图标及对应测试／来源／验收文档。提交前53项相关回归通过，正常独立build含类型与lint已通过。只推送当前分支，保持OPEN+DRAFT，不合并、不切换运行实例；真实数据与本机截图不入库。远端最新提交及五项CI以PR检查为准；下方“未提交”语句为各轮当时状态，不能作为本次提交后的状态。
+
+## 最新：联系卡较小图标版日常3001（2026-10-09）
+
+用户授权更新3001，浏览器现场仅有公开页面。新日常目录 `local-m3/pr35-flow-contact-icons-small-daily-20261009/release`，BUILD_ID `oHABQTaKO8PhJXSg0-a-N`，由已验收candidate原样复制，未重建。35070文件长度／时间和1435关键SHA256匹配；pg/sharp已物化，release无重解析点或业务数据。旧3001 PID29008确认退出、端口释放后隐藏启动，新PID42456；3003 PID9440、PG55434 PID34532保持（均仅本次快照）。
+
+启动沿用原Node24，cwd为新release，参数 `--env-file=<local-m3>/credentials/accounts.env scripts/start-local-accounts.mjs --daily`。需要回退时只将cwd换回 `local-m3/pr35-flow-wheel-stall-daily-20261009/release`，旧BUILD_ID `C1-lkhfCa1W5CCdW-e_lz`；先重新核对PID与端口，按核对→停止→确认退出→隐藏启动→独立健康检查操作。不回灌数据库，不覆盖后续编辑。
+
+登录／公开页200，12项运行JS/CSS哈希一致；桌面1107×892浏览器确认四图标44px、原文和新标签外链不变、无溢出与warn/error。六张业务表、135素材元信息和配置前后MATCH，5草稿、1Published保持。证据与before/after-contact.jpg在新daily父目录。未迁移、保存、发布、提交、推送或合并。旧私有SESSION_HANDOFF.local.md已只读核对但未包含当前版本，以本段及现场为准。
+
+## 最新：较小联系卡图标候选3003（2026-10-09）
+
+3003更新为 `local-m3/pr35-flow-contact-icons-small-20261009/candidate`，BUILD_ID `oHABQTaKO8PhJXSg0-a-N`，桌面44px／手机36px。独立构建含类型与lint通过；原36948退出并确认端口释放后，沿用原Node24、accounts.env及无daily/test参数的runner隐藏启动，新PID9440（仅本次快照）。登录／公开页200，3001 PID29008及PG55434 PID34532保持。旧图标候选目录保留；本轮未操作后台、业务数据或发布。新父目录保留同视口before/after-desktop.jpg、390/320截图及responsive.json。浏览器临时样式已通过重载清除，正式CSS实测一致。未提交、推送、合并或切换3001。
+
+## 最新：Flow联系卡图标候选3003（2026-10-09）
+
+候选目录 `local-m3/pr35-flow-contact-icons-20261009/candidate`，BUILD_ID `YgMmPMzg2TC1sM9bzVnEF`。在确认3003空闲后，使用原Node24、`credentials/accounts.env` 与 `scripts/start-local-accounts.mjs`（无daily/test参数）隐藏启动。PID36948仅为本次快照；原3001 PID29008／PG55434 PID34532保持，后续先现场复核。未切换3001、迁移、保存、发布或提交。该候选只读展示日常公开内容，测试长账号与复制失败仅修改验收标签环境，已重载清除，剪贴板已恢复。
+
+667冻结输入MATCH，27相关测试及正常build／类型／lint通过。六表、135素材文件元信息、配置前后MATCH，5份草稿、1个Published保持。前后截图、上游原始SVG、构建日志与交互结果只在新候选父目录；公开来源和测试限制见[实施记录](design/PR35_FLOW_CONTACT_ICONS.md)。旧候选和日常release保留。等待用户确认，不自动部署日常或合并PR。
+
+## 最新：滚轮修正版日常3001（2026-10-09）
+
+用户授权“更新到3001”。现场两应用及日常PG均停止，没有要中断的日常实例。新日常目录 `local-m3/pr35-flow-wheel-stall-daily-20261009/release`，BUILD_ID `C1-lkhfCa1W5CCdW-e_lz`，由已验收candidate原样复制、未重建。3001 PID29008、PG55434 PID34532为本轮快照；3003保持停止。每次服务操作必须先复核，不能沿用PID。
+
+启动：原Node24，cwd为新release，参数 `--env-file=<local-m3>/credentials/accounts.env scripts/start-local-accounts.mjs --daily`，Start-Process Hidden、独立日志。PG使用原 `<local-m3>/data` 与原配置127.0.0.1:55434；首次以Start-Process -Wait等待pg_ctl时，等待未返回，取消等待连带结束PG；随后确认停止，用独立Start-Process加仅等待pg_ctl本身的WaitForExit正常启动。日志保留，未初始化、迁移或回灌数据库，应用启动前才建立保护快照。
+
+回退仅将应用cwd换回 `local-m3/pr35-flow-pricing-fit-daily-20261008/release`，旧BUILD_ID `oMxEyaIQ9qW40pC_JRU35`；沿用相同日常配置和daily参数，按核对→停止本人应用→确认退出→隐藏启动→独立健康检查执行。勿恢复数据库覆盖后续编辑。
+
+新daily父目录保留release-manifest、关键哈希、构建文件集合、HTTP资产比对、browser-smoke与保护摘要。六表、135素材文件元信息、配置MATCH；5份草稿与1个Published保持。未提交／推送／合并，旧私有SESSION_HANDOFF.local.md仍可能过时，以本段和现场为准。
+
+## 最新：持续快速滚动修正版已更新3003（2026-10-09）
+
+用户确认3003未保存编辑已处理后，旧PID39588退出、端口释放，再从 `local-m3/pr35-flow-wheel-stall-20261009/candidate` 隐藏启动新候选。BUILD_ID `C1-lkhfCa1W5CCdW-e_lz`，沿用Node24、原 `credentials/accounts.env` 与 `scripts/start-local-accounts.mjs`；登录／公开页HTTP200。3003 PID52636、3001 PID46252、PG55434 PID29020是本轮快照，后续操作先现场核对。3001和PG未重启；未写业务数据、迁移、发布、提交、推送或合并。
+
+原3003目录 `local-m3/pr35-flow-wheel-20261008/candidate` 和构建 `3qrnqR1nFBCdzNiM1b43s` 保留；需要回退时仅按正常服务流程切回旧应用目录，勿回灌数据库。新目录父级保留build/lint日志、662项冻结输入清单、复现与压力测试JSON和私人截图，不入公开仓库。实现与测试限制见[追加记录](design/PR35_FLOW_WHEEL_IMPLEMENTATION.md#持续快速切换修正2026-10-09)。等待用户实际鼠标体验，不自动替换3001。
+
+## 最新：Flow滚轮与转场候选等待用户体验
+
+先读[本轮实现与验证](design/PR35_FLOW_WHEEL_IMPLEMENTATION.md)。3003独立目录 `local-m3/pr35-flow-wheel-20261008/candidate`，BUILD_ID `3qrnqR1nFBCdzNiM1b43s`。沿用Node24、原credentials/accounts.env、`scripts/start-local-accounts.mjs`（无daily/test参数）；3003 PID39588仅为本次快照。原3001 PID46252／PG55434 PID29020保持，后续必须重新核对。首轮构建日志保留为initial，实际运行是含sceneInitialized修正的最终构建。候选只读访问日常公开数据，长内容测试仅临时DOM且已重载清除。未更新日常、迁移、保存、发布、提交或推送；不得把用户授权修复视为部署3001授权。
+
+## 最新：套餐首屏修正版已更新日常3001（2026-10-08）
+
+用户要求替换并确认已处理未保存编辑。新日常目录 `local-m3/pr35-flow-pricing-fit-daily-20261008/release`，BUILD_ID `oMxEyaIQ9qW40pC_JRU35`。使用原Node24、credentials/accounts.env与 `scripts/start-local-accounts.mjs --daily` 隐藏启动；3001 PID32456、3003 PID35368、PG55434 PID20752仅为本次快照，后续必须现场核对。原3001 PID19980已退出后才启动新版。
+
+旧日常 `local-m3/pr35-basic-palette-daily-20261007/release`、BUILD_ID `4KIcZdT3vpgQln4NxohHT` 保留。回退只将应用cwd改回该路径，沿用相同参数，依次核对→停止→确认退出→隐藏启动→独立健康检查；不恢复数据库、不改后来编辑。复制35055文件、1432项关键文件SHA256一致，构建server/static文件集合一致；运行CSS与新release一致，套餐页现场复核通过。六表、135素材元信息及配置前后MATCH。私有证据在 `local-m3/pr35-flow-pricing-fit-20261008/cutover` 和新daily父目录。旧私有交接仍过时；以本段及现场为准。本轮未提交／推送／合并，不构成下一次切换授权。
+
+## 最新：Flow 拍摄套餐首屏候选（2026-10-08）
+
+见[实施及验收记录](design/PR35_FLOW_PRICING_FIT.md)。3003 从约定 `local-m3/pr35-flow-pricing-fit-20261008/candidate` 运行，BUILD_ID `oMxEyaIQ9qW40pC_JRU35`；沿用本机 Node24、原 credentials/accounts.env 与 `scripts/start-local-accounts.mjs`（无 daily/test 参数）。候选只读验收当前公开套餐，未写业务数据。3001 仍为下述基础配色日常版；本轮没有切换日常应用。后续先复核现场端口和路径，不沿用历史 PID。当前停在用户查看 3003 视觉效果；尚未提交／推送，本轮无新增日常部署授权。
+
+## 最新：用户确认后已更新日常3001（2026-10-07）
+
+新日常路径为约定 `local-m3/pr35-basic-palette-daily-20261007/release`，BUILD_ID `4KIcZdT3vpgQln4NxohHT`，与3004一致。启动时原3001/PG55434已停，按既有data目录启动原日常PG，再使用原credentials/accounts.env与 `scripts/start-local-accounts.mjs --daily` 启动新release。3001 PID103760、PG55434 PID101296为当时快照，后续先现场核对。3004 PID95964和隔离PG55436 PID83772保持。
+
+恢复只将应用工作目录改回 `local-m3/pr35-flow-contact-tabs-20261007/release`（BUILD_ID `hfHktDwyj1CsVa1PpEQhY`），沿用原Node与日常参数，不回灌/迁移DB。每次按核对→停止→确认退出→隐藏启动→独立健康检查。六表、5份草稿、1个Published、135素材文件元信息与日常配置MATCH。私有证据在新daily目录；旧SESSION_HANDOFF.local.md前轮写入被拒绝仍过时，勿用其旧PID和路径直接操作。本轮无提交/推送/合并；不构成下一次部署授权。
+
+## 最新：基础配色候选已完成（2026-10-07）
+
+先读[实施与验收记录](design/PR35_BASIC_PALETTE_IMPLEMENTATION.md)。用户已确认前轮A／B方向；电影暖白承载、胶片浅棕片基、十一套基础灯箱材质已实现，Flow与高级拍立得边界保留。88候选分区、34对主要状态（其中2对采用前轮有效基线）、相关168测试、lint、类型、构建已完成；截图限制与既有其他排版缺口均在报告中。
+
+3004为本轮独立候选，BUILD_ID `4KIcZdT3vpgQln4NxohHT`，路径约定local-m3/pr35-basic-palette-impl-20261007/candidate。旧candidate-r3保留，隔离PG55436六表及11样本MATCH；3001／日常PG保持停止，未改草稿／Published。PR35仍OPEN+DRAFT、Head8b9d8bc，工作区有本轮未提交修改，保护这些文件。当前Head五项CI通过属于原提交。本轮不自动提交／部署／合并或继续后台。私有运维交接更新被自动审批以策略阻止拒绝，未更新；其中3004路径可能过时，以本段及现场核对为准。NEXT = WAITING_FOR_BASIC_PALETTE_ACCEPTANCE。
+
+## 最新：十一套基础配色只读复核（2026-10-07）
+
+见[逐套复核与实施建议](design/PR35_BASIC_PALETTE_REVIEW.md)。当前每套固定主基调，八浅三深；建议调整电影首屏明暗衔接、胶片整条深色片基、棱镜／档案灯箱色温。其余已观察分区一致的模板保留；展厅窄深框有现场材质依据，不列必改。
+
+3004仍为既有中文排版候选，未构建、切换或写入测试数据；3001／日常PG未启动。私有证据目录为约定 local-m3/pr35-basic-palette-review-20261007，含双视口分区拼图及灯箱。只有文档修改，未提交／推送。等待用户确认报告A／B视觉方向后才实施，不自动继续其他后台或Flow切片。PR35保持OPEN+DRAFT，基线8b9d8bc。
+
+## 最新：基础中文排版候选（2026-10-07）
+
+用户确认补评第8节第一切片，已完成五模板局部展示文字调整。先读[本轮实现与验收](design/PR35_BASIC_CHINESE_TYPOGRAPHY.md)；英文、照片、各模板身份与 Flow 成果保持。基线 cf75ad0，新增输入与构建一致；标题／渲染检查、lint、类型、普通构建通过，最新远端 CI 只认最终 Head。
+
+隔离3004候选 BUILD_ID `6boSL8lCO-8x4vM4f2Cj2`，私有 `local-m3/pr35-basic-type-20261007/review.html` 可看五套前后与变体。五样本仍v1；剩余验收区间六表MATCH，不代表完整任务前后摘要。日常3001／PG55434本轮保持停止，无部署、迁移或发布。55436正确数据目录、启动及应用恢复命令见约定本机交接，旧目录不要据历史PID直接启动。
+
+等待本切片实际效果确认；PR35 OPEN+DRAFT，不合并，不继续基础／拍立得后台，不处理Film首图前移等排除项。下方只读补评为历史授权记录。
+
+## 历史：基础版与高级拍立得设计补评（2026-10-07）
+
+本轮按用户附件仅评审与方案；[主报告](design/IMPECCABLE_BASIC_AND_POLAROID_REVIEW.md) 九节与 [BP 索引](design/IMPECCABLE_EVIDENCE_INDEX.md#基础与高级拍立得补评-bp2026-10-07) 已补齐。11 套基础模板各自非空桌面／手机主路径、基础六分区、高级五模块及三构图／两主题均 COMPLETE_WITH_LIMITS。已有整卡排序、当前图集预览／返回和纸面身份保留；重点为中文标题裁切／行距、基础操作距离、拍立得图库与设置优先级。
+
+授权测试准备只在 PG55436 新增 11 Site／44 素材／11 草稿与公开快照，版本 v1 固定；正常流程，没有更改权限实现或复制私人照片。准备后的正式观察只读。3001 原构建 hfHktDwyj1CsVa1PpEQhY 与基线 b3a4286 相关 312 产品文件一致；3004 旧构建的 151 相关基础文件一致。日常 5 草稿／1 Published 前后 MATCH，未替换或重启实例。私有证据在约定 local-m3 下 pr35-basic-polaroid-review-20261007，含可查看 review.html；不得提交其中图片、DOM、凭据、完整摘要。
+
+PR35 OPEN + DRAFT；本次只有文档，未新实施产品。输入 Head 五项 CI 成功，不据此声称下一文档 Head 已通过。后续先等用户选择具体切片，不自动修一行 CSS、不继续 Flow、不恢复 S3、不合并或部署。此前 Flow 实施授权不扩展到基础／拍立得。
+
+## 最新：局部修正提交收口（2026-10-07）
+
+本次按用户要求提交至原PR35：价格面板滤镜、Flow选区配色、联系外链新标签页和脱敏记录。此前阶段“未提交/推送”仅代表记录时状态，提交ID及CI按PR最新Head核对。3001已是 `hfHktDwyj1CsVa1PpEQhY`，本次提交不再部署；旧构建、3003/3004和两套PG保持。PR仍Draft，不合并，无数据库或内容写入。
+
+## 最新：联系外链修正已部署3001（2026-10-07）
+
+用户明确部署且确认后台未编辑后，3001已切换至 `hfHktDwyj1CsVa1PpEQhY`。输入MATCH、类型和门禁通过，HTTP及浏览器外链检查通过；两个入口发出 `_blank` 新窗口请求，本站联系页保留，第三方目标页加载和手机App唤起未验证。5行草稿和1行Published指针前后MATCH，无迁移。新目录 `pr35-flow-contact-tabs-20261007`，旧 `pr35-flow-glass-artifact-20261007` 保留，可应用级回退；精确PID及启动参数见私有交接。
+
+Flow 联系项 HTTP(S) 链接改新标签页打开，含 noopener/noreferrer 和辅助提示；mailto 不设新标签页。仅 `gallery.tsx` 局部改动，无内容或权限改动。3003仍为 `s7XVl1iDJaR4xPBfqVMQN`，3004/PG保持。原滤镜/选区修改继续保留，未提交/推送/合并。
+
+## 最新：日常3001已更新（2026-10-07）
+
+用户明确部署并确认未保存编辑处理完成后，3001已切换至 `s7XVl1iDJaR4xPBfqVMQN`；与3003复用同一冻结release，不覆盖构建。登录/公开HTTP200，浏览器样式与原文核对通过，5行草稿和1行Published指针MATCH。旧日常构建保留，恢复只切应用、不恢复数据库；3003/3004/PG保持。精确目录、PID及命令见私有交接。未提交/推送/合并，不把本次日常切换视为后续部署授权。
+
+## 最新：价格条带修正版已切换3003（2026-10-07）
+
+见[局部排查记录](design/PR35_FLOW_PRICE_REPAINT.md)。本次只改 Flow CSS：价格面板取消冗余背景滤镜、选区使用 Flow 浅绿配深字。用户确认后已切换3003至独立构建 `s7XVl1iDJaR4xPBfqVMQN`；原构建保留，原3001/3004/PG保持。1280/390选区、悬停、滚动及场景返回验收通过，原文与几何保持；草稿和Published前后MATCH。空闲3002尝试被既有端口校验拒绝，无监听，未修改安全检查。用户截图条带尚未稳定复现，不宣称浏览器根因已解决；待实际体验。未提交/推送/合并，未改业务数据。精确运行与应用级恢复记录见私有运维交接。
+
+## 最新：PR35提交收口（2026-10-07）
+
+本次按用户授权提交并推送当前QQ/微信复制、Flow价格与联系视觉优化及评审记录；各历史段落“未提交/未推送”仅描述当时状态。最终提交ID和CI请按PR35当前Head核对。3003保留最新候选，3001及原3004/PG保持；不迁移、不改原文/草稿/Published，不合并或自动部署。私人截图、自动工具快照和运维记录未纳入提交。
+
+## 最新：Flow价格与联系视觉候选（2026-10-07）
+
+用户只授权材质、文字层级与底部遮挡，明确保留大外框和原文。仅改局部CSS，见[实现与验收](design/PR35_FLOW_SURFACE_POLISH.md)。3003保留候选，当前3001/原3004/PG均未切换；5行草稿与1行Published指针前后MATCH，无内容写入。构建和类型检查通过，桌面/手机同数据证据在本机私有目录；候选Build ID和恢复方法见私有运维记录。PR35保持Draft，未提交/推送/合并，等待用户体验，后续3001切换需对应授权。
+
+## 最新：Flow 价格区透明白边已交付3001（2026-10-07）
+
+仅改价格承载层绿底为5%中性白层及文字轻阴影，细白边/几何/业务保持，见[记录](design/PR35_FLOW_PRICING_GLASS.md)。独立普通构建、1440/390同数据DOM与原视口截图验证通过；手机截图限制保留。用户明确确认未保存编辑处理后切换3001，全部草稿与Published指针MATCH、PG不重启，原复制按钮版应用保留，临时3003关闭、既有3004保持。精确输入/Build ID/PID和应用级回退见本机私有交接，不回灌数据库。PR35仍Draft，修改尚未提交/推送/合并。
+
+## 最新：Flow 联系账号快捷复制已交付3001（2026-10-07）
+
+见[实现与验收](design/PR35_FLOW_CONTACT_COPY.md)。QQ/微信复制及透明按钮、失败提示、44px点击盒完成；24相关检查、局部lint、普通构建、公开安全、390/320和实际剪贴板回读通过。用户已处理未保存编辑并明确确认切换3001；原S2应用保留、PG不重启、全部5行草稿及1行Published指针MATCH，3003临时实例关闭、3004保持。当前运行基于`3b65c48`加未提交产品修改，具体快照/Build ID/PID与应用级回退见本机私有交接，不恢复数据库覆盖后续编辑。PR35仍Draft，未提交/推送/合并；后续动作需对应授权。
+
+## PR35当前：S2候选、S3取消（2026-10-07）
+
+收口补充：3004独立`s2-r3`含低高度长标题入口修复，修复Head `c2e8087`五项CI通过；首轮失败、补拍截图和原始测量保留，详见S2实现文档。六业务表再次MATCH，3001原版保持。后续验收当前候选，S3取消；最终文档Head门禁另核对，PR35保持Draft。下段`s2-r2`为首轮候选记录。
+
+用户明确开始S2并取消S3。已补Flow照片名称、真实44px次要点击盒和手机/低高度桌面首组节奏，见[记录](design/PR35_S2_IMPLEMENTATION.md)。38项相关测试、lint、TS、独立构建及同数据390/1280/1440前后、320/600低屏控件复核通过；六业务表MATCH。3004为独立s2-r2构建，原single-rail与中间s2保留，恢复只切应用、不恢复数据库；启动命令和现场PID见约定私有交接，操作前复核编辑状态。原模板、3001、草稿/Published、资源权限和顺序保持，PR仍Draft、最新Head门禁另核对，不合并。S3从计划移除，根首页保留原设计；旧评审作为历史证据，下方未开始S2/S3属于此前状态。实体手机/读屏及最终视觉待用户验收。
+
+## PR35追加：Flow自动单轨（2026-10-07）
+
+按用户确认，仅调整首页有效轨道投影，见[范围与证据](design/PR35_FLOW_SINGLE_RAIL.md)。左/右独轨在原作品区居中，桌面500px/手机300px上限，右独轨保留右侧身份；两侧有效自动回到保存比例，空配置不补入其他分类。23项相关测试、lint、TS、独立构建及3004桌面/手机/320、灯箱返回和滚轮通过，六业务表MATCH。新增CI内存预览矩阵，保留双轨断言；最新Head门禁另核对。旧候选应用留存，恢复仅切应用目录，不恢复数据库；3001原版保持，不迁移、不保存发布。PID、构建及私有原图见约定本机交接，操作前重新核对。PR仍Draft，不合并、不继续S2/S3。
+
+## PR35追加：空态与动效控件（2026-10-06）
+
+接续用户指出的深色底，仅改emptyGallery透明文字和motion薄玻璃、暂停/悬停/焦点视觉，见[追加记录](design/PR35_FLOW_SURFACE_RESTORATION.md)。21项相关测试、TS、独立构建及同数据1440/390完整对照、320溢出/实际暂停恢复通过。六业务表前后MATCH；3004新独立构建，旧导航版保留，3001原版保持。实际暂停采用原animation:none静态列表，不能只凭animation-play-state判定；采样原件和恢复命令存本机。PR保持Draft，最新Head CI另行核对，无业务写入、迁移或合并，不启动S2/S3。
+
+## PR35追加：轻透导航（2026-10-06）
+
+按明确授权先启动原日常3001及PG，再只读核对公开设计；随后仅修改候选导航底色、磨砂与选中/焦点视觉，见[追加记录](design/PR35_FLOW_SURFACE_RESTORATION.md)。3004新独立构建可查看，原构建保留；3001保持原版运行。24项相关测试、公开安全、普通构建及桌面/手机导航检查通过，六业务表前后MATCH。原桌面宿主截图被裁切的限制保留，完整改后图另存本机。未改业务数据、权限、schema或保存发布，PR仍Draft，不继续S2/S3。私有恢复命令、PID和构建另存，操作前重新核对；下方未启动3001为历史。
+
+## PR35追加：Flow透明层恢复（2026-10-06）
+
+按用户明确授权恢复前台参考体验，见[局部实现与验收](design/PR35_FLOW_SURFACE_RESTORATION.md)。黑底来自PR34亮背景可读性覆盖，本轮删除大块底板，保留导航/大图控件与空态的局部深色效果。3004独立构建已切换，旧构建保留；只读前后六业务表MATCH，3001/日常数据不动。相关24测试、lint、TS、独立构建及浏览器1440/390/320验证通过，最终CI按新Head核对。下方S1b收据仍为历史Head，不覆盖；PR保持Draft，不启动S2/S3。现场PID、Build ID、停止恢复及私有对照另存，操作前仍须复核。
+
+## 当前切片：PR35 S1b 实施候选（2026-10-06）
+
+在用户明确B1–B5授权下完成查找条件显式沿用、局部容器宽度、唯一模块效果入口、手机两行五名称及当前公开空间草稿编辑捷径，见[实施记录](design/PR35_S1B_IMPLEMENTATION.md)。现有PR35、独立分支和S1a证据保留；源码按查找、布局预览、捷径三个切片提交。最终Head与五项门禁在PR当前交付核对。
+
+3004使用独立冻结构建，原S1a与中间构建保留；现场切换前人工页dirty=false、无打开模态。匿名库六业务表前后MATCH并与S1a一致，布局只读和CI隔离写入分别记录。未执行保留库TRUNCATE包装，不启动或替换3001/真实数据库，不迁移/真实发布。
+
+S1b CI失败证据不可覆盖：`37e5b16`的桌面图库body+20px未复现，根因仍未确认；`fe81822`追加同帧/后续两帧诊断且原溢出断言保持，该路径通过后暴露装饰箭头名称不一致。`7e16faf`修正按钮无障碍名称并补真实暂选跨断点保护；最终浏览器结果按修正后Head核对，不宣称一次通过已查明旧溢出原因。
+
+`2066bda`通过原Flow前台/分类预览及真实跨页追加保存，但新会话回归只改hash仍保留原会话；改用真实重载核对默认查找状态，原断言保持。第三次失败及修正另存，候选产品构建不因这个测试前提修正而变更。
+
+`a15f1cf`原响应式轨道断言失败；桌面386/386已记录，失败手机值缺失。测试补就绪前后原始采样并复用既有DPR实际槽位准备条件，容差/超时和原轨道尺寸、焦点、滚动断言不变；前台不修改。第四次失败及后续采样分别保留，不能反推未记录的手机值。
+
+PR35保持Draft，下一步由用户确认S1b导航、分类说明与入口取舍，不自动继续S2/S3或合并。私有记录包含候选入口、实际构建/PID和正常停止恢复方法，操作前重新核对。历史首败/同Head重跑证据及原断言保持，实体手机/真实客户验收不因自动检查通过而补写完成。
+
+## 当前切片：PR35 S1a 实施候选（2026-10-06）
+
+用户只授权图库照片前移与当前分类全屏预览定位，见[实现与验收](design/PR35_S1A_IMPLEMENTATION.md)。当前仍在PR35独立工作区；原评审文档和其它工作区未提交修改保留。候选3004运行新构建，原构建留存、既有匿名库六业务表MATCH。27项相关纯测试、局部lint、普通构建通过，新增隔离浏览器回归按最新Head CI核对；原首次失败/同Head重跑通过的证据及原断言保持。
+
+日常3001不替换，不做迁移/开户/真实业务写入。PR35仍Draft，不合并、不自动继续S1b/S2/S3。下一步是用户确认这两个改动的实际效果；本机运行PID、原构建和截图来源见私有交接，恢复前现场核对。下方只读等待设计确认属于历史停止点。
+
+## 桌面专项补评完成（2026-10-06）
+
+用户要求补一轮桌面专项并重新汇报；已完成[桌面报告](design/IMPECCABLE_DESKTOP_REVIEW.md)，[主报告](design/IMPECCABLE_REVIEW.md)及[证据索引](design/IMPECCABLE_EVIDENCE_INDEX.md)同步更新。1440五后台、基础六分区、十一模板首屏；1280/1920关键几何；当前编辑/保存草稿/Published、轨道滚轮及横竖灯箱均现场只读观察。没有业务编辑、产品代码、依赖或工具门禁变更。
+
+桌面优先S1a：照片前移和当前分类全屏预览定位；S1b再处理筛选、栏宽、重复入口与手机导航。等待用户设计确认，PR35保持Draft，不实施/合并/日常替换。六业务表前后摘要一致；本轮3004退出、四个评审标签关闭、视口恢复，必要匿名PG保留。运行与证据路径见私有交接，恢复前现场核对。
+
+## 最新检查点：PR34 合并与只读评审（2026-10-06）
+
+PR34 已按用户明确授权 Ready 并锁定 `eaa38048a5207c4092686ae8284bf433ddc839e2` Squash，main 为 `03affa8c0a9485a3c4a3ff356cce2f3e621905c6`；五项 main push 检查通过，Squash 文件树与已接受 Head 一致。只接受阶段功能，不补写实体手机、客户或最终审美验收。
+
+当前独立分支 `review/impeccable-interface-assessment` 只做 Impeccable critique／audit 与中文方案，见[评审](design/IMPECCABLE_REVIEW.md)、[范围](design/IMPECCABLE_REVIEW_BRIEF.md)及[固定工具版本](design/IMPECCABLE_TOOLING.md)。新 PR 保持 OPEN + DRAFT，产品实施未开始；报告完成后停止，等用户确认。禁止旧 Mission 自动继续、产品改版、业务写入、合并新 PR、日常切换或远程部署。
+
+日常冻结 `a78bca9` 尚未接入最终可访问名称／撤销焦点修复，与 main 不完全等价。本轮日常3001及真实库保持原状，不启动或覆盖；临时实例和原始截图／检测结果仅存本机私有运维目录，结束只停止本轮应用，必要匿名测试数据库保留。既有工作区编辑、私人照片、账号、草稿及 Published 受保护。正常登录可能产生会话／访问记录，不能称数据库绝对零变化。
+
+旧 PR34 Draft、未提交／推送与端口 PID 均是历史快照；恢复前现场核对，不重放旧启停或迁移。
+
 ## 最新收口：完整浅色后台提交到PR34（2026-10-06）
 
 用户授权将当前最新版本提交并推送到PR34；代码、封闭设计候选、隔离测试及文档纳入本轮提交。详见[CURRENT_STATUS](CURRENT_STATUS.md)和[完整后台记录](PR34_FLOW_ADMIN_FULL.md)。提交前49项相关纯测试通过，CI按最新PR Head核对，不复用旧Head通过记录。

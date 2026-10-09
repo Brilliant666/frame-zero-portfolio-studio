@@ -9,6 +9,7 @@ import PlatformAccounts from "../shared/platform-accounts";
 import { groupSourceOrientationSlots, justifiedPhotoColumns } from "../shared/source-orientation-layout";
 import { useTemplateSectionNavigation } from "../shared/use-template-section-navigation";
 import type { TemplateProps } from "../types";
+import { hasCjkText } from "../shared/display-text";
 import { splitCinematicLightSlots } from "./slot-plan";
 
 const cinematicRatios = getTemplateSlotRatios("cinematic-light");
@@ -135,8 +136,8 @@ export default function CinematicLightTemplate({
 
         <div className="hero-copy">
           <p className="eyebrow">{content.hero.eyebrow}</p>
-          <h1 className="glitch" data-text={content.hero.title}>
-            {heroTitleLead}<br />{heroTitle.join(" ")}
+          <h1 className="glitch" data-text={content.hero.title} data-cjk={hasCjkText(content.hero.title) || undefined}>
+            {hasCjkText(content.hero.title) ? content.hero.title : <>{heroTitleLead}<br />{heroTitle.join(" ")}</>}
           </h1>
           <div className="hero-bottomline">
             <p>

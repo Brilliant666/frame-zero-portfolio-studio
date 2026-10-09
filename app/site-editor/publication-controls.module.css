@@ -106,3 +106,67 @@
 .message[data-tone="success"] { border-color: #39815b; background: #edf7f0; color: #285b3f; }
 .message[data-tone="error"] { border-color: #ba4832; background: #fff0eb; color: #8a3023; }
 .message[data-tone="pending"] { border-color: #b88119; background: #fff7e4; color: #775618; }
+
+/* The premium Polaroid editor keeps versions in flow and actions in its shell. */
+.panel.polaroid { padding: 0 0 12px; margin-bottom: 16px; border: 0; border-bottom: 1px solid #e2e7ee; border-radius: 0; background: transparent; }
+.compactRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px; }
+.compactVersions { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; min-width: 0; color: #637287; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.compactVersions strong { color: #293e57; font-weight: 600; }
+.compactStatus { color: #52677f; }
+.compactTools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
+.polaroid .actions { top: 12px; }
+.panel.polaroid .compactTools > .secondary { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 36px; }
+.polaroid .compactTools > .actionDisclosure > summary { line-height: 1.6; }
+.dockedPreview { display: block; }
+.inlinePreview { display: none; }
+.previewSplit { position: relative; display: flex; align-items: stretch; min-width: 0; }
+.panel.polaroid .previewSplit > button { min-height: 44px; padding: 8px 12px; border: 1px solid #b9c5d4; border-radius: 8px; background: #fff; color: #293e57; font: inherit; cursor: pointer; white-space: nowrap; }
+.panel.polaroid .previewSplit:has(.splitDisclosure) > button { border-radius: 8px 0 0 8px; }
+.actionDisclosure { position: relative; min-width: 0; }
+.actionDisclosure > summary { display: flex; align-items: center; justify-content: center; min-height: 36px; padding: 4px 8px; color: #52677f; cursor: pointer; list-style: none; white-space: nowrap; }
+.actionDisclosure > summary::-webkit-details-marker { display: none; }
+.actionDisclosure[open] > summary { background: #edf2f7; border-radius: 6px; }
+.actionMenu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 65; display: grid; gap: 4px; width: max-content; min-width: 210px; max-width: min(320px, calc(100vw - 32px)); padding: 8px; border: 1px solid #d6dfe9; border-radius: 10px; background: #fff; box-shadow: 0 12px 32px #24344924; }
+.panel.polaroid .actionMenu :is(button, a) { display: block; min-height: 36px; width: 100%; padding: 8px 10px; border: 0; border-radius: 5px; background: transparent; color: #344b66; font: inherit; line-height: 1.5; text-align: left; text-decoration: none; white-space: normal; overflow-wrap: anywhere; cursor: pointer; }
+.panel.polaroid .actionMenu :is(button, a):hover { background: #f1f5fa; text-decoration: none; }
+.splitDisclosure { position: static; }
+.panel.polaroid .splitDisclosure > summary { width: 34px; height: 100%; min-height: 44px; padding: 0; border: 1px solid #b9c5d4; border-left: 0; border-radius: 0 8px 8px 0; background: #fff; color: #344b66; font-size: 18px; }
+.splitDisclosure .actionMenu { right: 0; }
+.compactMessage { margin-top: 8px; color: #52677f; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.compactMessage strong { font-weight: 600; }
+.compactMessage[data-tone="success"] { white-space: normal; }
+.compactMessage[data-tone="error"] { color: #943721; }
+.compactMessage[data-tone="pending"] { color: #795711; }
+.recovery { margin-top: 6px; }
+.panel.polaroid .recovery .refresh { min-height: 32px; font-size: 12px; }
+.historyDrawer { position: fixed; inset: 0 0 0 auto; width: min(460px, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh; padding: 0; margin: 0; border: 0; border-left: 1px solid #dce3ec; border-radius: 0; background: #fff; color: #243449; box-shadow: -10px 0 45px #16273d26; overflow: auto; overscroll-behavior: contain; }
+.historyDrawer::backdrop { background: #16273d45; }
+.drawerHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 24px 20px 18px; border-bottom: 1px solid #e2e7ee; }
+.drawerHeading h2 { margin: 0; color: #243449; font-family: inherit; font-size: 18px; font-weight: 600; line-height: 1.5; }
+.drawerHeading p { margin: 8px 0 0; color: #637287; font-size: 12px; line-height: 1.7; }
+.panel.polaroid .drawerClose { display: grid; flex-shrink: 0; place-items: center; width: 40px; min-height: 40px; padding: 0; border: 1px solid #d5dfe9; border-radius: 8px; background: #fff; color: #344b66; font-size: 24px; cursor: pointer; }
+.drawerContent { padding: 20px; }
+.drawerContent > p { margin: 0 0 16px; line-height: 1.7; overflow-wrap: anywhere; }
+.drawerContent ul { padding: 0; margin: 0; list-style: none; }
+.drawerContent li { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; padding: 16px 0; border-bottom: 1px solid #e2e7ee; }
+.drawerContent li > div { display: grid; gap: 6px; min-width: 0; }
+.drawerContent li strong { font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.drawerContent time { color: #738093; font-size: 12px; }
+.panel.polaroid .drawerContent .secondary { min-height: 36px; }
+.polaroid .current { color: #52677f; }
+@media (max-width: 900px) {
+  .polaroid .dockedPreview { display: none; }
+  .inlinePreview { display: block; }
+  .compactTools { flex: 1 1 100%; }
+  .inlinePreview .splitDisclosure .actionMenu { left: 0; right: auto; }
+}
+@media (max-width: 600px) {
+  .panel.polaroid { padding: 0 0 12px; }
+  .polaroid .actions { top: auto; }
+  .compactRow { gap: 8px; }
+  .compactVersions { gap: 3px 10px; }
+  .compactTools { justify-content: space-between; gap: 4px 8px; }
+  .panel.polaroid .previewSplit > button { padding-inline: 10px; font-size: 12px; }
+  .panel.polaroid .compactTools > .secondary { font-size: 12px; }
+  .actionDisclosure > summary { padding-inline: 4px; font-size: 12px; }
+}

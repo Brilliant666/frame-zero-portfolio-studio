@@ -150,6 +150,7 @@ export default function TemplatePreviewDialog({
             works={[...lightboxWorks]}
             theme={templateId === "polaroid-field" ? "light" : "dark"}
             appearance={templateAppearances[templateId].tone}
+            basicTemplate={templateId}
             frameRef={lightboxRef}
             closeButtonRef={closeButtonRef}
             onMove={moveActiveWork}

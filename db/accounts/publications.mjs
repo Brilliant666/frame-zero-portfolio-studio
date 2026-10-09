@@ -3,15 +3,23 @@ export class PublicationError extends Error {
   constructor(message, status = 409) { super(message); this.status = status; }
 }
 const publicationSpaces = new Set(['basic', 'premium-polaroid', 'premium-flow-gallery']);
-const summary = row => ({ id: row.id, space: row.space, templateId: row.space === 'basic' ? row.content.activeTemplate : row.space, draftRevision: row.draft_revision, publishedAt: row.published_at });
+const summary = (row, matchedDraftRevision, outcome) => ({ id: row.id, space: row.space, templateId: row.space === 'basic' ? row.content.activeTemplate : row.space, draftRevision: row.draft_revision, publishedAt: row.published_at,
+  ...(matchedDraftRevision !== undefined ? { matchedDraftRevision } : {}), ...(outcome ? { outcome } : {}) });
+const canonical = value => JSON.stringify(value, (_, item) => item && typeof item === 'object' && !Array.isArray(item) ? Object.fromEntries(Object.keys(item).sort().map(key => [key, item[key]])) : item);
+const sameProjection = (row, prepared) => canonical(row.content) === canonical(prepared.content) && canonical([...new Set(row.asset_ids)].sort()) === canonical([...new Set(prepared.assetIds)].sort());
+function matchedRevision(row, draft, prepare) {
+  if (!draft || typeof prepare !== 'function') return null;
+  try { return sameProjection(row, prepare(draft.content, row.space)) ? draft.revision : null; }
+  catch { return null; }
+}
 async function validateAssets(client,siteId,ids) {
   const assets=await client.query('SELECT * FROM site_assets WHERE site_id=$1 AND id=ANY($2::uuid[]) FOR SHARE',[siteId,ids]);
   if(assets.rowCount!==ids.length)throw new PublicationError('发布资源不存在或不属于本站',422);
   try { for(const row of assets.rows)for(const variant of ['thumbnail','card','full'])await readAssetVariant(row,variant); }
   catch {throw new PublicationError('发布所需的展示图片不可读，未改变公开版本',422);}
 }
-export async function publicationHistory(pool, siteId, options = /** @type {{authorizedSpaces?: string[], allowedSpaces?: string[], allowPremium?: boolean}} */ ({})) {
-  const { authorizedSpaces, allowedSpaces, allowPremium = false } = options;
+export async function publicationHistory(pool, siteId, options = /** @type {{authorizedSpaces?: string[], allowedSpaces?: string[], allowPremium?: boolean, prepare?: (value: unknown, space: string) => {content: unknown, assetIds: string[]}}} */ ({})) {
+  const { authorizedSpaces, allowedSpaces, allowPremium = false, prepare } = options;
   // The old boolean grants only the old product; adding a premium template must
   // never broaden that existing authorization into access to all premium spaces.
   const explicit = authorizedSpaces ?? allowedSpaces;
@@ -23,11 +31,30 @@ export async function publicationHistory(pool, siteId, options = /** @type {{aut
   // revoked after page/request authorization cannot expose that product's history.
   // Keep the current Published summary available even when its grant was revoked.
   const grant = `(r.space='basic' OR EXISTS (SELECT 1 FROM site_template_grants g WHERE g.site_id=r.site_id AND g.product=r.space))`;
-  const rows = await pool.query(`SELECT r.*,p.revision_id AS current_id,${grant} AS has_current_grant FROM site_publication_revisions r
-    LEFT JOIN site_publications p ON p.site_id=r.site_id WHERE r.site_id=$1
+  const rows = await pool.query(`SELECT r.*,p.revision_id AS current_id,d.revision AS current_draft_revision,d.content AS current_draft_content,${grant} AS has_current_grant FROM site_publication_revisions r
+    LEFT JOIN site_publications p ON p.site_id=r.site_id
+    LEFT JOIN site_content_drafts d ON d.site_id=r.site_id AND d.space=r.space WHERE r.site_id=$1
     AND (r.id=p.revision_id OR (r.space=ANY($2::text[]) AND ${grant}))
     ORDER BY r.published_at DESC,r.id DESC`, [siteId, [...permitted]]);
-  return { current: rows.rows.find(r => r.id === r.current_id) ? summary(rows.rows.find(r => r.id === r.current_id)) : null, history: rows.rows.filter(row => permitted.has(row.space) && row.has_current_grant === true).map(summary) };
+  const projected = new Map();
+  const describe = row => {
+    if (!prepare) return summary(row);
+    if (!permitted.has(row.space) || row.has_current_grant !== true) return summary(row, null);
+    if (!projected.has(row.space)) {
+      try { projected.set(row.space, row.current_draft_revision ? { revision: row.current_draft_revision, value: prepare(row.current_draft_content, row.space) } : null); }
+      catch { projected.set(row.space, null); }
+    }
+    const draft = projected.get(row.space);
+    return summary(row, draft && sameProjection(row, draft.value) ? draft.revision : null);
+  };
+  const current = rows.rows.find(r => r.id === r.current_id);
+  return { current: current ? describe(current) : null, history: rows.rows.filter(row => permitted.has(row.space) && row.has_current_grant === true).map(describe) };
+}
+
+/** Call only from an authorized transaction or an explicit operator maintenance run. */
+export async function prunePublicationHistory(client, siteId, space = null) {
+  const result = await client.query('SELECT prune_site_publication_history($1::uuid,$2::text) AS removed', [siteId,space]);
+  return result.rows[0]?.removed ?? 0;
 }
 export async function readPublished(pool, slug) {
   const result = await pool.query(`SELECT r.*,s.slug FROM sites s JOIN site_publications p ON p.site_id=s.id
@@ -57,7 +84,7 @@ export async function changePublication(pool, {siteId,userId,space,payload,prepa
     }
     const pointer = await client.query('SELECT revision_id FROM site_publications WHERE site_id=$1',[siteId]);
     if ((pointer.rows[0]?.revision_id ?? null) !== payload.expectedPublicationId) throw new PublicationError('发布状态已变化，请重新读取后确认');
-    let row;
+    let row, matchedDraftRevision, outcome;
     if (payload.action === 'publish') {
       const draft = await client.query('SELECT * FROM site_content_drafts WHERE site_id=$1 AND space=$2 FOR UPDATE',[siteId,space]);
       if (!draft.rowCount || draft.rows[0].revision !== payload.expectedDraftRevision) throw new PublicationError('草稿版本已变化，请先保存并重新读取');
@@ -65,19 +92,30 @@ export async function changePublication(pool, {siteId,userId,space,payload,prepa
       try { prepared=prepare(draft.rows[0].content); }catch{throw new PublicationError('草稿结构不合法，未发布',422);}
       const {content,assetIds}=prepared;
       await validateAssets(client,siteId,assetIds);
-      const inserted = await client.query(`INSERT INTO site_publication_revisions(site_id,space,draft_revision,content,asset_ids)
-        VALUES($1,$2,$3,$4::jsonb,$5::uuid[]) RETURNING *`,[siteId,space,draft.rows[0].revision,JSON.stringify(content),assetIds]);
-      row = inserted.rows[0];
+      const existing = await client.query(`SELECT * FROM site_publication_revisions
+        WHERE site_id=$1 AND space=$2 AND content=$3::jsonb AND asset_ids @> $4::uuid[] AND asset_ids <@ $4::uuid[]
+        ORDER BY (id=$5::uuid) DESC NULLS LAST,published_at DESC,id DESC LIMIT 1`, [siteId,space,JSON.stringify(content),assetIds,pointer.rows[0]?.revision_id ?? null]);
+      if (existing.rowCount) {
+        row = existing.rows[0]; outcome = row.id === pointer.rows[0]?.revision_id ? 'unchanged' : 'reused';
+      } else {
+        const inserted = await client.query(`INSERT INTO site_publication_revisions(site_id,space,draft_revision,content,asset_ids)
+          VALUES($1,$2,$3,$4::jsonb,$5::uuid[]) RETURNING *`,[siteId,space,draft.rows[0].revision,JSON.stringify(content),assetIds]);
+        row = inserted.rows[0]; outcome = 'created';
+      }
+      matchedDraftRevision = draft.rows[0].revision;
     } else {
       const target = await client.query('SELECT * FROM site_publication_revisions WHERE site_id=$1 AND space=$2 AND id=$3',[siteId,space,payload.revisionId]);
       if (!target.rowCount) throw new PublicationError('历史版本不存在',404);
       row=target.rows[0];
       await validateAssets(client,siteId,row.asset_ids);
+      const draft = await client.query('SELECT revision,content FROM site_content_drafts WHERE site_id=$1 AND space=$2 FOR SHARE',[siteId,space]);
+      matchedDraftRevision = matchedRevision(row, draft.rows[0], prepare);
     }
-    await client.query(`INSERT INTO site_publications(site_id,revision_id) VALUES($1,$2)
+    if (row.id !== pointer.rows[0]?.revision_id) await client.query(`INSERT INTO site_publications(site_id,revision_id) VALUES($1,$2)
       ON CONFLICT(site_id) DO UPDATE SET revision_id=EXCLUDED.revision_id`,[siteId,row.id]);
+    await prunePublicationHistory(client, siteId, space);
     await client.query('COMMIT');
-    return summary(row);
+    return summary(row, matchedDraftRevision, outcome);
   } catch(error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }
 }
