@@ -37,3 +37,6 @@
 本机私有证据根目录为 `local-m3/pr35-polaroid-contact-channels-20261009`：最终运行目录 `candidate-final`；保留 `desktop-paper-full.png`、`desktop-night-full.png`、`mobile-390.png`、`mobile-320.png`、`copy-failure-320.png`、`admin-contact.png`、构建／lint日志、`fixture-receipt.json` 和 `final-state.json`。测试期间截图接口曾产生裁切或未加载画面，最终视觉结论使用上述完整页面截图；临时视口已恢复。
 
 日常拍立得当前没有QQ记录，平台字段仍是昵称；部署代码本身不会自动复制Flow的账号或主页链接。是否填写真实渠道及发布内容，留待用户后续指令。真实手机系统的复制菜单、平台App唤起未现场验证。
+# 后续CI矩阵同步（2026-10-10）
+
+Head8fe3df4的四项CI通过，[PostgreSQL浏览器集成](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/37966185233)剩余失败位于模板矩阵的旧高级平台入口：按钮仍存在，但已位于新增的外层兼容区，旧脚本未展开。后续仅修测试，通过真实disclosure选择／保留QR引用，再填写四渠道；当前编辑、保存草稿、公开页面三种呈现及1440／390／320三个视口验证四渠道和安全外链，高级不展示旧邮箱／二维码。基础十一模板的QR比例、加载及布局断言保持，回切基础新增完整数据与QR复核。图集滚动、焦点、灯箱及后台滚动断言不变。13项相关局部测试、语法及ESLint通过，完整新Head CI以PR检查区为准；产品与运行版本未改变。
