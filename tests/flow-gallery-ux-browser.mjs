@@ -816,12 +816,16 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
           const start = performance.now();
           const frame = now => {
             const root = document.querySelector('[data-flow-scene]'), scene = root?.getAttribute('data-flow-scene');
-            const rect = selector => { const r = root?.querySelector(selector)?.getBoundingClientRect(); return r ? { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width } : null; };
-            const tracks = [...(root?.querySelectorAll('[style*="--rail-duration"]') ?? [])].map(track => {
+            // Crossfades keep the aria-hidden outgoing scene before the active
+            // scene in the DOM. Measure the destination from its first frame,
+            // without waiting for the outgoing scene to disappear.
+            const active = root?.querySelector('[data-flow-active-scene]');
+            const rect = selector => { const r = active?.querySelector(selector)?.getBoundingClientRect(); return r ? { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width } : null; };
+            const tracks = [...(active?.querySelectorAll('[style*="--rail-duration"]') ?? [])].map(track => {
               const style = getComputedStyle(track);
               return { y: new DOMMatrixReadOnly(style.transform).m42, delay: style.animationDelay, state: style.animationPlayState };
             });
-            window.__flowUxCapture.samples.push({ ms: now - start, scene, inner: innerWidth, html: document.documentElement.clientWidth, body: document.body.getBoundingClientRect().width, bodyLeft: document.body.getBoundingClientRect().left, overflow: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth), title: rect('h1'), rails: rect('[aria-label="作品速览"]'), tracks });
+            window.__flowUxCapture.samples.push({ ms: now - start, scene, measuredScene: active?.getAttribute('data-flow-active-scene'), outgoingScene: root?.querySelector('[data-flow-exiting]')?.getAttribute('data-flow-exiting') ?? null, inner: innerWidth, html: document.documentElement.clientWidth, body: document.body.getBoundingClientRect().width, bodyLeft: document.body.getBoundingClientRect().left, overflow: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth), title: rect('h1'), rails: rect('[aria-label="作品速览"]'), tracks });
             if (now - start < 700) requestAnimationFrame(frame); else window.__flowUxCapture.done = true;
           };
           requestAnimationFrame(frame);
@@ -831,7 +835,9 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       await publicPage.waitForFunction(() => window.__flowUxCapture?.done);
       const samples = await publicPage.evaluate(() => window.__flowUxCapture.samples);
       const works = samples.filter(row => row.scene === 'works');
+      report.transitions.push({ from, viewport: publicPage.viewportSize(), durationMs: samples.at(-1).ms, samples });
       assert.ok(works.length >= 5 && samples.at(-1).ms >= 700, 'Capture includes multiple first-scene rAF frames across 700ms');
+      assert.ok(works.every(row => row.measuredScene === 'works'), 'Geometry belongs to the active home scene from its first committed frame');
       const spread = values => Math.max(...values) - Math.min(...values);
       for (const key of ['html', 'body', 'bodyLeft']) assert.ok(spread(samples.map(row => row[key])) <= 1, `${from}→works ${key} changed during transition`);
       for (const row of samples) assert.ok(row.overflow <= row.inner + 1, `${from}→works transient horizontal overflow`);
@@ -845,7 +851,6 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       for (let index = 0; index < 2; index++) {
         assert.ok(Math.abs(early.at(-1).tracks[index].y - early[0].tracks[index].y) > 2, 'Both rails move within the first 250ms');
       }
-      report.transitions.push({ from, viewport: publicPage.viewportSize(), durationMs: samples.at(-1).ms, samples });
       await screenshot(publicPage, `public-${from}-return`);
     }
     async function trackMotion(milliseconds = 400) {
