@@ -107,7 +107,10 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
   async function ready(p = page) {
     await p.getByRole('region', { name: '公开发布', exact: true }).waitFor();
     await p.waitForFunction(() => !document.querySelector('fieldset')?.disabled);
-    await p.getByRole('region', { name: '公开发布', exact: true }).getByText(/暂无公开版本|公开：/).waitFor();
+    // The history dialog repeats the public template in a hidden paragraph.
+    // Wait for the loaded primary status, excluding unresolved/loading labels.
+    await p.getByRole('region', { name: '公开发布', exact: true }).locator('span')
+      .filter({ hasText: /^(?:暂无公开版本|(?:当前)?公开：(?!待核对|待确认).+)$/ }).waitFor({ state: 'visible' });
   }
   async function save(space = 'basic', p = page) {
     const pending = p.waitForResponse(response => new URL(response.url()).pathname === draftPath(space) && response.request().method() === 'PUT');

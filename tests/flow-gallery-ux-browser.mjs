@@ -1206,7 +1206,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
       try {
         await b1.goto(`${origin}/${SLUG}/admin/${SPACE}#edit-library`);
         await b1.getByText('本站图库 8 张', { exact: true }).waitFor();
-        const before = { draft: await draft(), publication: await publication() };
+        const before = { draft: await draft(), publication: await publication(), snapshot: await readPublished(runtime.pool, SLUG) };
         assert.equal(await b1root.getAttribute('data-flow-dirty'), 'false');
         // A first group has four existing members: 55 Site assets gives 51
         // eligible photos and a real second picker page under the normal API.
@@ -1324,7 +1324,17 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         assert.deepEqual(saved.content.groups[0].assetIds, [...group.assetIds, second, first]);
         assert.deepEqual(saved.content.groups.slice(1), before.draft.content.groups.slice(1));
         assert.deepEqual(await draft(), saved);
-        assert.deepEqual(await publication(), before.publication, 'Save-only preserves the complete existing Published record');
+        assert.deepEqual(await readPublished(runtime.pool, SLUG), before.snapshot, 'Save-only preserves the complete existing Published snapshot, content and asset references');
+        // Draft-match metadata is derived from the current saved draft, not a
+        // field stored in the immutable Published record. Added members make
+        // this space unmatched; every persisted history field must stay equal.
+        assert.equal(before.publication.current.matchedDraftRevision, before.draft.revision);
+        const unmatched = row => row?.space === SPACE ? { ...row, matchedDraftRevision: null } : row;
+        assert.deepEqual(await publication(), {
+          ...before.publication,
+          current: unmatched(before.publication.current),
+          history: before.publication.history.map(unmatched),
+        }, 'Only computed draft-match metadata changes after save-only; pointer and complete history stay equal');
         // Changing only this route's hash retains the current editing session.
         // A real reload mounts a new session and must discard transient lookup.
         await b1.reload();
