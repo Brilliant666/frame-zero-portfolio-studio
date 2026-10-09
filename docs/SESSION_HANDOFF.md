@@ -1,5 +1,57 @@
 # 会话交接
 
+## 提交交接（2026-10-10）
+
+用户授权推送现有PR35，本次纳入此前四渠道、顶部发布区修正和历史去重实现／验收文档。基线d6964ec之后的最终Head与五项CI请现场查询PR35，不能用旧Head成功替代。PR保持OPEN+DRAFT；本次不部署、不迁移、不保存发布或合并。日常运行仍为下节已验收的 `EgQnDSFrm2zmO7f2EMfPn`；提交后不因Git Head变化重建日常版本。
+
+## 最新：发布历史去重版日常3001（2026-10-10）
+
+用户已确认可重启。当前3001 PID56856仅本轮快照，cwd `local-m3/pr35-publication-retention-daily-20261010/release`，BUILD_ID `EgQnDSFrm2zmO7f2EMfPn`。从已验收3004原样复制，35080文件集合／长度／时间、1441关键哈希一致；沿用Node24、原 `credentials/accounts.env` 和 `scripts/start-local-accounts.mjs --daily`。登录／公开页200、12运行资源匹配，浏览器只读确认草稿已保存、无待发布改动、11条历史。六表／135素材元信息／配置前后MATCH。
+
+0006迁移已在上一轮安装，本轮只读确认，不重跑迁移或清理。旧 `pr35-polaroid-contact-channels-daily-20261009/release`（BUILD_ID `8S-kdoN9WnG-nT2iOvjgs`）保留；应用回退只换cwd，沿用原配置，先现场核对→停止→确认退出→隐藏启动→独立健康检查，不回灌数据库。3003、3004与两PG保持。私有交接已备份更新；新daily父目录保留验证收据及 `browser-status.png`。本轮未提交／推送／合并。
+
+## 最新：发布历史保留策略与限定清理（2026-10-10）
+
+详见[实施记录](design/PR35_PUBLICATION_HISTORY_RETENTION.md)。当前3004 cwd `local-m3/pr35-publication-retention-20261010/candidate`，BUILD_ID `EgQnDSFrm2zmO7f2EMfPn`，PID61808仅本次快照；旧r4保留。沿用原隔离启动配置与PG55436，fixture `polaroidheadermv0wnz73` 最终草稿v4、公开原v2、历史2条，内容一致。浏览器已验证重复发布、回退不覆盖草稿及复用原快照。
+
+用户明确允许清理现有历史：先完整dump／精确删除计划，后在PG55434及55436安装0006兼容DDL，再仅清理daily star21→11及本fixture4→2。日常当前Published、所有草稿、其他Site及素材保持；隔离浏览器写入仅本fixture草稿revision4。私有证据根 `local-m3/pr35-publication-retention-ops-20261010`，含备份、删除行清单、迁移／清理结果及 `final-browser-verification.json`。私有SESSION_HANDOFF.local.md已更新并保留修改前副本，不含凭据。不要重新执行旧删除计划或回灌数据库。
+
+3001仍运行 `pr35-polaroid-contact-channels-daily-20261009/release`，BUILD_ID `8S-kdoN9WnG-nT2iOvjgs`，PID29084；3003及两PG保持。本轮只做获授权历史清理，没有部署新3001应用。旧应用可能再次创建重复记录；新策略须在后续获授权切换后持续生效。任何启停先重新核对PID、路径和版本。工作区HEAD仍d6964ec，本轮及此前修改均未提交；PR35保持OPEN+DRAFT。
+
+## 最新：公开主页入口对齐r4（2026-10-09）
+
+3004 cwd `local-m3/pr35-polaroid-header-20261009/candidate-r4`，BUILD_ID `-HrsUPNwoqMWxpUCouH3_`，PID49948仅本轮快照；原启动配置、隔离数据库、fixture及旧构建保持。仅publication-controls.module.css修正compactTools文字居中，桌面和窄屏复核见link-alignment-*私有证据。3001／3003／两PG未动，无保存发布或迁移，未提交推送。后续先现场核对PID，不直接沿用快照。
+
+## 最新：短内容分区顶部对齐候选r3（2026-10-09）
+
+3004当前cwd `local-m3/pr35-polaroid-header-20261009/candidate-r3`，BUILD_ID `is8zuik9ToTGKVUt2GhnC`，PID61408仅本轮快照。仅premium正文CSS新增margin-block:0与align-self:start的等效规则，修复图集／套餐垂直居中；浏览器五区四视口通过，截图见私有root alignment-*。沿用r2相同隔离配置与启动方式，旧构建保留，fixture仍草稿v2／公开v2／历史4条，无业务写入。3001PID29084、3003PID9440及两PG不动。后续先现场核对，不根据旧PID直接操作；本轮未提交／推送或部署3001。
+
+## 最新：拍立得顶部发布区候选（2026-10-09）
+
+本轮仅候选实现，详情见[验收记录](design/PR35_POLAROID_PUBLICATION_HEADER.md)。工作区仍为 `review/impeccable-interface-assessment`，HEAD `d6964ec`，保留四渠道未提交修改。本轮新代码亦未提交／推送；后续不要直接覆盖3001。
+
+3004最终cwd为 `local-m3/pr35-polaroid-header-20261009/candidate-r2`，BUILD_ID `g6A8cu9OgEIxFKJXfQP69`，PID43980仅本次快照；原candidate保留。Node24沿用 `pr34-flow-admin-full-20261001/.env.full.local`，运行 `scripts/start-local-accounts.mjs --test`，隔离PG55436保持。匿名验收入口 `/polaroidheadermv0wnz73/admin/premium-polaroid#edit-library`，草稿／公开v2，历史4条；旧六表原行指纹MATCH。登录材料、截图及构建清单位于本轮私有父目录，不提交凭据。浏览器登录cookie仅作用于该fixture路径与该fixture API路径，未替换日常登录。
+
+日常3001 PID29084仍运行下述四渠道构建，3003 PID9440、PG55434 PID34532、PG55436 PID39232保持。本轮不迁移、不改日常草稿／Published／照片。后续操作先现场核对PID与路径，不沿用本次PID直接启停。
+
+## 最新：高级拍立得四渠道日常3001（2026-10-09）
+
+用户确认未保存编辑已处理后，停止核实过的原3001 PID42456，单独确认退出及端口释放，再隐藏启动新release。当前3001 PID29084为本次快照；cwd `local-m3/pr35-polaroid-contact-channels-daily-20261009/release`，BUILD_ID `8S-kdoN9WnG-nT2iOvjgs`。使用原Node24和 `--env-file=<local-m3>/credentials/accounts.env scripts/start-local-accounts.mjs --daily`，新目录保留独立日志。
+
+35073文件双向集合／长度／时间MATCH，1438关键SHA256一致，无私照、env或隔离数据复制。登录／公开页200，12项运行资产哈希一致。六表、135素材元信息与配置前后MATCH；浏览器实际显示原Wechat和两个平台昵称，未填QQ隐藏，二维码区已移除。3003 PID9440、3004 PID49300、PG55434 PID34532和PG55436 PID39232保持；后续先现场复核，不沿用PID直接操作。
+
+回退只将cwd换回 `local-m3/pr35-flow-contact-icons-small-daily-20261009/release`（BUILD_ID `oHABQTaKO8PhJXSg0-a-N`），沿用原配置及daily参数，按核对→停止→确认退出→启动→独立健康检查执行。不回灌数据库或覆盖后续编辑。本轮无迁移、保存发布、提交推送或合并。私有旧SESSION_HANDOFF.local.md已只读核对但仍过时，以本段与现场为准。证据位于新daily父目录：release-manifest、file-set-verification、http-check、protected-before/result及after-booking.png。
+
+## 最新：高级拍立得四渠道候选（2026-10-09）
+
+当前工作区基线 `d6964ec`，本轮修改尚未提交。详见[实施记录](design/PR35_POLAROID_CONTACT_CHANNELS.md)。最终3004目录为 `local-m3/pr35-polaroid-contact-channels-20261009/candidate-final`，BUILD_ID `8S-kdoN9WnG-nT2iOvjgs`；初版candidate及旧构建均保留。44项相关测试、正常build含类型与全lint通过，672输入MATCH。
+
+3004 PID49300、隔离PG55436 PID39232仅为本轮快照。PG使用 `local-m3/pr34-flow-admin-full-20261001/pgdata`，原pgsql程序及55436；应用沿用该目录 `.env.full.local` 与Node24，参数 `scripts/start-local-accounts.mjs --test`，cwd为本轮candidate-final，隐藏启动。后续先现场复核，分步操作，不使用旧premium-reference-proof数据库目录，不初始化或迁移。
+
+仅新建匿名 `polaroidcontactsmv0vcbed` 一站及两份匿名素材，旧隔离六表行指纹保持。API保存发布v1后，浏览器QQ编辑仅保存为草稿v2；公开v1仍显示旧QQ，两个二维码引用与旧邮箱保留。fixture登录材料留在本轮私有目录，勿提交或输出。前台可从 `/polaroidcontactsmv0vcbed#polaroid-booking` 验收，后台同站点 `/admin/premium-polaroid#edit-contact`。
+
+日常3001 PID42456、3003 PID9440、PG55434 PID34532未变；没有日常业务写入或应用替换。浏览器临时视口与剪贴板测试覆盖已清除。等待用户验收，不自动部署、填充真实渠道或发布；PR保持Draft，本轮未提交／推送。
+
 ## 提交交接（2026-10-09）
 
 用户要求将当前成果提交到PR35。本次包含基础配色与灯箱、Flow套餐首屏适配、滚轮持续输入修正、联系卡图标及对应测试／来源／验收文档。提交前53项相关回归通过，正常独立build含类型与lint已通过。只推送当前分支，保持OPEN+DRAFT，不合并、不切换运行实例；真实数据与本机截图不入库。远端最新提交及五项CI以PR检查为准；下方“未提交”语句为各轮当时状态，不能作为本次提交后的状态。

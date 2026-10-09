@@ -19,6 +19,7 @@
     { "idx": 2, "version": "7", "when": 1790500000000, "tag": "0002_site_assets", "breakpoints": true },
     { "idx": 3, "version": "7", "when": 1790600000000, "tag": "0003_site_publications", "breakpoints": true },
     { "idx": 4, "version": "7", "when": 1790700000000, "tag": "0004_basic_publications", "breakpoints": true },
-    { "idx": 5, "version": "7", "when": 1790800000000, "tag": "0005_flow_gallery_space", "breakpoints": true }
+    { "idx": 5, "version": "7", "when": 1790800000000, "tag": "0005_flow_gallery_space", "breakpoints": true },
+    { "idx": 6, "version": "7", "when": 1791590400000, "tag": "0006_publication_history_retention", "breakpoints": true }
   ]
 }

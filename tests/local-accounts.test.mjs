@@ -122,6 +122,10 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1800000 },
     const { flowGalleryDatabaseIntegration } = await import('./flow-gallery-database-integration.mjs');
     await flowGalleryDatabaseIntegration({ runtime });
   });
+  await t.test('publication retention keeps distinct recovery points and protects current content', async () => {
+    const { publicationRetentionDatabaseIntegration } = await import('./publication-retention-database-integration.mjs');
+    await publicationRetentionDatabaseIntegration({ runtime });
+  });
   await t.test('concurrent provision is idempotent; conflicts cannot overwrite', async () => {
     const outcomes = await Promise.all([provisionAccount(runtime, input('fixturealpha', true)), provisionAccount(runtime, input('FIXTUREALPHA', true))]);
     assert.deepEqual(outcomes.map(o => o.status).sort(), ['ALREADY_EXISTS', 'CREATED']);

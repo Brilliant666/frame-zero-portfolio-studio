@@ -43,6 +43,7 @@ function fakeTransaction({ grants = [], owner = true, pointer = null, draftRevis
     if (sql.includes('FROM site_content_drafts')) return { rowCount: 1, rows: [{ revision: draftRevision, content: row.content }] };
     if (sql.includes('FROM site_assets')) return { rowCount: 0, rows: [] };
     if (sql.startsWith('INSERT INTO site_publication_revisions')) return { rowCount: 1, rows: [row] };
+    if (sql.includes('content=$3::jsonb')) return { rowCount: 0, rows: [] };
     if (sql.includes('FROM site_publication_revisions')) return { rowCount: targetSpace === values[1] ? 1 : 0, rows: [{ ...row, asset_ids: [] }] };
     return { rows: [] };
   }, release() { released = true; } };

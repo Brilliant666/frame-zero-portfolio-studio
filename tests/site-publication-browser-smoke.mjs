@@ -122,7 +122,7 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
     await publicationRegion().getByRole('button', { name: '保存并发布', exact: true }).click();
     const response = await pending; assert.equal(response.status(), 200);
     const value = (await bounded(response.json(), `${space} publication JSON`)).publication;
-    await publicationRegion().getByRole('status').filter({ hasText: '发布成功' }).waitFor();
+    await publicationRegion().getByRole('status').filter({ hasText: value.outcome === 'unchanged' ? '当前内容已发布' : '发布成功' }).waitFor();
     return value;
   }
   async function template(id) {
@@ -222,7 +222,7 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
       await page.getByLabel('摄影师名称', { exact: true }).fill('Premium publication fixture');
       const saved = await save('premium-polaroid'); assert.equal(saved.revision, 1);
       assert.equal(await publicationRegion().getByText('已同步', { exact: true }).count(), 0);
-      await publicationRegion().getByText('当前编辑尚未发布', { exact: true }).waitFor();
+      await publicationRegion().getByText('草稿尚未发布', { exact: true }).waitFor();
       assert.equal((await publication()).current.id, firstBasic.id);
       await page.goto(`${origin}${basic}/profile`); await ready();
     });
@@ -237,7 +237,8 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
       await page.goto(`${origin}${basic}/profile`); await ready();
       await publish(); assert.deepEqual(await draft('premium-polaroid'), premiumBefore);
       await publicationRegion().locator('summary').filter({ hasText: /^发布历史与回退 / }).click();
-      const previous = publicationRegion().locator('li').filter({ hasText: '基础版 · 明亮电影感 · v1' });
+      const previous = publicationRegion().locator(`li[data-publication-id="${firstBasic.id}"]`);
+      assert.match(await previous.textContent(), /基础版 · 明亮电影感/);
       const response = page.waitForResponse(r => new URL(r.url()).pathname === publicationPath('basic') && r.request().method() === 'POST');
       await previous.getByRole('button', { name: '恢复此公开版本', exact: true }).click();
       assert.equal((await response).status(), 200);

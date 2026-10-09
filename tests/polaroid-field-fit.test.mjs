@@ -474,7 +474,7 @@ test("contact Admin keeps WeChat, Email, and note while normalizing safe platfor
   assert.ok(!siteContentType.includes("url:"));
 });
 
-test("polaroid contact renders WeChat and Email while delegating uploaded cards to the shared renderer", async () => {
+test("basic polaroid retains WeChat, Email and uploaded cards; premium uses independent grouped channels", async () => {
   const [template, platformAccounts] = await Promise.all([
     fs.readFile(new URL("../app/templates/polaroid-field/template.tsx", import.meta.url), "utf8"),
     fs.readFile(new URL("../app/templates/shared/platform-accounts.tsx", import.meta.url), "utf8"),
@@ -489,6 +489,8 @@ test("polaroid contact renders WeChat and Email while delegating uploaded cards 
   assert.ok(!template.includes("polaroid-qq"));
   assert.ok(!template.includes("QQ / 点击复制"));
   assert.ok(template.includes('import PlatformAccounts from "../shared/platform-accounts"'));
+  assert.ok(template.includes('collectionWorkspace ? <PolaroidBookingContacts contact={content.contact} social={content.social} /> : <>'));
+  assert.ok(template.includes('!collectionWorkspace && (Navigation ? <PlatformAccounts'));
   assert.ok(template.includes('<PlatformAccounts accounts={content.social} tone="dark" />'));
   assert.ok(!template.includes("content.social.map"));
   assert.ok(!template.includes("SocialQrCode"));
