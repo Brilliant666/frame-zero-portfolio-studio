@@ -528,6 +528,56 @@ dialog[data-template-real-preview] main[data-template]:is(
   background: linear-gradient(var(--acid), transparent);
 }
 
+/* Cinematic's photo scene shares the warm paper of its surrounding interface.
+   The image, crop and composition stay intact; the veil supports dark copy. */
+.site-shell[data-template="cinematic-light"] .hero {
+  background: #f8f5f0;
+  color: #19130f;
+}
+
+.site-shell[data-template="cinematic-light"] .hero-vignette {
+  background:
+    linear-gradient(0deg, #f8f5f0 0%, rgba(248,245,240,.97) 16%, rgba(248,245,240,.86) 39%, rgba(248,245,240,.24) 58%, transparent 72%),
+    linear-gradient(90deg, rgba(248,245,240,.42), transparent 62%),
+    linear-gradient(180deg, rgba(248,245,240,.78), transparent 19%);
+}
+
+.site-shell[data-template="cinematic-light"] .hero-grid {
+  background-image:
+    linear-gradient(rgba(44,30,20,.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(44,30,20,.12) 1px, transparent 1px);
+}
+
+.site-shell[data-template="cinematic-light"] .hero .eyebrow,
+.site-shell[data-template="cinematic-light"] .hero .hud-top-left span:first-child,
+.site-shell[data-template="cinematic-light"] .hero-index strong {
+  color: #a94208;
+}
+
+.site-shell[data-template="cinematic-light"] .hero .glitch {
+  text-shadow: .05em 0 rgba(255,107,0,.22), -.035em 0 rgba(255,176,0,.18);
+}
+
+.site-shell[data-template="cinematic-light"] .hero .action-ghost {
+  border-color: rgba(44,30,20,.38);
+  background: rgba(248,245,240,.52);
+}
+
+.site-shell[data-template="cinematic-light"] .hero .action-ghost:hover,
+.site-shell[data-template="cinematic-light"] .hero .action-ghost:focus-visible {
+  border-color: #a94208;
+  color: #a94208;
+  background: #fffaf2;
+}
+
+@media (max-width: 900px) {
+  .site-shell[data-template="cinematic-light"] .hero-vignette {
+    background:
+      linear-gradient(0deg, #f8f5f0 0%, rgba(248,245,240,.97) 21%, rgba(248,245,240,.88) 39%, rgba(248,245,240,.3) 57%, transparent 73%),
+      linear-gradient(180deg, rgba(248,245,240,.82), transparent 23%);
+  }
+}
+
 .signal-strip {
   overflow: hidden;
   border-top: 1px solid var(--acid);

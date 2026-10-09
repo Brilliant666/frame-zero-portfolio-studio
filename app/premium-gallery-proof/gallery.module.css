@@ -69,6 +69,17 @@
 .contactCopy:disabled{cursor:wait;opacity:.7}
 .contactCopyFeedback{font-size:12px;line-height:1.6;color:#fff;text-shadow:0 1px 4px #00000080}
 .contactCopyFeedback:empty{display:none}
+.contactCardWithIcon{display:grid;grid-template-columns:minmax(0,1fr) 44px;align-items:center;gap:16px}
+.contactDetails{min-width:0}
+.contactPlatformIcon{display:grid;place-items:center;width:44px;height:44px;border-radius:10px;border:1px solid #ffffff38;color:#fff;pointer-events:none;user-select:none}
+.contactPlatformIcon svg{display:block;width:68%;height:68%;fill:currentColor}
+.contactPlatformIcon[data-platform="douyin"]{background:#161719}
+.contactPlatformIcon[data-platform="xiaohongshu"]{background:#ff2442}
+.contactPlatformIcon[data-platform="xiaohongshu"] svg{width:84%;height:84%}
+.contactPlatformIcon[data-platform="qq"]{background:#168dd8}
+.contactPlatformIcon[data-platform="wechat"]{background:#20b96c}
+@media(max-width:700px){.contactCardWithIcon{grid-template-columns:minmax(0,1fr) 36px;gap:12px}.contactPlatformIcon{width:36px;height:36px;border-radius:9px}}
+@media(max-width:560px){.contactCards{grid-template-columns:minmax(0,1fr)}.contactCards article{min-height:112px;padding:20px}.contactCards h2{font-size:13px}}
 .rails.singleRail{grid-template-columns:minmax(0,1fr);gap:0;justify-items:center}
 .singleRail .rail{width:min(100%,500px)}
 @media(max-width:700px){.singleRail .rail{width:min(100%,300px)}}
@@ -92,7 +103,26 @@
 /* Keep the transparent price surface without a redundant backdrop-filter inside
    the opacity-animated scroller. The fixed navigation retains its own glass. */
 .pricePanel{backdrop-filter:none}
+/* Short pricing copy should not scroll just to fill a minimum-height panel.
+   Keep the outer glass frame and let longer copy use the existing scene scroller. */
+@media(min-width:701px){
+  .pricePanel{min-height:0;margin-bottom:24px}
+}
+/* Compact spacing on shorter desktop viewports, without shrinking body copy. */
+@media(min-width:1001px) and (max-height:800px){
+  .pricePanel{margin-top:94px;margin-bottom:16px;padding:24px 36px}
+  .pricePanel h1{font-size:48px;margin-bottom:16px}
+  .packages{margin-top:24px}
+  .packages article{padding:18px}
+  .packages h2{margin-bottom:8px}
+  .packages .price{margin-bottom:14px}
+  .packages article>p:not(.price){margin-bottom:12px}
+}
 /* Long scenes scroll above the fixed progress controls, never beneath them. */
+.sceneEnter{animation:enter .42s cubic-bezier(.22,1,.36,1) both}
+.sceneExit{position:absolute;inset:0 0 auto;pointer-events:none;animation:sceneLeave .42s cubic-bezier(.22,1,.36,1) both}
+@keyframes sceneLeave{from{opacity:1}to{opacity:0}}
+@media(prefers-reduced-motion:reduce){.sceneEnter,.sceneExit{animation:none}}
 .root[data-flow-scene="pricing"] .scene,.root[data-flow-scene="contact"] .scene{height:calc(var(--gallery-viewport-height,100svh) - 80px)}
 @media(max-width:700px){.root[data-flow-scene="pricing"] .scene,.root[data-flow-scene="contact"] .scene{height:calc(var(--gallery-viewport-height,100svh) - 100px)}}
 @media(min-width:701px){

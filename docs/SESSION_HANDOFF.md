@@ -1,5 +1,75 @@
 # 会话交接
 
+## 提交交接（2026-10-09）
+
+用户要求将当前成果提交到PR35。本次包含基础配色与灯箱、Flow套餐首屏适配、滚轮持续输入修正、联系卡图标及对应测试／来源／验收文档。提交前53项相关回归通过，正常独立build含类型与lint已通过。只推送当前分支，保持OPEN+DRAFT，不合并、不切换运行实例；真实数据与本机截图不入库。远端最新提交及五项CI以PR检查为准；下方“未提交”语句为各轮当时状态，不能作为本次提交后的状态。
+
+## 最新：联系卡较小图标版日常3001（2026-10-09）
+
+用户授权更新3001，浏览器现场仅有公开页面。新日常目录 `local-m3/pr35-flow-contact-icons-small-daily-20261009/release`，BUILD_ID `oHABQTaKO8PhJXSg0-a-N`，由已验收candidate原样复制，未重建。35070文件长度／时间和1435关键SHA256匹配；pg/sharp已物化，release无重解析点或业务数据。旧3001 PID29008确认退出、端口释放后隐藏启动，新PID42456；3003 PID9440、PG55434 PID34532保持（均仅本次快照）。
+
+启动沿用原Node24，cwd为新release，参数 `--env-file=<local-m3>/credentials/accounts.env scripts/start-local-accounts.mjs --daily`。需要回退时只将cwd换回 `local-m3/pr35-flow-wheel-stall-daily-20261009/release`，旧BUILD_ID `C1-lkhfCa1W5CCdW-e_lz`；先重新核对PID与端口，按核对→停止→确认退出→隐藏启动→独立健康检查操作。不回灌数据库，不覆盖后续编辑。
+
+登录／公开页200，12项运行JS/CSS哈希一致；桌面1107×892浏览器确认四图标44px、原文和新标签外链不变、无溢出与warn/error。六张业务表、135素材元信息和配置前后MATCH，5草稿、1Published保持。证据与before/after-contact.jpg在新daily父目录。未迁移、保存、发布、提交、推送或合并。旧私有SESSION_HANDOFF.local.md已只读核对但未包含当前版本，以本段及现场为准。
+
+## 最新：较小联系卡图标候选3003（2026-10-09）
+
+3003更新为 `local-m3/pr35-flow-contact-icons-small-20261009/candidate`，BUILD_ID `oHABQTaKO8PhJXSg0-a-N`，桌面44px／手机36px。独立构建含类型与lint通过；原36948退出并确认端口释放后，沿用原Node24、accounts.env及无daily/test参数的runner隐藏启动，新PID9440（仅本次快照）。登录／公开页200，3001 PID29008及PG55434 PID34532保持。旧图标候选目录保留；本轮未操作后台、业务数据或发布。新父目录保留同视口before/after-desktop.jpg、390/320截图及responsive.json。浏览器临时样式已通过重载清除，正式CSS实测一致。未提交、推送、合并或切换3001。
+
+## 最新：Flow联系卡图标候选3003（2026-10-09）
+
+候选目录 `local-m3/pr35-flow-contact-icons-20261009/candidate`，BUILD_ID `YgMmPMzg2TC1sM9bzVnEF`。在确认3003空闲后，使用原Node24、`credentials/accounts.env` 与 `scripts/start-local-accounts.mjs`（无daily/test参数）隐藏启动。PID36948仅为本次快照；原3001 PID29008／PG55434 PID34532保持，后续先现场复核。未切换3001、迁移、保存、发布或提交。该候选只读展示日常公开内容，测试长账号与复制失败仅修改验收标签环境，已重载清除，剪贴板已恢复。
+
+667冻结输入MATCH，27相关测试及正常build／类型／lint通过。六表、135素材文件元信息、配置前后MATCH，5份草稿、1个Published保持。前后截图、上游原始SVG、构建日志与交互结果只在新候选父目录；公开来源和测试限制见[实施记录](design/PR35_FLOW_CONTACT_ICONS.md)。旧候选和日常release保留。等待用户确认，不自动部署日常或合并PR。
+
+## 最新：滚轮修正版日常3001（2026-10-09）
+
+用户授权“更新到3001”。现场两应用及日常PG均停止，没有要中断的日常实例。新日常目录 `local-m3/pr35-flow-wheel-stall-daily-20261009/release`，BUILD_ID `C1-lkhfCa1W5CCdW-e_lz`，由已验收candidate原样复制、未重建。3001 PID29008、PG55434 PID34532为本轮快照；3003保持停止。每次服务操作必须先复核，不能沿用PID。
+
+启动：原Node24，cwd为新release，参数 `--env-file=<local-m3>/credentials/accounts.env scripts/start-local-accounts.mjs --daily`，Start-Process Hidden、独立日志。PG使用原 `<local-m3>/data` 与原配置127.0.0.1:55434；首次以Start-Process -Wait等待pg_ctl时，等待未返回，取消等待连带结束PG；随后确认停止，用独立Start-Process加仅等待pg_ctl本身的WaitForExit正常启动。日志保留，未初始化、迁移或回灌数据库，应用启动前才建立保护快照。
+
+回退仅将应用cwd换回 `local-m3/pr35-flow-pricing-fit-daily-20261008/release`，旧BUILD_ID `oMxEyaIQ9qW40pC_JRU35`；沿用相同日常配置和daily参数，按核对→停止本人应用→确认退出→隐藏启动→独立健康检查执行。勿恢复数据库覆盖后续编辑。
+
+新daily父目录保留release-manifest、关键哈希、构建文件集合、HTTP资产比对、browser-smoke与保护摘要。六表、135素材文件元信息、配置MATCH；5份草稿与1个Published保持。未提交／推送／合并，旧私有SESSION_HANDOFF.local.md仍可能过时，以本段和现场为准。
+
+## 最新：持续快速滚动修正版已更新3003（2026-10-09）
+
+用户确认3003未保存编辑已处理后，旧PID39588退出、端口释放，再从 `local-m3/pr35-flow-wheel-stall-20261009/candidate` 隐藏启动新候选。BUILD_ID `C1-lkhfCa1W5CCdW-e_lz`，沿用Node24、原 `credentials/accounts.env` 与 `scripts/start-local-accounts.mjs`；登录／公开页HTTP200。3003 PID52636、3001 PID46252、PG55434 PID29020是本轮快照，后续操作先现场核对。3001和PG未重启；未写业务数据、迁移、发布、提交、推送或合并。
+
+原3003目录 `local-m3/pr35-flow-wheel-20261008/candidate` 和构建 `3qrnqR1nFBCdzNiM1b43s` 保留；需要回退时仅按正常服务流程切回旧应用目录，勿回灌数据库。新目录父级保留build/lint日志、662项冻结输入清单、复现与压力测试JSON和私人截图，不入公开仓库。实现与测试限制见[追加记录](design/PR35_FLOW_WHEEL_IMPLEMENTATION.md#持续快速切换修正2026-10-09)。等待用户实际鼠标体验，不自动替换3001。
+
+## 最新：Flow滚轮与转场候选等待用户体验
+
+先读[本轮实现与验证](design/PR35_FLOW_WHEEL_IMPLEMENTATION.md)。3003独立目录 `local-m3/pr35-flow-wheel-20261008/candidate`，BUILD_ID `3qrnqR1nFBCdzNiM1b43s`。沿用Node24、原credentials/accounts.env、`scripts/start-local-accounts.mjs`（无daily/test参数）；3003 PID39588仅为本次快照。原3001 PID46252／PG55434 PID29020保持，后续必须重新核对。首轮构建日志保留为initial，实际运行是含sceneInitialized修正的最终构建。候选只读访问日常公开数据，长内容测试仅临时DOM且已重载清除。未更新日常、迁移、保存、发布、提交或推送；不得把用户授权修复视为部署3001授权。
+
+## 最新：套餐首屏修正版已更新日常3001（2026-10-08）
+
+用户要求替换并确认已处理未保存编辑。新日常目录 `local-m3/pr35-flow-pricing-fit-daily-20261008/release`，BUILD_ID `oMxEyaIQ9qW40pC_JRU35`。使用原Node24、credentials/accounts.env与 `scripts/start-local-accounts.mjs --daily` 隐藏启动；3001 PID32456、3003 PID35368、PG55434 PID20752仅为本次快照，后续必须现场核对。原3001 PID19980已退出后才启动新版。
+
+旧日常 `local-m3/pr35-basic-palette-daily-20261007/release`、BUILD_ID `4KIcZdT3vpgQln4NxohHT` 保留。回退只将应用cwd改回该路径，沿用相同参数，依次核对→停止→确认退出→隐藏启动→独立健康检查；不恢复数据库、不改后来编辑。复制35055文件、1432项关键文件SHA256一致，构建server/static文件集合一致；运行CSS与新release一致，套餐页现场复核通过。六表、135素材元信息及配置前后MATCH。私有证据在 `local-m3/pr35-flow-pricing-fit-20261008/cutover` 和新daily父目录。旧私有交接仍过时；以本段及现场为准。本轮未提交／推送／合并，不构成下一次切换授权。
+
+## 最新：Flow 拍摄套餐首屏候选（2026-10-08）
+
+见[实施及验收记录](design/PR35_FLOW_PRICING_FIT.md)。3003 从约定 `local-m3/pr35-flow-pricing-fit-20261008/candidate` 运行，BUILD_ID `oMxEyaIQ9qW40pC_JRU35`；沿用本机 Node24、原 credentials/accounts.env 与 `scripts/start-local-accounts.mjs`（无 daily/test 参数）。候选只读验收当前公开套餐，未写业务数据。3001 仍为下述基础配色日常版；本轮没有切换日常应用。后续先复核现场端口和路径，不沿用历史 PID。当前停在用户查看 3003 视觉效果；尚未提交／推送，本轮无新增日常部署授权。
+
+## 最新：用户确认后已更新日常3001（2026-10-07）
+
+新日常路径为约定 `local-m3/pr35-basic-palette-daily-20261007/release`，BUILD_ID `4KIcZdT3vpgQln4NxohHT`，与3004一致。启动时原3001/PG55434已停，按既有data目录启动原日常PG，再使用原credentials/accounts.env与 `scripts/start-local-accounts.mjs --daily` 启动新release。3001 PID103760、PG55434 PID101296为当时快照，后续先现场核对。3004 PID95964和隔离PG55436 PID83772保持。
+
+恢复只将应用工作目录改回 `local-m3/pr35-flow-contact-tabs-20261007/release`（BUILD_ID `hfHktDwyj1CsVa1PpEQhY`），沿用原Node与日常参数，不回灌/迁移DB。每次按核对→停止→确认退出→隐藏启动→独立健康检查。六表、5份草稿、1个Published、135素材文件元信息与日常配置MATCH。私有证据在新daily目录；旧SESSION_HANDOFF.local.md前轮写入被拒绝仍过时，勿用其旧PID和路径直接操作。本轮无提交/推送/合并；不构成下一次部署授权。
+
+## 最新：基础配色候选已完成（2026-10-07）
+
+先读[实施与验收记录](design/PR35_BASIC_PALETTE_IMPLEMENTATION.md)。用户已确认前轮A／B方向；电影暖白承载、胶片浅棕片基、十一套基础灯箱材质已实现，Flow与高级拍立得边界保留。88候选分区、34对主要状态（其中2对采用前轮有效基线）、相关168测试、lint、类型、构建已完成；截图限制与既有其他排版缺口均在报告中。
+
+3004为本轮独立候选，BUILD_ID `4KIcZdT3vpgQln4NxohHT`，路径约定local-m3/pr35-basic-palette-impl-20261007/candidate。旧candidate-r3保留，隔离PG55436六表及11样本MATCH；3001／日常PG保持停止，未改草稿／Published。PR35仍OPEN+DRAFT、Head8b9d8bc，工作区有本轮未提交修改，保护这些文件。当前Head五项CI通过属于原提交。本轮不自动提交／部署／合并或继续后台。私有运维交接更新被自动审批以策略阻止拒绝，未更新；其中3004路径可能过时，以本段及现场核对为准。NEXT = WAITING_FOR_BASIC_PALETTE_ACCEPTANCE。
+
+## 最新：十一套基础配色只读复核（2026-10-07）
+
+见[逐套复核与实施建议](design/PR35_BASIC_PALETTE_REVIEW.md)。当前每套固定主基调，八浅三深；建议调整电影首屏明暗衔接、胶片整条深色片基、棱镜／档案灯箱色温。其余已观察分区一致的模板保留；展厅窄深框有现场材质依据，不列必改。
+
+3004仍为既有中文排版候选，未构建、切换或写入测试数据；3001／日常PG未启动。私有证据目录为约定 local-m3/pr35-basic-palette-review-20261007，含双视口分区拼图及灯箱。只有文档修改，未提交／推送。等待用户确认报告A／B视觉方向后才实施，不自动继续其他后台或Flow切片。PR35保持OPEN+DRAFT，基线8b9d8bc。
+
 ## 最新：基础中文排版候选（2026-10-07）
 
 用户确认补评第8节第一切片，已完成五模板局部展示文字调整。先读[本轮实现与验收](design/PR35_BASIC_CHINESE_TYPOGRAPHY.md)；英文、照片、各模板身份与 Flow 成果保持。基线 cf75ad0，新增输入与构建一致；标题／渲染检查、lint、类型、普通构建通过，最新远端 CI 只认最终 Head。

@@ -4,6 +4,8 @@
 
 import { useEffect, useRef, useState, type RefObject } from "react";
 import type { Work } from "../../site-config";
+import type { TemplateId } from "../catalog";
+import styles from "./lightbox.module.css";
 
 type LightboxProps = {
   work: Work;
@@ -15,12 +17,14 @@ type LightboxProps = {
   theme?: "light" | "dark";
   /** Appearance is independent of the existing photo-information presentation. */
   appearance?: "light" | "dark";
+  /** Only basic-template entry points opt into template-specific materials. */
+  basicTemplate?: TemplateId;
   safeMissingImage?: boolean;
   separateControls?: boolean;
   motionOrigin?: { left: number; top: number; width: number; height: number } | null;
 };
 
-export default function Lightbox({ work, works, frameRef, closeButtonRef, onMove, onClose, theme = "dark", appearance = theme, safeMissingImage = false, separateControls = false, motionOrigin }: LightboxProps) {
+export default function Lightbox({ work, works, frameRef, closeButtonRef, onMove, onClose, theme = "dark", appearance = theme, basicTemplate, safeMissingImage = false, separateControls = false, motionOrigin }: LightboxProps) {
   const [unavailable, setUnavailable] = useState<string[]>([]);
   const photoRef = useRef<HTMLDivElement>(null), entered = useRef(false);
   useEffect(() => {
@@ -35,7 +39,8 @@ export default function Lightbox({ work, works, frameRef, closeButtonRef, onMove
   return (
     <div
       ref={frameRef}
-      className={`lightbox ${appearance === "light" ? "lightbox-light" : ""}`}
+      className={`lightbox ${appearance === "light" ? "lightbox-light" : ""}${basicTemplate ? ` ${styles.basic}` : ""}`}
+      data-basic-template={basicTemplate}
       data-separated={separateControls || undefined}
       role="dialog"
       aria-modal="true"
