@@ -171,7 +171,7 @@ export async function siteTemplateBrowserMatrix({ page, publicPage, context, ori
           // otherwise turns each Playwright stability check into seconds.
           await page.bringToFront();
           await page.setViewportSize({ width, height: width === 1440 ? 900 : 844 });
-          await page.getByRole('button', { name: '预览当前编辑', exact: true }).click();
+          await page.getByRole('button', { name: '预览效果', exact: true }).click();
           await currentDialog().waitFor();
           assert.equal(await currentDialog().evaluate(element => Boolean(element.parentElement?.closest('[data-site-editor], nav, [class*="workspaceContext"]'))), false, 'Current preview must be isolated from editor navigation descendant styles');
           const currentRoot = currentDialog().locator(`[data-template="${id}"]`);
@@ -210,7 +210,7 @@ export async function siteTemplateBrowserMatrix({ page, publicPage, context, ori
       const saved = await draft(), pointer = (await publication()).current.id;
       await expandControl(page, page.getByLabel(/^账号、主页链接或分享文案 1/));
       await page.getByLabel(/^账号、主页链接或分享文案 1/).fill('UNSAVED-CONTACT-FIXTURE');
-      await page.getByRole('button', { name: '预览当前编辑', exact: true }).click();
+      await page.getByRole('button', { name: '预览效果', exact: true }).click();
       const root = currentDialog().locator(`[data-template="${saved.content.activeTemplate}"]`);
       await root.getByRole('link', { name: '联系约拍', exact: true }).first().click();
       await root.getByText('UNSAVED-CONTACT-FIXTURE', { exact: true }).waitFor();
@@ -271,7 +271,7 @@ export async function siteTemplateBrowserMatrix({ page, publicPage, context, ori
         console.log(`[publication-browser] VIEW premium ${width} current/saved/public`);
         await page.bringToFront();
         await page.setViewportSize({ width, height: width === 1440 ? 900 : 844 });
-        await page.getByRole('button', { name: '预览当前编辑', exact: true }).click();
+        await page.getByRole('button', { name: '预览效果', exact: true }).click();
         const dialog = page.getByRole('dialog', { name: '新版未保存草稿效果', exact: true });
         await dialog.waitFor();
         const cover = dialog.locator('[data-motion-cover]').last();

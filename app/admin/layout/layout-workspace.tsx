@@ -108,6 +108,17 @@ export default function LayoutWorkspace() {
   const [libraryTruncated, setLibraryTruncated] = useState(false);
   const [libraryMessage, setLibraryMessage] = useState("正在读取本地素材库…");
   const [isImporting, setIsImporting] = useState(false);
+  const [layoutMode, setLayoutMode] = useState<"slots" | "recommendation">("slots");
+  const focusPane = (id: string) => {
+    window.requestAnimationFrame(() => {
+      const heading = document.getElementById(id);
+      heading?.focus({ preventScroll: true });
+      heading?.scrollIntoView({ block: "start", behavior: "instant" });
+    });
+  };
+  const focusEditorOnMobile = () => {
+    if (window.matchMedia("(max-width: 760px)").matches) focusPane("slot-editor-heading");
+  };
   const [filter, setFilter] = useState<LibraryFilter>("all");
   const [query, setQuery] = useState("");
   const [libraryView, setLibraryView] = useState<LibraryView>("active");
@@ -400,6 +411,7 @@ export default function LayoutWorkspace() {
 
   const chooseSlot = (slotIndex: number) => {
     setActiveSlotState({ templateId: content.activeTemplate, slotIndex });
+    focusEditorOnMobile();
   };
 
   const removeSlot = (slotIndex: number) => {
@@ -418,6 +430,7 @@ export default function LayoutWorkspace() {
         : assetToWork(asset, activeSlot);
       return [...remaining, next].sort((left, right) => slotIndexOf(left, 0) - slotIndexOf(right, 0));
     });
+    focusEditorOnMobile();
   };
 
   const canMoveSlot = (slotIndex: number, direction: -1 | 1) => {
@@ -490,10 +503,26 @@ export default function LayoutWorkspace() {
 
       {siteScope && libraryTruncated && libraryState !== "error" && <p className={styles.libraryManagementMessage} role="status">{libraryMessage}</p>}
       {libraryState === "error" && <p role="alert">{libraryMessage}<button type="button" onClick={() => void refreshLibrary()}>重新读取素材</button></p>}
-      <div className={styles.layoutWorkspace}>
+      <div className={styles.layoutTaskbar} role="group" aria-label="排版方式">
+        <button type="button" aria-pressed={layoutMode === "slots"} aria-controls="basic-slot-workspace" onClick={() => setLayoutMode("slots")}>逐槽换图</button>
+        <button type="button" aria-pressed={layoutMode === "recommendation"} aria-controls="basic-layout-recommendation" onClick={() => setLayoutMode("recommendation")}>推荐排版</button>
+        <span>先安排照片，再从上方预览当前编辑；保存与发布仍由你确认。</span>
+      </div>
+      <div id="basic-layout-recommendation" className={styles.layoutRecommendations} hidden={layoutMode !== "recommendation"}>
+      <LayoutCompositionPreview
+        templateId={content.activeTemplate}
+        assets={assets}
+        libraryState={libraryState}
+        libraryMessage={libraryMessage}
+        busy={isImporting}
+        onRefresh={refreshLibrary}
+      />
+        <button type="button" className={styles.layoutReturn} onClick={() => { setLayoutMode("slots"); focusPane("slot-editor-heading"); }}>返回槽位微调</button>
+      </div>
+      <div id="basic-slot-workspace" className={styles.layoutWorkspace} hidden={layoutMode !== "slots"}>
         <section className={styles.slotPane} aria-labelledby="slot-list-heading">
           <div className={styles.paneHeading}>
-            <div><h3 id="slot-list-heading">照片槽位</h3><small>选择一项后在中栏编辑</small></div>
+            <div><h3 id="slot-list-heading">照片槽位</h3><small>选择槽位，再换图或调整焦点</small></div>
             <span>{template.photoSlots}</span>
           </div>
           <div className={styles.slotList} role="group" aria-label="模板照片槽位">
@@ -526,10 +555,13 @@ export default function LayoutWorkspace() {
 
         <section className={styles.slotEditor} aria-labelledby="slot-editor-heading">
           <div className={styles.paneHeading}>
-            <div><h3 id="slot-editor-heading">当前槽位 {String(activeSlot + 1).padStart(2, "0")}</h3><small>{slotDirectionLabel(activeSlot)} · {activeRatio} · {activeWork ? "已填入素材" : "等待素材"}</small></div>
+            <div><h3 id="slot-editor-heading" tabIndex={-1}>当前槽位 {String(activeSlot + 1).padStart(2, "0")}</h3><small>{slotDirectionLabel(activeSlot)} · {activeRatio} · {activeWork ? "已填入素材" : "等待素材"}</small></div>
             <span>{activeWork?.locked ? "LOCKED" : "EDIT"}</span>
           </div>
 
+          <div className={styles.slotQuickActions}>
+            <button type="button" onClick={() => focusPane("asset-library-heading")}>{activeWork ? "从图库换图" : "从图库选图"}</button>
+          </div>
           {activeWork ? (
             <div className={styles.slotEditorBody}>
               <div
@@ -575,17 +607,18 @@ export default function LayoutWorkspace() {
             <div className={styles.emptyEditor}>
               <span>{activeRatio}</span>
               <strong>此槽位尚未安排素材</strong>
-              <p>从右侧素材库选择一张方向兼容的照片，或先生成排版建议并采用到草稿。</p>
+              <p>从图库选择一张方向兼容的照片，或切换到“推荐排版”，预览后采用到草稿。</p>
             </div>
           )}
         </section>
 
         <section className={styles.assetPane} aria-labelledby="asset-library-heading">
           <div className={styles.paneHeading}>
-            <div><h3 id="asset-library-heading">素材选择与管理</h3><small>{libraryView === "active" ? `选择后放入当前槽位 ${String(activeSlot + 1).padStart(2, "0")}` : "回收站素材仍保留文件与现有排版引用"}</small></div>
+            <div><h3 id="asset-library-heading" tabIndex={-1}>素材选择与管理</h3><small>{libraryView === "active" ? `选择后放入当前槽位 ${String(activeSlot + 1).padStart(2, "0")}` : "回收站素材仍保留文件与现有排版引用"}</small></div>
             <span>{filteredItems.length} / {libraryView === "active" ? activeItems.length : archivedAssetCount}</span>
           </div>
-          {siteScope && <div id="basic-photo-upload"><SiteAssetUpload endpoint={siteScope.assetsEndpoint} onUploaded={refreshLibrary} /></div>}
+          <button type="button" className={styles.layoutReturn} onClick={() => focusPane("slot-editor-heading")}>返回当前槽位 {String(activeSlot + 1).padStart(2, "0")}</button>
+          {siteScope && <div id="basic-photo-upload"><SiteAssetUpload endpoint={siteScope.assetsEndpoint} onUploaded={refreshLibrary} compact /></div>}
           {localPhotoImportState === "configured" ? (
             <div className={styles.libraryViews} role="group" aria-label="素材库视图">
               <button ref={activeLibraryViewRef} type="button" aria-pressed={libraryView === "active"} onClick={() => { setLibraryView("active"); setAssetPage(0); setArchiveCandidate(null); }}>在库素材 {activeItems.length}</button>
@@ -705,7 +738,7 @@ export default function LayoutWorkspace() {
                 ? siteScope
                     ? "使用图库上方的上传入口加入照片，再选择素材安排到模板槽位。"
                     : localPhotoImportState === "configured"
-                    ? "使用下方“上传素材与排版建议”把照片或文件夹加入素材库。"
+                    ? "使用下方“上传素材与其他工具”把照片或文件夹加入素材库。"
                     : localPhotoImportState === "missing"
                       ? "本地照片导入服务未启动；请使用 npm run dev 启动完整编辑环境。"
                       : "当前没有可用的素材。"
@@ -715,7 +748,7 @@ export default function LayoutWorkspace() {
           )}
         </section>
       </div>
-      <details className={styles.layoutSecondaryTools}><summary>{siteScope ? "排版建议与工具" : "上传素材与排版建议"}</summary>
+      <details className={styles.layoutSecondaryTools}><summary>{siteScope ? "其他排版工具" : "上传素材与其他工具"}</summary>
         <button type="button" onClick={resetLayout}>清空本模板</button>
       {siteScope ? <p role="status">{libraryMessage}</p> : <PhotoImportPanel
         importing={isImporting}
@@ -728,14 +761,7 @@ export default function LayoutWorkspace() {
         stats={libraryStats}
       />}
 
-      <LayoutCompositionPreview
-        templateId={content.activeTemplate}
-        assets={assets}
-        libraryState={libraryState}
-        libraryMessage={libraryMessage}
-        busy={isImporting}
-        onRefresh={refreshLibrary}
-      />
+
 
       </details>
     </AdminSection>

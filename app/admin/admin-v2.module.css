@@ -1533,3 +1533,27 @@
 .socialFields > summary { min-height: 44px; padding: 10px 0; cursor: pointer; overflow-wrap: anywhere; }
 .socialFields > div { display: grid; gap: 14px; padding: 12px 0; }
 .layoutSummary { grid-template-columns:1fr 1fr; }
+
+/* Basic editing paths: keep the next action close to its current context. */
+.templateDetail { grid-template-rows: auto auto auto minmax(0, 1fr); }
+.templateDetailActions { padding: .85rem 1rem; gap: .65rem; border-bottom: 1px solid var(--admin-v2-line); }
+.templateDetailActions > p { margin: 0; }
+.templateDetailActions > button { border-radius: 8px; }
+.layoutTaskbar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: 1rem 0; }
+.layoutTaskbar > button, .slotQuickActions > button, .layoutReturn {
+  min-height: 44px; padding: .65rem .85rem; border: 1px solid var(--admin-v2-line);
+  border-radius: 8px; background: #fff; color: var(--admin-v2-ink); font: inherit; font-size: .85rem; cursor: pointer;
+}
+.layoutTaskbar > button[aria-pressed="true"] { background: var(--admin-v2-ink); color: #fff; border-color: var(--admin-v2-ink); }
+.layoutTaskbar > span { flex: 1 1 18rem; color: var(--admin-v2-muted); font-size: .78rem; line-height: 1.6; }
+.layoutWorkspace[hidden], .layoutRecommendations[hidden] { display: none; }
+.slotQuickActions { padding: .65rem .85rem 0; }
+.slotQuickActions > button { width: 100%; }
+.layoutReturn { margin: .75rem .85rem; }
+.slotEditor h3, .assetPane h3 { scroll-margin-top: 7rem; }
+.layoutTaskbar > button:focus-visible, .slotQuickActions > button:focus-visible, .layoutReturn:focus-visible,
+.slotEditor h3:focus-visible, .assetPane h3:focus-visible { outline: 2px solid var(--admin-v2-accent); outline-offset: 3px; }
+
+@media (min-width: 761px) {
+  .slotQuickActions, .assetPane > .layoutReturn { display: none; }
+}

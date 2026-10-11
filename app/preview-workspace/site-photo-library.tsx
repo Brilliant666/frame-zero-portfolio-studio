@@ -1,13 +1,14 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element -- Authenticated Site image variants. */
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { SiteAsset } from "../site-editor/assets-client";
 import type { Collection } from "../templates/polaroid-field/collection-model";
 import { filterPickerAssets, PICKER_PAGE_SIZE, type PickerFilter } from "./photo-picker-state";
 import styles from "./site-photo-library.module.css";
 
 export type SitePhotoLibraryProps = {
+  upload?: ReactNode;
   assets: readonly SiteAsset[];
   collections: readonly Collection[];
   ready: boolean;
@@ -22,7 +23,7 @@ const initialFilter: PickerFilter = { query: "", orientation: "all", membership:
 const orientationNames = { landscape: "横图", portrait: "竖图", square: "方图" };
 const EMPTY: readonly string[] = [];
 
-export default function SitePhotoLibrary({ assets, collections, ready, truncated, state, onReload, onAdd, onView }: SitePhotoLibraryProps) {
+export default function SitePhotoLibrary({ upload, assets, collections, ready, truncated, state, onReload, onAdd, onView }: SitePhotoLibraryProps) {
   const [filter, setFilter] = useState(initialFilter);
   const [picked, setPicked] = useState<string[]>([]);
   const [targetId, setTargetId] = useState("");
@@ -59,16 +60,17 @@ export default function SitePhotoLibrary({ assets, collections, ready, truncated
     } catch (cause) { setError(cause instanceof Error ? cause.message : "加入失败，选择已保留。"); }
   }
   return <section className={styles.library} aria-label="图库">
-    <header className={styles.header}><div><h2>图库</h2><p>基础与高级共用本站照片；加入高级图集只修改该空间草稿。</p></div><button type="button" disabled={reloading} onClick={() => void reload()}>{reloading ? "正在读取…" : "重新读取素材"}</button></header>
-    <p role="status">{state}</p>
+    <header className={styles.header}><div><h2>本站照片 <span className={styles.count}>{assets.length} 张</span></h2></div><div className={styles.headerActions}><button type="button" disabled={reloading} onClick={() => void reload()}>{reloading ? "正在读取…" : "重新读取素材"}</button></div></header>
+    <p className={styles.intro}>本站模板共享照片；上传不会发布，移出图集不会删除原图。</p>
+    {upload}
+    <p role="status" className={ready && !reloading ? styles.screenReaderStatus : styles.warning}>{state}</p>
     {truncated && <p className={styles.warning}>当前仅载入部分本站素材（{assets.length} 张）；筛选、排序和分页只覆盖已载入照片。</p>}
     <fieldset className={styles.filters} disabled={filter.onlySelected}>
       <label>照片方向<select value={filter.orientation} onChange={event => updateFilter({ orientation: event.target.value })}><option value="all">全部方向</option><option value="landscape">横图</option><option value="portrait">竖图</option><option value="square">方图</option></select></label>
       <label>加入本站时间<select value={filter.sort} onChange={event => updateFilter({ sort: event.target.value })}><option value="newest">最新在前</option><option value="oldest">最早在前</option></select></label>
       <label>图集关系<select value={filter.membership} disabled={!target} onChange={event => updateFilter({ membership: event.target.value })}><option value="all">全部照片</option><option value="outside">未加入目标图集</option></select></label>
-    </fieldset>
     <details className={styles.diagnostics} data-library-id-search><summary>按素材 ID 查找（可选）</summary><label>按素材 ID 查找<input type="search" disabled={filter.onlySelected} value={filter.query} placeholder="输入已知素材 ID 的一部分" onChange={event => updateFilter({ query: event.target.value })} /></label></details>
-    <p className={styles.hint}>加入本站时间不是拍摄时间。按选择顺序追加；跨页、筛选和切换目标图集均保留选择。</p>
+    </fieldset>
     <div className={styles.tools}>
       <button type="button" disabled={!ready || reloading || !visible.some(asset => !pickedIds.has(asset.id))} onClick={() => { setPicked(current => [...new Set([...current, ...visible.map(asset => asset.id)])]); setError(""); setMessage(""); }}>选择本页照片</button>
       <button type="button" aria-pressed={filter.onlySelected} onClick={() => updateFilter({ onlySelected: !filter.onlySelected })}>{filter.onlySelected ? "返回全部结果" : "查看已选"}</button>
@@ -87,6 +89,7 @@ export default function SitePhotoLibrary({ assets, collections, ready, truncated
     </div>
     {ready && !filtered.length && <p>没有符合条件的照片，请调整筛选{filter.query ? "或展开“按素材 ID 查找”清除搜索" : ""}。</p>}
     <nav className={styles.tools} aria-label="图库分页"><button type="button" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>上一页</button><span>第 {currentPage + 1} / {pages} 页 · {filtered.length} 张匹配</span><button type="button" disabled={currentPage + 1 >= pages} onClick={() => setPage(currentPage + 1)}>下一页</button></nav>
+    <p className={styles.hint}>按选择顺序追加；跨页、筛选和切换目标图集均保留选择。加入本站时间不是拍摄时间。</p>
     <footer className={styles.destination}>
       <label>加入高级图集<select value={target?.id ?? ""} onChange={event => { setTargetId(event.target.value); setPage(0); setError(""); setMessage(""); }}><option value="">请选择目标图集</option>{collections.map(item => <option value={item.id} key={item.id}>{item.name || "未命名图集"} · {item.assetIds.length} 张{item.visible ? "" : " · 隐藏"}</option>)}</select></label>
       <div><strong>{target ? `预计新增 ${additions.length} 张` : "先选择目标图集"}</strong><p>重复照片会由图集自动去重，不保存或发布。</p>{!collections.length && <p>请先到图集管理新建图集。</p>}{targetId && !target && <p role="alert">原目标图集已不存在，请重新选择。</p>}</div>

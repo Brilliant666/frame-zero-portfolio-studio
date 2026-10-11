@@ -327,7 +327,7 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
     <div className={styles.body}>
       {siteMode && props?.PublicationControls && <props.PublicationControls revision={revision} dirty={dirty} disabled={loadState !== "ready" || saving || conflict || pendingSave || !!pickerCollectionId || creatingCollection} templateId="premium-polaroid" saveDraft={saveForPublication}
         presentation="polaroid" onPublishStart={() => setMessage("")}
-        previewAction={<button type="button" disabled={loadState !== "ready"} onClick={() => { setPreviewCollectionId(undefined); setPreview(structuredClone(draft)); }}>预览当前编辑</button>}
+        previewAction={<button type="button" disabled={loadState !== "ready"} onClick={() => { setPreviewCollectionId(undefined); setPreview(structuredClone(draft)); }}>预览效果</button>}
         savedPreviewHref={siteScope?.previewHref}
         draftStatus={saving ? "保存中…" : dirty ? "未保存修改" : saved ? "已保存" : "尚未配置"}
         draftAction={<button type="button" onClick={() => void save()} disabled={loadState !== "ready" || saving || !dirty || conflict || pendingSave || !!pickerCollectionId || creatingCollection}>仅保存草稿</button>}
@@ -342,10 +342,8 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
       <nav className={styles.nav} aria-label="新版编辑分区">{sections.map(([id, label]) => <button key={id} type="button" aria-pressed={section === id} onClick={() => changeSection(id)}>{label}</button>)}</nav></>}
       <fieldset disabled={loadState !== "ready"} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
         {siteScope && <section className={styles.panel} hidden={section !== "library"}>
-          <p className={styles.hint}>先在图库添加照片，再进入图集组织展示。本站基础与高级内容共用这些照片。</p>
-          <div className={styles.row}><button type="button" onClick={() => changeSection("albums")}>进入图集 →</button></div>
-          <SiteAssetUpload endpoint={siteScope.assetsEndpoint} onUploaded={loadLibrary} />
-          <SitePhotoLibrary assets={assets} collections={draft.collections} ready={libraryReady} truncated={libraryTruncated} state={libraryState} onReload={loadLibrary} onAdd={addLibraryPhotos} onView={setEnlargedMember} />
+          <SitePhotoLibrary assets={assets} collections={draft.collections} ready={libraryReady} truncated={libraryTruncated} state={libraryState} onReload={loadLibrary} onAdd={addLibraryPhotos} onView={setEnlargedMember}
+            upload={<SiteAssetUpload endpoint={siteScope.assetsEndpoint} onUploaded={loadLibrary} compact />} />
         </section>}
         {siteMode && section === "albums" && <section className={styles.panel}>
           <div className={styles.collectionHeading}><div><h2>图集</h2><p>{draft.collections.length} 个图集 · 最多 30 个</p></div><button type="button" disabled={draft.collections.length >= 30 || loadState !== "ready" || saving} onClick={createCollection}>新建图集</button></div>

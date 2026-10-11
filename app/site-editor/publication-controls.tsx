@@ -11,7 +11,7 @@ import styles from "./publication-controls.module.css";
 export type PublicationEditorProps = {
   revision: number; dirty: boolean; disabled: boolean; templateId: string;
   draftAction?: ReactNode; tools?: ReactNode; draftStatus?: string; compactTools?: boolean;
-  presentation?: "polaroid"; previewAction?: ReactNode; savedPreviewHref?: string; onPublishStart?: () => void;
+  presentation?: "polaroid" | "basic"; previewAction?: ReactNode; savedPreviewHref?: string; onPublishStart?: () => void;
   saveDraft: (options?: DraftSaveOptions) => Promise<DraftSaveReceipt | null>;
 };
 type PublicationState = { current: Publication | null; history: Publication[] };
@@ -26,7 +26,7 @@ function parseState(value: unknown): PublicationState {
   return value as PublicationState;
 }
 
-function ActionDisclosure({ label, children, split = false }: { label: string; children: ReactNode; split?: boolean }) {
+function ActionDisclosure({ label, children }: { label: string; children: ReactNode }) {
   const ref = useRef<HTMLDetailsElement>(null);
   const close = (restoreFocus: boolean) => {
     const element = ref.current;
@@ -43,10 +43,10 @@ function ActionDisclosure({ label, children, split = false }: { label: string; c
     document.addEventListener("pointerdown", outside);
     return () => document.removeEventListener("pointerdown", outside);
   }, []);
-  return <details ref={ref} className={`${styles.actionDisclosure} ${split ? styles.splitDisclosure : ""}`}
+  return <details ref={ref} className={styles.actionDisclosure}
     onKeyDown={(event) => { if (event.key === "Escape" && ref.current?.open) { event.preventDefault(); event.stopPropagation(); close(true); } }}
     onBlur={(event) => { if (event.relatedTarget instanceof Node && !event.currentTarget.contains(event.relatedTarget)) close(false); }}>
-    <summary aria-label={label}>{split ? <span aria-hidden="true">⌄</span> : label}</summary>
+    <summary aria-label={label}>{label}</summary>
     <div className={styles.actionMenu} aria-label={label} onClick={(event) => {
       if (event.target instanceof Element && event.target.closest("button, a")) close(true);
     }}>{children}</div>
@@ -67,7 +67,7 @@ export default function PublicationControls({ endpoint, publicHref, space, revis
   const historyDialog = useRef<HTMLDialogElement>(null), historyTrigger = useRef<HTMLButtonElement>(null);
   const historyTitleId = useId();
   useEffect(() => {
-    if (presentation !== "polaroid" || feedbackTone !== "success" || !message) return;
+    if (!presentation || feedbackTone !== "success" || !message) return;
     const timer = window.setTimeout(() => setMessage(""), 6000);
     return () => window.clearTimeout(timer);
   }, [presentation, feedbackTone, message]);
@@ -154,22 +154,22 @@ export default function PublicationControls({ endpoint, publicHref, space, revis
   const synced = publicationSynced(state?.current ?? null, space, templateId, revision, dirty);
   const status = pending ? "结果待确认" : !state ? "发布状态暂不可用" : dirty ? "有修改待保存发布" : synced ? "已同步" : state.current ? "当前编辑尚未发布" : "尚未发布";
   const feedbackMessage = publicationSuccessDetail(message, publishedFeedback, dirty, synced);
-  if (presentation === "polaroid") {
+  if (presentation) {
     const needsRecovery = !!pending || feedbackTone === "error" || feedbackTone === "pending";
     const compactStatus = pending ? "结果待确认" : !state ? "公开状态待确认" : dirty ? "有修改未保存" : synced ? "无待发布改动" : "草稿尚未发布";
     const refreshAction = <button className={styles.refresh} type="button" disabled={busy} onClick={() => void refresh()}>{pending ? "只读检查发布结果" : "刷新公开状态"}</button>;
-    const preview = <div className={styles.previewSplit}>{previewAction}{savedPreviewHref && <ActionDisclosure label="更多预览方式" split><a href={savedPreviewHref} target="_blank" rel="noopener noreferrer">预览已保存草稿 ↗</a></ActionDisclosure>}</div>;
+    const preview = <div className={styles.previewAction}>{previewAction}</div>;
     const feedback = message && <div className={styles.compactMessage} data-tone={feedbackTone} role={feedbackTone === "error" ? "alert" : "status"} title={feedbackMessage}>
       {feedbackTone !== "success" && <strong>{feedbackTitle} · </strong>}{feedbackMessage}
     </div>;
-    return <section className={`${styles.panel} ${styles.polaroid}`} aria-label="公开发布">
+    return <section className={`${styles.panel} ${styles.polaroid}`} data-presentation={presentation} aria-label="公开发布">
       <div className={styles.compactRow}>
         <div className={styles.compactVersions}><span title={`草稿版本 v${revision}`}><strong>草稿</strong> · {draftStatus ?? (dirty ? "未保存修改" : "已保存")}</span><span title={state?.current ? versionDetail(state.current) : undefined}>{!state ? "当前公开：待核对" : state.current ? `当前公开：${title(state.current)}` : "当前公开：尚无版本"}</span><span className={styles.compactStatus}>{compactStatus}</span></div>
         <div className={styles.compactTools}>
           <div className={styles.inlinePreview}>{preview}</div>
           <a className={styles.secondary} href={publicHref} target="_blank" rel="noopener noreferrer">查看公开主页 ↗</a>
           <button ref={historyTrigger} className={styles.secondary} type="button" aria-haspopup="dialog" onClick={() => historyDialog.current?.showModal()}>发布记录 {state?.history.length ?? 0}</button>
-          <ActionDisclosure label="更多 ⋯">{tools}{!needsRecovery && refreshAction}</ActionDisclosure>
+          <ActionDisclosure label="更多 ⋯">{savedPreviewHref && <a href={savedPreviewHref} target="_blank" rel="noopener noreferrer">预览已保存草稿 ↗</a>}{tools}{!needsRecovery && refreshAction}</ActionDisclosure>
         </div>
       </div>
       <div className={styles.actions} data-editor-save-actions="true" data-keyboard-open={keyboardOpen || undefined} data-modal-open={modalOpen || undefined} inert={modalOpen || undefined}>

@@ -17,11 +17,13 @@ export default function DraftTemplatePreviewTrigger({
   label,
   className,
   scope,
+  showIcon = true,
 }: Readonly<{
   templateId: TemplateId;
   label: string;
   className?: string;
   scope: DraftPreviewScope;
+  showIcon?: boolean;
 }>) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -44,7 +46,7 @@ export default function DraftTemplatePreviewTrigger({
         aria-expanded={open}
         onClick={() => setOpen(true)}
       >
-        {scope === "admin" ? <span className={styles.previewText}>{label}</span> : label} <span aria-hidden="true">◐</span>
+        {scope === "admin" ? <span className={styles.previewText}>{label}</span> : label}{showIcon && <> <span aria-hidden="true">◐</span></>}
       </button>
       {open ? (
         <DraftPreviewDialog

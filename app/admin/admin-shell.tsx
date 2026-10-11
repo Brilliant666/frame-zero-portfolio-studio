@@ -119,6 +119,9 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
         <main id="admin-main" className={styles.main} tabIndex={-1}>
           {siteScope?.publicationEndpoint && siteScope.publicHref && <PublicationControls endpoint={siteScope.publicationEndpoint} publicHref={siteScope.publicHref} space="basic" templateId={content.activeTemplate} revision={revision} dirty={dirty} disabled={loadState !== "ready" || saveState === "saving" || conflict || pendingSave} saveDraft={save}
             draftStatus={status.label}
+            presentation="basic"
+            previewAction={loadState === "ready" && <DraftTemplatePreviewTrigger templateId={content.activeTemplate} scope="admin" label="预览效果" showIcon={false} />}
+            savedPreviewHref={siteScope.previewHref}
             draftAction={<button
             type="button"
             className={siteScope ? styles.draftButton : styles.saveButton}
@@ -135,15 +138,11 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
             </span>
           </button>}
             tools={<>
-              {loadState === "ready" && <DraftTemplatePreviewTrigger templateId={content.activeTemplate} scope="admin" label="预览当前编辑" />}
-              <Link href={siteScope.previewHref} target="_blank">预览已保存草稿 ↗</Link>
-              <details><summary>更多</summary><div>
                 <Link href={sectionHref("/admin/advanced")}>兼容内容与工具</Link>
                 <a href={siteScope.adminBasePath.replace(/\/basic$/, "")} onClick={(event) => { if (dirty && !window.confirm("当前基础版草稿尚未保存。离开后未保存修改会丢失，确认返回内容空间选择？")) event.preventDefault(); }}>切换内容空间</a>
                 <button type="button" onClick={exportDraft}>导出当前草稿</button>
                 <button type="button" disabled={saveState === "saving"} onClick={() => { if ((!dirty && !pendingSave && !conflict) || window.confirm("重新读取会替换当前编辑。请先导出留存，确认继续？")) void reload(); }}>重新读取草稿</button>
                 <small>十一套基础模板共用本空间内容，与高级版独立。Ctrl/Cmd+S 仅保存草稿。{savedAt && `上次保存 ${savedAt}`}</small>
-              </div></details>
             </>} />}
           {pendingSave && <div className={styles.errorSummary} role="alert"><span>{message || "保存结果待确认，请检查后继续。"}</span><button type="button" onClick={() => void checkSave()}>检查保存结果</button><button type="button" onClick={exportDraft}>导出当前草稿</button></div>}
           {loadState === "error" || loadState === "degraded" || conflict ? (

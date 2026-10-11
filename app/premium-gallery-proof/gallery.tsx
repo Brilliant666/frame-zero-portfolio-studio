@@ -29,7 +29,7 @@ function Photo({ photo, className, style, sizes = "100vw", full = false, lazy = 
   return <img className={className} style={style} {...galleryPhotoSource(photo, sizes, full)} loading={lazy ? "lazy" : "eager"} decoding="async" width={photo.width} height={photo.height} alt={photo.alt} draggable={false} />;
 }
 
-function Rail({ group, reverse, paused, onSelect, widthPercent, single }: { group: GalleryDocument["groups"][number]; reverse: boolean; paused: boolean; onSelect: (photo: GalleryPhoto) => void; widthPercent: number; single: boolean }) {
+function Rail({ group, reverse, onSelect, widthPercent, single }: { group: GalleryDocument["groups"][number]; reverse: boolean; onSelect: (photo: GalleryPhoto) => void; widthPercent: number; single: boolean }) {
   const rail = useRef<HTMLDivElement>(null);
   const railWindow = useRef<HTMLDivElement>(null);
   const copy = useRef<HTMLDivElement>(null);
@@ -55,7 +55,7 @@ function Rail({ group, reverse, paused, onSelect, widthPercent, single }: { grou
     const viewport = railWindow.current;
     if (!viewport) return;
     const wheel = (event: WheelEvent) => {
-      // Keep native scrolling in keyboard, explicit pause and reduced-motion modes.
+      // Keep native scrolling in keyboard and reduced-motion modes.
       // Even at their ends, a rail must not hand its wheel to scene navigation.
       event.stopPropagation();
       if (event.ctrlKey || event.metaKey || !event.deltaY) return;
@@ -72,10 +72,10 @@ function Rail({ group, reverse, paused, onSelect, widthPercent, single }: { grou
     return () => viewport.removeEventListener("wheel", wheel);
   }, [reverse]);
   useLayoutEffect(() => {
-    if (!paused && !keyboardFocused && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (!keyboardFocused && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       railWindow.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
     }
-  }, [paused, keyboardFocused]);
+  }, [keyboardFocused]);
   useEffect(() => {
     // Pointer focus survives lightbox return, but should not freeze the rail.
     // Track Tab before it enters the rail so keyboard users get a stable list.
@@ -181,7 +181,6 @@ function Lightbox({ photo: initialPhoto, photos, onClose }: { photo: GalleryPhot
 
 export default function FlowGallery({ document: content, previewGroupId }: { document: GalleryDocument; previewGroupId?: string }) {
   const [scene, setScene] = useState<Scene>(previewGroupId ? "gallery" : "works");
-  const [paused, setPaused] = useState(false);
   const [selected, setSelected] = useState<GalleryPhoto | null>(null);
   const [selectedScope, setSelectedScope] = useState<readonly GalleryPhoto[]>([]);
   const root = useRef<HTMLDivElement>(null);
@@ -369,8 +368,8 @@ export default function FlowGallery({ document: content, previewGroupId }: { doc
       }}>
       {displayScene === "works" && <>
         <div ref={leaving ? undefined : introduction} className={styles.introduction}><h1 data-flow-scene-heading tabIndex={-1}>{content.profile.title}</h1><a data-flow-expand className={styles.expand} href="#gallery" onClick={event => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) sceneFocus.current = "heading"; }}>展开完整作品</a><p>{content.profile.intro}</p></div>
-        <div className={`${styles.rails} ${railLayout.mode === "single" ? styles.singleRail : ""} ${paused ? styles.paused : ""}`} data-flow-rail-layout={railLayout.mode} aria-label="作品速览" style={railLayout.mode !== "dual" || content.leftRailWidthPercent === undefined ? undefined : { gridTemplateColumns: `minmax(0, ${content.leftRailWidthPercent}fr) minmax(0, ${100 - content.leftRailWidthPercent}fr)` }}>
-          {railLayout.mode === "empty" ? <p className={styles.emptyGallery}>还没有作品</p> : railLayout.columns.map(({ group, side, widthPercent }) => <Rail key={`${side}-${group.id}`} group={group} reverse={side === 1} paused={paused} onSelect={photo => openPhoto(photo, group.photos)} widthPercent={widthPercent} single={railLayout.mode === "single"} />)}
+        <div className={`${styles.rails} ${railLayout.mode === "single" ? styles.singleRail : ""}`} data-flow-rail-layout={railLayout.mode} aria-label="作品速览" style={railLayout.mode !== "dual" || content.leftRailWidthPercent === undefined ? undefined : { gridTemplateColumns: `minmax(0, ${content.leftRailWidthPercent}fr) minmax(0, ${100 - content.leftRailWidthPercent}fr)` }}>
+          {railLayout.mode === "empty" ? <p className={styles.emptyGallery}>还没有作品</p> : railLayout.columns.map(({ group, side, widthPercent }) => <Rail key={`${side}-${group.id}`} group={group} reverse={side === 1} onSelect={photo => openPhoto(photo, group.photos)} widthPercent={widthPercent} single={railLayout.mode === "single"} />)}
         </div>
       </>}
       {displayScene === "pricing" && content.pricing && <section className={styles.pricePanel}><h1 data-flow-scene-heading tabIndex={-1}>{content.pricing.heading}</h1><p className={styles.priceIntro}>{content.pricing.introduction}</p><div className={styles.packages}>{content.pricing.packages.map((item) => <article key={item.id}><h2>{item.name}</h2><p className={styles.price}>{item.price}</p><p>{item.description}</p><ul>{item.details.map((line, index) => <li key={index}>{line}</li>)}</ul></article>)}</div></section>}
@@ -409,7 +408,6 @@ export default function FlowGallery({ document: content, previewGroupId }: { doc
         <div className={styles.photoGrid}>{group.photos.map((photo) => <button key={photo.id} className={photo.height > photo.width ? styles.tall : ""} onClick={() => openPhoto(photo, group.photos)} aria-label={`查看大图：${photo.alt}`}><Photo photo={photo} lazy sizes={gridPhotoWidth ? `${gridPhotoWidth}px` : "(max-width: 700px) calc((100vw - 45px) / 2), calc((100vw - 130px) / 3)"} /></button>)}</div>
       </section>)}
     </main> : [...(outgoing && outgoing.scene !== scene ? [outgoing.scene] : []), scene].map(item => renderScene(item, item !== scene))}
-    {scene === "works" && <button className={styles.motion} aria-pressed={paused} onClick={() => setPaused(!paused)}>{paused ? "播放动效" : "暂停动效"}</button>}
     {scene !== "gallery" && <div className={styles.sceneProgress} aria-label="页面位置"><span>0{available.indexOf(scene) + 1} / {scene === "works" ? "作品画廊" : scene === "pricing" ? "价格与活动" : "联系方式"}</span><div className={styles.progressLine}>{available.map((item) => <button key={item} aria-label={`前往${item === "works" ? "作品画廊" : item === "pricing" ? "价格与活动" : "联系方式"}`} aria-current={scene === item ? "step" : undefined} onClick={() => navigate(item)} />)}</div></div>}
     {selected && <Lightbox photo={selected} photos={selectedScope} onClose={() => setSelected(null)} />}
   </div>;

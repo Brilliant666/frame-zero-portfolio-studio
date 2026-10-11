@@ -75,7 +75,7 @@ test('success detail follows latest dirty and synchronized state, without a stal
 
 test('Polaroid uses separate draft/public status, preview affordances, more tools and a native history dialog', async () => {
   const ui = harness();
-  const props = { presentation: 'polaroid', previewAction: { type: 'button', props: { children: '预览当前编辑' } }, savedPreviewHref: '/fixture/preview', tools: { type: 'button', props: { children: '导出草稿' } } };
+  const props = { presentation: 'polaroid', previewAction: { type: 'button', props: { children: '预览效果' } }, savedPreviewHref: '/fixture/preview', tools: { type: 'button', props: { children: '导出草稿' } } };
   ui.render(props); await ui.effects();
   const tree = ui.render(props);
   assert.match(text(tree), /草稿/);
@@ -95,7 +95,10 @@ test('Polaroid uses separate draft/public status, preview affordances, more tool
   assert.ok(publicLink, 'public navigation remains a direct status-bar action');
   assert.equal(publicLink.props.target, '_blank');
   assert.equal(publicLink.props.rel, 'noopener noreferrer');
-  const saved = find(tree, node => node.type === 'a' && node.props.href === '/fixture/preview');
+  assert.ok(button(tree, '预览效果'));
+  assert.equal(find(tree, node => typeof node.type === 'function' && node.props.label === '更多预览方式'), null);
+  const saved = find(more, node => node.type === 'a' && node.props.href === '/fixture/preview');
+  assert.ok(saved, 'saved draft preview is available from the existing More menu');
   assert.equal(saved.props.target, '_blank');
   assert.equal(saved.props.rel, 'noopener noreferrer');
   const dialog = find(tree, node => node.type === 'dialog');
@@ -111,7 +114,27 @@ test('Polaroid uses separate draft/public status, preview affordances, more tool
   button(tree, '×').props.onClick(); assert.equal(closes, 2); assert.equal(focused, 2);
 });
 
-test('default basic and Flow presentation keep their original tool/history layout', async () => {
+test('basic compact header distinguishes its draft from a different public space and retains recovery', async () => {
+  const ui = harness();
+  const props = { presentation: 'basic', space: 'basic', templateId: 'neon-hud', savedPreviewHref: '/fixture/preview' };
+  ui.render(props); await ui.effects();
+  const tree = ui.render(props);
+  assert.match(text(tree), /当前公开：高级拍立得/);
+  assert.match(text(tree), /草稿尚未发布/);
+  assert.doesNotMatch(text(tree), /无待发布改动/);
+  assert.ok(find(tree, node => node.type === 'dialog'));
+  const more = find(tree, node => typeof node.type === 'function' && node.props.label === '更多 ⋯');
+  assert.ok(find(more, node => node.props?.href === '/fixture/preview'));
+  assert.ok(button(more, '刷新公开状态'));
+  const failure = harness(async () => { throw Error('offline'); });
+  failure.render(props); await failure.effects();
+  const failed = failure.render(props);
+  assert.match(text(failed), /公开状态待确认/);
+  assert.ok(button(find(failed, node => node.props?.className === 'recovery'), '刷新公开状态'));
+  assert.equal(button(failed, '保存并发布').props.disabled, true);
+});
+
+test('callers without compact presentation retain their original tool/history layout', async () => {
   for (const space of ['basic', 'premium-flow-gallery']) {
     const ui = harness(); const props = { space, compactTools: true };
     ui.render(props); await ui.effects(); const tree = ui.render(props);

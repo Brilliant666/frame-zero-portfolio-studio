@@ -319,7 +319,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
       await openEditor(page, premium);
       // The restored MotionHome uses photographer as its visible h1 (not hero.title).
       await field(page, '摄影师名称').fill('UNSAVED MEMORY PREVIEW');
-      await page.getByRole('button', { name: '预览当前编辑', exact: true }).click();
+      await page.getByRole('button', { name: '预览效果', exact: true }).click();
       const dialog = page.getByRole('dialog');
       await dialog.getByRole('heading', { name: 'UNSAVED MEMORY PREVIEW', exact: true }).waitFor();
       assert.deepEqual(await read('premium-polaroid'), savedBefore, 'Memory preview must not persist unsaved edits');

@@ -38,7 +38,7 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
     await page.waitForFunction(() => document.querySelector('#basic-photo-upload input[type="file"]')?.matches(':enabled'));
     assert.equal(await input.isEnabled(), true, 'The visible gallery upload is ready for user input');
     assert.equal(await input.getAttribute('accept'), 'image/jpeg,image/png,image/webp');
-    await uploader.getByText(/每批最多 8 张 · 每张最多 20 MB · JPEG \/ PNG \/ WebP/).waitFor({ state: 'visible' });
+    await uploader.getByText('JPEG / PNG / WebP · 每批最多 8 张 · 每张最多 20 MB', { exact: true }).waitFor({ state: 'visible' });
   }
 
   async function login(p, username) {

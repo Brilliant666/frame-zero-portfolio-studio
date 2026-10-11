@@ -78,7 +78,7 @@ export function LayoutCompositionPreview({
   busy: boolean;
   onRefresh: () => void | Promise<unknown>;
 }>) {
-  const { content, setContent } = useAdmin();
+  const { content, setContent, siteScope } = useAdmin();
   const [dialogOpen, setDialogOpen] = useState(false);
   const previewTriggerRef = useRef<HTMLButtonElement>(null);
   const profile = getTemplateMaterialProfile(templateId);
@@ -243,7 +243,9 @@ export function LayoutCompositionPreview({
             </button>
           </div>
           <p className={styles.templateCompositionPreviewBoundary}>
-            采用推荐排版只更新当前模板的本地草稿；仍需点击顶栏“保存修改”才会持久化。
+            {siteScope
+              ? "采用推荐排版只更新当前编辑；点击“仅保存草稿”保留修改，或“保存并发布”更新公开主页。"
+              : "采用推荐排版只更新当前模板的本地草稿；仍需点击顶栏“保存修改”才会持久化。"}
           </p>
           {dialogOpen ? (
             <TemplatePreviewDialog

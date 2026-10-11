@@ -1,0 +1,9 @@
+.compact { display:flex; align-items:center; flex-wrap:wrap; gap:8px 14px; margin:14px 0; }
+.compact p { margin:0; color:#66758c; font-size:12px; line-height:1.6; flex:1; min-width:180px; }
+.choose { position:relative; display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:8px 14px; box-sizing:border-box; border:1px solid #b8cce0; border-radius:8px; background:#eaf4fc; color:#243e5b; font-size:14px; font-weight:600; cursor:pointer; overflow:hidden; }
+.choose input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+.choose:focus-within { outline:3px solid #5279ad; outline-offset:3px; }
+.choose:has(input:disabled) { opacity:.55; cursor:wait; }
+.compact .message,.compact ul { flex-basis:100%; }
+.compact .message[role="alert"] { padding:10px; background:#fff2e7; color:#943d23; border-radius:8px; }
+.compact ul { margin:0; padding-left:20px; font-size:13px; overflow-wrap:anywhere; }

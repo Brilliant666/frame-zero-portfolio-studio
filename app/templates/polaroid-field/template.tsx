@@ -18,6 +18,7 @@ import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import PlatformAccounts from "../shared/platform-accounts";
 import PolaroidBookingContacts from "./booking-contacts";
+import { packageInquiry, polaroidContactNote } from "./booking-copy";
 import { buildPolaroidFieldLayout } from "./field-layout";
 import CollectionExperience from "./collection-experience";
 import type { PhotoAsset } from "../../photo-library";
@@ -74,6 +75,13 @@ export default function PolaroidFieldTemplate({
   const [localCollectionProof, setCollectionProof] = useState(false);
   const collectionProof = !!collectionWorkspace || localCollectionProof;
   const [homeRequest, setHomeRequest] = useState(0);
+  const [inquiryPackage, setInquiryPackage] = useState<string | null>(null);
+  const contactNote = polaroidContactNote(content.contact.note, !!collectionWorkspace);
+  const inquiryTemplate = packageInquiry(bookingTemplate, inquiryPackage);
+  const bookingEyebrow = collectionWorkspace ? content.statement.eyebrow : "03 / SEND A FIELD NOTE";
+  const bookingLineOne = collectionWorkspace ? content.statement.lineOne : "把下一颗星";
+  const bookingLineTwo = collectionWorkspace ? content.statement.lineTwo : "钉在这里";
+  const hasBookingTitle = !!(bookingLineOne.trim() || bookingLineTwo.trim());
 
   const { view, minimumScale, dragging, desktopFieldEnabled, sceneMode, showOverview, showFocus, zoomBy, handleFieldKeyDown } = useConstellationViewport({
     viewportRef, canvasRef, layoutKey: fieldSlots, getFocusIndex: () => focusSlot?.index ?? 4, enabled: !collectionProof,
@@ -402,8 +410,12 @@ export default function PolaroidFieldTemplate({
               </div>
               <a
                 href="#polaroid-booking"
-                onClick={(event) => handleViewLink(event, "booking", "#polaroid-booking", true)}
-              >收藏这段旅程 <span>↘</span></a>
+                aria-label={collectionWorkspace ? `咨询套餐：${item.name || "未命名套餐"}` : undefined}
+                onClick={(event) => {
+                  if (collectionWorkspace) setInquiryPackage(item.name || "未命名套餐");
+                  handleViewLink(event, "booking", "#polaroid-booking", true);
+                }}
+              >{collectionWorkspace ? "咨询此套餐" : "收藏这段旅程"} <span>↘</span></a>
             </article>
           ))}
         </div>
@@ -423,14 +435,15 @@ export default function PolaroidFieldTemplate({
       <section
         id="polaroid-booking"
         className={styles.bookingSection}
-        aria-labelledby="booking-title"
+        aria-labelledby={hasBookingTitle ? "booking-title" : undefined}
+        aria-label={hasBookingTitle ? undefined : "联系约拍"}
         data-polaroid-view="booking"
         hidden={activeView !== "booking"}
         tabIndex={-1}
       >
         <div data-star-dark className={styles.bookingIntro}>
-          <small>{collectionWorkspace ? content.statement.eyebrow : "03 / SEND A FIELD NOTE"}</small>
-          <h2 id="booking-title">{collectionWorkspace ? content.statement.lineOne : "把下一颗星"}<br /><span>{collectionWorkspace ? content.statement.lineTwo : "钉在这里"}</span></h2>
+          {bookingEyebrow.trim() && <small>{bookingEyebrow}</small>}
+          {hasBookingTitle && <h2 id="booking-title">{bookingLineOne}{bookingLineOne.trim() && bookingLineTwo.trim() && <br />}{bookingLineTwo.trim() && <span>{bookingLineTwo}</span>}</h2>}
           <p>
             告诉我角色、日期与想要留下的情绪。复制清单后，
             {collectionWorkspace ? "通过下方联系方式发送，就可以开始一起搭建画面。" : "通过微信或邮箱发送，就可以开始一起搭建画面。"}
@@ -448,7 +461,7 @@ export default function PolaroidFieldTemplate({
             <b>OPEN ↗</b>
           </a>)}
           </>}
-          <p className={styles.contactNote}>{content.contact.note}</p>
+          {contactNote.trim() && <p className={styles.contactNote}>{contactNote}</p>}
         </div>
 
         <div data-star-paper className={styles.noteCard}>
@@ -457,8 +470,8 @@ export default function PolaroidFieldTemplate({
             <span>FIELD_NOTE.txt</span>
             <strong>{content.profile.brand}</strong>
           </div>
-          <pre>{bookingTemplate}</pre>
-          <button type="button" onClick={() => void onCopy(bookingTemplate, "polaroid-template")}>
+          <pre>{inquiryTemplate}</pre>
+          <button type="button" onClick={() => void onCopy(inquiryTemplate, "polaroid-template")}>
             <span aria-live="polite">
               {copiedKey === "polaroid-template" ? "完整清单已复制 ✓" : "复制完整约拍清单"}
             </span>

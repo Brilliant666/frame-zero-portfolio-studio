@@ -1002,11 +1002,12 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
           assert.ok(resumed.before.every(t => t.state === 'running'));
           assert.ok(resumed.after.every((t, i) => Math.abs(t.y - resumed.before[i].y) > 2), 'Leaving a rail resumes both tracks');
           assert.ok(resumed.after.every((t, i) => Math.abs(t.y - resumed.before[i].y) < 30), 'Resume does not reset the wheel position');
-          await publicPage.getByRole('button', { name: '暂停动效', exact: true }).click();
+          assert.equal(await publicPage.getByRole('button', { name: /暂停动效|播放动效/ }).count(), 0);
+          await publicPage.emulateMedia({ reducedMotion: 'reduce' });
           const paused = await trackMotion();
-          assert.ok(paused.before.every(track => track.name === 'none'), 'Pause switches the rails to a stable scrollable list');
+          assert.ok(paused.before.every(track => track.name === 'none'), 'Reduced motion switches the rails to a stable scrollable list');
           assert.ok(paused.after.every((track, index) => Math.abs(track.y - paused.before[index].y) <= 1));
-          assert.equal(new URL(publicPage.url()).hash, '#works', 'Motion controls do not navigate');
+          assert.equal(new URL(publicPage.url()).hash, '#works', 'Reduced-motion changes do not navigate');
           const staticViewport = rails.locator('[data-flow-rail-window]').first();
           const staticBounds = await staticViewport.boundingBox();
           await publicPage.mouse.move(staticBounds.x + staticBounds.width / 2, staticBounds.y + staticBounds.height / 2);
@@ -1015,7 +1016,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
           await staticViewport.evaluate(e => { e.scrollTop = e.scrollHeight; });
           await publicPage.mouse.wheel(0, 360);
           assert.equal(new URL(publicPage.url()).hash, '#works', 'Static rail at its end must not navigate');
-          await publicPage.getByRole('button', { name: '播放动效', exact: true }).click();
+          await publicPage.emulateMedia({ reducedMotion: 'no-preference' });
           await publicPage.mouse.move(20, 300);
           await publicPage.mouse.wheel(0, 360);
           await publicPage.locator('[data-flow-scene="pricing"]').waitFor();

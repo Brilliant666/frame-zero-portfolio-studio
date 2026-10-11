@@ -158,7 +158,7 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
     await page.waitForFunction(() => document.querySelector('#basic-photo-upload input[type="file"]')?.matches(':enabled'));
     assert.equal(await input.isEnabled(), true, 'Upload is available directly in the gallery');
     assert.equal(await input.getAttribute('accept'), 'image/jpeg,image/png,image/webp');
-    await uploader.getByText(/每批最多 8 张 · 每张最多 20 MB · JPEG \/ PNG \/ WebP/).waitFor({ state: 'visible' });
+    await uploader.getByText('JPEG / PNG / WebP · 每批最多 8 张 · 每张最多 20 MB', { exact: true }).waitFor({ state: 'visible' });
   }
   const makeFile = async (name, width, height, color) => ({ name: `${name}.png`, mimeType: 'image/png', buffer: await sharp({ create: { width, height, channels: 3, background: color } }).png().toBuffer() });
   let firstBasic, secondBasic, firstPremium, originalCard, photoAssets;
@@ -239,18 +239,22 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
       const premiumBefore = await draft('premium-polaroid');
       await page.goto(`${origin}${basic}/profile`); await ready();
       await publish(); assert.deepEqual(await draft('premium-polaroid'), premiumBefore);
-      await publicationRegion().locator('summary').filter({ hasText: /^发布历史与回退 / }).click();
-      const previous = publicationRegion().locator(`li[data-publication-id="${firstBasic.id}"]`);
+      await publicationRegion().getByRole('button', { name: /^发布记录 / }).click();
+      const history = page.getByRole('dialog', { name: '发布记录与回退', exact: true });
+      await history.waitFor({ state: 'visible' });
+      const previous = history.locator(`li[data-publication-id="${firstBasic.id}"]`);
       assert.match(await previous.textContent(), /基础版 · 明亮电影感/);
       const response = page.waitForResponse(r => new URL(r.url()).pathname === publicationPath('basic') && r.request().method() === 'POST');
       await previous.getByRole('button', { name: '恢复此公开版本', exact: true }).click();
       assert.equal((await response).status(), 200);
-      await publicationRegion().getByRole('status').filter({ hasText: '已恢复公开版本' }).waitFor();
+      await history.getByRole('status').filter({ hasText: '已恢复公开版本' }).waitFor();
       assert.equal((await publication()).current.id, firstBasic.id);
       assert.deepEqual(await draft(), basicBefore); assert.deepEqual(await draft('premium-polaroid'), premiumBefore);
       await publicPage.goto(`${origin}/${slug}`); await publicPage.locator('[data-template="cinematic-light"]').waitFor();
       assert.equal(await publicPage.locator('[data-site-premium]').count(), 0);
       await screenshot(publicPage, 'rollback-basic-public');
+      await history.getByRole('button', { name: '关闭发布记录', exact: true }).click();
+      await history.waitFor({ state: 'hidden' });
     });
     await stage('05 edits while saving remain unsaved and unpublished', async () => {
       await page.getByLabel('摄影师名称', { exact: true }).fill('Captured publication name');

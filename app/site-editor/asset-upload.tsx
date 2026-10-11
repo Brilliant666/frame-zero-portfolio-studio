@@ -1,11 +1,12 @@
 "use client";
 import { useId, useRef, useState } from "react";
+import styles from "./asset-upload.module.css";
 
 type UploadStatus = "queued" | "uploading" | "uploaded" | "rejected" | "uncertain";
 type UploadResult = { name: string; status: UploadStatus };
 const labels: Record<UploadStatus, string> = { queued: "未上传", uploading: "上传中", uploaded: "已入库", rejected: "未完成，请核对提示", uncertain: "结果待核对，请先检查图库" };
 
-export default function SiteAssetUpload({ endpoint, onUploaded }: { endpoint: string; onUploaded: () => Promise<unknown> }) {
+export default function SiteAssetUpload({ endpoint, onUploaded, compact = false }: { endpoint: string; onUploaded: () => Promise<unknown>; compact?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [failed, setFailed] = useState(false);
@@ -41,10 +42,10 @@ export default function SiteAssetUpload({ endpoint, onUploaded }: { endpoint: st
       finally { lock.current = false; setBusy(false); }
     }
   }
-  return <section aria-label="本站照片上传" data-site-upload>
-    <label>上传本站照片<input aria-label="上传本站照片" aria-describedby={hintId} type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy} onChange={event => { const files = Array.from(event.target.files ?? []); event.target.value = ""; void upload(files); }} /></label>
-    <p id={hintId}>每批最多 8 张 · 每张最多 20 MB · JPEG / PNG / WebP。原图保留，移出图集不会删除图库照片。</p>
-    <p role={failed ? "alert" : "status"}>{message || "上传到本站图库后，各内容空间可分别选片；上传本身不会发布。"}</p>
+  return <section aria-label="本站照片上传" data-site-upload className={compact ? styles.compact : undefined}>
+    <label className={compact ? styles.choose : undefined}>上传本站照片<input aria-label="上传本站照片" aria-describedby={hintId} type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy} onChange={event => { const files = Array.from(event.target.files ?? []); event.target.value = ""; void upload(files); }} /></label>
+    <p id={hintId}>{compact ? "JPEG / PNG / WebP · 每批最多 8 张 · 每张最多 20 MB" : "每批最多 8 张 · 每张最多 20 MB · JPEG / PNG / WebP。原图保留，移出图集不会删除图库照片。"}</p>
+    {(!compact || message) && <p className={compact ? styles.message : undefined} role={failed ? "alert" : "status"}>{message || "上传到本站图库后，各内容空间可分别选片；上传本身不会发布。"}</p>}
     {!!results.length && <ul aria-label="本批上传结果">{results.map((item, index) => <li key={index}>{index + 1}. {item.name} — {labels[item.status]}</li>)}</ul>}
   </section>;
 }
