@@ -138,8 +138,8 @@ for (const section of ["template", "profile", "packages", "layout", "contact", "
         "the structure diagram must precede the detailed material guidance",
       );
       assert.ok(
-        profileIndex < actionIndex,
-        "the primary action must follow the complete material guidance",
+        headingIndex < actionIndex && actionIndex < previewIndex,
+        "the primary action must follow the template name and precede the structure and material guidance",
       );
       assert.doesNotMatch(html, /data-layout-composition-preview=|data-layout-preview-apply=/);
       assert.doesNotMatch(html, /data-template-card=/);

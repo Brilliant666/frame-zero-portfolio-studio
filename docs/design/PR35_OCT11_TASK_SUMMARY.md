@@ -32,3 +32,9 @@ PR继续OPEN + DRAFT。S3前台重设计未实施；无通用模板引擎、十�
 - [基础顶部补齐](PR35_BASIC_PUBLICATION_HEADER.md)
 - [拍立得图库与预览](PR35_POLAROID_LIBRARY_COMPACT.md)
 - 套餐／联系留白与日常切换的分轮测量见 `CURRENT_STATUS.md` 对应日期条目。本机截图、账号和运维材料不进入公开仓库。
+# 提交后 CI 补充
+
+首推 `035289d` 的 Container、Deployment Bootstrap、Public Safety 通过。Quality 首轮失败记录：[38141525030](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/38141525030)，旧渲染断言仍要求模板主按钮位于完整素材说明之后；按已验收入口前移更新为名称后、结构图前，素材说明存在及结构顺序断言保留。PostgreSQL 首轮失败记录：[38141525060](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/38141525060)，Flow 按钮总数仍包含已移除的暂停按钮；改为明确一个作品入口和三个页面入口，并断言暂停按钮不存在，44px 点击面积、照片无遮挡及后续数据检查保持。
+
+这次补充只修改测试和记录。旧后台完整构建、包检查及45项运行测试、两文件lint通过；产品代码、3001和业务数据不变。后续最终Head五项CI以PR检查区为准，首轮失败保留。
+

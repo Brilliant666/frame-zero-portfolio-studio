@@ -1124,14 +1124,17 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         await publicPage.setViewportSize(viewport);
         await publicPage.goto(`${origin}/${SLUG}#works`);
         await publicPage.locator('[data-flow-scene="works"]').waitFor();
-        const controls = await publicPage.locator('[data-flow-expand], button[aria-pressed], [aria-label="页面位置"] button').evaluateAll(nodes => {
+        assert.equal(await publicPage.locator('[data-flow-expand]').count(), 1);
+        assert.equal(await publicPage.locator('[aria-label="页面位置"] button').count(), 3);
+        assert.equal(await publicPage.getByRole('button', { name: /暂停动效|播放动效/ }).count(), 0);
+        const controls = await publicPage.locator('[data-flow-expand], [aria-label="页面位置"] button').evaluateAll(nodes => {
           const rect = element => { const r = element.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height }; };
           const photos = [...document.querySelectorAll('[data-flow-rail-window]')].map(rect);
           return nodes.map(node => { const bounds = rect(node); return { name: node.getAttribute('aria-label') ?? node.textContent, ...bounds, centerHit: node.contains(document.elementFromPoint((bounds.left + bounds.right) / 2, (bounds.top + bounds.bottom) / 2)), overlapsPhoto: photos.some(photo => bounds.left < photo.right && bounds.right > photo.left && bounds.top < photo.bottom && bounds.bottom > photo.top) }; });
         });
         const sample = { viewport, controls };
         report.s2.push(sample);
-        assert.equal(controls.length, 5);
+        assert.equal(controls.length, 4);
         for (const control of controls) {
           assert.ok(control.width >= 44 && control.height >= 44, `${control.name} has a full 44px hit target`);
           assert.ok(control.centerHit && !control.overlapsPhoto, `${control.name} is hittable without covering the photo window`);
