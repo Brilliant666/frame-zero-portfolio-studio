@@ -46,7 +46,7 @@ export default function CollectionLivePreview({ collection, assets, onView, acti
     return [{ id, asset, title: `${String(index + 1).padStart(2, "0")} / ${collection.name}`, subtitle: "查看完整影像" }];
   }), [collection.assetIds, collection.name, assetMap, unavailable]);
   const missing = collection.assetIds.length - cards.length;
-  return <section className={styles.preview} aria-label="当前图集即时效果" data-star-theme={theme}>
+  return <section className={styles.preview} aria-label="当前图集即时效果" data-template-preview data-star-theme={theme}>
     <div className={styles.toolbar}>
       <div><h3>当前编辑 · 即时效果</h3><p>按当前照片顺序展示；此处不保存或发布。构图和主题仅用于查看。</p></div>
       <button type="button" onClick={() => setTheme(value => value === "paper" ? "night" : "paper")}>{theme === "paper" ? "切换到夜空" : "切换到纸面"}</button>

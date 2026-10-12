@@ -32,13 +32,15 @@
 .toolbar { display:flex; flex-wrap:wrap; gap:8px 16px; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid var(--star-line); }
 .toolbar h3 { margin:0; font-size:15px; }
 .toolbar p { margin:4px 0 0; font-size:12px; color:var(--star-muted); }
-.toolbar button { min-height:44px; color:var(--star-ink); background:var(--star-glass); border:1px solid var(--star-line); }
+.toolbar button, .device button { min-height:44px; padding:9px 14px; border-radius:8px; font:inherit; color:var(--star-ink); background:var(--star-glass); border:1px solid var(--star-line); cursor:pointer; touch-action:manipulation; }
+.toolbar button:hover, .device button:hover { background:var(--star-glass-2); }
+.toolbar button:disabled, .device button:disabled { opacity:.45; cursor:not-allowed; }
 .notice { padding:12px 16px; margin:0; font-size:13px; }
 .preview :focus-visible { outline:3px solid var(--star-focus); outline-offset:3px; }
 
 .device { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:8px 16px; }
-.device button { min-height:44px; }
 .device button[aria-pressed="true"] { outline:2px solid var(--star-focus); outline-offset:1px; }
+.device button:focus-visible { outline:3px solid var(--star-focus); outline-offset:3px; }
 .device span { font-size:12px; color:var(--star-muted); }
 .viewport { width:100%; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; }
 .scaledSpace { position:relative; width:100%; }
