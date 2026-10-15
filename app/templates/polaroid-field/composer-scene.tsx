@@ -316,8 +316,8 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
       else if (event.key === "-") { event.preventDefault(); zoom(1 / 1.2); }
       else if (event.key.startsWith("Arrow")) {
         event.preventDefault(); cameraMode.current = "manual";
-        motion.move({ ...viewRef.current, x: viewRef.current.x + (event.key === "ArrowLeft" ? 80 : event.key === "ArrowRight" ? -80 : 0),
-          y: viewRef.current.y + (event.key === "ArrowUp" ? 80 : event.key === "ArrowDown" ? -80 : 0) },380);
+        motion.pan(event.key === "ArrowLeft" ? 80 : event.key === "ArrowRight" ? -80 : 0,
+          event.key === "ArrowUp" ? 80 : event.key === "ArrowDown" ? -80 : 0);
       }
     }}>
     <div className={styles.header} ref={headerRef}>

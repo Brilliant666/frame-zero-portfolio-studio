@@ -25,6 +25,8 @@ export default function CollectionMemberEditor({ collection, assets, onChange, o
   const [selection, setSelection] = useState<{ collectionId: string; ids: string[] }>({ collectionId: collection.id, ids: [] });
   const selectedIds = selection.collectionId === collection.id ? collection.assetIds.filter(id => selection.ids.includes(id)) : [];
   const [undo, setUndo] = useState<MemberMoveUndo | null>(null);
+  const undoMemberId = useRef<string | null>(null);
+  const undoButton = useRef<HTMLButtonElement>(null);
   const canUndo = undoMemberMove(collection, undo) !== collection;
   const toggle = (id: string) => setSelection({ collectionId: collection.id, ids: selectedIds.includes(id) ? selectedIds.filter(value => value !== id) : [...selectedIds, id] });
   const drag = useRef<Drag | null>(null);
@@ -32,7 +34,12 @@ export default function CollectionMemberEditor({ collection, assets, onChange, o
   const [dragView, setDragView] = useState<DragView | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const assetMap = useMemo(() => new Map(assets.map(asset => [asset.id, asset])), [assets]);
-  const restoreFocus = useCallback((id: string) => requestAnimationFrame(() => cards.current.get(id)?.focus({ preventScroll: true })), []);
+  const restoreFocus = useCallback((id: string, reveal = false) => requestAnimationFrame(() => {
+    const card = cards.current.get(id);
+    if (!card || !card.getClientRects().length) return;
+    card.focus({ preventScroll: true });
+    if (reveal) card.scrollIntoView({ block: "nearest" });
+  }), []);
   const clearHold = useCallback(() => { if (holdTimer.current) clearTimeout(holdTimer.current); holdTimer.current = null; }, []);
   const cancelDrag = useCallback(() => {
     clearHold();
@@ -72,7 +79,7 @@ export default function CollectionMemberEditor({ collection, assets, onChange, o
     if (!active.active) return;
     if (active.original !== collection) { setAnnouncement("图集已变化，已取消本次拖动。请重新排序。"); restoreFocus(active.id); return; }
     const next = moveCollectionMembers(collection, [active.id], { kind: "relative", targetId: active.target, side: active.side });
-    if (next !== collection) { setUndo(rememberMemberMove(collection, next)); onChange(next); setAnnouncement(`照片已移到第 ${next.assetIds.indexOf(active.id) + 1} 位；尚未保存。`); }
+    if (next !== collection) { undoMemberId.current = active.id; setUndo(rememberMemberMove(collection, next)); onChange(next); setAnnouncement(`照片已移到第 ${next.assetIds.indexOf(active.id) + 1} 位；尚未保存。`); }
     else setAnnouncement("位置未改变。");
     restoreFocus(active.id);
   }, [clearHold, collection, onChange, restoreFocus, track]);
@@ -142,9 +149,12 @@ export default function CollectionMemberEditor({ collection, assets, onChange, o
   }, [dragView, track]);
   useEffect(() => {
     if (!undo) return;
-    const timer = setTimeout(() => setUndo(null), 12000);
+    const timer = setTimeout(() => {
+      if (document.activeElement === undoButton.current && undoMemberId.current) restoreFocus(undoMemberId.current, true);
+      setUndo(null);
+    }, 12000);
     return () => clearTimeout(timer);
-  }, [undo]);
+  }, [undo, restoreFocus]);
   function keyboard(event: KeyboardEvent<HTMLLIElement>, id: string, index: number) {
     if (event.target !== event.currentTarget || drag.current || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
     event.preventDefault();
@@ -153,7 +163,7 @@ export default function CollectionMemberEditor({ collection, assets, onChange, o
     const columns = Math.max(1, nodes.filter(card => Math.abs(card.getBoundingClientRect().top - (firstTop ?? 0)) < 2).length);
     const destination = event.key === "Home" ? 0 : event.key === "End" ? collection.assetIds.length - 1 : index + (event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : event.key === "ArrowUp" ? -columns : columns);
     const next = moveCollectionMember(collection, id, Math.min(collection.assetIds.length - 1, Math.max(0, destination)));
-    if (next !== collection) { setUndo(rememberMemberMove(collection, next)); onChange(next); setAnnouncement(`照片已移到第 ${next.assetIds.indexOf(id) + 1} 位；尚未保存。`); }
+    if (next !== collection) { undoMemberId.current = id; setUndo(rememberMemberMove(collection, next)); onChange(next); setAnnouncement(`照片已移到第 ${next.assetIds.indexOf(id) + 1} 位；尚未保存。`); }
     restoreFocus(id);
     requestAnimationFrame(() => cards.current.get(id)?.scrollIntoView({ block: "nearest" }));
   }
@@ -184,7 +194,7 @@ export default function CollectionMemberEditor({ collection, assets, onChange, o
     </div>}
     <p id={helpId} className={styles.help}>{mode === "sort" ? "拖动整张照片调整顺序，手机长按后拖动；拖到屏幕边缘可滚动。键盘支持方向键和 Home / End，Escape 取消。" : "选择照片后统一移出；选择一张可设为封面。移出不删除本站素材。"}</p>
     <p className={styles.live} role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
-    {mode === "sort" && canUndo && <div className={styles.feedback}><span>已调整顺序</span><button type="button" onClick={() => { const previous = undoMemberMove(collection, undo); if (previous !== collection) { onChange(previous); setAnnouncement("已撤销最近一次移动；尚未保存。"); } setUndo(null); }}>撤销最近移动</button></div>}
+    {mode === "sort" && canUndo && <div className={styles.feedback}><span>已调整顺序</span><button ref={undoButton} type="button" onClick={() => { const previous = undoMemberMove(collection, undo); if (previous !== collection) { onChange(previous); setAnnouncement("已撤销最近一次移动；尚未保存。"); if (undoMemberId.current) restoreFocus(undoMemberId.current, true); } setUndo(null); }}>撤销最近移动</button></div>}
     {!collection.assetIds.length && <p>图集还没有照片，请从图库选片。</p>}
     <ol className={styles.grid} ref={list}>{collection.assetIds.map((id, index) => {
       const asset = assetMap.get(id);

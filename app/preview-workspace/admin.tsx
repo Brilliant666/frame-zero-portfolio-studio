@@ -11,6 +11,7 @@ import { isAdminSaveShortcut } from "../admin/admin-state";
 import { createEmptyPreviewDocument, copyLegacyBasics, parsePreviewDocument, type PreviewPortfolioDocumentV1 } from "./document";
 import { POLAROID_SOCIAL_LIMIT, readPolaroidSocial, writePolaroidSocial } from "./contact-channels";
 import { restorePreviewFocus } from "./preview-focus";
+import { focusPhotoResults as focusEditorRegion } from "./use-photo-page-focus";
 import { importPrototypeCollections, previewIsDirty, reconcilePreviewSave } from "./admin-state";
 import { PreviewPortfolioView } from "./portfolio-view";
 import { loadSiteAssets, type SiteAsset } from "../site-editor/assets-client";
@@ -27,6 +28,7 @@ import CollectionMemberEditor from "./collection-member-editor";
 import CollectionLivePreview from "./collection-live-preview";
 import SitePhotoLibrary from "./site-photo-library";
 import NewCollectionDialog from "./new-collection-dialog";
+import PackagesEditor from "./packages-editor";
 import styles from "./admin.module.css";
 
 type Envelope = { content: PreviewPortfolioDocumentV1 | null; revision: number; updatedAt: string | null };
@@ -74,10 +76,18 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
   const [conflict, setConflict] = useState(false);
   const [message, setMessage] = useState("正在读取新版工作区…");
   const [section, setSection] = useState(siteMode ? "library" : "profile");
+  const sectionScroll = useRef<Record<string, number>>({});
+  const sectionFrame = useRef(0);
+  const collectionStepFrame = useRef(0);
   const sections = siteMode ? [["library", "图库"], ["albums", "图集"], ["profile", "主页资料"], ["packages", "拍摄套餐"], ["contact", "联系约拍"]] : [["profile", "主页资料"], ["collections", "图集管理"], ["contact", "套餐与联系"]];
   const siteName = siteScope?.adminBasePath.split("/")[1] ?? "";
-  const changeSection = (value: string) => {
+  const changeSection = (value: string, resetScroll = false) => {
+    sectionScroll.current[section] = window.scrollY;
+    if (resetScroll) sectionScroll.current[value] = 0;
     setSection(value);
+    cancelAnimationFrame(sectionFrame.current);
+    cancelAnimationFrame(collectionStepFrame.current);
+    sectionFrame.current = requestAnimationFrame(() => window.scrollTo({ top: sectionScroll.current[value] ?? 0, behavior: "instant" }));
     if (siteMode) { const url = new URL(window.location.href); url.hash = `edit-${value}`; window.history.replaceState(null, "", url); }
   };
   useEffect(() => {
@@ -91,11 +101,20 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
   const [collectionTab, setCollectionTab] = useState<"photos" | "settings" | "effect">("photos");
   const [compareEffect, setCompareEffect] = useState(false);
   const photoScroll = useRef(0);
-  const changeCollectionTab = (value: "photos" | "settings" | "effect") => {
+  const collectionPanels = useRef<Partial<Record<"photos" | "settings" | "effect", HTMLElement | null>>>({});
+  const changeCollectionTab = (value: "photos" | "settings" | "effect", focusPanel = false) => {
     if (collectionTab === "photos") photoScroll.current = window.scrollY;
     setCollectionTab(value);
-    requestAnimationFrame(() => window.scrollTo({ top: value === "photos" ? photoScroll.current : 0, behavior: "instant" }));
+    cancelAnimationFrame(collectionStepFrame.current);
+    collectionStepFrame.current = requestAnimationFrame(() => {
+      // Step actions disappear with their old panel; the persistent tabs keep their own focus.
+      const panel = collectionPanels.current[value];
+      if (focusPanel && panel && value !== "photos") { focusEditorRegion(panel); return; }
+      if (focusPanel) panel?.focus({ preventScroll: true });
+      window.scrollTo({ top: value === "photos" ? photoScroll.current : 0, behavior: "instant" });
+    });
   };
+  useEffect(() => () => { cancelAnimationFrame(sectionFrame.current); cancelAnimationFrame(collectionStepFrame.current); }, []);
   const [operationMember, setOperationMember] = useState<string | null>(null);
   const [enlargedMember, setEnlargedMember] = useState<SiteAsset | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -265,7 +284,7 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
   };
   const openCollection = (id: string) => {
     setSelectedId(id); setCollectionTab("photos"); setOperationMember(null); photoScroll.current = 0;
-    changeSection("collections");
+    changeSection("collections", true);
   };
   const createNamedCollection = (name: string) => {
     if (current.current.collections.length >= 30 || loadState !== "ready" || saving) return;
@@ -311,12 +330,12 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
   };
   const memberLabel = (id: string) => { const index = assets.findIndex((asset) => asset.id === id); return index >= 0 ? `素材 ${String(index + 1).padStart(2, "0")} · ${assets[index].orientation === "portrait" ? "竖图" : assets[index].orientation === "landscape" ? "横图" : "方图"}` : `缺失或已回收 · ${id.slice(0, 12)}`; };
 
-  return <main className={styles.workspace} data-site-editor={siteMode ? "premium" : undefined}>
-    {siteMode ? <header className={styles.topbar}>
+  return <main data-photo-workspace className={styles.workspace} data-site-editor={siteMode ? "premium" : undefined}>
+    {siteMode ? <header data-photo-scroll-header className={styles.topbar}>
       <div><p className={styles.breadcrumb}>{siteName} <span>/</span> 高级拍立得</p><h1>{section === "collections" ? "图集编辑" : sections.find(([id]) => id === section)?.[1]}</h1></div>
 
     </header> : <>
-    <header className={styles.topbar}><div><h1>新版摄影作品集后台</h1><p>{siteMode ? "本站高级拍立得草稿" : "独立本地工作区"} · {dirty ? "有未保存修改" : saved ? `已保存 · 版本 ${revision}` : "尚未配置"}{saving ? " · 保存中" : ""}</p></div><div className={styles.actions}>
+    <header data-photo-scroll-header className={styles.topbar}><div><h1>新版摄影作品集后台</h1><p>{siteMode ? "本站高级拍立得草稿" : "独立本地工作区"} · {dirty ? "有未保存修改" : saved ? `已保存 · 版本 ${revision}` : "尚未配置"}{saving ? " · 保存中" : ""}</p></div><div className={styles.actions}>
       <a href={siteScope?.previewHref ?? "/preview"} target="_blank" rel="noreferrer">{siteMode ? "查看受保护草稿 ↗" : "查看已保存主页 ↗"}</a>
       <button type="button" disabled={loadState !== "ready"} onClick={() => { setPreviewCollectionId(undefined); setPreview(structuredClone(draft)); }}>查看草稿效果</button>
       <button type="button" disabled={saving || loadState === "loading"} onClick={() => { if ((!dirty && !conflict) || confirm("重新读取将替换当前未保存草稿。若有冲突，请先导出留存，确认继续？")) void reload(); }}>重新读取</button>
@@ -366,7 +385,7 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
               {selected.coverAssetId && !assetMap.has(selected.coverAssetId) && <p className={styles.warning}>独立封面暂不可用，保留引用；当前预览使用首张可用成员。</p>}
               {siteMode && <nav className={styles.collectionTabs} aria-label="图集编辑内容"><button type="button" aria-pressed={collectionTab === "photos"} onClick={() => changeCollectionTab("photos")}>照片排序</button><button type="button" aria-pressed={collectionTab === "settings"} onClick={() => changeCollectionTab("settings")}>图集设置</button><button type="button" aria-pressed={collectionTab === "effect"} onClick={() => changeCollectionTab("effect")}>展示效果</button></nav>}
               {siteMode && collectionTab === "photos" && <button type="button" aria-pressed={compareEffect} onClick={() => setCompareEffect(value => !value)}>{compareEffect ? "关闭上下对照" : "开启上下对照"}</button>}
-              <div hidden={siteMode && collectionTab !== "photos"}>
+              <div ref={node => { collectionPanels.current.photos = node; }} role="group" tabIndex={-1} aria-label="照片排序步骤" hidden={siteMode && collectionTab !== "photos"}>
               {siteMode ? <><h3 className={styles.membersHeading}>成员与顺序 · {selected.assetIds.length} 张</h3><CollectionMemberEditor key={selected.id} collection={selected} assets={assets} onChange={next => updateCollection(() => next)} onView={setEnlargedMember} /></> : <>              <h3 className={styles.membersHeading}>成员与顺序 · {selected.assetIds.length} 张</h3><ol className={styles.memberList}>{selected.assetIds.map((id, index) => <li className={styles.member} key={id} data-new={siteMode && recentAdditions.includes(id)}><button type="button" className={styles.memberImage} disabled={!assetMap.has(id)} aria-label={`查看成员 ${index + 1} 大图`} onClick={() => setEnlargedMember(assetMap.get(id)!)}>{assetMap.has(id) && <img alt="" src={assetMap.get(id)!.variants.thumbnail.src} />}<span>查看大图</span></button><span>{index + 1}. {memberLabel(id)}{siteMode && recentAdditions.includes(id) && " · 本次加入"}{!assetMap.has(id) && " · 引用保留"}</span><button type="button" className={styles.memberSelect} aria-label={`成员 ${index + 1} 选择操作`} aria-expanded={operationMember === id} onClick={() => setOperationMember(operationMember === id ? null : id)}>选择操作</button>{operationMember === id && <div className={styles.memberActions}><button type="button" disabled={!assetMap.has(id)} onClick={() => updateCollection(item => ({ ...item, coverAssetId: id }))}>设为封面</button><button type="button" aria-label={`成员 ${index + 1} 上移`} disabled={index === 0} onClick={() => updateCollection((item) => ({ ...item, assetIds: moveItem(item.assetIds, index, index - 1) }))}>↑</button><button type="button" aria-label={`成员 ${index + 1} 下移`} disabled={index === selected.assetIds.length - 1} onClick={() => updateCollection((item) => ({ ...item, assetIds: moveItem(item.assetIds, index, index + 1) }))}>↓</button><button type="button" onClick={() => updateCollection((item) => ({ ...item, assetIds: item.assetIds.filter((entry) => entry !== id), focusAssetId: item.focusAssetId === id ? null : item.focusAssetId }))}>移出</button>{siteMode && <button type="button" className={styles.movePosition} aria-label={`成员 ${index + 1} 移到指定位置`} onClick={() => {
                 const value = window.prompt(`移到第几位？请输入 1–${selected.assetIds.length}`, String(index + 1));
                 if (value === null) return;
@@ -374,9 +393,9 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
                 if (!Number.isInteger(position) || position < 1 || position > selected.assetIds.length) { setMessage("位置无效，成员顺序未改变。"); return; }
                 updateCollection(item => ({ ...item, assetIds: moveItem(item.assetIds, index, position - 1) }));
               }}>移到第…位</button>}</div>}</li>)}</ol></>}
-              {siteMode && <div className={styles.flowNext}><p>顺序确认后，选择首页展示的图集封面。</p><button type="button" onClick={() => changeCollectionTab("settings")}>下一步：确认封面</button></div>}
+              {siteMode && <div className={styles.flowNext}><p>顺序确认后，选择首页展示的图集封面。</p><button type="button" onClick={() => changeCollectionTab("settings", true)}>下一步：确认封面</button></div>}
               </div>
-              <div hidden={siteMode && collectionTab !== "settings"} data-collection-settings>
+              <div ref={node => { collectionPanels.current.settings = node; }} role="group" tabIndex={-1} aria-label="图集设置步骤" hidden={siteMode && collectionTab !== "settings"} data-collection-settings>
 
               <div className={styles.row}><button type="button" disabled={!selected.assetIds.length} onClick={() => { if (confirm("移出此图集的全部成员？仅解除关系，素材文件及独立封面不变。")) updateCollection((item) => ({ ...item, assetIds: [], focusAssetId: null })); }}>移出全部成员</button><button type="button" onClick={() => { setPreviewCollectionId(selected.id); setPreview(structuredClone({ ...draft, collections: [{ ...selected, visible: true }] })); }}>查看图集草稿效果</button></div>
 
@@ -391,14 +410,14 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
               {selected.coverFit === "fill" && <div className={styles.grid}>{(["X", "Y"] as const).map((axis) => { const key = axis === "X" ? "coverFocusX" : "coverFocusY"; return <label className={styles.field} key={axis}>封面焦点 {axis}：{selected[key]}%<input type="range" min="0" max="100" value={selected[key]} onChange={(event) => updateCollection((item) => ({ ...item, [key]: Number(event.target.value) }))} /></label>; })}</div>}
               <label className={styles.field}>星图重点照片<select value={selected.focusAssetId ?? ""} onChange={(event) => updateCollection((item) => ({ ...item, focusAssetId: event.target.value || null }))}><option value="">默认第一张可用成员</option>{selected.assetIds.map((id) => <option key={id} value={id}>{memberLabel(id)}</option>)}</select></label></CoverSettings>
               {siteMode && <CollectionMemberEditor key={`manage-${selected.id}`} mode="manage" collection={selected} assets={assets} onChange={next => updateCollection(() => next)} onView={setEnlargedMember} />}
-              <p className={styles.hint}>最多 30 个图集，每个图集最多 500 张；移除关系不会删除素材。</p>{siteMode && <div className={styles.flowNext}><button type="button" onClick={() => changeCollectionTab("photos")}>返回调整顺序</button><button type="button" className={styles.primary} onClick={() => changeCollectionTab("effect")}>下一步：查看效果</button></div>}</div>
+              <p className={styles.hint}>最多 30 个图集，每个图集最多 500 张；移除关系不会删除素材。</p>{siteMode && <div className={styles.flowNext}><button type="button" onClick={() => changeCollectionTab("photos", true)}>返回调整顺序</button><button type="button" className={styles.primary} onClick={() => changeCollectionTab("effect", true)}>下一步：查看效果</button></div>}</div>
               {siteScope ? null : <details><summary>从共享素材库添加照片</summary><p className={styles.hint}>{libraryState}</p><div className={styles.row}><button type="button" onClick={() => void loadLibrary()}>重新读取素材</button>{!siteMode && <a href="/admin/layout" target="_blank" rel="noreferrer">打开原版共享素材库管理 ↗</a>}</div><p className={styles.hint}>这是共用素材库；导入和回收会影响两边素材可用性。此处只选择可用图片。</p><div className={styles.library}>{assets.map((asset) => <div className={styles.asset} key={asset.id}><img alt={memberLabel(asset.id)} src={asset.variants.thumbnail.src} loading="lazy" /><span>{memberLabel(asset.id)}</span><button type="button" disabled={!libraryReady || selected.assetIds.includes(asset.id) || selected.assetIds.length >= 500} onClick={() => updateCollection((item) => ({ ...item, assetIds: [...item.assetIds, asset.id] }))}>{selected.assetIds.includes(asset.id) ? "已在图集" : "加入图集"}</button><button type="button" disabled={!libraryReady} onClick={() => updateCollection((item) => ({ ...item, coverAssetId: asset.id }))}>设为封面</button></div>)}</div></details>}
-            {siteMode && <aside className={styles.liveEffect} hidden={collectionTab !== "effect" && !(collectionTab === "photos" && compareEffect)}><p className={styles.hint}>这是当前编辑的效果。确认后使用页面“保存并发布”更新公开主页；“仅保存草稿”保留编辑供下次继续。</p><CollectionLivePreview key={selected.id} collection={selected} assets={assets} onView={setEnlargedMember} active={(collectionTab === "effect" || (collectionTab === "photos" && compareEffect)) && !pickerCollectionId && !preview && !enlargedMember} /></aside>}</section></div> : <p className={styles.notice}>还没有图集，点击“新建图集”开始。</p>}
+            {siteMode && <aside ref={node => { collectionPanels.current.effect = node; }} tabIndex={-1} aria-label="展示效果步骤" className={styles.liveEffect} hidden={collectionTab !== "effect" && !(collectionTab === "photos" && compareEffect)}><p className={styles.hint}>这是当前编辑的效果。确认后使用页面“保存并发布”更新公开主页；“仅保存草稿”保留编辑供下次继续。</p><CollectionLivePreview key={selected.id} collection={selected} assets={assets} onView={setEnlargedMember} active={(collectionTab === "effect" || (collectionTab === "photos" && compareEffect)) && !pickerCollectionId && !preview && !enlargedMember} /></aside>}</section></div> : <p className={styles.notice}>还没有图集，点击“新建图集”开始。</p>}
           </div>
           {!siteMode && <section className={styles.panel}><h2>显式导入旧原型图集</h2><p className={styles.hint}>选择之前导出的 JSON。仅导入图集到当前草稿，不自动保存；不会猜测分类或恢复已丢失的内存。</p><label className={styles.field}>导入图集 JSON<input type="file" accept="application/json,.json" onChange={(event) => { void importCollections(event.target.files?.[0]); event.target.value = ""; }} /></label></section>}
         </>}
         {(section === "packages" || (!siteMode && section === "contact")) && <>
-          <section className={styles.panel}><h2>拍摄套餐</h2>{draft.packages.map((item, index) => <details className={styles.lowFrequency} key={index}><summary><strong>{item.name || `套餐 ${index + 1}`}</strong><span>{item.price || "未填价格"} · {item.duration || "未填时长"} · {item.enabled ? "显示" : "隐藏"}</span><small>编辑套餐详情</small></summary><div><TextFields prefix={`套餐 ${index + 1} · `} value={{ number: item.number, english: item.english, name: item.name, description: item.description, price: item.price, duration: item.duration }} onChange={(next) => edit((doc) => ({ ...doc, packages: doc.packages.map((entry, i) => i === index ? { ...entry, ...next } : entry) }))} /><Field label="交付内容（每行一条）" multiline value={item.deliverables.join("\n")} onChange={(text) => edit((doc) => ({ ...doc, packages: doc.packages.map((entry, i) => i === index ? { ...entry, deliverables: text === "" ? [] : text.split("\n") } : entry) }))} /><div className={styles.row}><label><input type="checkbox" checked={item.enabled} onChange={(event) => edit((doc) => ({ ...doc, packages: doc.packages.map((entry, i) => i === index ? { ...entry, enabled: event.target.checked } : entry) }))} /> 显示套餐</label><button type="button" disabled={index === 0} onClick={() => edit((doc) => ({ ...doc, packages: moveItem(doc.packages, index, index - 1) }))}>上移</button><button type="button" onClick={() => { if (confirm("从新版草稿移除此套餐？")) edit((doc) => ({ ...doc, packages: doc.packages.filter((_, i) => i !== index) })); }}>移除套餐</button></div></div></details>)}<button type="button" disabled={draft.packages.length >= 12} onClick={() => edit((doc) => ({ ...doc, packages: [...doc.packages, { number: String(doc.packages.length + 1), english: "", name: "新套餐", description: "", price: "", duration: "", deliverables: [], enabled: true }] }))}>添加套餐</button></section>
+          <PackagesEditor value={draft.packages} onChange={(packages) => edit((doc) => ({ ...doc, packages }))} />
         </>}
         {section === "contact" && <>
           <section className={styles.panel}>

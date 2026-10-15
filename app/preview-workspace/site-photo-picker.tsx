@@ -1,12 +1,13 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element -- Authenticated Site image variants. */
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useId, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import type { SiteAsset } from "../site-editor/assets-client";
 import { filterPickerAssets, PICKER_PAGE_SIZE, type PickerFilter } from "./photo-picker-state";
 import { applyPickerLookup, clearPickerLookup, currentFlowLibraryLookup, describePickerLookup, type FlowLibraryLookup } from "./flow-picker-lookup";
 import { flowAssetName } from "../site-editor/flow-gallery-photo-names";
 import styles from "./site-photo-picker.module.css";
+import { usePhotoPageFocus } from "./use-photo-page-focus";
 
 type Props = {
   appearance?: "flow";
@@ -26,7 +27,9 @@ export default function SitePhotoPicker({ appearance, siteScopeKey, flowLibraryL
   const [filter, setFilter] = useState(initialFilter);
   const [picked, setPicked] = useState<string[]>([]);
   const [page, setPage] = useState(0);
+  const pageStatusId = useId();
   const [error, setError] = useState("");
+  const [reloading, setReloading] = useState(false);
   const [lookupNotice, setLookupNotice] = useState("");
   const [enlarged, setEnlarged] = useState<SiteAsset | null>(null);
   const [enlargedName, setEnlargedName] = useState("");
@@ -37,7 +40,7 @@ export default function SitePhotoPicker({ appearance, siteScopeKey, flowLibraryL
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const target = returnFocus?.current ?? previous;
     node?.showModal();
-    return () => { node?.close(); target?.focus(); };
+    return () => { node?.close(); target?.focus({ preventScroll: true }); };
   }, [returnFocus]);
   const memberIds = useMemo(() => new Set(members), [members]);
   const pickedIds = useMemo(() => new Set(picked), [picked]);
@@ -48,6 +51,8 @@ export default function SitePhotoPicker({ appearance, siteScopeKey, flowLibraryL
   const filtered = useMemo(() => filterPickerAssets(assets, members, picked, filter), [assets, members, picked, filter]);
   const pages = Math.max(1, Math.ceil(filtered.length / PICKER_PAGE_SIZE));
   const currentPage = Math.min(page, pages - 1);
+  const { resultsRef, requestPageFocus } = usePhotoPageFocus(currentPage);
+  const changePage = (next: number) => { requestPageFocus(); setPage(next); };
   const visible = filtered.slice(currentPage * PICKER_PAGE_SIZE, (currentPage + 1) * PICKER_PAGE_SIZE);
   const flowLookupEnabled = appearance === "flow" && Boolean(siteScopeKey);
   const libraryLookup = flowLookupEnabled ? currentFlowLibraryLookup(flowLibraryLookup, siteScopeKey) : null;
@@ -56,8 +61,15 @@ export default function SitePhotoPicker({ appearance, siteScopeKey, flowLibraryL
   const updateFilter = (change: Partial<PickerFilter>) => { setFilter(value => ({ ...value, ...change })); setPage(0); setLookupNotice(""); };
   const toggle = (id: string) => { setPicked(ids => ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id]); setError(""); };
   const close = () => { if (!picked.length || window.confirm(`放弃本次选片？已加入${noun}的成员和其他编辑不变。`)) onClose(); };
+  async function reload() {
+    if (reloading) return;
+    setReloading(true); setError("");
+    try { await onReload(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "图库读取失败，选择已保留。"); }
+    finally { setReloading(false); }
+  }
   return <dialog ref={dialog} className={styles.dialog} data-appearance={appearance} aria-labelledby="site-picker-title" onCancel={event => { event.preventDefault(); if (enlarged) closeEnlarged(); else close(); }}>
-    <header className={styles.header} inert={Boolean(enlarged)}><div><h2 id="site-picker-title">从图库选片</h2><p>加入「{collectionName}」 · 已有 {members.length} 张，还可加入 {remaining} 张</p></div><button type="button" onClick={close}>取消选片</button></header>
+    <header data-photo-scroll-header className={styles.header} inert={Boolean(enlarged)}><div><h2 id="site-picker-title">从图库选片</h2><p>加入「{collectionName}」 · 已有 {members.length} 张，还可加入 {remaining} 张</p></div><button type="button" onClick={close}>取消选片</button></header>
     <div className={styles.content} inert={Boolean(enlarged)}>
       <p role="status">{state}</p>
       {truncated && <p className={styles.warning}>本站素材超过 10,000 张，当前只载入其中一部分；筛选和分页仅覆盖已载入照片。</p>}
@@ -74,24 +86,24 @@ export default function SitePhotoPicker({ appearance, siteScopeKey, flowLibraryL
       </fieldset>
       <p className={styles.hint}>按缩略图和方向找照片；加入本站时间不是拍摄时间。选中顺序即追加顺序，改变筛选不会改变已选顺序。</p>
       <div className={styles.tools}>
-        <button type="button" disabled={!ready || !visible.some(asset => !memberIds.has(asset.id) && !pickedIds.has(asset.id))} onClick={() => { setPicked(ids => [...new Set([...ids, ...visible.filter(asset => !memberIds.has(asset.id)).map(asset => asset.id)])]); setError(""); }}>选择本页可加入照片</button>
+        <button type="button" disabled={!ready || reloading || !visible.some(asset => !memberIds.has(asset.id) && !pickedIds.has(asset.id))} onClick={() => { setPicked(ids => [...new Set([...ids, ...visible.filter(asset => !memberIds.has(asset.id)).map(asset => asset.id)])]); setError(""); }}>选择本页可加入照片</button>
         <button type="button" aria-pressed={filter.onlySelected} onClick={() => updateFilter({ onlySelected: !filter.onlySelected })}>{filter.onlySelected ? "返回全部结果" : "查看已选"}</button>
         <button type="button" disabled={!picked.length} onClick={() => { setPicked([]); setError(""); }}>清空选择</button>
-        <button type="button" onClick={() => void onReload()}>重新读取素材</button>
+        <button type="button" disabled={reloading} onClick={() => void reload()}>{reloading ? "正在读取…" : "重新读取素材"}</button>
       </div>
       {missing.length > 0 && <p className={styles.warning}>有 {missing.length} 张已选照片不在当前素材列表中。<button type="button" onClick={() => setPicked(ids => ids.filter(id => availableIds.has(id)))}>取消这些选择</button></p>}
-      <div className={styles.grid} aria-label="本站选片结果" aria-busy={!ready}>
+      <div ref={resultsRef} tabIndex={-1} role="region" className={styles.grid} aria-label="本站选片结果" aria-describedby={pageStatusId} aria-busy={!ready || reloading}>
         {visible.map((asset, index) => <article key={asset.id} className={styles.card} data-flow-asset-id={appearance === "flow" ? asset.id : undefined} data-selected={pickedIds.has(asset.id)}>
           <button className={styles.imageButton} type="button" aria-label={appearance === "flow" ? `放大照片：${flowAssetName(asset, currentPage * PICKER_PAGE_SIZE + index)}` : `放大照片 ${asset.id}`} onClick={event => { enlargeTrigger.current = event.currentTarget; setEnlargedName(flowAssetName(asset, currentPage * PICKER_PAGE_SIZE + index)); setEnlarged(asset); }}><img alt="" src={asset.variants.thumbnail.src} loading="lazy" /></button>
-          <label className={styles.pick}><input type="checkbox" aria-label={appearance === "flow" ? `选择照片：${flowAssetName(asset, currentPage * PICKER_PAGE_SIZE + index)}` : `选择照片 ${asset.id}`} disabled={!ready || memberIds.has(asset.id)} checked={pickedIds.has(asset.id)} onChange={() => toggle(asset.id)} />{memberIds.has(asset.id) ? `已在${noun}` : pickedIds.has(asset.id) ? `已选 ${picked.indexOf(asset.id) + 1}` : "选择照片"}</label>
+          <label className={styles.pick}><input type="checkbox" aria-label={appearance === "flow" ? `选择照片：${flowAssetName(asset, currentPage * PICKER_PAGE_SIZE + index)}` : `选择照片 ${asset.id}`} disabled={!ready || reloading || memberIds.has(asset.id)} checked={pickedIds.has(asset.id)} onChange={() => toggle(asset.id)} />{memberIds.has(asset.id) ? `已在${noun}` : pickedIds.has(asset.id) ? `已选 ${picked.indexOf(asset.id) + 1}` : "选择照片"}</label>
           <span>{orientationName[asset.orientation]} · {asset.variants.full.width} × {asset.variants.full.height}</span>
           <small title={asset.id}>ID {asset.id}</small><small>{asset.createdAt ? new Date(asset.createdAt).toLocaleString("zh-CN", { hour12: false }) : "加入时间未知"}</small>
         </article>)}
       </div>
       {!filtered.length && (flowLookupEnabled ? <p className={styles.empty} role="status">{filter.onlySelected ? "暂无暂选照片。返回全部结果后继续选片。" : <>当前条件：{describePickerLookup(filter)}。没有符合条件的照片。{hasLookup ? "可清除查找条件或调整分类关系。" : "可调整分类关系，或重新读取素材。"}</>}</p> : <p>没有符合条件的照片。试试调整筛选，或清除素材 ID。</p>)}
-      <nav className={styles.tools} aria-label="选片分页"><button type="button" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>上一页</button><span>第 {currentPage + 1} / {pages} 页 · {filtered.length} 张匹配</span><button type="button" disabled={currentPage + 1 >= pages} onClick={() => setPage(currentPage + 1)}>下一页</button></nav>
+      <nav className={styles.tools} aria-label="选片分页"><button type="button" disabled={currentPage === 0} onClick={() => changePage(currentPage - 1)}>上一页</button><span id={pageStatusId}>第 {currentPage + 1} / {pages} 页 · {filtered.length} 张匹配</span><button type="button" disabled={currentPage + 1 >= pages} onClick={() => changePage(currentPage + 1)}>下一页</button></nav>
     </div>
-    <footer className={styles.footer} inert={Boolean(enlarged)}><div><strong>已选 {picked.length} 张 · 新增 {additions.length} 张</strong><p>加入后仍需保存修改；不会发布。</p>{additions.length > remaining && <p role="alert">超过剩余容量，请减少选择。</p>}{error && <p role="alert">{error}</p>}</div><button className={styles.primary} type="button" disabled={!ready || !additions.length || additions.length > remaining || missing.length > 0} onClick={() => { try { onAdd(picked); } catch (cause) { setError(cause instanceof Error ? cause.message : "加入失败，草稿未改变。"); } }}>加入当前{noun}（{additions.length} 张）</button></footer>
+    <footer className={styles.footer} inert={Boolean(enlarged)}><div><strong>已选 {picked.length} 张 · 新增 {additions.length} 张</strong><p>加入后仍需保存修改；不会发布。</p>{additions.length > remaining && <p role="alert">超过剩余容量，请减少选择。</p>}{error && <p role="alert">{error}</p>}</div><button className={styles.primary} type="button" disabled={!ready || reloading || !additions.length || additions.length > remaining || missing.length > 0} onClick={() => { try { onAdd(picked); } catch (cause) { setError(cause instanceof Error ? cause.message : "加入失败，草稿未改变。"); } }}>加入当前{noun}（{additions.length} 张）</button></footer>
     {enlarged && <div className={styles.enlarged}><button type="button" autoFocus onClick={closeEnlarged}>关闭放大照片</button><img src={enlarged.variants.full.src} alt={appearance === "flow" ? enlargedName : `素材 ${enlarged.id}`} /><p>{orientationName[enlarged.orientation]} · ID {enlarged.id}</p></div>}
   </dialog>;
 }

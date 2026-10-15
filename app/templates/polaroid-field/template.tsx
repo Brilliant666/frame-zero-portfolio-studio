@@ -177,7 +177,7 @@ export default function PolaroidFieldTemplate({
       <a
         className={styles.skipLink}
         href={collectionProof ? "#polaroid-top" : "#polaroid-field"}
-        onClick={(event) => handleViewLink(event, "field", "#polaroid-field", true)}
+        onClick={(event) => handleViewLink(event, "field", collectionProof ? "#polaroid-top" : "#polaroid-field", true)}
       >跳到作品星图</a>
 
       <header className={`${styles.topbar} ${isPreview ? styles.previewTopbar : ""}`}>
@@ -225,7 +225,7 @@ export default function PolaroidFieldTemplate({
           id="polaroid-field"
           ref={viewportRef}
           className={`${styles.fieldViewport} ${dragging ? styles.dragging : ""}`}
-          tabIndex={desktopFieldEnabled ? 0 : undefined}
+          tabIndex={desktopFieldEnabled ? 0 : -1}
           role="region"
           aria-label={desktopFieldEnabled
             ? "可拖拽作品星图。可使用方向键移动，加减号缩放，Home 或数字 0 完整显示全部作品。"
@@ -419,7 +419,7 @@ export default function PolaroidFieldTemplate({
             </article>
           ))}
         </div>
-        <p className={styles.packageNote}>展示价格不含妆造、服装、场地和跨城交通；最终方案会在拍摄前与你逐项确认。</p>
+        {!collectionWorkspace && <p className={styles.packageNote}>展示价格不含妆造、服装、场地和跨城交通；最终方案会在拍摄前与你逐项确认。</p>}
         {trustItems.length > 0 ? (
           <div className={styles.factRow} aria-label="约拍关键信息">
             {trustItems.map((item, index) => (

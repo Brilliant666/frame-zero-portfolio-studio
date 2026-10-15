@@ -1,6 +1,7 @@
 /** Isolated visual fixture. Never reads application data or starts Next/Postgres.
  * Build: node tests/display-fixes-fixture.mjs build --out=<private evidence directory> --revision=HEAD
  * Build current files: same command without --revision (writes /after).
+ * Optional --label=<single-slug> preserves an additional small comparison build.
  * Serve both: node tests/display-fixes-fixture.mjs serve --out=<same directory> --port=3004
  */
 import { build } from "vite";
@@ -21,7 +22,9 @@ const command = process.argv[2];
 if (command === "build") {
   const revision = option("revision");
   if (revision && !/^[\w./-]+$/.test(revision)) throw new Error("Invalid revision.");
-  const target = path.join(output, revision ? "before" : "after");
+  const label = option("label") ?? (revision ? "before" : "after");
+  if (!/^[a-z0-9-]+$/.test(label)) throw new Error("Invalid fixture label.");
+  const target = path.join(output, label);
   try { await fs.access(path.join(target, "index.html")); throw new Error("Refusing to overwrite existing evidence. Use another explicit output directory."); }
   catch (error) { if (error.code !== "ENOENT") throw error; }
   await build({
@@ -48,6 +51,14 @@ if (command === "build") {
     try {
       const url = new URL(request.url, "http://127.0.0.1");
       const pathname = decodeURIComponent(url.pathname);
+      const sampleAsset = pathname.match(/^\/api\/sites\/continuity-fixture\/assets\/20000000-0000-4000-8000-(\d{12})\/(thumbnail|card|full)$/);
+      if (sampleAsset && ["GET", "HEAD"].includes(request.method)) {
+        const number = Number(sampleAsset[1]);
+        if (number < 1 || number > 96) throw new Error("Unknown anonymous asset");
+        response.writeHead(200, { "Content-Type": "image/svg+xml", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
+        response.end(request.method === "HEAD" ? undefined : [...anonymousImages][(number - 1) % 9]);
+        return;
+      }
       if (pathname === "/__local-preview-photo") {
         const source = url.searchParams.get("src") ?? "", prefix = "data:image/svg+xml,";
         if (source.length > 4096 || !source.startsWith(prefix)) throw new Error("Not an anonymous fixture image");

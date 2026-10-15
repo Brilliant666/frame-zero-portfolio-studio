@@ -1,11 +1,12 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element -- Authenticated Site image variants. */
-import { useMemo, useState, type ReactNode } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 import type { SiteAsset } from "../site-editor/assets-client";
 import type { Collection } from "../templates/polaroid-field/collection-model";
 import { filterPickerAssets, PICKER_PAGE_SIZE, type PickerFilter } from "./photo-picker-state";
 import styles from "./site-photo-library.module.css";
+import { usePhotoPageFocus } from "./use-photo-page-focus";
 
 export type SitePhotoLibraryProps = {
   upload?: ReactNode;
@@ -28,6 +29,7 @@ export default function SitePhotoLibrary({ upload, assets, collections, ready, t
   const [picked, setPicked] = useState<string[]>([]);
   const [targetId, setTargetId] = useState("");
   const [page, setPage] = useState(0);
+  const pageStatusId = useId();
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [reloading, setReloading] = useState(false);
@@ -41,6 +43,8 @@ export default function SitePhotoLibrary({ upload, assets, collections, ready, t
   const filtered = useMemo(() => filterPickerAssets(assets, members, picked, filter), [assets, members, picked, filter]);
   const pages = Math.max(1, Math.ceil(filtered.length / PICKER_PAGE_SIZE));
   const currentPage = Math.min(page, pages - 1);
+  const { resultsRef, requestPageFocus } = usePhotoPageFocus(currentPage);
+  const changePage = (next: number) => { requestPageFocus(); setPage(next); };
   const visible = filtered.slice(currentPage * PICKER_PAGE_SIZE, (currentPage + 1) * PICKER_PAGE_SIZE);
   const updateFilter = (change: Partial<PickerFilter>) => { setFilter(current => ({ ...current, ...change })); setPage(0); };
   const select = (id: string) => { setPicked(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]); setError(""); setMessage(""); };
@@ -78,7 +82,7 @@ export default function SitePhotoLibrary({ upload, assets, collections, ready, t
       <strong>已选 {picked.length} 张</strong>
     </div>
     {missing.length > 0 && <p className={styles.warning} role="alert">有 {missing.length} 张已选照片不在当前素材列表，选择仍保留。<button type="button" onClick={() => setPicked(current => current.filter(id => availableIds.has(id)))}>取消不可用选择</button></p>}
-    <div className={styles.grid} aria-label="图库浏览结果" aria-busy={!ready || reloading}>
+    <div ref={resultsRef} tabIndex={-1} role="region" className={styles.grid} aria-label="图库浏览结果" aria-describedby={pageStatusId} aria-busy={!ready || reloading}>
       {visible.map(asset => <article className={styles.card} key={asset.id} data-selected={pickedIds.has(asset.id)}>
         <button type="button" className={styles.photo} aria-label={`查看照片 ${asset.id} 大图`} onClick={() => onView(asset)}><img src={asset.variants.thumbnail.src} alt="" loading="lazy" /></button>
         <label className={styles.pick}><input type="checkbox" aria-label={`选择照片 ${asset.id}`} checked={pickedIds.has(asset.id)} disabled={!ready || reloading} onChange={() => select(asset.id)} />{pickedIds.has(asset.id) ? `已选 ${picked.indexOf(asset.id) + 1}` : "选择照片"}</label>
@@ -88,7 +92,7 @@ export default function SitePhotoLibrary({ upload, assets, collections, ready, t
       </article>)}
     </div>
     {ready && !filtered.length && <p>没有符合条件的照片，请调整筛选{filter.query ? "或展开“按素材 ID 查找”清除搜索" : ""}。</p>}
-    <nav className={styles.tools} aria-label="图库分页"><button type="button" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>上一页</button><span>第 {currentPage + 1} / {pages} 页 · {filtered.length} 张匹配</span><button type="button" disabled={currentPage + 1 >= pages} onClick={() => setPage(currentPage + 1)}>下一页</button></nav>
+    <nav className={styles.tools} aria-label="图库分页"><button type="button" disabled={currentPage === 0} onClick={() => changePage(currentPage - 1)}>上一页</button><span id={pageStatusId}>第 {currentPage + 1} / {pages} 页 · {filtered.length} 张匹配</span><button type="button" disabled={currentPage + 1 >= pages} onClick={() => changePage(currentPage + 1)}>下一页</button></nav>
     <p className={styles.hint}>按选择顺序追加；跨页、筛选和切换目标图集均保留选择。加入本站时间不是拍摄时间。</p>
     <footer className={styles.destination}>
       <label>加入高级图集<select value={target?.id ?? ""} onChange={event => { setTargetId(event.target.value); setPage(0); setError(""); setMessage(""); }}><option value="">请选择目标图集</option>{collections.map(item => <option value={item.id} key={item.id}>{item.name || "未命名图集"} · {item.assetIds.length} 张{item.visible ? "" : " · 隐藏"}</option>)}</select></label>

@@ -619,8 +619,8 @@ test("polaroid package facts use only non-empty trust items and stay out of the 
   const packageNoteIndex = packageSection.indexOf("styles.packageNote");
   const factRowIndex = packageSection.indexOf("styles.factRow");
   assert.ok(!fieldSection.includes("styles.factRow"), "facts do not lengthen the field view");
-  assert.notEqual(packageNoteIndex, -1, "package note remains present");
-  assert.ok(factRowIndex > packageNoteIndex, "facts follow the package note");
+  assert.notEqual(packageNoteIndex, -1, "basic package note remains present");
+  assert.ok(factRowIndex > packageNoteIndex, "facts stay after the optional basic note");
 
   const sourceFile = ts.createSourceFile(
     "polaroid-field-template.tsx",
@@ -631,8 +631,13 @@ test("polaroid package facts use only non-empty trust items and stay out of the 
   );
   let trustFilter;
   let trustRender;
+  let basicNote;
 
   function visit(node) {
+    if (ts.isJsxExpression(node) && node.expression && ts.isBinaryExpression(node.expression)
+      && node.expression.right.getText(sourceFile).includes("styles.packageNote")) {
+      basicNote = node.expression;
+    }
     if (
       ts.isVariableDeclaration(node)
       && ts.isIdentifier(node.name)
@@ -653,6 +658,10 @@ test("polaroid package facts use only non-empty trust items and stay out of the 
     ts.forEachChild(node, visit);
   }
   visit(sourceFile);
+  assert.ok(basicNote, "package note has a conditional rendering boundary");
+  const noteCondition = new Function("collectionWorkspace", `return ${basicNote.left.getText(sourceFile)}`);
+  assert.equal(noteCondition(undefined), true, "basic retains the existing note");
+  assert.equal(noteCondition({ collections: [] }), false, "premium removes the fixed note even with empty collections");
 
   assert.ok(trustFilter && ts.isArrowFunction(trustFilter), "trust items have an explicit filter");
   assert.ok(ts.isBinaryExpression(trustFilter.body));
@@ -737,7 +746,8 @@ test("template wiring preserves nine slots, keyboard access, FIT reset, mobile l
   assert.match(template, /data-rotation=\{placement\.rotation\}/);
   assert.match(template, /data-layout-band=\{placement\.band\}/);
   assert.match(camera, /new ResizeObserver\(schedule\)/);
-  assert.match(template, /tabIndex=\{desktopFieldEnabled \? 0 : undefined\}/);
+  // Mobile stays out of the tab sequence while accepting skip-link focus.
+  assert.match(template, /tabIndex=\{desktopFieldEnabled \? 0 : -1\}/);
   assert.match(template, /desktopFieldEnabled[\s\S]*九张拍立得作品画廊/);
   assert.match(camera, /case "0":[\s\S]*case "Home":[\s\S]*showOverview\(\)/);
   assert.match(template, /onClick=\{showOverview\}[\s\S]*>FIT<\/button>/);

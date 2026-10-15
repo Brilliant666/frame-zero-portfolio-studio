@@ -24,16 +24,19 @@ export default function CollectionLivePreview({ collection, assets, onView, acti
   const canvas = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 520 });
   useLayoutEffect(() => {
+    if (!active) return;
     const host = viewport.current, content = canvas.current;
     if (!host || !content) return;
-    const measure = () => setDimensions(previous => {
+    const measure = () => {
       const next = { width: host.clientWidth, height: content.offsetHeight };
-      return previous.width === next.width && previous.height === next.height ? previous : next;
-    });
+      // A hidden parent is not a new layout. Keep the last usable dimensions.
+      if (next.width <= 0 || next.height <= 0) return;
+      setDimensions(previous => previous.width === next.width && previous.height === next.height ? previous : next);
+    };
     const observer = new ResizeObserver(measure);
     observer.observe(host); observer.observe(content); measure();
     return () => observer.disconnect();
-  }, []);
+  }, [active]);
   const logicalWidth = device === "desktop" ? 960 : 390;
   const scale = dimensions.width > 0 ? Math.min(1, dimensions.width / logicalWidth) : 1;
   const scaledHeight = dimensions.height * scale;

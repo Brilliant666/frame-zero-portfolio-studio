@@ -9,6 +9,7 @@
 
 .sections :global(#polaroid-packages) {
   padding-block: clamp(1.5rem, 4vh, 2.5rem);
+  padding-bottom: clamp(1rem, 2.5vh, 1.5rem);
 }
 
 .sections :global(#polaroid-packages) > div:first-child {
@@ -17,6 +18,10 @@
 
 .sections :global(#polaroid-packages) article {
   min-height: 0;
+}
+
+.sections :global(#polaroid-packages) > div:nth-child(2) {
+  align-items: stretch;
 }
 
 .sections :global(#polaroid-packages) > p {
@@ -69,7 +74,8 @@
 .sections :global(#polaroid-packages) article:hover,
 .sections :global(#polaroid-packages) article:focus-within {
   box-shadow: var(--star-shadow);
-  transform: translateY(-4px);
+  /* Keep comparison cards on the same baseline while pointing or tabbing. */
+  transform: none;
 }
 
 .sections :global(#polaroid-packages) article > span,
@@ -116,6 +122,7 @@
 }
 
 .sections :global(#polaroid-packages) [aria-label="约拍关键信息"] {
+  margin-top: 1.5rem;
   padding-inline: 1.25rem;
   border: 1px solid var(--star-line);
   border-radius: 18px;
@@ -148,9 +155,18 @@
 }
 
 @media (min-width: 1051px) and (max-height: 800px) {
-  .sections :global(#polaroid-packages) { padding-block: 1.25rem; }
-  .sections :global(#polaroid-packages) > div:first-child { margin-bottom: 1.5rem; }
-  .sections :global(#polaroid-packages) article { padding-block: 1.5rem; }
+  /* Spend the shorter viewport on content, not accumulated vertical spacing.
+     Keep natural height for longer titles, extra packages and enlarged text. */
+  .sections :global(#polaroid-packages) { padding-block: .75rem .5rem; }
+  .sections :global(#polaroid-packages) > div:first-child { margin-bottom: .75rem; }
+  .sections :global(#polaroid-packages) > div:first-child small { margin-bottom: .5rem; }
+  .sections :global(#polaroid-packages) article { padding-block: .75rem; }
+  .sections :global(#polaroid-packages) article > div:nth-of-type(2) { margin-bottom: .75rem; padding-bottom: .625rem; }
+  .sections :global(#polaroid-packages) article > div:nth-of-type(3) { padding-top: .75rem; }
+  .sections :global(#polaroid-packages) article > div:nth-of-type(3) > strong { margin-bottom: .625rem; }
+  .sections :global(#polaroid-packages) article ul { gap: .375rem; }
+  .sections :global(#polaroid-packages) article > a { margin-top: 1rem; padding-block: .625rem; }
+  .sections :global(#polaroid-packages) [aria-label="约拍关键信息"] > div { padding-block: .625rem; }
   .sections :global(#polaroid-packages) > p { margin-top: 1.25rem; }
 }
 

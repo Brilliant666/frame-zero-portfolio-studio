@@ -5,12 +5,24 @@ import admin from "../../../app/preview-workspace/admin.module.css";
 import "../../../app/preview-workspace/preview-theme.css";
 import CollectionLivePreview from "../../../app/preview-workspace/collection-live-preview";
 import Prism from "../../../app/templates/prism-liquid/template";
+import PolaroidField from "../../../app/templates/polaroid-field/template";
+import { LibraryContinuityProbe, PackageAdminContinuityProbe } from "./continuity-probes";
 import { PreviewPortfolioExperience } from "../../../app/preview-workspace/portfolio-view";
 import Lightbox from "../../../app/templates/shared/lightbox";
 import { useTemplateInteractions } from "../../../app/templates/shared/use-template-interactions";
 import "./fixture.css";
+import "./night-directions.css";
 
 const params = new URLSearchParams(location.search);
+// Art-direction proofs only. Never imported by a product route or persisted.
+const direction = ["silver", "dusk", "ice"].includes(params.get("direction")) ? params.get("direction") : null;
+if (direction) {
+  document.documentElement.dataset.nightStudy = direction;
+  window.addEventListener("preview:theme-change", () => {
+    document.documentElement.dataset.previewTheme = "night";
+    document.documentElement.dataset.starTheme = "night";
+  }, { once: true });
+}
 const subject = params.get("subject") ?? "prism";
 const combination = params.get("photos") ?? "empty";
 const embedded = params.get("host") !== "standalone";
@@ -24,6 +36,18 @@ const content = { activeTemplate: "prism-liquid", profile: { mark: "F", brand: "
 const assets = works.map(work => ({ id: work.code, originalName: `${work.code}.svg`, width: work.previewWidth, height: work.previewHeight, aspectRatio: work.previewWidth / work.previewHeight, orientation: work.previewWidth > work.previewHeight ? "landscape" : "portrait", variants: Object.fromEntries(["full", "card", "thumbnail"].map(kind => [kind, { src: work.image, width: work.previewWidth, height: work.previewHeight }])) }));
 const collection = { id: "10000000-0000-4000-8000-000000000001", name: "匿名作品集", description: "只读布局验收", visible: true, assetIds: assets.map(asset => asset.id), coverAssetId: assets[0]?.id ?? null, focusAssetId: null, coverFit: "natural", coverFocusX: 50, coverFocusY: 50 };
 const portfolioDocument = { schemaVersion: 1, ...Object.fromEntries(["profile", "hero", "trustItems", "packages", "contact", "social", "bookingFields", "statement"].map(key => [key, content[key]])), collections: [collection] };
+// Explicit anonymous content for full-page package/theme review; never fetched from a Site.
+if (params.get("demo") === "packages") {
+  portfolioDocument.packages = [
+    { number: "01", english: "CONVENTION", duration: "15min", name: "漫展场照", price: "¥60", description: "快速判断现场光线与动线，在有限时间内完成角色高光。", deliverables: ["底片 80–120 张", "精修 6 张", "7 天内交付"], enabled: true },
+    { number: "02", english: "PRIVATE", duration: "2 HOURS", name: "外景拍摄", price: "¥299起", description: "从参考、分镜到情绪走向，让一组照片拥有完整叙事。", deliverables: ["底片 150–250 张", "精修 12 张", "10 天内交付"], enabled: true },
+    { number: "03", english: "STUDIO", duration: "3 HOURS", name: "影棚创作", price: "¥299起", description: "灯光、置景与色彩统一，把角色设定落成可触摸的世界。", deliverables: ["底片 100–150 张", "精修 9 张", "14 天内交付"], enabled: true },
+  ];
+  portfolioDocument.trustItems = [{ label: "BASE", value: "上海 / 苏州 / 杭州" }, { label: "PRICE", value: "¥299 起" }, { label: "DELIVERY", value: "7–14 天" }];
+  portfolioDocument.contact = { wechat: "review_wechat", email: "", note: "匿名预览资料，请勿用于联系。" };
+  portfolioDocument.social = [{ label: "QQ", handle: "00001234" }, { label: "抖音", handle: "https://example.com/douyin" }, { label: "小红书", handle: "https://example.com/xiaohongshu" }];
+  portfolioDocument.bookingFields = ["角色 / 作品：", "日期 / 漫展：", "城市 / 场地：", "单人 / 多人：", "选择套餐：", "想要的视觉风格：", "参考图链接：", "预算范围：", "联系方式："];
+}
 
 const rect = element => { const r = element.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height, right: r.right, bottom: r.bottom }; };
 function rgba(value) { const values = value.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0, 0]; return [...values.slice(0, 3), values[3] ?? 1]; }
@@ -40,6 +64,7 @@ function buttonMeasure(button) {
   return { text: button.textContent, label: button.getAttribute("aria-label"), pressed: button.getAttribute("aria-pressed"), focused: button === document.activeElement, color: css.color, background: css.backgroundColor, effectiveSolidBackground: background, contrast: (Math.max(a, b) + .05) / (Math.min(a, b) + .05), imageLayers, outline: css.outline, ...rect(button) };
 }
 function measure() {
+  if (["library", "package-admin", "field"].includes(subject)) return { subject, pass: null, note: "Interaction probe: verify actions and focus in the browser." };
   if (subject === "portfolio") {
     const preview = document.querySelector("[data-site-premium]");
     const buttons = [...preview.querySelectorAll("button, a")].filter(button => button.offsetWidth && button.offsetHeight).map(buttonMeasure);
@@ -63,13 +88,18 @@ function measure() {
   const heroCss = getComputedStyle(hero);
   return { subject, combination, pass, viewport: { width: innerWidth, height: innerHeight, clientWidth: width }, hero: rect(hero), heroCopy: rect(heroCopy), heroPadding: { top: heroCss.paddingTop, right: heroCss.paddingRight, bottom: heroCss.paddingBottom, left: heroCss.paddingLeft }, headingBounds, gridColumns: heroCss.gridTemplateColumns, railGap: getComputedStyle(rail).gap, slots: rail.children.length, buttons: rail.querySelectorAll("button").length, bounds, textBounds, images };
 }
+function keepCurrentView(event) {
+  const target = new URL(event.currentTarget.href);
+  target.hash = location.hash;
+  event.currentTarget.href = target.href;
+}
 function Fixture() {
   const [result, setResult] = useState(null), [previewOpen, setPreviewOpen] = useState(true);
   const interactions = useTemplateInteractions(works);
   const closeLightbox = () => interactions.setActiveWork(null);
   useEffect(() => { window.measureDisplayFixes = measure; return () => { delete window.measureDisplayFixes; }; }, []);
   return <>
-    {subject === "prism" ? <Prism templateId="prism-liquid" content={content} works={works} packages={[]} bookingTemplate="测试" copiedKey={interactions.copiedKey} booted isPreview onCopy={interactions.copyText} onOpenWork={interactions.openWork} /> : subject === "portfolio" ? previewOpen ? <section className={embedded ? admin.preview : undefined} role={embedded ? "dialog" : undefined} aria-modal={embedded ? "true" : undefined} aria-label={embedded ? "新版未保存草稿效果" : undefined}>
+    {subject === "library" ? <LibraryContinuityProbe assets={assets} /> : subject === "package-admin" ? <PackageAdminContinuityProbe portfolioDocument={portfolioDocument} assets={assets} /> : subject === "field" ? <PolaroidField templateId="polaroid-field" content={content} works={works} packages={[]} bookingTemplate="测试" copiedKey={interactions.copiedKey} booted onCopy={interactions.copyText} onOpenWork={interactions.openWork} /> : subject === "prism" ? <Prism templateId="prism-liquid" content={content} works={works} packages={[]} bookingTemplate="测试" copiedKey={interactions.copiedKey} booted isPreview onCopy={interactions.copyText} onOpenWork={interactions.openWork} /> : subject === "portfolio" ? previewOpen ? <section className={embedded ? admin.preview : undefined} role={embedded ? "dialog" : undefined} aria-modal={embedded ? "true" : undefined} aria-label={embedded ? "新版未保存草稿效果" : undefined}>
       {embedded && <div className={admin.previewBar}><p>当前编辑快照 · 预览不会保存或发布</p><button type="button" onClick={() => setPreviewOpen(false)}>关闭草稿效果</button></div>}
       <div data-site-premium><PreviewPortfolioExperience document={portfolioDocument} assets={assets} embedded={embedded} initialCollectionId={params.get("collection") === "open" ? collection.id : undefined} /></div>
     </section> : <button type="button" onClick={() => setPreviewOpen(true)}>重新打开草稿效果</button> : <div className={embedded ? admin.workspace : undefined} data-site-editor={embedded ? "premium" : undefined}>
@@ -77,7 +107,7 @@ function Fixture() {
       <div className={embedded ? admin.panel : undefined}><CollectionLivePreview collection={collection} assets={assets} onView={asset => interactions.openWork(works.find(work => work.code === asset.id))} /></div>
     </div>}
     {interactions.activeWork && <Lightbox theme="light" appearance="light" basicTemplate={subject === "prism" ? "prism-liquid" : undefined} work={interactions.activeWork} works={[...interactions.lightboxWorks]} frameRef={interactions.lightboxRef} closeButtonRef={interactions.closeButtonRef} onMove={interactions.moveActiveWork} onClose={closeLightbox} />}
-    <details className="fixture-report"><summary>隔离验收工具</summary><p>当前：{subject} / {combination} / {embedded ? "后台内嵌" : "独立组件"}</p><nav>{["empty", "few", "mixed", "full"].map(value => <a key={value} href={`?subject=${subject}&photos=${value}&host=${embedded ? "embedded" : "standalone"}`}>{value} </a>)}</nav><p><a href="?subject=prism&photos=empty">Prism</a> · <a href="?subject=polaroid&photos=mixed&host=embedded">拍立得内嵌</a> · <a href="?subject=polaroid&photos=mixed&host=standalone">拍立得独立</a></p><button type="button" onClick={() => setResult(measure())}>测量当前实际布局与颜色</button>{result && <><strong>{result.pass ? "PASS" : "FAIL"}</strong><pre>{JSON.stringify(result, null, 2)}</pre></>}</details>
+    <details className="fixture-report"><summary>{direction ? ({ silver: 'A · 银盐暗房', dusk: 'B · 暮紫夜空', ice: '原冰蓝对照' })[direction] + ' · 切换方案' : '隔离验收工具'}</summary>{direction && <nav aria-label="设计方案对照">{[['silver','A 银盐暗房'],['dusk','B 暮紫夜空'],['ice','原冰蓝']].map(([value,label]) => <p key={value}><a onClick={keepCurrentView} onFocus={keepCurrentView} onPointerEnter={keepCurrentView} href={`?subject=portfolio&photos=${combination}&host=standalone&demo=packages&direction=${value}${location.hash}`}>{label}</a></p>)}<p>匿名样稿 · 不保存或发布</p></nav>}<p>当前：{subject} / {combination} / {embedded ? "后台内嵌" : "独立组件"}</p><nav>{["empty", "few", "mixed", "full"].map(value => <a key={value} onClick={keepCurrentView} href={`?subject=${subject}&photos=${value}&host=${embedded ? "embedded" : "standalone"}&demo=${params.get("demo") ?? ""}${direction ? `&direction=${direction}` : ""}${location.hash}`}>{value} </a>)}</nav><p><a href="?subject=prism&photos=empty">Prism</a> · <a href="?subject=polaroid&photos=mixed&host=embedded">拍立得内嵌</a> · <a href="?subject=polaroid&photos=mixed&host=standalone">拍立得独立</a></p><button type="button" onClick={() => setResult(measure())}>测量当前实际布局与颜色</button>{result && <><strong>{result.pass ? "PASS" : "FAIL"}</strong><pre>{JSON.stringify(result, null, 2)}</pre></>}</details>
   </>;
 }
 createRoot(document.getElementById("root")).render(<Fixture />);
