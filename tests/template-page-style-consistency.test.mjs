@@ -70,7 +70,8 @@ test("light basic viewer appearance retains the existing work information and na
   const source = await fs.readFile(filename, "utf8");
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText;
   const loaded = { exports: {} };
-  vm.runInNewContext(compiled, { module: loaded, exports: loaded.exports, require: createRequire(import.meta.url) });
+  const require = createRequire(import.meta.url);
+  vm.runInNewContext(compiled, { module: loaded, exports: loaded.exports, require: (id) => id.endsWith(".module.css") ? { default: { basic: "basic-material" } } : require(id) });
   const work = { code: "FRAME 01", title: "Fixture title", subtitle: "Fixture caption", image: "/fixture.webp", preview: "/fixture.webp", previewWidth: 640, previewHeight: 480, fullWidth: 1280, enabled: true };
   const props = { work, works: [work], frameRef: { current: null }, closeButtonRef: { current: null }, onMove() {}, onClose() {} };
   const basic = renderToStaticMarkup(createElement(loaded.exports.default, { ...props, appearance: "light", theme: "dark" }));
@@ -80,4 +81,55 @@ test("light basic viewer appearance retains the existing work information and na
   const advanced = renderToStaticMarkup(createElement(loaded.exports.default, { ...props, theme: "light" }));
   assert.match(advanced, /lightbox-light/); assert.match(advanced, /第 1 张照片/);
   assert.doesNotMatch(advanced, /Fixture title|Fixture caption/);
+  assert.doesNotMatch(advanced, /data-basic-template|basic-material/);
+  const palette = renderToStaticMarkup(createElement(loaded.exports.default, { ...props, appearance: "light", basicTemplate: "prism-liquid" }));
+  assert.match(palette, /data-basic-template="prism-liquid"/);
+  assert.match(palette, /basic-material/);
+  assert.match(palette, /Fixture title/); assert.match(palette, /Fixture caption/);
+  assert.match(palette, /aria-label="上一张作品"/);
+});
+
+test("public basic viewer and current-edit preview carry the selected template into the same lightbox", async () => {
+  const require = createRequire(import.meta.url);
+  const work = { code: "FRAME 01", title: "Fixture title", image: "/fixture.webp", enabled: true };
+  const content = { activeTemplate: "prism-liquid", social: [], packages: [], bookingFields: [], templateWorks: {} };
+  const interactions = { activeWork: work, lightboxWorks: [work], lightboxRef: { current: null }, closeButtonRef: { current: null }, setActiveWork() {}, moveActiveWork() {} };
+  const appearanceSource = await fs.readFile(new URL("../app/templates/appearance.ts", import.meta.url), "utf8");
+  const appearanceModule = { exports: {} };
+  vm.runInNewContext(ts.transpileModule(appearanceSource, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { module: appearanceModule, exports: appearanceModule.exports });
+  const appearances = appearanceModule.exports;
+  const lightbox = (props) => createElement("div", { "data-viewer-template": props.basicTemplate, "data-viewer-tone": props.appearance });
+  async function load(relativePath) {
+    const source = await fs.readFile(new URL(relativePath, import.meta.url), "utf8");
+    const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+    const loaded = { exports: {} };
+    const mocks = (id) => {
+      if (id === "react-dom") return { createPortal: (child) => child };
+      if (id.endsWith(".module.css")) return { default: {} };
+      if (id.endsWith("/appearance")) return appearances;
+      if (id.endsWith("/lightbox")) return { default: lightbox };
+      if (id.endsWith("/template-renderer")) return { default: () => null };
+      if (id.endsWith("/assets-client")) return { hydrateSiteWorks: (value) => value };
+      if (id.endsWith("/asset-context")) return { PlatformAssetContext: { Provider: ({ children }) => children } };
+      if (id.endsWith("/use-template-works")) return { useTemplateWorks: () => ({ works: [work] }) };
+      if (id.endsWith("/use-template-interactions")) return { useTemplateInteractions: () => interactions };
+      if (id.endsWith("/admin-provider")) return { useAdmin: () => ({ content }) };
+      return require(id);
+    };
+    vm.runInNewContext(output, { module: loaded, exports: loaded.exports, require: mocks, document: { body: {} } });
+    return loaded.exports;
+  }
+  const basic = (await load("../app/site-editor/basic-view.tsx")).SiteBasicView;
+  const preview = (await load("../app/admin/template-preview-dialog.tsx")).default;
+  for (const [templateId, appearance] of Object.entries(appearances.templateAppearances)) {
+    content.activeTemplate = templateId;
+    const publicHtml = renderToStaticMarkup(createElement(basic, { content, assets: [] }));
+    // A recommendation can preview another template without changing the saved active one.
+    content.activeTemplate = templateId === "neon-hud" ? "archive-os" : "neon-hud";
+    const previewHtml = renderToStaticMarkup(createElement(preview, { templateId, works: [work], title: "预览", description: "测试", previewSource: "recommendation", onRequestClose() {} }));
+    for (const html of [publicHtml, previewHtml]) {
+      assert.match(html, new RegExp(`data-viewer-template="${templateId}"`));
+      assert.match(html, new RegExp(`data-viewer-tone="${appearance.tone}"`));
+    }
+  }
 });

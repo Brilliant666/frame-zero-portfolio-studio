@@ -34,7 +34,7 @@ function tilt(event: PointerEvent<HTMLButtonElement>) {
 }
 
 export default function MotionHome({ cards, content, onOpen, onPrepare, onWarm, active=true, restoreFocusId }: MotionHomeProps) {
-  const { paused, toggle } = useStarMotion();
+  const { paused } = useStarMotion();
   const root = useRef<HTMLElement>(null);
   const leaving = useRef(false);
   const exitCleanup = useRef<(() => void) | null>(null);
@@ -117,7 +117,6 @@ export default function MotionHome({ cards, content, onOpen, onPrepare, onWarm, 
         <h1 className={styles.title} aria-label={name}><span aria-hidden="true">{Array.from(name).map((character, index) => <span className={styles.characterMask} key={index}><span data-title-character>{character}</span></span>)}</span><i aria-hidden="true">✦</i></h1>
         <div className={styles.lede} data-home-exit-part>{content.profile.intro && <p>{content.profile.intro}</p>}{content.hero.services && <p><strong>{content.hero.services}</strong></p>}</div>
         <div className={styles.actions} data-home-exit-part>{cards.slice(0, 2).map((card, index) => <button key={card.id} type="button" data-home-action data-primary={index === 0} onPointerEnter={() => onPrepare?.(card.id)} onPointerDown={() => onPrepare?.(card.id)} onFocus={() => onPrepare?.(card.id)} onClick={() => open(card.id)}>{card.title}<span aria-hidden="true">→</span></button>)}</div>
-        <button type="button" data-home-motion className={styles.motionControl} aria-pressed={paused} onClick={toggle}>{paused ? "恢复动效" : "暂停动效"}</button>
         {cards.length === 0 && <p className={styles.empty}>还没有可展示的图集。</p>}
       </div>
       <div className={styles.covers} data-count={Math.min(cards.length, 3)} aria-label="图集封面">{cards.slice(0, 3).map(cover)}</div>

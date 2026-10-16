@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { TemplateProps } from "../types";
+import { hasCjkText } from "../shared/display-text";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import PlatformAccounts from "../shared/platform-accounts";
@@ -100,7 +101,7 @@ export default function EditorialDuetTemplate({
       <section id="editorial-top" className={styles.cover} data-template-view="works" hidden={activeView !== "works"} tabIndex={-1}>
         <div className={styles.coverCopy}>
           <p>{content.hero.eyebrow}</p>
-          <h1>{content.hero.title}</h1>
+          <h1 data-cjk={hasCjkText(content.hero.title) || undefined}>{content.hero.title}</h1>
           <div className={styles.coverDeck}>
             <span>PHOTOGRAPHY BY<br /><strong>{content.profile.photographer}</strong></span>
             <p>{content.profile.intro}<br />{content.hero.services}</p>
@@ -233,7 +234,7 @@ export default function EditorialDuetTemplate({
 
       <section className={styles.interlude} data-template-view="works" hidden={activeView !== "works"}>
         <p>{content.statement.eyebrow}</p>
-        <h2>{content.statement.lineOne}<br /><em>{content.statement.lineTwo}</em></h2>
+        <h2 data-cjk={hasCjkText(content.statement.lineOne + content.statement.lineTwo) || undefined}>{content.statement.lineOne}<br /><em>{content.statement.lineTwo}</em></h2>
         <span>{content.profile.brand} · PERSONAL VISUAL ARCHIVE</span>
       </section>
 

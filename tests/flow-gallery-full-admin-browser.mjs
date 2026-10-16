@@ -183,7 +183,7 @@ export async function flowGalleryFullAdminBrowser({ runtime, origin, password, f
       report.screenshots.push({ file: name, viewport: page.viewportSize(), pathname: new URL(page.url()).pathname });
       const primary = await page.evaluate(() => {
         const section = document.querySelector('[data-flow-editor-section]')?.dataset.flowEditorSection;
-        const image = section === 'library' ? document.querySelector('button[aria-label^="放大素材 "] img')
+        const image = section === 'library' ? document.querySelector('button[aria-label^="放大照片："] img')
           : section === 'groups' ? document.querySelector('[data-sort-card] img') : null;
         if (!image) return null;
         const rect = element => { const b = element.getBoundingClientRect(); return { x: b.x, y: b.y, width: b.width, height: b.height, left: b.left, top: b.top, right: b.right, bottom: b.bottom }; };
@@ -347,7 +347,7 @@ export async function flowGalleryFullAdminBrowser({ runtime, origin, password, f
     const originalPublished = await publication();
     await stage('03 real library metadata, filters, pagination and upload result states', async () => {
       await module('library');
-      const photos = () => page.getByRole('button', { name: /^放大素材 / });
+      const photos = () => page.getByRole('button', { name: /^放大照片：/ });
       await photos().first().waitFor();
       assert.equal(await photos().count(), 48);
       await page.getByRole('button', { name: '下一页', exact: true }).click();
@@ -360,7 +360,8 @@ export async function flowGalleryFullAdminBrowser({ runtime, origin, password, f
       await page.getByRole('combobox', { name: '画幅', exact: true }).selectOption('all');
       await page.getByRole('combobox', { name: '加入本站时间', exact: true }).selectOption('oldest');
       const earliest = [...assets].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt) || a.id.localeCompare(b.id))[0];
-      assert.equal(await photos().first().getAttribute('aria-label'), `放大素材 ${earliest.id}`);
+      assert.equal(await photos().first().getAttribute('aria-label'), `放大照片：第 1 张照片，${({ portrait: "竖幅", landscape: "横幅", square: "方幅" })[earliest.orientation]}`);
+      assert.equal(await photos().first().locator("xpath=ancestor::article[1]").getAttribute("data-flow-asset-id"), earliest.id);
       const metadata = photos().first().locator('xpath=ancestor::article[1]');
       assert.match(await metadata.innerText(), /\d+\s*×\s*\d+/);
       await metadata.locator('summary').click();
@@ -369,7 +370,8 @@ export async function flowGalleryFullAdminBrowser({ runtime, origin, password, f
       await idLookup.click();
       await page.getByRole('textbox', { name: '素材 ID（可选）', exact: true }).fill(earliest.id);
       assert.equal(await photos().count(), 1);
-      assert.equal(await photos().first().getAttribute('aria-label'), `放大素材 ${earliest.id}`);
+      assert.equal(await photos().first().getAttribute('aria-label'), `放大照片：第 1 张照片，${({ portrait: "竖幅", landscape: "横幅", square: "方幅" })[earliest.orientation]}`);
+      assert.equal(await photos().first().locator("xpath=ancestor::article[1]").getAttribute("data-flow-asset-id"), earliest.id);
       await page.getByRole('textbox', { name: '素材 ID（可选）', exact: true }).fill('');
       if (await idLookup.locator('..').getAttribute('open') !== null) await idLookup.click();
       assert.equal(await idLookup.locator('..').getAttribute('open'), null);
@@ -423,11 +425,11 @@ export async function flowGalleryFullAdminBrowser({ runtime, origin, password, f
       await page.getByRole('button', { name: '新建并从图库选片', exact: true }).click();
       const picker = page.getByRole('dialog', { name: '从图库选片', exact: true });
       await picker.waitFor();
-      const choices = picker.getByRole('checkbox', { name: /^选择照片 / });
-      const selected = [await choices.nth(2).getAttribute('aria-label'), await choices.nth(0).getAttribute('aria-label')].map(label => label.replace('选择照片 ', ''));
-      for (const id of selected) await picker.getByLabel(`选择照片 ${id}`, { exact: true }).check();
+      const choices = picker.getByRole('checkbox', { name: /^选择照片：/ });
+      const selected = [await choices.nth(2).locator('xpath=ancestor::article[1]').getAttribute('data-flow-asset-id'), await choices.nth(0).locator('xpath=ancestor::article[1]').getAttribute('data-flow-asset-id')];
+      for (const id of selected) await picker.locator(`[data-flow-asset-id="${id}"]`).getByRole("checkbox", { name: /^选择照片：第 \d+ 张照片，(横幅|竖幅|方幅)$/ }).check();
       await picker.getByRole('button', { name: '查看已选', exact: true }).click();
-      assert.deepEqual(await choices.evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label').replace('选择照片 ', ''))), selected);
+      assert.deepEqual(await choices.evaluateAll(nodes => nodes.map(node => node.closest('[data-flow-asset-id]').dataset.flowAssetId)), selected);
       await picker.getByRole('button', { name: '加入当前分类（2 张）', exact: true }).click();
       const members = page.locator('[data-sort-card]');
       assert.deepEqual(await members.evaluateAll(nodes => nodes.map(node => node.dataset.memberId)), selected);

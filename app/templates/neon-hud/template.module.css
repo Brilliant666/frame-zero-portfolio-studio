@@ -885,3 +885,25 @@
   .archiveCard:hover img,
   .archiveCard:focus-visible img { transform: none; }
 }
+
+/* CJK copy needs room for full-height glyphs; HUD labels keep their original leading. */
+.heroIntro h1[data-cjk],
+.manifestoCopy h2[data-cjk] {
+  min-width: 0;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+  line-break: strict;
+}
+.manifesto:has(.manifestoCopy h2[data-cjk]) {
+  display: grid;
+  align-items: end;
+  padding: clamp(2rem, 8vw, 7rem) clamp(1rem, 7vw, 8rem);
+}
+.manifestoCopy:has(h2[data-cjk]) {
+  position: relative;
+  inset: auto;
+  min-width: 0;
+}
+@media (max-width: 700px) {
+  .manifesto:has(.manifestoCopy h2[data-cjk]) { padding: 3rem 1rem; }
+}

@@ -9,7 +9,7 @@ import ts from "typescript";
 async function picker(t) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "site-photo-picker-"));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
-  for (const [name, sourcePath] of [["catalog", "templates/catalog"], ["document", "preview-workspace/document"], ["flow", "site-editor/flow-gallery-document"], ["schema", "site-editor/content-schema"], ["picker", "preview-workspace/photo-picker-state"]]) {
+  for (const [name, sourcePath] of [["catalog", "templates/catalog"], ["document", "preview-workspace/document"], ["flow", "site-editor/flow-gallery-document"], ["schema", "site-editor/content-schema"], ["picker", "preview-workspace/photo-picker-state"], ["lookup", "preview-workspace/flow-picker-lookup"], ["times", "site-editor/asset-metadata"]]) {
     const source = await fs.readFile(new URL(`../app/${sourcePath}.ts`, import.meta.url), "utf8");
     // site-config reexports the same catalog functions; legacy defaults are unrelated.
     const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText
@@ -20,7 +20,7 @@ async function picker(t) {
       .replace('"./document"', '"./document.mjs"');
     await fs.writeFile(path.join(directory, `${name}.mjs`), js);
   }
-  return { ...await import(pathToFileURL(path.join(directory, "picker.mjs"))), ...await import(pathToFileURL(path.join(directory, "document.mjs"))) };
+  return { ...await import(pathToFileURL(path.join(directory, "picker.mjs"))), ...await import(pathToFileURL(path.join(directory, "document.mjs"))), ...await import(pathToFileURL(path.join(directory, "lookup.mjs"))), ...await import(pathToFileURL(path.join(directory, "times.mjs"))) };
 }
 
 const id = n => `abcdef00-0000-4000-8000-${n.toString(16).padStart(12, "0")}`;
@@ -68,6 +68,60 @@ test("paging and filtering preserve source order and selections from other pages
   assert.deepEqual(m.filterPickerAssets(assets, [], picked, { ...filter, onlySelected: true }).map(a => a.id), picked);
   assert.deepEqual(picked, [id(99), id(2), id(49)]);
   assert.deepEqual(assets, before);
+});
+
+test("Flow lookup is current-Site, explicit and non-default; stale or invalid conditions are unavailable", async t => {
+  const m = await picker(t), scope = "/api/sites/anonymous/assets";
+  const input = freeze({ siteScopeKey: scope, query: "  ABCDEF  ", orientation: "portrait", order: "oldest" });
+  assert.deepEqual(m.currentFlowLibraryLookup(input, scope), { ...input, query: "ABCDEF" });
+  assert.equal(input.query, "  ABCDEF  ", "Normalizing a snapshot leaves library conditions unchanged");
+  for (const [source, current] of [[undefined, scope], [input, undefined], [input, "/api/sites/other/assets"],
+    [{ ...input, query: "", orientation: "all", order: "recent" }, scope],
+    [{ ...input, query: " \t ", orientation: "all", order: undefined }, scope],
+    [{ ...input, orientation: "unknown" }, scope], [{ ...input, query: null }, scope], [{ ...input, order: "mtime" }, scope]]) {
+    assert.equal(m.currentFlowLibraryLookup(source, current), null);
+  }
+  assert.ok(m.currentFlowLibraryLookup({ ...input, query: "", orientation: "all", order: "oldest" }, scope), "An actual non-default compatible time order is useful");
+});
+
+test("Flow explicitly applies a condition snapshot without altering member relations or cross-page selection order", async t => {
+  const m = await picker(t), scope = "/api/sites/anonymous/assets";
+  const assets = freeze(Array.from({ length: 100 }, (_, index) => asset(index + 1, index % 2 ? "portrait" : "landscape")));
+  const members = freeze([id(2)]), picked = freeze([id(99), id(50), id(1)]);
+  const before = freeze({ ...filter, query: "previous", orientation: "square", membership: "outside", sort: "oldest", onlySelected: true });
+  const lookup = freeze(m.currentFlowLibraryLookup({ siteScopeKey: scope, query: "  ABCDEF  ", orientation: "portrait", order: "recent" }, scope));
+  const applied = m.applyPickerLookup(before, lookup);
+  assert.deepEqual(applied, { ...before, query: "ABCDEF", orientation: "portrait", sort: "newest", onlySelected: false });
+  const matches = m.filterPickerAssets(assets, members, picked, applied);
+  assert.equal(matches.length, 49);
+  assert.ok(matches.every(photo => photo.orientation === "portrait" && photo.id !== id(2)));
+  assert.equal(matches.slice(0, m.PICKER_PAGE_SIZE).length, 48);
+  assert.deepEqual(m.filterPickerAssets(assets, members, picked, { ...applied, query: "no-result", onlySelected: true }).map(photo => photo.id), picked, "Selected review bypasses current lookup and retains original order");
+  assert.deepEqual(picked, [id(99), id(50), id(1)]);
+  assert.equal(before.query, "previous");
+  assert.equal(lookup.query, "ABCDEF");
+});
+
+test("clearing Flow lookup retains relations, current picker order and selected review", async t => {
+  const m = await picker(t), before = freeze({ ...filter, query: "no-result", orientation: "portrait", membership: "outside", sort: "oldest", onlySelected: true });
+  const cleared = m.clearPickerLookup(before);
+  assert.deepEqual(cleared, { ...before, query: "", orientation: "all" });
+  const picked = freeze([id(4), id(1)]), assets = freeze([asset(1), asset(4, "square")]);
+  assert.deepEqual(m.filterPickerAssets(assets, [id(1)], picked, cleared).map(photo => photo.id), picked);
+  assert.deepEqual(m.filterPickerAssets(assets, [id(1)], picked, { ...cleared, onlySelected: false }).map(photo => photo.id), [id(4)]);
+  assert.match(m.describePickerLookup(before), /竖图.*素材 ID 包含“no-result”.*未加入当前分类/);
+  assert.match(m.describePickerLookup(cleared), /全部方向.*全部素材 ID.*未加入当前分类/);
+});
+
+test("compatible Flow time sorting matches the picker including unknown times and stable ties", async t => {
+  const m = await picker(t);
+  const assets = freeze([asset(5, "square", null), asset(3), asset(2, "portrait", "2026-09-27T01:00:00.000Z"), asset(1), { id: id(4), orientation: "portrait" }, asset(6, "landscape", "invalid-date")]);
+  for (const [order, sort] of [["recent", "newest"], ["oldest", "oldest"]]) {
+    const applied = m.applyPickerLookup(filter, { siteScopeKey: "current", query: "", orientation: "all", order });
+    assert.equal(applied.sort, sort);
+    assert.deepEqual(m.filterPickerAssets(assets, [], [], applied).map(photo => photo.id), [...assets].sort((a, b) => m.compareSiteAssetTimes(a, b, order)).map(photo => photo.id));
+  }
+  assert.equal(m.applyPickerLookup({ ...filter, sort: "oldest" }, { siteScopeKey: "current", query: "", orientation: "portrait" }).sort, "oldest", "Without a compatible supplied order the picker retains its order");
 });
 
 test("append deduplicates against latest members, preserves selection order and leaves the draft untouched", async t => {

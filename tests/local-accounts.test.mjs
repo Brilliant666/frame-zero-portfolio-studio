@@ -122,6 +122,10 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1800000 },
     const { flowGalleryDatabaseIntegration } = await import('./flow-gallery-database-integration.mjs');
     await flowGalleryDatabaseIntegration({ runtime });
   });
+  await t.test('publication retention keeps distinct recovery points and protects current content', async () => {
+    const { publicationRetentionDatabaseIntegration } = await import('./publication-retention-database-integration.mjs');
+    await publicationRetentionDatabaseIntegration({ runtime });
+  });
   await t.test('concurrent provision is idempotent; conflicts cannot overwrite', async () => {
     const outcomes = await Promise.all([provisionAccount(runtime, input('fixturealpha', true)), provisionAccount(runtime, input('FIXTUREALPHA', true))]);
     assert.deepEqual(outcomes.map(o => o.status).sort(), ['ALREADY_EXISTS', 'CREATED']);
@@ -454,6 +458,10 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1800000 },
   await t.test('independent flow gallery HTTP draft, preview, publication and three-space switching', { timeout: 180000 }, async () => {
     const { flowGalleryHttpIntegration } = await import('./flow-gallery-http-integration.mjs');
     await flowGalleryHttpIntegration({ runtime, origin: config.origin, password, request, login, readDraft, saveDraft, sitePage, assetRoot });
+  });
+  await t.test('current Published workbench shortcut uses current drafts and real owner/grant boundaries', { timeout: 180000 }, async () => {
+    const { workbenchShortcutHttpIntegration } = await import('./workbench-shortcut-http-integration.mjs');
+    await workbenchShortcutHttpIntegration({ runtime, password, request, login, readDraft, saveDraft, sitePage });
   });
   if (process.env.FRAME_ZERO_PUBLICATION_BROWSER_SMOKE === '1') {
     await t.test('flow gallery scene geometry and independent module previews', { timeout: 240000 }, async browserTest => {

@@ -256,7 +256,7 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   assert.match(layout, /const assetPageSize = 24;/);
   assert.match(layout, /const slotDirectionLabel = \(slotIndex: number\) =>/);
   assert.match(layout, /<h3 id="slot-list-heading">照片槽位<\/h3>/);
-  assert.match(layout, /<h3 id="asset-library-heading">素材选择与管理<\/h3>/);
+  assert.match(layout, /<h3 id="asset-library-heading" tabIndex=\{-1\}>素材选择与管理<\/h3>/);
   assert.match(layout, /aria-label="模板照片槽位"/);
   assert.doesNotMatch(layout, /aria-label="模板固定照片槽位"/);
   assert.ok(
@@ -336,7 +336,7 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(layout, /setLibraryMessage\("素材库还为空。"\)/);
   assert.match(layout, /libraryState === "error"[\s\S]*\? "素材库暂时无法读取"/);
   assert.match(layout, /<p>\{libraryState === "error"[\s\S]*\? libraryMessage/);
-  assert.match(layout, /使用下方“上传素材与排版建议”把照片或文件夹加入素材库/);
+  assert.match(layout, /使用下方“上传素材与其他工具”把照片或文件夹加入素材库/);
   assert.match(managementClient, /service-update-required/);
   assert.match(managementClient, /本地素材服务版本较旧；请停止并重新运行 npm run dev/);
   assert.doesNotMatch(layout, /先运行文件夹导入命令|重新执行导入命令/);
@@ -610,7 +610,7 @@ test("Admin V2 keeps one shared save action on the unchanged site-content endpoi
   assert.doesNotMatch(provider, /site_settings|SiteDocument|migration|repository/);
   assert.equal([provider, shell, template, structurePreview, layout, layoutPreview]
     .reduce((count, input) => count + (input.match(/method:\s*"PUT"/g)?.length ?? 0), 0), 1);
-  assert.match(shell, /<DraftTemplatePreviewTrigger templateId=\{content\.activeTemplate\} scope="admin" label="预览当前编辑"/);
+  assert.match(shell, /<DraftTemplatePreviewTrigger templateId=\{content\.activeTemplate\} scope="admin" label="预览效果"/);
   assert.match(shell, /saveDraft=\{save\}/, "Site combined action must reuse the existing save function");
   assert.match(shell, /siteScope \? "仅保存草稿"/, "The shortcut action remains a draft-only save");
   assert.match(shell, /aria-keyshortcuts="Control\+S Meta\+S"/);

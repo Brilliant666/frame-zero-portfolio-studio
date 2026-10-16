@@ -1,0 +1,75 @@
+/* Basic viewers only. Advanced Polaroid retains its existing shared defaults. */
+.basic[data-basic-template] {
+  --viewer-backdrop: rgba(239, 232, 219, .96);
+  --viewer-paper: #fffdf7;
+  --viewer-stage: #f8f4eb;
+  --viewer-line: #bfb6a8;
+  --viewer-ink: #182227;
+  --viewer-muted: #536066;
+  --viewer-accent: #b2493b;
+  --viewer-shadow: 0 20px 80px #18222735;
+}
+
+.basic[data-basic-template="cinematic-light"] { --viewer-accent: #b5410b; }
+.basic[data-basic-template="film-rail"] { --viewer-paper: #f7f1e6; --viewer-stage: #eee5d5; --viewer-ink: #191613; --viewer-accent: #a53425; }
+.basic[data-basic-template="manga-panels"] { --viewer-paper: #faf8f0; --viewer-stage: #f4f0e6; --viewer-ink: #11100e; --viewer-accent: #b62c1d; }
+.basic[data-basic-template="editorial-duet"] { --viewer-paper: #f8f5ef; --viewer-stage: #f2efe8; --viewer-ink: #151411; }
+
+.basic[data-basic-template="prism-liquid"] {
+  --viewer-backdrop: rgba(241, 239, 249, .96);
+  --viewer-paper: #fbfbff;
+  --viewer-stage: #f3f0fa;
+  --viewer-line: #c9c2d9;
+  --viewer-ink: #15121d;
+  --viewer-muted: #625a70;
+  --viewer-accent: #7130ce;
+  --viewer-shadow: 0 20px 80px #33215126;
+}
+
+.basic[data-basic-template="archive-os"] {
+  --viewer-backdrop: rgba(226, 228, 226, .97);
+  --viewer-paper: #f5f6f4;
+  --viewer-stage: #e7e8e5;
+  --viewer-line: #b9bdb9;
+  --viewer-ink: #171819;
+  --viewer-muted: #545a55;
+  --viewer-accent: #36594a;
+  --viewer-shadow: 0 20px 80px #17181926;
+}
+
+.basic[data-basic-template="museum-depth"] {
+  --viewer-backdrop: rgba(235, 233, 227, .96);
+  --viewer-paper: #f8f7f3;
+  --viewer-stage: #f2f0eb;
+  --viewer-line: #c4c0b7;
+  --viewer-ink: #171716;
+  --viewer-muted: #625f59;
+  --viewer-accent: #65523e;
+}
+
+.basic[data-basic-template="neon-hud"],
+.basic[data-basic-template="orbital-portal"],
+.basic[data-basic-template="character-select"] {
+  --viewer-backdrop: rgba(5, 9, 20, .96);
+  --viewer-paper: #091120;
+  --viewer-stage: #050914;
+  --viewer-line: #38506e;
+  --viewer-ink: #edf6ff;
+  --viewer-muted: #a7bad1;
+  --viewer-accent: #6cafff;
+  --viewer-shadow: 0 20px 80px #0008;
+}
+.basic[data-basic-template="orbital-portal"] { --viewer-backdrop: rgba(5, 7, 11, .96); --viewer-paper: #0d121b; --viewer-stage: #05070b; --viewer-line: #394858; --viewer-ink: #f7f3ed; --viewer-muted: #aebac7; --viewer-accent: #9acbdb; }
+.basic[data-basic-template="character-select"] { --viewer-backdrop: rgba(12, 14, 22, .96); --viewer-paper: #171c2a; --viewer-stage: #0c0e16; --viewer-line: #46516a; --viewer-ink: #f7f7f2; --viewer-muted: #b9c0ce; --viewer-accent: #ffd633; }
+
+/* Extra specificity makes the material independent of global stylesheet order. */
+.basic[data-basic-template] :global(.lightbox-backdrop) { background: var(--viewer-backdrop); }
+.basic[data-basic-template] :global(.lightbox-frame) { border-color: var(--viewer-line); background: var(--viewer-paper); box-shadow: var(--viewer-shadow); }
+.basic[data-basic-template] :global(.lightbox-stage) { background: var(--viewer-stage); }
+.basic[data-basic-template] :global(.lightbox-nav) { border-color: var(--viewer-line); background: var(--viewer-paper); color: var(--viewer-ink); }
+.basic[data-basic-template] :global(.lightbox-info) { border-top-color: var(--viewer-line); color: var(--viewer-ink); }
+.basic[data-basic-template] :global(.lightbox-info) > span { color: var(--viewer-accent); }
+.basic[data-basic-template] :global(.lightbox-info) small,
+.basic[data-basic-template] :global(.lightbox-controls) { color: var(--viewer-muted); }
+.basic[data-basic-template] :global(.lightbox-info) button { border-color: var(--viewer-line); color: var(--viewer-ink); }
+.basic[data-basic-template] button:focus-visible { outline-color: var(--viewer-accent); }

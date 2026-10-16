@@ -1,0 +1,81 @@
+/* Isolated art-direction studies. These selectors never ship in the app bundle.
+   Paper remains the original theme; both studies render the same React content. */
+html[data-night-study="silver"][data-preview-theme="night"] {
+  --star-ink:#eeeae3; --star-muted:#b8b4ad;
+  --star-line:#ffffff24; --star-line-2:#ffffff4a;
+  --star-accent:#e4ded3; --star-accent-2:#d2ccc2; --star-focus:#eaa28d;
+  --star-accent-soft:#df90751a; --star-on-accent:#201d1a;
+  --star-glass:#20201f; --star-glass-2:#292827;
+  --star-grad:linear-gradient(180deg,#e9e6df,#cbc7be);
+  --star-paper:#292827; --star-paper-ink:#eeeae3; --star-paper-muted:#b8b4ad;
+  --star-paper-border:#ffffff24; --star-placeholder:#35332f;
+  --star-caption-accent:#d2ccc2; --star-caption-muted:#b8b4ad;
+  --star-thread:#c8bfa65c; --star-tape:#b7ac9980;
+  --star-sky-star:#bdb6aa; --star-sky-highlight:#df9075;
+  --star-glow:transparent; --star-pin-shadow:none;
+  --star-shadow:0 12px 30px #0004; --star-shadow-up:0 20px 40px #0006;
+  --star-panel-shadow:none; --star-segment-highlight:transparent;
+  --star-intro-bg:#171716; --star-top-fade:#171716f2; --star-overlay:#171716f7;
+  --star-background:radial-gradient(ellipse at 80% 0,#36322c55,transparent 60%),#171716;
+}
+html[data-night-study="dusk"][data-preview-theme="night"] {
+  --star-ink:#f0eaf4; --star-muted:#c0b4cb;
+  --star-line:#dbbde42e; --star-line-2:#dbbde466;
+  --star-accent:#d6b6dd; --star-accent-2:#ddc7e5; --star-focus:#edd0f1;
+  --star-accent-soft:#d8aad81c; --star-on-accent:#31263b;
+  --star-glass:#32263ccb; --star-glass-2:#3a2d45ed;
+  --star-grad:linear-gradient(125deg,#e4cde5,#c8b8df);
+  --star-paper:#30283a; --star-paper-ink:#f0eaf4; --star-paper-muted:#c0b4cb;
+  --star-paper-border:#dbbde426; --star-placeholder:#483950;
+  --star-caption-accent:#ddc7e5; --star-caption-muted:#c0b4cb;
+  --star-thread:#d8bade55; --star-tape:#b98aa155;
+  --star-sky-star:#dccfe6; --star-sky-highlight:#e9bccd;
+  --star-glow:#c38fd133; --star-pin-shadow:drop-shadow(0 0 5px #cda4df33);
+  --star-shadow:0 18px 34px #09050f55; --star-shadow-up:0 24px 44px #09050f88;
+  --star-panel-shadow:inset 0 1px #ead5ef0a,0 18px 40px #09050f26;
+  --star-segment-highlight:#ffffff18;
+  --star-intro-bg:#211a29; --star-top-fade:#211a29ed; --star-overlay:#211a29f7;
+  --star-background:radial-gradient(ellipse at 88% 8%,#8c577b38,transparent 60%),radial-gradient(ellipse at 5% 90%,#78609626,transparent 60%),#211a29;
+}
+
+/* Silver is a colour/material theme. Component geometry comes from paper. */
+/* B: dusk. Softer corners, translucent lilac surfaces, fine outlined actions. */
+html[data-night-study="dusk"][data-preview-theme="night"] #polaroid-packages article,
+html[data-night-study="dusk"][data-preview-theme="night"] #polaroid-booking > div {
+  border-radius:24px 8px 24px 8px;
+}
+html[data-night-study="dusk"][data-preview-theme="night"] #polaroid-packages article > div:first-of-type {
+  font:400 30px/1.2 var(--star-serif); color:#c5acce; margin-bottom:.5rem;
+}
+html[data-night-study="dusk"][data-preview-theme="night"] #polaroid-packages article > a {
+  border-radius:8px; background:#d8aad80e; color:var(--star-ink); border-color:#dbbde466;
+}
+html[data-night-study="dusk"][data-preview-theme="night"] [data-polaroid-contact-channels] :is(button,a) { border-radius:12px; }
+
+/* Historical dusk study only; silver inherits the shared type hierarchy. */
+html[data-night-study="dusk"][data-preview-theme="night"] #polaroid-packages article h3 {
+  font-size:clamp(1.8rem,2.7vw,2.5rem); line-height:1.25;
+}
+html[data-night-study="dusk"][data-preview-theme="night"] #polaroid-packages article small { color:var(--star-muted); }
+html[data-night-study="dusk"][data-preview-theme="night"] #polaroid-packages article > div:nth-of-type(3) > strong {
+  color:var(--star-ink); font-weight:400; font-variant-numeric:tabular-nums;
+}
+html[data-night-study="dusk"][data-preview-theme="night"] #polaroid-packages article:hover,
+html[data-night-study="dusk"][data-preview-theme="night"] #polaroid-packages article:focus-within {
+  transform:translateY(-2px); border-color:var(--star-line-2); box-shadow:var(--star-panel-shadow);
+}
+html[data-night-study="dusk"][data-preview-theme="night"] #polaroid-packages article > a:hover {
+  background:var(--star-ink); color:var(--star-on-accent);
+}
+html[data-night-study="silver"][data-preview-theme="night"] [data-site-premium] canvas[aria-hidden="true"] { opacity:.22; }
+html[data-night-study="dusk"][data-preview-theme="night"] [data-site-premium] canvas[aria-hidden="true"] { opacity:.5; }
+html[data-night-study="silver"][data-preview-theme="night"]:has(#polaroid-packages:not([hidden]),#polaroid-booking:not([hidden])) [data-site-premium] canvas[aria-hidden="true"],
+html[data-night-study="dusk"][data-preview-theme="night"]:has(#polaroid-packages:not([hidden]),#polaroid-booking:not([hidden])) [data-site-premium] canvas[aria-hidden="true"] { opacity:.12; }
+@media(prefers-reduced-motion:reduce) {
+  html[data-night-study] #polaroid-packages article { transition:none; }
+}
+/* Keep the fixture switcher away from the real mobile booking actions. */
+@media(max-width:767px) {
+  html[data-night-study] .fixture-report { top:16px; right:64px; bottom:auto; max-width:145px; font-size:10px; border-radius:4px; }
+  html[data-night-study] .fixture-report[open] { top:116px; right:16px; max-width:calc(100vw - 32px); }
+}

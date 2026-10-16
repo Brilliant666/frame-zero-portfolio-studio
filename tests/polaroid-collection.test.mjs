@@ -25,13 +25,15 @@ test("saved preview Lightbox reserves an external operation row and preserves le
   const source = await fs.readFile(new URL("../app/templates/shared/lightbox.tsx", import.meta.url), "utf8");
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const compiled = { exports: {} };
-  new Function("require", "module", "exports", js)(createRequire(import.meta.url), compiled, compiled.exports);
+  const require = createRequire(import.meta.url);
+  new Function("require", "module", "exports", js)((id) => id.endsWith(".module.css") ? { default: { basic: "basic-material" } } : require(id), compiled, compiled.exports);
   const Lightbox = compiled.exports.default;
   const work = { assetId: "a", code: "01", title: "匿名作品", subtitle: "测试", image: "/a.jpg", preview: "/a.jpg", previewWidth: 400, fullWidth: 1200 };
   const props = { work, works: [work, { ...work, assetId: "b", code: "02" }], frameRef: { current: null }, closeButtonRef: { current: null }, onMove() {}, onClose() {} };
   const render = (extra = {}) => renderToStaticMarkup(createElement(Lightbox, { ...props, ...extra }));
   const saved = render({ theme: "light", separateControls: true });
   assert.match(saved, /data-separated="true"/);
+  assert.doesNotMatch(saved, /data-basic-template|basic-material/);
   assert.doesNotMatch(saved.split('class="lightbox-info"')[0], /aria-label="[上下]一张作品"/);
   assert.match(saved.split('class="lightbox-info"')[1], /aria-label="上一张作品"/);
   assert.match(saved.split('class="lightbox-info"')[1], /aria-label="下一张作品"/);

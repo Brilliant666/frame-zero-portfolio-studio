@@ -32,14 +32,14 @@ export async function basicPublicationHttpIntegration({ runtime, origin, passwor
   const publish = async (space = 'basic', expected = revision) => { const r = await request(path(space), cookie, { action: 'publish', expectedDraftRevision: expected, expectedPublicationId: pointer }); assert.equal(r.status, 200); const publication = (await r.json()).publication; pointer = publication.id; return publication; };
   for (const actor of [undefined, outsider]) assert.equal((await request(path('basic'), actor, { action: 'publish', expectedDraftRevision: 1, expectedPublicationId: null })).status, actor ? 403 : 401);
   assert.equal((await request(path('premium-polaroid'), cookie)).status, 403);
-  let first;
+  const publications = [];
   for (const template of templateCatalog) {
     basic.activeTemplate = template.id;
     basic.profile.brand = basic.profile.photographer = basic.hero.title = `Published fixture ${template.id}`;
     basic.works = [work(assets[3], 0, true, 'LEGACY-FALLBACK-PRIVATE')];
     basic.templateWorks = { [template.id]: [...Array.from({ length: template.photoSlots }, (_, slot) => work(assets[0], slot)), work(assets[1], 1, false, 'DISABLED-PRIVATE'), work(assets[2], template.photoSlots, true, 'OVERFLOW-PRIVATE')], [templateCatalog.find(t => t.id !== template.id).id]: [work(assets[3], 0, true, 'OTHER-TEMPLATE-PRIVATE')] };
     basic.packages = [{ number: '', english: '', name: 'DISABLED-PACKAGE-PRIVATE', description: '', price: '', duration: '', deliverables: [], enabled: false }];
-    await save(); const published = await publish(); first ??= published;
+    await save(); const published = await publish(); publications.push(published);
     assert.equal(published.space, 'basic'); assert.equal(published.templateId, template.id);
     const snapshot = await readPublished(runtime.pool, slug);
     assert.equal(snapshot.id, pointer); assert.equal(snapshot.templateId, template.id); assert.deepEqual(snapshot.assetIds, [assets[0]]);
@@ -49,10 +49,17 @@ export async function basicPublicationHttpIntegration({ runtime, origin, passwor
     assert.equal((await request(`/api/public-sites/${slug}/assets/${assets[0]}/full`)).status, 200);
     for (const id of assets.slice(1)) assert.equal((await request(`/api/public-sites/${slug}/assets/${id}/full`)).status, 404);
   }
+  const first = publications[0];
+  const elevenHistoryResponse = await request(path('basic'), cookie); assert.equal(elevenHistoryResponse.status, 200);
+  const elevenHistory = await elevenHistoryResponse.json();
+  assert.equal(elevenHistory.current.id, publications.at(-1).id);
+  assert.deepEqual(elevenHistory.history.map(row => row.id).sort(), publications.slice(-10).map(row => row.id).sort(), 'Eleven distinct basic templates publish successfully; exactly the newest ten remain');
+  assert.ok(elevenHistory.history.every(row => row.space === 'basic'));
+  assert.ok(!elevenHistory.history.some(row => row.id === first.id), 'The first snapshot is outside the retention window');
   assert.equal((await runtime.pool.query('SELECT count(*)::int AS n FROM site_template_grants WHERE site_id=$1', [provisioned.siteId])).rows[0].n, 0, 'All eleven basic templates publish without a premium grant');
-  assert.equal((await request(`/api/sites/${other}/publications/basic`, outsider, { action: 'rollback', revisionId: first.id, expectedPublicationId: null })).status, 404, 'Another owner cannot use this Site history UUID');
+  assert.equal((await request(`/api/sites/${other}/publications/basic`, outsider, { action: 'rollback', revisionId: publications.at(-1).id, expectedPublicationId: null })).status, 404, 'Another owner cannot use an existing retained Site history UUID');
   basic.templateWorks[basic.activeTemplate] = [];
-  await save(); await publish();
+  await save(); publications.push(await publish());
   assert.deepEqual((await readPublished(runtime.pool, slug)).assetIds, [], 'Explicit empty active-template list never falls back to legacy works');
   for (const id of assets) assert.equal((await request(`/api/public-sites/${slug}/assets/${id}/full`)).status, 404);
   assert.doesNotMatch(await (await request(`/${slug}`)).text(), /LEGACY-FALLBACK-PRIVATE|OTHER-TEMPLATE-PRIVATE/);
@@ -71,7 +78,10 @@ export async function basicPublicationHttpIntegration({ runtime, origin, passwor
   const history = await (await request(path('basic'), cookie)).json();
   assert.equal(history.current.id, pointer); assert.equal(history.current.space, 'premium-polaroid'); assert.equal(history.current.templateId, 'premium-polaroid');
   assert.ok(history.history.some(row => row.id === basicBeforeSwitch && row.space === 'basic' && row.draftRevision === premiumPublished.draftRevision), 'Equal numeric revisions remain distinct content spaces');
-  assert.ok(history.history.some(row => row.id === first.id && row.templateId === templateCatalog[0].id));
+  assert.deepEqual(history.history.filter(row => row.space === 'basic').map(row => row.id).sort(), publications.slice(-10).map(row => row.id).sort(), 'The empty-layout publication advances only the basic retention window');
+  const retained = publications[2];
+  assert.ok(history.history.some(row => row.id === retained.id && row.templateId === retained.templateId));
+  assert.ok(!history.history.some(row => row.id === first.id || row.id === publications[1].id));
   await runtime.pool.query('DELETE FROM site_template_grants WHERE site_id=$1', [provisioned.siteId]);
   const revokedHistory = await (await request(path('basic'), cookie)).json();
   assert.equal(revokedHistory.current.id, premiumPublished.id); assert.equal(revokedHistory.current.templateId, 'premium-polaroid');
@@ -79,8 +89,16 @@ export async function basicPublicationHttpIntegration({ runtime, origin, passwor
   assert.equal((await request(path('premium-polaroid'), cookie, { action: 'rollback', revisionId: premiumPublished.id, expectedPublicationId: pointer })).status, 403);
   await runtime.pool.query("INSERT INTO site_template_grants(id,site_id,product,source) VALUES($1,$2,'premium-polaroid','operator-test')", [randomUUID(), provisioned.siteId]);
   assert.equal((await request(path('basic'), cookie, { action: 'rollback', revisionId: premiumPublished.id, expectedPublicationId: pointer })).status, 404);
-  const rollback = await request(path('basic'), cookie, { action: 'rollback', revisionId: first.id, expectedPublicationId: pointer }); assert.equal(rollback.status, 200); pointer = (await rollback.json()).publication.id;
-  assert.match(await (await request(`/${slug}`)).text(), /Published fixture cinematic-light/);
+  const draftBeforeRejectedRollback = await (await request(drafts('basic'), cookie)).json();
+  const premiumDraftBeforeRejectedRollback = await (await request(drafts('premium-polaroid'), cookie)).json();
+  const publishedBeforeRejectedRollback = await readPublished(runtime.pool, slug);
+  assert.equal((await request(path('basic'), cookie, { action: 'rollback', revisionId: first.id, expectedPublicationId: pointer })).status, 404, 'A pruned snapshot cannot be restored');
+  assert.deepEqual(await readPublished(runtime.pool, slug), publishedBeforeRejectedRollback, 'Rejected rollback keeps the exact current Published snapshot');
+  assert.deepEqual(await (await request(drafts('basic'), cookie)).json(), draftBeforeRejectedRollback, 'Rejected rollback leaves the entire basic draft unchanged');
+  assert.deepEqual(await (await request(drafts('premium-polaroid'), cookie)).json(), premiumDraftBeforeRejectedRollback, 'Rejected rollback leaves the independent premium draft unchanged');
+  const rollback = await request(path('basic'), cookie, { action: 'rollback', revisionId: retained.id, expectedPublicationId: pointer }); assert.equal(rollback.status, 200); pointer = (await rollback.json()).publication.id;
+  assert.equal(pointer, retained.id);
+  assert.ok((await (await request(`/${slug}`)).text()).includes(`Published fixture ${retained.templateId}`), 'A retained snapshot still restores its original template and content');
   assert.equal((await (await request(drafts('basic'), cookie)).json()).revision, revision, 'Rollback retains current basic draft');
   assert.equal((await (await request(drafts('premium-polaroid'), cookie)).json()).content.profile.photographer, 'PREMIUM-SWITCH-FIXTURE');
   assert.equal((await request(path('basic'), cookie, { action: 'rollback', revisionId: basicBeforeSwitch, expectedPublicationId: premiumPublished.id })).status, 409);
@@ -89,5 +107,5 @@ export async function basicPublicationHttpIntegration({ runtime, origin, passwor
   assert.ok(limited.history.every(row => row.space === 'basic'));
   assert.equal((await request(path('premium-polaroid'), cookie, { action: 'rollback', revisionId: premiumPublished.id, expectedPublicationId: pointer })).status, 403);
   assert.equal((await request(path('basic'), cookie, { action: 'rollback', revisionId: premiumPublished.id, expectedPublicationId: pointer })).status, 404);
-  assert.equal((await readPublished(runtime.pool, slug)).id, first.id);
+  assert.equal((await readPublished(runtime.pool, slug)).id, retained.id);
 }

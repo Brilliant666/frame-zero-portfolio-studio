@@ -6,12 +6,28 @@ import { siteEntryStyle } from './site-entry-style.mjs';
 
 const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
-export function publishedWorkspaceSummary(published, templateNames = {}) {
+// Only consume the Site and grants returned by the existing owner authorization.
+// The destination is a current draft route, never a publication revision URL.
+export function publishedDraftTarget(published, account, grantConfirmed = true) {
+  if (!grantConfirmed || !published || !isSiteSlug(account?.site?.slug)) return null;
+  const routes = { basic: 'basic/profile', 'premium-polaroid': 'premium-polaroid', 'premium-flow-gallery': 'premium-flow-gallery' };
+  if (!Object.hasOwn(routes, published.space)) return null;
+  const permitted = published.space === 'basic'
+    ? account.templates?.basic?.length > 0
+    : account.templates?.premium?.includes(published.space);
+  return permitted ? `/${account.site.slug}/admin/${routes[published.space]}` : null;
+}
+
+export function publishedWorkspaceSummary(published, templateNames = {}, account = null, grantConfirmed = true) {
   if (published === undefined) return '<section class="publication-overview" data-workspace-public="unknown"><strong>公开状态暂未确认</strong><p>暂时无法读取公开版本。可进入草稿继续编辑，稍后重新核对。</p></section>';
   if (!published) return '<section class="publication-overview" data-workspace-public="unpublished"><strong>本站尚未发布作品集</strong><p>选择一个内容空间完成编辑，再保存并发布。</p></section>';
   const spaces = { basic: '基础版', 'premium-polaroid': '高级拍立得', 'premium-flow-gallery': '流影视廊' };
   const template = published.space === 'basic' ? ` · ${escape(templateNames[published.templateId] ?? "基础模板")}` : '';
-  return `<section class="publication-overview" data-workspace-public="${escape(published.space)}"><strong>当前公开主页：${escape(spaces[published.space] ?? published.space)}${template}</strong><p>公开版本对应草稿 v${escape(published.draftRevision)}。此信息只读；保存其他草稿不会切换公开主页。</p></section>`;
+  const target = publishedDraftTarget(published, account, grantConfirmed);
+  const shortcut = target
+    ? `<div class="publication-draft-entry"><a class="button" data-published-draft-entry="${escape(published.space)}" href="${escape(target)}">编辑此空间草稿 <span aria-hidden="true">→</span></a><p>进入该内容空间的当前草稿；历史发布快照保持只读。</p></div>`
+    : account ? '<p data-published-draft-unavailable="true">当前公开空间无法编辑，请核对内容空间授权；公开版本保持不变。</p>' : '';
+  return `<section class="publication-overview" data-workspace-public="${escape(published.space)}"><strong>当前公开主页：${escape(spaces[published.space] ?? published.space)}${template}</strong><p>公开版本对应草稿 v${escape(published.draftRevision)}。此信息只读；保存其他草稿不会切换公开主页。</p>${shortcut}</section>`;
 }
 const publicBadge = (published, space) => published?.space === space ? '<p class="public-badge">当前公开主页使用此内容空间</p>' : '';
 const publicAttribute = (published, space) => published?.space === space ? ' data-current-public="true"' : '';
@@ -42,9 +58,15 @@ export async function handleSiteEntry(request, slug, admin = false, templateName
       // load another owner's Site and check its identity afterward.
       const account = await readSiteForPrincipal(runtime, session.user, null, slug);
       if (!account) return page('无权访问此后台', '<p>请从账号页面进入自己拥有的站点。</p>', 403);
-      let published;
-      try { ({ current: published } = await publicationHistory(runtime.pool, account.site.id, { authorizedSpaces: account.templates.premium })); } catch { /* Unknown is not an unpublished state. */ }
-      return page('站点后台', `<p class="lead">选择你要编辑的作品集。这里是本站的工作台；登录用于确认身份，工作台用于管理属于你的内容。</p><section class="dashboard" data-site-admin="true"><div class="workspace-heading"><div><h2>${escape(account.site.slug)} 的作品集</h2><p>当前账号：${escape(account.user.username)} · 站点归属已验证</p></div><a class="button" href="/${escape(slug)}">查看公开主页 <span aria-hidden="true">↗</span></a></div>${publishedWorkspaceSummary(published, templateNames)}<div class="spaces"><article class="space"${publicAttribute(published, 'basic')}><div class="space-top"><span class="space-number">01 / BASIC</span><span class="badge">基础模板：${account.templates.basic.length} 套</span></div><h2>基础版作品集</h2>${publicBadge(published, 'basic')}<p>使用基础模板与对应的素材排版，管理这套作品集自己的内容。</p><ul><li>摄影师资料、模板与素材排版</li><li>拍摄套餐、联系方式与页面文案</li><li>保存基础版草稿与保存并发布</li></ul><a class="button primary" href="/${escape(slug)}/admin/basic/profile">编辑基础版草稿 <span aria-hidden="true">→</span></a></article><article class="space"${publicAttribute(published, 'premium-polaroid')}><div class="space-top"><span class="space-number">02 / POLAROID</span><span class="badge${account.templates.premium.includes('premium-polaroid') ? '' : ' muted'}">${account.templates.premium.includes('premium-polaroid') ? '高级拍立得（已授权）' : '尚未授权'}</span></div><h2>高级拍立得</h2>${publicBadge(published, 'premium-polaroid')}<p>以图集为中心组织作品，编辑拍立得页面并管理发布版本。</p><ul><li>图集、封面与图集内照片</li><li>独立的主页资料、套餐与联系信息</li><li>草稿预览与显式发布</li></ul>${account.templates.premium.includes('premium-polaroid') ? `<a class="button primary" href="/${escape(slug)}/admin/premium-polaroid">编辑高级拍立得草稿 <span aria-hidden="true">→</span></a>` : '<span class="unavailable">当前账号尚未开通此内容空间</span>'}</article>${flowGalleryWorkspaceCard(account, slug, published)}</div><aside class="explanation"><h2>保存草稿，不等于发布</h2><p>基础版、高级拍立得与流影视廊三个内容空间独立保存。保存只更新当前私人草稿，不会发布或同步到其他内容空间。本站图库资源可在已授权的后台复用，业务草稿各自保存；不会自动读取或导入旧版全局照片。</p></aside><footer>工作台地址属于当前站点，不是另一套登录入口。</footer></section>`);
+      let published, grantConfirmed = false;
+      try {
+        const result = await publicationHistory(runtime.pool, account.site.id, { authorizedSpaces: account.templates.premium });
+        published = result.current;
+        // The current summary survives revocation; editable history already
+        // includes the query's grant recheck. Intersect both before offering a link.
+        grantConfirmed = !!published && result.history.some(row => row.id === published.id && row.space === published.space);
+      } catch { /* Unknown is not an unpublished state. */ }
+      return page('站点后台', `<p class="lead">选择你要编辑的作品集。这里是本站的工作台；登录用于确认身份，工作台用于管理属于你的内容。</p><section class="dashboard" data-site-admin="true"><div class="workspace-heading"><div><h2>${escape(account.site.slug)} 的作品集</h2><p>当前账号：${escape(account.user.username)} · 站点归属已验证</p></div><a class="button" href="/${escape(slug)}">查看公开主页 <span aria-hidden="true">↗</span></a></div>${publishedWorkspaceSummary(published, templateNames, account, grantConfirmed)}<div class="spaces"><article class="space"${publicAttribute(published, 'basic')}><div class="space-top"><span class="space-number">01 / BASIC</span><span class="badge">基础模板：${account.templates.basic.length} 套</span></div><h2>基础版作品集</h2>${publicBadge(published, 'basic')}<p>使用基础模板与对应的素材排版，管理这套作品集自己的内容。</p><ul><li>摄影师资料、模板与素材排版</li><li>拍摄套餐、联系方式与页面文案</li><li>保存基础版草稿与保存并发布</li></ul><a class="button primary" href="/${escape(slug)}/admin/basic/profile">编辑基础版草稿 <span aria-hidden="true">→</span></a></article><article class="space"${publicAttribute(published, 'premium-polaroid')}><div class="space-top"><span class="space-number">02 / POLAROID</span><span class="badge${account.templates.premium.includes('premium-polaroid') ? '' : ' muted'}">${account.templates.premium.includes('premium-polaroid') ? '高级拍立得（已授权）' : '尚未授权'}</span></div><h2>高级拍立得</h2>${publicBadge(published, 'premium-polaroid')}<p>以图集为中心组织作品，编辑拍立得页面并管理发布版本。</p><ul><li>图集、封面与图集内照片</li><li>独立的主页资料、套餐与联系信息</li><li>草稿预览与显式发布</li></ul>${account.templates.premium.includes('premium-polaroid') ? `<a class="button primary" href="/${escape(slug)}/admin/premium-polaroid">编辑高级拍立得草稿 <span aria-hidden="true">→</span></a>` : '<span class="unavailable">当前账号尚未开通此内容空间</span>'}</article>${flowGalleryWorkspaceCard(account, slug, published)}</div><aside class="explanation"><h2>保存草稿，不等于发布</h2><p>基础版、高级拍立得与流影视廊三个内容空间独立保存。保存只更新当前私人草稿，不会发布或同步到其他内容空间。本站图库资源可在已授权的后台复用，业务草稿各自保存；不会自动读取或导入旧版全局照片。</p></aside><footer>工作台地址属于当前站点，不是另一套登录入口。</footer></section>`);
     }
     const result = await runtime.pool.query(`SELECT s.slug FROM sites s
       JOIN portfolio_users p ON p.id=s.owner_id

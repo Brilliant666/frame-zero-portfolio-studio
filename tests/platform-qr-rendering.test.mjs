@@ -113,12 +113,6 @@ test("all eleven templates omit empty direct contact actions while retaining ind
     assert.match(cardOnly, /aria-label="平台账号与分享卡片"/, `${templateId}: optional card region survives without direct contacts`);
     assert.match(cardOnly, /独立联系卡/);
   }
-  const premium = renderer.render("polaroid-field", { collections: [], Navigation: () => createElement("nav") }, {
-    contact: { wechat: "", email: "", note: "" },
-  }).html;
-  assert.doesNotMatch(premium, /href="mailto:[^"]*"/);
-  assert.ok((premium.match(/<button\b[\s\S]*?<\/button>/g) ?? []).every(button => !/WECHAT|EMAIL|复制微信号/i.test(button)), "premium collection mode also omits empty contact operations");
-  assert.match(premium, /href="https:\/\/example.com\/profile"/);
 });
 
 test("all eleven contact surfaces use exactly one shared platform account renderer", async () => {
@@ -134,22 +128,84 @@ test("all eleven contact surfaces use exactly one shared platform account render
   }
 });
 
-test("legacy and preview polaroid contacts render one shared account region in mutually exclusive footer branches", () => {
+test("basic polaroid retains shared account cards while premium renders its independent four contact channels", () => {
   const renderer = contactRenderer();
-  const legacy = renderer.render("polaroid-field");
+  const content = {
+    contact: { wechat: "premium_wechat", email: "legacy@portfolio.example", note: "保留联系说明" },
+    social: [
+      { label: "旧平台", handle: "https://example.com/profile", qrAssetId: "a".repeat(64) },
+      { label: "小红书", handle: "我的主页 https://xhslink.cn/o/fixture", qrAssetId: "b".repeat(64) },
+      { label: "QQ", handle: "00123456789", qrAssetId: "c".repeat(64) },
+      { label: "抖音", handle: "查看主页 https://v.douyin.com/fixture/", qrAssetId: "d".repeat(64) },
+    ],
+  };
+  const before = structuredClone(content);
+  const legacy = renderer.render("polaroid-field", undefined, content);
   const preview = renderer.render("polaroid-field", {
     collections: [], Navigation: () => createElement("nav", { "aria-label": "预览导航" }),
-  });
-  for (const result of [legacy, preview]) {
-    assert.equal(result.sharedCalls, 1);
-    assert.equal((result.html.match(/aria-label="平台账号与分享卡片"/g) ?? []).length, 1);
-    assert.equal((result.html.match(/href="https:\/\/example.com\/profile"/g) ?? []).length, 1);
-    assert.match(result.html, /target="_blank" rel="noopener noreferrer"/);
-  }
+  }, content);
+  assert.equal(legacy.sharedCalls, 1);
+  assert.equal((legacy.html.match(/aria-label="平台账号与分享卡片"/g) ?? []).length, 1);
+  assert.equal((legacy.html.match(/href="https:\/\/example.com\/profile"/g) ?? []).length, 1);
+  assert.match(legacy.html, /href="mailto:legacy@portfolio\.example"/);
+  assert.match(legacy.html, /target="_blank" rel="noopener noreferrer"/);
   assert.match(legacy.html, /<footer\b[^>]*class="footer"/);
   assert.doesNotMatch(legacy.html, /aria-label="预览导航"/);
+  assert.doesNotMatch(legacy.html, /data-polaroid-contact-channels/);
+
+  assert.equal(preview.sharedCalls, 0, "premium never mounts the shared QR card region, including hidden content");
+  assert.equal((preview.html.match(/data-polaroid-contact-channels="true"/g) ?? []).length, 1);
+  const groups = [...preview.html.matchAll(/<section\b[^>]*aria-label="(联系方式|平台账号)"[^>]*>([\s\S]*?)<\/section>/g)];
+  assert.deepEqual(groups.map(match => match[1]), ["联系方式", "平台账号"]);
+  const actions = groups.flatMap(group => [...group[2].matchAll(/<(button|a)\b([^>]*)>([\s\S]*?)<\/\1>/g)]);
+  assert.deepEqual(actions.map(match => match[2].match(/aria-label="([^"]+)"/)?.[1]), [
+    "复制QQ账号", "复制Wechat账号", "查看抖音主页（在新标签页打开）", "查看小红书主页（在新标签页打开）",
+  ]);
+  assert.deepEqual(actions.map(match => match[1]), ["button", "button", "a", "a"]);
+  assert.match(actions[0][3], /<strong>00123456789<\/strong>/);
+  assert.match(actions[1][3], /<strong>premium_wechat<\/strong>/);
+  for (const [index, href] of ["https://v.douyin.com/fixture/", "https://xhslink.cn/o/fixture"].entries()) {
+    assert.ok(actions[index + 2][2].includes(`href="${href}"`));
+    assert.match(actions[index + 2][2], /target="_blank" rel="noopener noreferrer"/);
+  }
+  assert.doesNotMatch(preview.html, /平台账号与分享卡片|旧平台|example\.com\/profile|legacy@portfolio\.example|mailto:|\/api\/platform-qr|分享卡片原图/);
+  assert.ok(groups.every(group => !/<img\b|<svg\b/.test(group[2])), "premium contact groups contain no QR images or generated codes");
   assert.doesNotMatch(preview.html, /<footer\b/);
   assert.match(preview.html, /aria-label="预览导航"/);
+  assert.deepEqual(content, before, "presentation never removes legacy email or saved QR references from content");
+});
+
+test("premium polaroid omits blank channels and treats unsafe platform values as copyable text", () => {
+  const renderer = contactRenderer();
+  const workspace = { collections: [], Navigation: () => createElement("nav") };
+  for (const empty of ["", " \t "]) {
+    const blank = renderer.render("polaroid-field", workspace, {
+      contact: { wechat: empty, email: "legacy@portfolio.example", note: "" },
+      social: [
+        ...["QQ", "抖音", "小红书"].map(label => ({ label, handle: empty, qrAssetId: "a".repeat(64) })),
+        { label: "旧平台", handle: "https://example.com/profile", qrAssetId: "b".repeat(64) },
+      ],
+    });
+    assert.equal(blank.sharedCalls, 0);
+    assert.doesNotMatch(blank.html, /aria-label="(?:联系方式|平台账号|复制QQ账号|复制Wechat账号)"|mailto:|legacy@portfolio\.example|example\.com\/profile|平台账号与分享卡片/);
+  }
+  const platformsOnly = renderer.render("polaroid-field", workspace, {
+    contact: { wechat: "", email: "", note: "" },
+    social: [{ label: "抖音", handle: "https://example.com/profile" }],
+  }).html;
+  assert.doesNotMatch(platformsOnly, /aria-label="联系方式"|复制QQ账号|复制Wechat账号/);
+  assert.match(platformsOnly, /href="https:\/\/example.com\/profile" target="_blank" rel="noopener noreferrer"/);
+  for (const value of ["javascript:alert(1)", "http://example.invalid", "https://user:password@example.invalid", "<img src=x onerror=alert(1)>"]) {
+    const { html } = renderer.render("polaroid-field", workspace, {
+      contact: { wechat: "", email: "", note: "" }, social: [{ label: "抖音", handle: value }],
+    });
+    const group = html.match(/<section\b[^>]*aria-label="平台账号"[^>]*>([\s\S]*?)<\/section>/)?.[1];
+    assert.ok(group);
+    assert.match(group, /<button\b[^>]*aria-label="复制抖音账号"/);
+    assert.doesNotMatch(group, /<a\b|<img\b|\shref=/);
+    const escaped = renderToStaticMarkup(createElement("strong", null, value));
+    assert.ok(group.includes(escaped), "unsafe values remain intact and HTML-escaped");
+  }
 });
 
 test("shared platform account cards preserve links, accessibility, natural ratio, and fail-safe rendering", async () => {

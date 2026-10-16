@@ -132,6 +132,23 @@ export default function TemplateEditor() {
               <p>{inspectedTemplate.description}</p>
             </header>
 
+            <div className={styles.templateDetailActions} data-template-primary-action="true">
+              <p className={styles.templateMaterialPlanNote}>
+                选择模板 → 素材排版 → 预览 → {siteScope ? "保存并发布" : "保存修改"}。
+                查看模板不改变草稿；点击下方按钮才会选择并进入排版。
+              </p>
+              <button
+                type="button"
+                onClick={() => continueToLayout(inspectedTemplate.id)}
+                title={inspectedIsDraft
+                  ? "进入当前草稿模板的素材排版"
+                  : "将模板写入当前草稿并进入素材排版；不会自动保存或发布"}
+              >
+                {inspectedIsDraft ? "进入素材排版" : "选为草稿模板并进入素材排版"}
+                <span aria-hidden="true">→</span>
+              </button>
+            </div>
+
             <div className={styles.templateDetailVisual}>
               <TemplateStructurePreview templateId={inspectedTemplate.id} />
             </div>
@@ -220,18 +237,6 @@ export default function TemplateEditor() {
 
             </div>
 
-            <div className={styles.templateDetailActions} data-template-primary-action="true">
-              <button
-                type="button"
-                onClick={() => continueToLayout(inspectedTemplate.id)}
-                title={inspectedIsDraft
-                  ? "进入当前草稿模板的素材排版"
-                  : "将模板写入当前草稿并进入素材排版；不会自动保存或发布"}
-              >
-                {inspectedIsDraft ? "进入素材排版" : "选为草稿模板并进入素材排版"}
-                <span aria-hidden="true">→</span>
-              </button>
-            </div>
           </article>
         </div>
       </div>

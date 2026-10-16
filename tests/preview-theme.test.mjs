@@ -40,8 +40,8 @@ test("missing, corrupt and inaccessible preference storage safely defaults to pa
 });
 
 test("prepaint style remains preview-scoped and gives the loading scene dark paint",()=>{
-  assert.match(PREVIEW_THEME_BOOTSTRAP_CSS,/html\[data-preview-theme="night"\]\{background:#06080f/);
-  assert.match(PREVIEW_THEME_BOOTSTRAP_CSS,/--star-intro-bg:#06080f;--star-accent:#f1c86a/);
+  assert.match(PREVIEW_THEME_BOOTSTRAP_CSS,/html\[data-preview-theme="night"\]\{background:#171716/);
+  assert.match(PREVIEW_THEME_BOOTSTRAP_CSS,/--star-intro-bg:#171716;--star-accent:#e4ded3/);
   assert.match(PREVIEW_THEME_BOOTSTRAP_CSS,/html\[data-preview-theme\] body\{background:transparent/);
   assert.ok(PREVIEW_THEME_BOOTSTRAP_CSS.split("}").filter(Boolean).every(rule=>rule.startsWith("html[data-preview-theme")));
 });

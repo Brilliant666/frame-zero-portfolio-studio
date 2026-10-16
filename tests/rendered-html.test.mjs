@@ -110,7 +110,7 @@ test("keeps editable content and eleven lazy template choices in one configurati
     ancestor = ancestor.parent;
   }
   assert.equal(siteScoped, true, "the restored preview entry must stay inside the Site-only editor branch");
-  assert.match(previewTriggers[0].getText(parsedShell), /templateId=\{content\.activeTemplate\} scope="admin" label="预览当前编辑"/);
+  assert.match(previewTriggers[0].getText(parsedShell), /templateId=\{content\.activeTemplate\} scope="admin" label="预览效果" showIcon=\{false\}/);
   assert.doesNotMatch(page, /DraftTemplatePreviewTrigger|data-admin-draft-preview-trigger|<AdminShell|<PublicationControls/,
     "legacy portfolio rendering must not acquire private editor controls");
   assert.match(adminShell, /"保存修改"/);
@@ -168,7 +168,7 @@ test("keeps every template on a fixed photo-slot contract with missing-image pla
   assert.match(sharedSlots, /export function PhotoPlaceholder/);
   assert.match(sharedSlots, /Math\.abs\(Math\.log\(actualRatio \/ targetRatio\)\)/);
   assert.match(layoutWorkspace, /LayoutCompositionPreview/);
-  assert.match(layoutWorkspace, /生成排版建议并采用到草稿/);
+  assert.match(layoutWorkspace, /切换到“推荐排版”，预览后采用到草稿/);
   assert.doesNotMatch(layoutWorkspace, /一键智能排版/);
   assert.match(layoutWorkspace, /刷新素材列表/);
   assert.match(libraryModel, /parsePhotoLibraryManifest/);

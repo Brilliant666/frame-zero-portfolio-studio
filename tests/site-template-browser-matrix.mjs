@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
+import { createPreviewReturnDiagnostics } from './preview-return-diagnostics.mjs';
 
 // Open the actual disclosure before editing; never force visibility or bypass UI.
 async function expandControl(page, control) {
@@ -68,6 +69,31 @@ export async function siteTemplateBrowserMatrix({ page, publicPage, context, ori
     assert.ok(cardLayout.captionTop >= cardLayout.pictureBottom - 2, `${id}/${width} original-image caption stays below the complete card`);
     assert.equal(await root.locator('a[href="mailto:"]').count(), 0, 'An empty email must not produce a dead contact link');
     assert.equal(await root.getByRole('button', { name: '复制微信号', exact: true }).count(), 0, 'An empty WeChat account must not produce a copy action');
+  }
+  async function premiumContact(root) {
+    await root.getByRole('link', { name: '联系约拍', exact: true }).first().click();
+    const booking = root.locator('#polaroid-booking');
+    await booking.waitFor({ state: 'visible' });
+    const channels = booking.locator('[data-polaroid-contact-channels]');
+    await channels.waitFor({ state: 'visible' });
+    for (const [name, account] of [['QQ', '10000001'], ['Wechat', 'premium-matrix-wechat']]) {
+      const copy = channels.getByRole('button', { name: `复制${name}账号`, exact: true });
+      await copy.waitFor({ state: 'visible' });
+      assert.equal(await copy.locator('strong').innerText(), account);
+      assert.equal(await copy.isEnabled(), true);
+    }
+    for (const [name, href] of [['抖音', 'https://example.com/premium-douyin'], ['小红书', 'https://example.com/premium-xiaohongshu']]) {
+      const account = channels.getByRole('link', { name: `查看${name}主页（在新标签页打开）`, exact: true });
+      await account.waitFor({ state: 'visible' });
+      assert.equal(await account.getAttribute('href'), href);
+      assert.equal(await account.getAttribute('target'), '_blank');
+      const rel = (await account.getAttribute('rel')).split(/\s+/);
+      assert.ok(rel.includes('noopener') && rel.includes('noreferrer'));
+    }
+    assert.equal(await booking.locator('img').count(), 0, 'Premium booking does not render retained compatibility QR images');
+    assert.equal(await root.getByRole('group', { name: 'Premium fixture contact分享卡片', exact: true }).count(), 0);
+    assert.equal(await booking.locator('a[href^="mailto:"]').count(), 0, 'Premium booking does not render retained compatibility email');
+    assert.equal(await booking.getByRole('link', { name: /打开Premium fixture contact主页/ }).count(), 0, 'Legacy non-channel account remains compatibility data only');
   }
   async function lightbox(p, root, id, width) {
     if (id === 'archive-os' && width < 700) await root.locator('[aria-label="移动端档案导航"]').getByRole('button', { name: /检查器/ }).click();
@@ -146,7 +172,7 @@ export async function siteTemplateBrowserMatrix({ page, publicPage, context, ori
           // otherwise turns each Playwright stability check into seconds.
           await page.bringToFront();
           await page.setViewportSize({ width, height: width === 1440 ? 900 : 844 });
-          await page.getByRole('button', { name: '预览当前编辑', exact: true }).click();
+          await page.getByRole('button', { name: '预览效果', exact: true }).click();
           await currentDialog().waitFor();
           assert.equal(await currentDialog().evaluate(element => Boolean(element.parentElement?.closest('[data-site-editor], nav, [class*="workspaceContext"]'))), false, 'Current preview must be isolated from editor navigation descendant styles');
           const currentRoot = currentDialog().locator(`[data-template="${id}"]`);
@@ -185,7 +211,7 @@ export async function siteTemplateBrowserMatrix({ page, publicPage, context, ori
       const saved = await draft(), pointer = (await publication()).current.id;
       await expandControl(page, page.getByLabel(/^账号、主页链接或分享文案 1/));
       await page.getByLabel(/^账号、主页链接或分享文案 1/).fill('UNSAVED-CONTACT-FIXTURE');
-      await page.getByRole('button', { name: '预览当前编辑', exact: true }).click();
+      await page.getByRole('button', { name: '预览效果', exact: true }).click();
       const root = currentDialog().locator(`[data-template="${saved.content.activeTemplate}"]`);
       await root.getByRole('link', { name: '联系约拍', exact: true }).first().click();
       await root.getByText('UNSAVED-CONTACT-FIXTURE', { exact: true }).waitFor();
@@ -203,7 +229,9 @@ export async function siteTemplateBrowserMatrix({ page, publicPage, context, ori
       const basicBefore = await draft();
       const sharedCardId = basicBefore.content.social[0].qrAssetId;
       assert.ok(sharedCardId);
+      const premiumBefore = await draft('premium-polaroid');
       await page.getByRole('button', { name: '联系约拍', exact: true }).click();
+      await expandControl(page, page.getByRole('button', { name: '添加平台账号', exact: true, includeHidden: true }));
       await page.getByRole('button', { name: '添加平台账号', exact: true }).click();
       await expandControl(page, page.getByLabel('平台 1 · 名称', { exact: true }));
       await page.getByLabel('平台 1 · 名称', { exact: true }).fill('Premium fixture contact');
@@ -213,6 +241,12 @@ export async function siteTemplateBrowserMatrix({ page, publicPage, context, ori
       await page.locator('article').filter({ has: page.locator('code', { hasText: sharedCardId }) }).getByRole('button', { name: '选用此卡片', exact: true }).click();
       assert.ok((await page.getByAltText('当前联系卡', { exact: true }).getAttribute('src')).includes(sharedCardId));
       assert.deepEqual(await draft(), basicBefore, 'Selecting the same card in premium must not modify basic content');
+      assert.deepEqual(await draft('premium-polaroid'), premiumBefore, 'Compatibility card selection alone must not save the premium draft');
+      await page.getByLabel('原邮箱（高级公开页不显示）', { exact: true }).fill('premium-matrix@fixture.example');
+      await page.getByLabel('QQ号', { exact: true }).fill('10000001');
+      await page.getByLabel('微信号', { exact: true }).fill('premium-matrix-wechat');
+      await page.getByLabel('抖音账号或主页链接', { exact: true }).fill('https://example.com/premium-douyin');
+      await page.getByLabel('小红书账号或主页链接', { exact: true }).fill('https://example.com/premium-xiaohongshu');
       await page.getByRole('button', { name: '图集', exact: true }).click();
       for (let index = 1; index <= 4; index++) {
         await page.getByRole('button', { name: '新建图集', exact: true }).click();
@@ -226,36 +260,59 @@ export async function siteTemplateBrowserMatrix({ page, publicPage, context, ori
       await publish('premium-polaroid');
       const saved = await draft('premium-polaroid'), pointer = (await publication()).current.id;
       assert.equal(saved.content.social[0].qrAssetId, sharedCardId);
+      assert.equal(saved.content.social[0].label, 'Premium fixture contact');
+      assert.equal(saved.content.contact.email, 'premium-matrix@fixture.example');
+      assert.equal(saved.content.contact.wechat, 'premium-matrix-wechat');
+      for (const [label, handle] of [['QQ', '10000001'], ['抖音', 'https://example.com/premium-douyin'], ['小红书', 'https://example.com/premium-xiaohongshu']]) {
+        assert.equal(saved.content.social.find(item => item.label === label)?.handle, handle);
+      }
       assert.deepEqual(await draft(), basicBefore, 'Premium save and publish must preserve the independent basic card reference');
       for (const width of [1440, 390, 320]) {
         const currentStarted = Date.now();
         console.log(`[publication-browser] VIEW premium ${width} current/saved/public`);
         await page.bringToFront();
         await page.setViewportSize({ width, height: width === 1440 ? 900 : 844 });
-        await page.getByRole('button', { name: '预览当前编辑', exact: true }).click();
+        await page.getByRole('button', { name: '预览效果', exact: true }).click();
         const dialog = page.getByRole('dialog', { name: '新版未保存草稿效果', exact: true });
         await dialog.waitFor();
         const cover = dialog.locator('[data-motion-cover]').last();
-        await cover.scrollIntoViewIfNeeded();
-        const coverId = await cover.getAttribute('data-motion-cover');
         const port = await dialog.locator('[data-preview-scrollport]').count() ? dialog.locator('[data-preview-scrollport]').first() : dialog;
-        const scroll = await port.evaluate(element => element.scrollTop), background = await page.evaluate(() => scrollY);
-        assert.ok(scroll > 0, 'Four-collection fixture exercises actual inner preview scrolling');
-        await cover.click();
-        await dialog.getByRole('button', { name: '← 返回图集首页', exact: true }).waitFor();
-        const photo = dialog.locator('button[data-card-id]').first();
-        await photo.click();
-        const box = page.locator('.lightbox[role="dialog"]').last();
-        await box.waitFor(); await loadedPhotos(box);
-        await box.getByRole('button', { name: '关闭 ×', exact: true }).click();
-        await box.waitFor({ state: 'detached' });
-        await dialog.getByRole('button', { name: '← 返回图集首页', exact: true }).click();
-        const returned = dialog.locator(`[data-motion-cover="${coverId}"]`);
-        await returned.waitFor();
-        await page.waitForFunction(({ element, scroll }) => Math.abs(element.scrollTop - scroll) <= 2, { element: await port.elementHandle(), scroll });
-        await page.waitForFunction(element => document.activeElement === element, await returned.elementHandle());
-        assert.equal(await page.evaluate(() => scrollY), background, 'Collection navigation must not scroll the editor behind the preview');
-        await contact(dialog.locator('[data-template="polaroid-field"]'), 'premium-polaroid', width, 'Premium fixture contact');
+        const diagnostic = await createPreviewReturnDiagnostics(page, { port, cover, label: `premium-return-${width}` });
+        let returnError;
+        try {
+          await diagnostic.sample('before-scrollIntoView');
+          await cover.scrollIntoViewIfNeeded();
+          const coverId = await cover.getAttribute('data-motion-cover');
+          const scroll = await port.evaluate(element => element.scrollTop), background = await page.evaluate(() => scrollY);
+          await diagnostic.sample('baseline-after-scrollIntoView', { scroll, background });
+          assert.ok(scroll > 0, 'Four-collection fixture exercises actual inner preview scrolling');
+          await diagnostic.sample('before-cover-click-call');
+          await cover.click();
+          await dialog.getByRole('button', { name: '← 返回图集首页', exact: true }).waitFor();
+          await diagnostic.sample('collection-ready');
+          const photo = dialog.locator('button[data-card-id]').first();
+          await photo.click();
+          const box = page.locator('.lightbox[role="dialog"]').last();
+          await box.waitFor(); await loadedPhotos(box);
+          await diagnostic.sample('lightbox-open');
+          await box.getByRole('button', { name: '关闭 ×', exact: true }).click();
+          await box.waitFor({ state: 'detached' });
+          await diagnostic.sample('lightbox-closed');
+          await diagnostic.sample('before-return-click-call');
+          await dialog.getByRole('button', { name: '← 返回图集首页', exact: true }).click();
+          const returned = dialog.locator(`[data-motion-cover="${coverId}"]`);
+          await returned.waitFor();
+          await diagnostic.sample('returned-attached');
+          await page.waitForFunction(({ element, scroll }) => Math.abs(element.scrollTop - scroll) <= 2, { element: await port.elementHandle(), scroll });
+          await page.waitForFunction(element => document.activeElement === element, await returned.elementHandle());
+          assert.equal(await page.evaluate(() => scrollY), background, 'Collection navigation must not scroll the editor behind the preview');
+          await diagnostic.sample('return-assertions-passed');
+        } catch (error) { returnError = error; throw error; }
+        finally {
+          try { await diagnostic.finish(returnError ? 'FAIL' : 'PASS', returnError); }
+          catch (error) { if (!returnError) throw error; console.error('[preview-return] Could not persist failure diagnostics:', error.message); }
+        }
+        await premiumContact(dialog.locator('[data-template="polaroid-field"]'));
         await screenshot(page, 'premium-current');
         await dialog.getByRole('button', { name: '关闭草稿效果', exact: true }).click();
         recordTiming(`premium/${width}/current`, currentStarted);
@@ -264,7 +321,7 @@ export async function siteTemplateBrowserMatrix({ page, publicPage, context, ori
           await p.bringToFront();
           await p.setViewportSize({ width, height: width === 1440 ? 900 : 844 }); await p.goto(`${origin}${route}`);
           await p.locator('[data-site-premium]').waitFor();
-          await contact(p.locator('[data-site-premium]'), 'premium-polaroid', width, 'Premium fixture contact');
+          await premiumContact(p.locator('[data-site-premium]'));
           await noOverflow(p, label); await screenshot(p, label);
           recordTiming(`premium/${width}/${label}`, started);
         }
@@ -275,7 +332,11 @@ export async function siteTemplateBrowserMatrix({ page, publicPage, context, ori
       await publish();
       await publicPage.bringToFront();
       await publicPage.goto(`${origin}/${slug}`);
-      await publicPage.locator(`[data-template="${(await draft()).content.activeTemplate}"]`).waitFor();
+      const returnedTemplate = (await draft()).content.activeTemplate;
+      const returnedBasic = publicPage.locator(`[data-template="${returnedTemplate}"]`);
+      await returnedBasic.waitFor();
+      await contact(returnedBasic, returnedTemplate, publicPage.viewportSize().width);
+      assert.deepEqual(await draft(), basicBefore, 'Returning to basic preserves its contact card and independent content');
       assert.equal(await publicPage.locator('[data-site-premium]').count(), 0);
       assert.equal(await publicPage.evaluate(() => document.documentElement.dataset.previewTheme), undefined);
     });

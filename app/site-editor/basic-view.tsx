@@ -26,7 +26,7 @@ export function SiteBasicView({ content, assets }: { content: SiteContent; asset
     <TemplateRenderer templateId={basic.activeTemplate} content={basic} works={works} packages={basic.packages.filter(p => p.enabled)}
       bookingTemplate={["【约拍任务申请】", ...basic.bookingFields].join("\n")} booted copiedKey={interactions.copiedKey}
       isPreview={false} onCopy={interactions.copyText} onBeforeViewChange={() => interactions.setActiveWork(null)} onOpenWork={interactions.openWork} />
-    {interactions.activeWork && <Lightbox theme={basic.activeTemplate === "polaroid-field" ? "light" : "dark"} appearance={templateAppearances[basic.activeTemplate].tone}
+    {interactions.activeWork && <Lightbox theme={basic.activeTemplate === "polaroid-field" ? "light" : "dark"} appearance={templateAppearances[basic.activeTemplate].tone} basicTemplate={basic.activeTemplate}
       work={interactions.activeWork} works={[...interactions.lightboxWorks]} frameRef={interactions.lightboxRef}
       closeButtonRef={interactions.closeButtonRef} onMove={interactions.moveActiveWork} onClose={() => interactions.setActiveWork(null)} />}
   </PlatformAssetContext.Provider>;

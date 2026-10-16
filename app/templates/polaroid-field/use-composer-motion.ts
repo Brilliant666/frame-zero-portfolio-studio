@@ -45,6 +45,12 @@ export function useComposerMotion(view:MutableRefObject<ComposerView>,commit:(ne
     if(!active.current || reduced.current){commit(to);return;}
     job.current={kind:"move",from:{...view.current},to,start:performance.now(),duration};run();
   },[commit,run,stop,view,constrain]);
+  // Repeated keyboard input must not keep restarting an eased camera move.
+  const pan=useCallback((dx:number,dy:number)=>{
+    stop();
+    if(!active.current)return;
+    commit(constrain({...view.current,x:view.current.x+dx,y:view.current.y+dy}));
+  },[stop,commit,constrain,view]);
   const zoom=useCallback((destination:ComposerView)=>{
     const to=constrain(destination);
     stop();
@@ -64,5 +70,5 @@ export function useComposerMotion(view:MutableRefObject<ComposerView>,commit:(ne
     const hidden=()=>{if(document.hidden)stop();};document.addEventListener("visibilitychange",hidden);
     return ()=>{stop();media.removeEventListener("change",change);document.removeEventListener("visibilitychange",hidden);};
   },[commit,stop,constrain,view]);
-  return useMemo(()=>({stop,move,zoom,release,target}),[stop,move,zoom,release,target]);
+  return useMemo(()=>({stop,move,pan,zoom,release,target}),[stop,move,pan,zoom,release,target]);
 }

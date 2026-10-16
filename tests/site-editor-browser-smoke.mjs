@@ -192,9 +192,15 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
       await field(page, '套餐 1 · 名称').fill('Premium anonymous package');
       await field(page, '套餐 1 · 价格').fill('200');
       await page.getByRole('button', { name: '联系约拍', exact: true }).click();
-      await field(page, '邮箱').fill('premium@fixture.example');
+      // Email is preserved as compatibility content after the four-channel redesign.
+      // Exercise its real disclosure and editor rather than dropping preservation coverage.
+      const premiumEmail = field(page, '原邮箱（高级公开页不显示）');
+      await expandControl(page, premiumEmail);
+      await premiumEmail.fill('premium@fixture.example');
       await field(page, '微信号').fill('premium-fixture-contact');
       premiumSaved = await saved(page, 'premium-polaroid');
+      assert.equal(premiumSaved.content.contact.email, 'premium@fixture.example');
+      assert.equal(premiumSaved.content.contact.wechat, 'premium-fixture-contact');
       assert.deepEqual(await read('basic'), basicSaved);
       await snapshot(page, '02-premium-saved');
     });
@@ -313,7 +319,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
       await openEditor(page, premium);
       // The restored MotionHome uses photographer as its visible h1 (not hero.title).
       await field(page, '摄影师名称').fill('UNSAVED MEMORY PREVIEW');
-      await page.getByRole('button', { name: '预览当前编辑', exact: true }).click();
+      await page.getByRole('button', { name: '预览效果', exact: true }).click();
       const dialog = page.getByRole('dialog');
       await dialog.getByRole('heading', { name: 'UNSAVED MEMORY PREVIEW', exact: true }).waitFor();
       assert.deepEqual(await read('premium-polaroid'), savedBefore, 'Memory preview must not persist unsaved edits');

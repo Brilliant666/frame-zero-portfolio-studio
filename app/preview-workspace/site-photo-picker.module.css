@@ -42,4 +42,8 @@
 .dialog[data-appearance="flow"] input[type="checkbox"] { accent-color:#275c49; }
 .dialog[data-appearance="flow"] .card small { color:#617460; }
 .dialog[data-appearance="flow"] :focus-visible { outline-color:#477d62; }
+.dialog[data-appearance="flow"] .lookupActions { display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; margin:0 0 12px; }
+.dialog[data-appearance="flow"] .lookupActions button { min-height:44px; background:transparent; }
+.lookupActions small { color:#617460; font-size:12px; }
+.empty { overflow-wrap:anywhere; }
 @media(max-width:700px) { .dialog[data-appearance="flow"] .header h2 { font-size:21px; }.dialog[data-appearance="flow"] .imageButton img { height:155px; } }

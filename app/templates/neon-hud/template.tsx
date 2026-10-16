@@ -10,6 +10,7 @@ import PlatformAccounts from "../shared/platform-accounts";
 import { groupSourceOrientationSlots, justifiedPhotoColumns } from "../shared/source-orientation-layout";
 import { useTemplateSectionNavigation } from "../shared/use-template-section-navigation";
 import type { TemplateProps } from "../types";
+import { hasCjkText } from "../shared/display-text";
 import styles from "./template.module.css";
 
 const neonRatios = getTemplateSlotRatios("neon-hud");
@@ -128,7 +129,7 @@ export default function NeonHudTemplate({
         <div className={styles.heroGrid} aria-hidden="true" />
         <div className={styles.heroIntro}>
           <p>{content.hero.eyebrow}</p>
-          <h1>{content.hero.title}</h1>
+          <h1 data-cjk={hasCjkText(content.hero.title) || undefined}>{content.hero.title}</h1>
           <div className={styles.introLine}>
             <span>VISUAL OPS / {content.profile.city}</span>
             <span>{content.hero.services}</span>
@@ -416,7 +417,7 @@ export default function NeonHudTemplate({
         <div className={styles.manifestoGrid} aria-hidden="true" />
         <div className={styles.manifestoCopy}>
           <p>{content.statement.eyebrow}</p>
-          <h2>{content.statement.lineOne}<br /><span>{content.statement.lineTwo}</span></h2>
+          <h2 data-cjk={hasCjkText(content.statement.lineOne + content.statement.lineTwo) || undefined}>{content.statement.lineOne}<br /><span>{content.statement.lineTwo}</span></h2>
           <small>{content.profile.brand} / VISUAL RECONSTRUCTION UNIT</small>
         </div>
       </section>

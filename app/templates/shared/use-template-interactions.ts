@@ -15,6 +15,7 @@ export function useTemplateInteractions(works: readonly Work[]) {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const lightboxRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const lightboxOpen = activeWork !== null;
 
   const moveActiveWork = useCallback((direction: -1 | 1) => {
     setActiveWork((current) => {
@@ -37,9 +38,20 @@ export function useTemplateInteractions(works: readonly Work[]) {
   }, [activeWork, workScope]);
 
   useEffect(() => {
-    if (!activeWork) return;
+    if (!lightboxOpen) return;
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const focusTimer = window.setTimeout(() => closeButtonRef.current?.focus(), 0);
+    document.body.classList.add("is-locked");
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.body.classList.remove("is-locked");
+      previouslyFocused?.focus();
+    };
+  }, [lightboxOpen]);
+
+  // Photo/scope changes refresh keyboard navigation without restarting modal focus.
+  useEffect(() => {
+    if (!lightboxOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -65,15 +77,11 @@ export function useTemplateInteractions(works: readonly Work[]) {
       }
     };
 
-    document.body.classList.add("is-locked");
     window.addEventListener("keydown", onKeyDown);
     return () => {
-      window.clearTimeout(focusTimer);
-      document.body.classList.remove("is-locked");
       window.removeEventListener("keydown", onKeyDown);
-      previouslyFocused?.focus();
     };
-  }, [activeWork, moveActiveWork]);
+  }, [lightboxOpen, moveActiveWork]);
 
   const copyText = useCallback(async (value: string, key: string) => {
     let didCopy = false;

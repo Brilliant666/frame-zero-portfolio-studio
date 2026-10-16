@@ -15,7 +15,7 @@ export interface GalleryDocument {
   profile: { brand: string; title: string; intro: string };
   background: GalleryPhoto | null;
   backgroundFocus?: { x: number; y: number };
-  /** Omitted only by the anonymous design proof. An explicit null leaves a rail empty. */
+  /** Omitted only by the anonymous design proof. Null stays unassigned; one valid rail renders alone. */
   featuredGroupIds?: { left: string | null; right: string | null };
   /** Omitted documents retain the original 2:1 layout. */
   leftRailWidthPercent?: number;

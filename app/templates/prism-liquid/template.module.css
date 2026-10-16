@@ -173,7 +173,8 @@
   .header nav { display: grid; width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .25rem; border-top: 1px solid rgba(33, 20, 56, .1); }
   .header nav a { justify-content: center; min-width: 0; padding-inline: .35rem; text-align: center; white-space: nowrap; }
   .availability { display: none; }
-  .hero { grid-template-columns: 1fr; align-content: center; padding: 7rem 1rem 5rem; }
+  .hero { grid-template-columns: minmax(0, 1fr); align-content: center; padding: 7rem 1rem 5rem; }
+  .heroCopy, .stage, .colorRail { min-width: 0; }
   .liquidField { inset: 8% -22% 8% 8%; }
   .heroCopy { align-self: auto; padding: 0; }
   .heroCopy h1 { font-size: clamp(3.8rem, 17vw, 6.8rem); }
@@ -181,8 +182,8 @@
   .mainImage { width: min(88vw, 40rem); aspect-ratio: 3 / 2; }
   .stageMeta { left: 0; bottom: 1rem; }
   .stageControls { right: .5rem; bottom: 1rem; }
-  .colorRail { grid-template-columns: repeat(9, 1fr); justify-self: center; gap: .3rem; }
-  .colorRail button { width: 2rem; height: 2rem; }
+  .colorRail { grid-template-columns: repeat(9, 2rem); justify-self: center; gap: .3rem; }
+  .colorRail button, .colorRailPlaceholder { width: 2rem; height: 2rem; }
   .colorRail button span { width: 1.35rem; height: 1.35rem; font-size: .45rem; }
   .scrollCue { display: none; }
   .sectionTitle { grid-template-columns: 1fr; gap: .7rem; }
@@ -198,6 +199,10 @@
   .booking { grid-template-columns: 1fr; }
   .requestCard pre { min-height: 17rem; }
   .footer { grid-template-columns: 1fr; gap: .5rem; }
+}
+
+@media (max-width: 380px) {
+  .colorRail { grid-template-columns: repeat(5, 2rem); }
 }
 
 @media (prefers-reduced-motion: reduce) {

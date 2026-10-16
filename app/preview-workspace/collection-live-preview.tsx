@@ -24,16 +24,19 @@ export default function CollectionLivePreview({ collection, assets, onView, acti
   const canvas = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 520 });
   useLayoutEffect(() => {
+    if (!active) return;
     const host = viewport.current, content = canvas.current;
     if (!host || !content) return;
-    const measure = () => setDimensions(previous => {
+    const measure = () => {
       const next = { width: host.clientWidth, height: content.offsetHeight };
-      return previous.width === next.width && previous.height === next.height ? previous : next;
-    });
+      // A hidden parent is not a new layout. Keep the last usable dimensions.
+      if (next.width <= 0 || next.height <= 0) return;
+      setDimensions(previous => previous.width === next.width && previous.height === next.height ? previous : next);
+    };
     const observer = new ResizeObserver(measure);
     observer.observe(host); observer.observe(content); measure();
     return () => observer.disconnect();
-  }, []);
+  }, [active]);
   const logicalWidth = device === "desktop" ? 960 : 390;
   const scale = dimensions.width > 0 ? Math.min(1, dimensions.width / logicalWidth) : 1;
   const scaledHeight = dimensions.height * scale;
@@ -46,7 +49,7 @@ export default function CollectionLivePreview({ collection, assets, onView, acti
     return [{ id, asset, title: `${String(index + 1).padStart(2, "0")} / ${collection.name}`, subtitle: "查看完整影像" }];
   }), [collection.assetIds, collection.name, assetMap, unavailable]);
   const missing = collection.assetIds.length - cards.length;
-  return <section className={styles.preview} aria-label="当前图集即时效果" data-star-theme={theme}>
+  return <section className={styles.preview} aria-label="当前图集即时效果" data-template-preview data-star-theme={theme}>
     <div className={styles.toolbar}>
       <div><h3>当前编辑 · 即时效果</h3><p>按当前照片顺序展示；此处不保存或发布。构图和主题仅用于查看。</p></div>
       <button type="button" onClick={() => setTheme(value => value === "paper" ? "night" : "paper")}>{theme === "paper" ? "切换到夜空" : "切换到纸面"}</button>

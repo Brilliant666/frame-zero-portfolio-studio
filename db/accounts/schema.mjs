@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, boolean, check, uniqueIndex, integer, jsonb, primaryKey, foreignKey } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, boolean, check, uniqueIndex, index, integer, jsonb, primaryKey, foreignKey } from 'drizzle-orm/pg-core';
 import { user } from './auth-schema.mjs';
 export * from './auth-schema.mjs';
 
@@ -57,13 +57,14 @@ export const siteLegacyImports = pgTable('site_legacy_imports', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, table => [uniqueIndex('site_legacy_import_unique').on(table.siteId, table.fingerprint)]);
 
-// SQL migration also enforces immutable rows and the composite Site/revision FK.
+// SQL also enforces immutable content, bounded history cleanup and the Site/revision FK.
 export const publicationRevisions = pgTable('site_publication_revisions', {
   id: uuid('id').defaultRandom().primaryKey(), siteId: uuid('site_id').notNull().references(() => sites.id),
   space: text('space').notNull(), draftRevision: integer('draft_revision').notNull(),
   content: jsonb('content').notNull(), assetIds: uuid('asset_ids').array().notNull(),
   publishedAt: timestamp('published_at', {withTimezone:true}).defaultNow().notNull(),
 }, table => [uniqueIndex('publication_site_revision_unique').on(table.siteId,table.id),
+  index('publication_history_site_order').on(table.siteId,table.space,table.publishedAt.desc(),table.id.desc()),
   check('publication_known_space',sql`${table.space} IN ('basic', 'premium-polaroid', 'premium-flow-gallery')`),
   check('publication_positive_revision',sql`${table.draftRevision} > 0`)]);
 export const publications = pgTable('site_publications', {

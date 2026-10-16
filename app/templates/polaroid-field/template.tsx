@@ -17,6 +17,8 @@ import type { TemplateProps } from "../types";
 import { getTemplateSlotRatios } from "../catalog";
 import { buildPhotoSlots, getPhotoSlotStyle, PhotoPlaceholder } from "../shared/photo-slots";
 import PlatformAccounts from "../shared/platform-accounts";
+import PolaroidBookingContacts from "./booking-contacts";
+import { packageInquiry, polaroidContactNote } from "./booking-copy";
 import { buildPolaroidFieldLayout } from "./field-layout";
 import CollectionExperience from "./collection-experience";
 import type { PhotoAsset } from "../../photo-library";
@@ -73,6 +75,13 @@ export default function PolaroidFieldTemplate({
   const [localCollectionProof, setCollectionProof] = useState(false);
   const collectionProof = !!collectionWorkspace || localCollectionProof;
   const [homeRequest, setHomeRequest] = useState(0);
+  const [inquiryPackage, setInquiryPackage] = useState<string | null>(null);
+  const contactNote = polaroidContactNote(content.contact.note, !!collectionWorkspace);
+  const inquiryTemplate = packageInquiry(bookingTemplate, inquiryPackage);
+  const bookingEyebrow = collectionWorkspace ? content.statement.eyebrow : "03 / SEND A FIELD NOTE";
+  const bookingLineOne = collectionWorkspace ? content.statement.lineOne : "把下一颗星";
+  const bookingLineTwo = collectionWorkspace ? content.statement.lineTwo : "钉在这里";
+  const hasBookingTitle = !!(bookingLineOne.trim() || bookingLineTwo.trim());
 
   const { view, minimumScale, dragging, desktopFieldEnabled, sceneMode, showOverview, showFocus, zoomBy, handleFieldKeyDown } = useConstellationViewport({
     viewportRef, canvasRef, layoutKey: fieldSlots, getFocusIndex: () => focusSlot?.index ?? 4, enabled: !collectionProof,
@@ -168,7 +177,7 @@ export default function PolaroidFieldTemplate({
       <a
         className={styles.skipLink}
         href={collectionProof ? "#polaroid-top" : "#polaroid-field"}
-        onClick={(event) => handleViewLink(event, "field", "#polaroid-field", true)}
+        onClick={(event) => handleViewLink(event, "field", collectionProof ? "#polaroid-top" : "#polaroid-field", true)}
       >跳到作品星图</a>
 
       <header className={`${styles.topbar} ${isPreview ? styles.previewTopbar : ""}`}>
@@ -216,7 +225,7 @@ export default function PolaroidFieldTemplate({
           id="polaroid-field"
           ref={viewportRef}
           className={`${styles.fieldViewport} ${dragging ? styles.dragging : ""}`}
-          tabIndex={desktopFieldEnabled ? 0 : undefined}
+          tabIndex={desktopFieldEnabled ? 0 : -1}
           role="region"
           aria-label={desktopFieldEnabled
             ? "可拖拽作品星图。可使用方向键移动，加减号缩放，Home 或数字 0 完整显示全部作品。"
@@ -401,12 +410,16 @@ export default function PolaroidFieldTemplate({
               </div>
               <a
                 href="#polaroid-booking"
-                onClick={(event) => handleViewLink(event, "booking", "#polaroid-booking", true)}
-              >收藏这段旅程 <span>↘</span></a>
+                aria-label={collectionWorkspace ? `咨询套餐：${item.name || "未命名套餐"}` : undefined}
+                onClick={(event) => {
+                  if (collectionWorkspace) setInquiryPackage(item.name || "未命名套餐");
+                  handleViewLink(event, "booking", "#polaroid-booking", true);
+                }}
+              >{collectionWorkspace ? "咨询此套餐" : "收藏这段旅程"} <span>↘</span></a>
             </article>
           ))}
         </div>
-        <p className={styles.packageNote}>展示价格不含妆造、服装、场地和跨城交通；最终方案会在拍摄前与你逐项确认。</p>
+        {!collectionWorkspace && <p className={styles.packageNote}>展示价格不含妆造、服装、场地和跨城交通；最终方案会在拍摄前与你逐项确认。</p>}
         {trustItems.length > 0 ? (
           <div className={styles.factRow} aria-label="约拍关键信息">
             {trustItems.map((item, index) => (
@@ -422,19 +435,21 @@ export default function PolaroidFieldTemplate({
       <section
         id="polaroid-booking"
         className={styles.bookingSection}
-        aria-labelledby="booking-title"
+        aria-labelledby={hasBookingTitle ? "booking-title" : undefined}
+        aria-label={hasBookingTitle ? undefined : "联系约拍"}
         data-polaroid-view="booking"
         hidden={activeView !== "booking"}
         tabIndex={-1}
       >
         <div data-star-dark className={styles.bookingIntro}>
-          <small>{collectionWorkspace ? content.statement.eyebrow : "03 / SEND A FIELD NOTE"}</small>
-          <h2 id="booking-title">{collectionWorkspace ? content.statement.lineOne : "把下一颗星"}<br /><span>{collectionWorkspace ? content.statement.lineTwo : "钉在这里"}</span></h2>
+          {bookingEyebrow.trim() && <small>{bookingEyebrow}</small>}
+          {hasBookingTitle && <h2 id="booking-title">{bookingLineOne}{bookingLineOne.trim() && bookingLineTwo.trim() && <br />}{bookingLineTwo.trim() && <span>{bookingLineTwo}</span>}</h2>}
           <p>
             告诉我角色、日期与想要留下的情绪。复制清单后，
-            通过微信或邮箱发送，就可以开始一起搭建画面。
+            {collectionWorkspace ? "通过下方联系方式发送，就可以开始一起搭建画面。" : "通过微信或邮箱发送，就可以开始一起搭建画面。"}
           </p>
 
+          {collectionWorkspace ? <PolaroidBookingContacts contact={content.contact} social={content.social} /> : <>
           {content.contact.wechat.trim() && (<button type="button" onClick={() => void onCopy(content.contact.wechat, "polaroid-wechat")}>
             <span>WECHAT / 点击复制</span>
             <strong>{content.contact.wechat}</strong>
@@ -445,7 +460,8 @@ export default function PolaroidFieldTemplate({
             <strong>{content.contact.email}</strong>
             <b>OPEN ↗</b>
           </a>)}
-          <p className={styles.contactNote}>{content.contact.note}</p>
+          </>}
+          {contactNote.trim() && <p className={styles.contactNote}>{contactNote}</p>}
         </div>
 
         <div data-star-paper className={styles.noteCard}>
@@ -454,8 +470,8 @@ export default function PolaroidFieldTemplate({
             <span>FIELD_NOTE.txt</span>
             <strong>{content.profile.brand}</strong>
           </div>
-          <pre>{bookingTemplate}</pre>
-          <button type="button" onClick={() => void onCopy(bookingTemplate, "polaroid-template")}>
+          <pre>{inquiryTemplate}</pre>
+          <button type="button" onClick={() => void onCopy(inquiryTemplate, "polaroid-template")}>
             <span aria-live="polite">
               {copiedKey === "polaroid-template" ? "完整清单已复制 ✓" : "复制完整约拍清单"}
             </span>
@@ -463,7 +479,7 @@ export default function PolaroidFieldTemplate({
           </button>
         </div>
 
-        {Navigation ? <PlatformAccounts accounts={content.social} tone="dark" /> : <footer data-star-dark className={styles.footer}>
+        {!collectionWorkspace && (Navigation ? <PlatformAccounts accounts={content.social} tone="dark" /> : <footer data-star-dark className={styles.footer}>
           <div>
             <strong>{content.profile.brand}</strong>
             <span>{content.profile.photographer} · {content.profile.role}</span>
@@ -471,7 +487,7 @@ export default function PolaroidFieldTemplate({
           <PlatformAccounts accounts={content.social} tone={collectionWorkspace ? "dark" : "light"} />
           <p>{content.statement.lineOne}{content.statement.lineTwo}</p>
           <small>© 2026 / EVERY MEMORY HAS COORDINATES.</small>
-        </footer>}
+        </footer>)}
       </section>
 
       <div className={styles.mobileCta} aria-label="快速约拍">
