@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
+import { createPreviewReturnDiagnostics } from './preview-return-diagnostics.mjs';
 
 // Open the actual disclosure before editing; never force visibility or bypass UI.
 async function expandControl(page, control) {
@@ -275,25 +276,42 @@ export async function siteTemplateBrowserMatrix({ page, publicPage, context, ori
         const dialog = page.getByRole('dialog', { name: '新版未保存草稿效果', exact: true });
         await dialog.waitFor();
         const cover = dialog.locator('[data-motion-cover]').last();
-        await cover.scrollIntoViewIfNeeded();
-        const coverId = await cover.getAttribute('data-motion-cover');
         const port = await dialog.locator('[data-preview-scrollport]').count() ? dialog.locator('[data-preview-scrollport]').first() : dialog;
-        const scroll = await port.evaluate(element => element.scrollTop), background = await page.evaluate(() => scrollY);
-        assert.ok(scroll > 0, 'Four-collection fixture exercises actual inner preview scrolling');
-        await cover.click();
-        await dialog.getByRole('button', { name: '← 返回图集首页', exact: true }).waitFor();
-        const photo = dialog.locator('button[data-card-id]').first();
-        await photo.click();
-        const box = page.locator('.lightbox[role="dialog"]').last();
-        await box.waitFor(); await loadedPhotos(box);
-        await box.getByRole('button', { name: '关闭 ×', exact: true }).click();
-        await box.waitFor({ state: 'detached' });
-        await dialog.getByRole('button', { name: '← 返回图集首页', exact: true }).click();
-        const returned = dialog.locator(`[data-motion-cover="${coverId}"]`);
-        await returned.waitFor();
-        await page.waitForFunction(({ element, scroll }) => Math.abs(element.scrollTop - scroll) <= 2, { element: await port.elementHandle(), scroll });
-        await page.waitForFunction(element => document.activeElement === element, await returned.elementHandle());
-        assert.equal(await page.evaluate(() => scrollY), background, 'Collection navigation must not scroll the editor behind the preview');
+        const diagnostic = await createPreviewReturnDiagnostics(page, { port, cover, label: `premium-return-${width}` });
+        let returnError;
+        try {
+          await diagnostic.sample('before-scrollIntoView');
+          await cover.scrollIntoViewIfNeeded();
+          const coverId = await cover.getAttribute('data-motion-cover');
+          const scroll = await port.evaluate(element => element.scrollTop), background = await page.evaluate(() => scrollY);
+          await diagnostic.sample('baseline-after-scrollIntoView', { scroll, background });
+          assert.ok(scroll > 0, 'Four-collection fixture exercises actual inner preview scrolling');
+          await diagnostic.sample('before-cover-click-call');
+          await cover.click();
+          await dialog.getByRole('button', { name: '← 返回图集首页', exact: true }).waitFor();
+          await diagnostic.sample('collection-ready');
+          const photo = dialog.locator('button[data-card-id]').first();
+          await photo.click();
+          const box = page.locator('.lightbox[role="dialog"]').last();
+          await box.waitFor(); await loadedPhotos(box);
+          await diagnostic.sample('lightbox-open');
+          await box.getByRole('button', { name: '关闭 ×', exact: true }).click();
+          await box.waitFor({ state: 'detached' });
+          await diagnostic.sample('lightbox-closed');
+          await diagnostic.sample('before-return-click-call');
+          await dialog.getByRole('button', { name: '← 返回图集首页', exact: true }).click();
+          const returned = dialog.locator(`[data-motion-cover="${coverId}"]`);
+          await returned.waitFor();
+          await diagnostic.sample('returned-attached');
+          await page.waitForFunction(({ element, scroll }) => Math.abs(element.scrollTop - scroll) <= 2, { element: await port.elementHandle(), scroll });
+          await page.waitForFunction(element => document.activeElement === element, await returned.elementHandle());
+          assert.equal(await page.evaluate(() => scrollY), background, 'Collection navigation must not scroll the editor behind the preview');
+          await diagnostic.sample('return-assertions-passed');
+        } catch (error) { returnError = error; throw error; }
+        finally {
+          try { await diagnostic.finish(returnError ? 'FAIL' : 'PASS', returnError); }
+          catch (error) { if (!returnError) throw error; console.error('[preview-return] Could not persist failure diagnostics:', error.message); }
+        }
         await premiumContact(dialog.locator('[data-template="polaroid-field"]'));
         await screenshot(page, 'premium-current');
         await dialog.getByRole('button', { name: '关闭草稿效果', exact: true }).click();
