@@ -361,3 +361,8 @@ test('current-group positioning accounts for the preview viewport origin and nav
   port.scrollTop = 0;
   assert.equal(groupScrolling.scrollToGalleryGroup(root, { getBoundingClientRect: () => ({ top: 50 }) }, viewport), 0);
 });
+
+test('a deferred rail photo stays invisible instead of showing a broken icon with its alt text', async () => {
+  const css = await fs.readFile(new URL('../app/premium-gallery-proof/gallery.module.css', import.meta.url), 'utf8');
+  assert.ok(css.includes('.root img:not([src]):not([srcset]){visibility:hidden}'));
+});
