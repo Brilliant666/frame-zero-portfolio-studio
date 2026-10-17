@@ -150,7 +150,7 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
         const generation=++entryGeneration.current;
         await loadComposer();
         if (entryGeneration.current!==generation || source?.cancelled) {source?.flight?.cleanup();return;}
-        if(source)source.accepted=true;
+        if(source){source.accepted=true;source.exited=exit;}
         setEntry({source,exiting:Boolean(exit)});
         void (exit ?? Promise.resolve()).then(() => {
           if(entryGeneration.current===generation) setEntry(current=>current&&{...current,exiting:false});

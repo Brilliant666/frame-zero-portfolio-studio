@@ -1,5 +1,5 @@
 .stage { position: relative; height: calc(100svh - var(--nav, 80px)); min-height: 480px; overflow: hidden; overflow: clip; isolation: isolate; touch-action: pinch-zoom; color: var(--star-paper-ink); background: linear-gradient(var(--star-line) 1px, transparent 1px) 0 0/64px 64px, linear-gradient(90deg,var(--star-line) 1px,transparent 1px) 0 0/64px 64px,radial-gradient(circle,var(--star-line) 0 .7px,transparent .8px) 0 0/10px 10px,var(--star-paper); box-shadow: inset 0 0 5rem var(--star-line); }
-.header { position: absolute; z-index: 3; inset: 18px 24px auto; display: flex; justify-content: space-between; align-items: start; gap: 16px; pointer-events: none; }
+.header { position: absolute; z-index: 3; inset: 18px 24px auto; transition: opacity .55s ease .1s, translate .55s cubic-bezier(.2,.8,.2,1) .1s; display: flex; justify-content: space-between; align-items: start; gap: 16px; pointer-events: none; }
 .header button, .header select, .header details { pointer-events: auto; }
 .identity { display: flex; align-items: start; gap: 18px; max-width: 58%; }
 .identity > div { position: relative; display: grid; gap: 5px; max-width: 440px; padding: 9px 16px 11px; background: var(--star-glass); box-shadow: 1px 3px 5px var(--star-line); border-radius: 1px 2px 5px 1px; overflow-wrap: anywhere; }
@@ -47,7 +47,7 @@
 .note strong { display: block; font-size: 26px; line-height: 1.2; font-weight: 400; max-height: 92px; overflow: auto; overflow-wrap: anywhere; }
 .note span { display: block; margin-top: 10px; font-size: 20px; }
 .note i { position: absolute; right: 12px; top: 8px; color: var(--star-accent); }
-.camera { position: absolute; z-index: 3; right: 16px; bottom: 16px; display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: 10px; background: var(--star-glass); box-shadow: 0 4px 14px var(--star-line); }
+.camera { position: absolute; z-index: 3; right: 16px; bottom: 16px; transition: opacity .55s ease .25s, translate .55s cubic-bezier(.2,.8,.2,1) .25s; display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: 10px; background: var(--star-glass); box-shadow: 0 4px 14px var(--star-line); }
 .camera button { border: 0; padding: 8px 12px; color: var(--star-paper-ink); background: transparent; font: inherit; font-size: 13px; cursor: pointer; }
 .camera output { min-width: 48px; text-align: center; font-size: 12px; }
 .empty { position: absolute; top: 45%; width: 100%; text-align: center; }
@@ -122,3 +122,7 @@
 :global([data-star-theme]) .stage[data-editor-embedded="true"][data-compact="true"] .options { display:flex; width:100%; gap:8px; flex-wrap:wrap; justify-content:space-between; }
 :global(html[data-preview-theme]) .stage[data-editor-embedded="true"] { height:520px; }
 :global(html[data-preview-theme]) .stage[data-editor-embedded="true"][data-compact="true"] { height:auto; }
+
+/* Entering from the homepage: chrome stays out of the way until the album's own entrance starts. */
+.stage[data-entering] .header,.stage[data-entering] .camera { opacity:0; translate:0 -8px; pointer-events:none; transition:none; }
+.stage[data-entering] .header * { pointer-events:none; }

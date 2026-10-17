@@ -48,29 +48,35 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
   const animations=useRef(new Set<Animation>());
   const entrance=useRef<(()=>void)|null>(null),entranceStarted=useRef(false);
   const entrancePending=useRef(false),entranceGeneration=useRef(0);
-  const cancelEntrance=useCallback(()=>{entranceGeneration.current++;entrancePending.current=false;entrance.current?.();entrance.current=null;entranceSource?.flight?.cleanup();if(worldRef.current){worldRef.current.style.visibility="visible";worldRef.current.dispatchEvent(new Event("composer:ready"));}},[entranceSource]);
+  const cancelEntrance=useCallback(()=>{entranceGeneration.current++;entrancePending.current=false;entrance.current?.();entrance.current=null;entranceSource?.flight?.cleanup();stageRef.current?.removeAttribute("data-entering");if(worldRef.current){worldRef.current.style.visibility="visible";worldRef.current.dispatchEvent(new Event("composer:ready"));}},[entranceSource]);
   const interruptEntrance=useCallback(()=>{entranceStarted.current=true;cancelEntrance();},[cancelEntrance]);
   useLayoutEffect(()=>{if(!active)interruptEntrance();},[active,interruptEntrance]);
   const beginEntrance=useCallback((mobile=false)=>{
     if(entranceStarted.current || entrancePending.current || !worldRef.current)return;
-    if(!worldRef.current.querySelector("[data-card-id]")){worldRef.current.style.visibility="visible";return;}
+    if(!worldRef.current.querySelector("[data-card-id]")){worldRef.current.style.visibility="visible";stageRef.current?.removeAttribute("data-entering");return;}
     entrancePending.current=true;
     const generation=entranceGeneration.current,world=worldRef.current;
     const images=[...world.querySelectorAll<HTMLImageElement>("img")].filter(image=>{const box=image.getBoundingClientRect();return box.right>0&&box.left<innerWidth&&box.bottom>0&&box.top<innerHeight;});
     images.forEach(image=>{image.loading="eager";});
     const ready=Promise.all(images.map(image=>prepareEntryPhoto(image.currentSrc||image.src).then(()=>image.decode().catch(()=>{}))));
-    const wait=Math.max(0,300-(performance.now()-(entranceSource?.startedAt ?? performance.now())));
-    let timer:ReturnType<typeof setTimeout>;
-    void Promise.race([entranceSource?.ready ?? ready,new Promise(resolve=>{timer=setTimeout(resolve,wait);})]).then(()=>{
-      clearTimeout(timer);
+    const elapsed=performance.now()-(entranceSource?.startedAt ?? performance.now());
+    const wait=Math.max(0,300-elapsed);
+    let timer:ReturnType<typeof setTimeout>,exitTimer:ReturnType<typeof setTimeout>|undefined;
+    // Never reveal the album over the homepage's exit; the cap keeps a slow exit from stalling it.
+    const exited=entranceSource?.exited?Promise.race([entranceSource.exited,new Promise(resolve=>{exitTimer=setTimeout(resolve,Math.max(0,700-elapsed));})]):undefined;
+    void Promise.all([Promise.race([entranceSource?.ready ?? ready,new Promise(resolve=>{timer=setTimeout(resolve,wait);})]),exited]).then(()=>{
+      clearTimeout(timer);clearTimeout(exitTimer);
       if(generation!==entranceGeneration.current || !world.isConnected)return;
       entrancePending.current=false;entranceStarted.current=true;
+      stageRef.current?.removeAttribute("data-entering");
       images.filter(image=>image.complete&&image.naturalWidth).forEach(image=>{image.style.opacity="1";});
       performance.mark("entry:pin-start");
       entrance.current=playCollectionEntrance(world,entranceSource,{pin:`.${styles.pin}`,tape:`.${styles.tape}`,lines:`.${styles.lines}`},mobile);
       world.dispatchEvent(new Event("composer:ready"));
     });
   },[entranceSource]);
+  // Coming from the homepage, the album's chrome waits for its entrance instead of sharing the screen with the exit.
+  useLayoutEffect(()=>{if(entranceSource&&!entranceStarted.current)stageRef.current?.setAttribute("data-entering","true");},[entranceSource]);
   useLayoutEffect(()=>()=>{cancelEntrance();entranceStarted.current=false;},[cancelEntrance]);
   const cancelAnimations=useCallback(()=>{animations.current.forEach(animation=>animation.cancel());animations.current.clear();},[]);
   useLayoutEffect(()=>{

@@ -2,6 +2,8 @@ export type CollectionFlight = { element: HTMLElement; stopPreparation: () => vo
 export type CollectionEntranceSource = {
   x: number; y: number; width: number; height: number; src: string; assetId: string;
   flight?: CollectionFlight; ready?: Promise<unknown>; startedAt?: number; paperColor?: string; cancelled?: boolean; accepted?: boolean;
+  /** Resolves when the homepage exit has played; the album waits for it so the two never overlap. */
+  exited?: Promise<unknown>;
 };
 
 export function collectionLandingGeometry(box: {left:number;top:number;width:number;height:number}, width:number, height:number, angle:number) {
@@ -55,8 +57,9 @@ export function playHomeExit(home: HTMLElement, selectedCoverId?: string | null)
   return {finished,cleanup};
 }
 
+/** From the homepage the papers are born at the chosen cover while it is still in flight; a direct visit drops them in. */
 export function collectionEntranceTiming(index: number, flight: boolean, night: boolean) {
-  return { delay: (flight ? 980 : 0) + index * 60, duration: 760,
+  return { delay: flight ? 320 + index * 45 : index * 60, duration: flight ? 900 : 760,
     easing: night ? "cubic-bezier(.22,1,.36,1)" : "cubic-bezier(.34,1.42,.64,1)" };
 }
 
@@ -113,12 +116,23 @@ export function playCollectionEntrance(world: HTMLElement, source: CollectionEnt
     }
   }else{session?.cleanup();session=undefined;}
   const visibleCards=cards.map(card=>({card,box:card.getBoundingClientRect()})).filter(item=>visible(item.box)).sort((a,b)=>a.box.top-b.box.top||a.box.left-b.box.left);
+  // With a flight, every other paper is born where the visitor clicked (the sky's dolly centre) and develops on the way.
+  const origin=session&&source?{x:source.x+source.width/2,y:source.y+source.height/2}:null;
   let order=0;
-  visibleCards.forEach(({card})=>{
+  visibleCards.forEach(({card,box})=>{
     if(flight&&card===landingCard)return;
     const timing=collectionEntranceTiming(order++,Boolean(session),night),delay=timing.delay;
-    track(card,[{opacity:0,translate:"0 -46px",rotate:"7deg",scale:".94"},{opacity:1,translate:"0 0",rotate:"0deg",scale:"1"}],timing);
-    const image=card.querySelector("img");if(image)track(image,[{filter:"brightness(1.2) saturate(.6)"},{filter:"none"}],{duration:1200,delay:delay+180,easing:"ease-out"});
+    const image=card.querySelector("img");
+    if(origin){
+      // the offset is measured on screen but applied inside the composer's scaled world
+      const scale=collectionLandingGeometry(box,card.offsetWidth,card.offsetHeight,Number(card.dataset.rotation??0)).scale||1;
+      const dx=Math.round((origin.x-(box.left+box.width/2))/scale),dy=Math.round((origin.y-(box.top+box.height/2))/scale);
+      track(card,[{opacity:0,translate:`${dx}px ${dy}px`,rotate:"0deg",scale:".12"},{opacity:1,offset:.28},{opacity:1,translate:"0 0",rotate:"0deg",scale:"1"}],timing);
+      if(image)track(image,[{filter:"brightness(.22) contrast(.7) saturate(0)"},{filter:"brightness(.75) contrast(.9) saturate(.55) sepia(.18)",offset:.5},{filter:"none"}],{duration:1200,delay:delay+120,easing:"ease-out"});
+    }else{
+      track(card,[{opacity:0,translate:"0 -46px",rotate:"7deg",scale:".94"},{opacity:1,translate:"0 0",rotate:"0deg",scale:"1"}],timing);
+      if(image)track(image,[{filter:"brightness(1.2) saturate(.6)"},{filter:"none"}],{duration:1200,delay:delay+180,easing:"ease-out"});
+    }
     card.querySelectorAll(`${selectors.pin},${selectors.tape}`).forEach(pin=>track(pin,[{opacity:0,scale:".1"},{opacity:1,scale:"1.3",offset:.65},{opacity:1,scale:"1"}],{duration:560,delay:delay+460,easing:timing.easing}));
   });
   world.querySelectorAll(`${selectors.lines} path`).forEach((path,index)=>track(path,[{strokeDashoffset:1,opacity:0},{strokeDashoffset:0,opacity:.55}],{duration:560,delay:(session?980:0)+360+index*60,easing:"ease-out"}));
