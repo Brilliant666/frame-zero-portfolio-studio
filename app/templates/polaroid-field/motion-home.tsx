@@ -6,7 +6,7 @@ import type { SiteContent } from "../../site-config";
 import type { SceneCard } from "./collection-scene";
 import styles from "./motion-home.module.css";
 import "./motion-fonts.css";
-import { claimHomeIntro, runHomeIntro } from "./home-intro";
+import { claimHomeIntro, runHomeIntro, titleCharacterDelay } from "./home-intro";
 import { entryPhotoSource } from "./entry-photos";
 import { createCollectionFlight, playHomeExit, type CollectionEntranceSource } from "./collection-entrance";
 import { useStarMotion } from "../../preview-workspace/motion-preference";
@@ -87,7 +87,9 @@ export default function MotionHome({ cards, content, onOpen, onPrepare, onWarm, 
       try { storage = window.sessionStorage; } catch { /* Use document fallback. */ }
       introClaim.current = claimHomeIntro(storage, initialPaused.current || enteredFromCollection.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     }
-    if (introClaim.current && root.current) return runHomeIntro(root.current);
+    // The pre-paint script may have started the opening for a visit this tab already had.
+    if (!introClaim.current) delete document.documentElement.dataset.starIntro;
+    else if (root.current) return runHomeIntro(root.current);
   }, []);
   useEffect(() => {
     if (!restoreFocusId) return;
@@ -111,14 +113,11 @@ export default function MotionHome({ cards, content, onOpen, onPrepare, onWarm, 
     </button>;
   };
   return <section ref={root} className={styles.home} aria-label="摄影图集首页" data-motion-home data-motion-paused={paused || undefined}>
-    <button type="button" className={styles.intro} data-home-intro hidden aria-label="开场动画进度，点击或按 Esc 跳过">
-      <i data-intro-star aria-hidden="true">✦</i><b data-intro-count aria-hidden="true">00</b>
-    </button>
     <div className={styles.sparks} aria-hidden="true">{Array.from({ length: 12 }, (_, index) => <i key={index} data-intro-spark>✦</i>)}</div>
     <div className={styles.opening}>
       <div className={styles.hero}>
         <p className={styles.kicker} data-home-exit-part>{content.profile.role && <span>{content.profile.role}</span>}{content.profile.city && <span>{content.profile.city}</span>}</p>
-        <h1 className={styles.title} aria-label={name}><span aria-hidden="true">{Array.from(name).map((character, index) => <span className={styles.characterMask} key={index}><span data-title-character>{character}</span></span>)}</span><i aria-hidden="true">✦</i></h1>
+        <h1 className={styles.title} aria-label={name}><span aria-hidden="true">{Array.from(name).map((character, index) => <span className={styles.characterMask} key={index}><span data-title-character style={{ "--char-delay": `${180 + titleCharacterDelay(index)}ms` } as CSSProperties}>{character}</span></span>)}</span><i data-title-star aria-hidden="true">✦</i></h1>
         <div className={styles.lede} data-home-exit-part>{content.profile.intro && <p>{content.profile.intro}</p>}{content.hero.services && <p><strong>{content.hero.services}</strong></p>}</div>
         <div className={styles.actions} data-home-exit-part>{cards.slice(0, 2).map((card, index) => <button key={card.id} type="button" data-home-action data-primary={index === 0} onPointerEnter={() => onPrepare?.(card.id)} onPointerDown={() => onPrepare?.(card.id)} onFocus={() => onPrepare?.(card.id)} onClick={() => open(card.id)}>{card.title}<span aria-hidden="true">→</span></button>)}</div>
         {cards.length === 0 && <p className={styles.empty}>还没有可展示的图集。</p>}

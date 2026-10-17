@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import styles from "./star-motion.module.css";
 import sections from "./theme-sections.module.css";
@@ -20,13 +20,18 @@ const subscribeTheme=(notify:()=>void)=>{window.addEventListener(themeEvent,noti
 const themeRoute=()=>/^\/preview\/?$/.test(location.pathname) || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" && (/^\/[a-z0-9-]+\/admin\/(?:preview\/)?premium-polaroid\/?$/.test(location.pathname) || /^\/[a-z0-9-]+\/?$/.test(location.pathname) && !!document.querySelector("[data-site-premium]"));
 const currentTheme=():Theme|"disabled"=>!themeRoute()?"disabled":document.documentElement.dataset.previewTheme==="paper"?"paper":"night";
 const serverTheme=()=>"disabled" as const;
-const ThemeContext = createContext<{ theme: Theme; enabled:boolean; change: (theme: Theme, origin:{x:number;y:number}) => void }>({ theme: "paper", enabled:false, change: () => {} });
+// Only the stable `change` travels through context. Each consumer reads the theme from the
+// store itself, so the shell syncing the saved theme after hydration never pushes an update
+// into a still-dehydrated template boundary (React would discard its server HTML).
+const ThemeContext = createContext<(theme: Theme, origin:{x:number;y:number}) => void>(() => {});
+const useThemeSnapshot=()=>useSyncExternalStore(subscribeTheme,currentTheme,serverTheme);
 export function StarNavigation({active,onNavigate}:{active:PolaroidView;onNavigate:(event:MouseEvent<HTMLElement>,view:PolaroidView)=>void}) {
   return <GlassSegments navigation label="作品集页面导航" value={active} options={[{value:"field",label:"作品",href:"#polaroid-top"},{value:"packages",label:"拍摄套餐",href:"#polaroid-packages"},{value:"booking",label:"联系约拍",href:"#polaroid-booking"}]} onChange={(view,event)=>onNavigate(event,view)}/>;
 }
 export function StarThemeToggle() {
-  const { theme, enabled, change } = useContext(ThemeContext);
-  if(!enabled)return null;
+  const change = useContext(ThemeContext), snapshot = useThemeSnapshot();
+  if(snapshot==="disabled")return null;
+  const theme:Theme=snapshot;
   const label=theme==="paper"?"切换到夜空":"切换到星图";
   return <button className={styles.toggle} type="button" aria-label={label} title={label} onClick={event=>{
     const box=event.currentTarget.getBoundingClientRect();change(theme==="paper"?"night":"paper",{x:box.left+box.width/2,y:box.top+box.height/2});
@@ -36,10 +41,11 @@ export function StarThemeToggle() {
 }
 export default function StarMotionShell({ children }: { children: ReactNode }) {
   const [paused, setPaused] = useState(false);
-  const snapshot=useSyncExternalStore(subscribeTheme,currentTheme,serverTheme);
+  const snapshot=useThemeSnapshot();
   const theme:Theme=snapshot==="night"?"night":"paper",enabled=snapshot!=="disabled";
   const transition=useRef<ViewTransition|null>(null),reveal=useRef<Animation|null>(null);
-  const mounted=useRef(false);
+  const mounted=useRef(false),pausedRef=useRef(paused);
+  useLayoutEffect(()=>{pausedRef.current=paused;},[paused]);
   useLayoutEffect(() => {
     if(!themeRoute())return;
     mounted.current=true;
@@ -53,13 +59,13 @@ export default function StarMotionShell({ children }: { children: ReactNode }) {
     const stop=()=>{reveal.current?.cancel();reveal.current=null;transition.current?.skipTransition();transition.current=null;};
     const onReduced=()=>{if(reduced.matches)stop();};
     reduced.addEventListener("change",onReduced);
-    return ()=>{mounted.current=false;stop();reduced.removeEventListener("change",onReduced);delete root.dataset.previewTheme;delete root.dataset.starTheme;delete root.dataset.publicPortfolio;};
+    return ()=>{mounted.current=false;stop();reduced.removeEventListener("change",onReduced);delete root.dataset.previewTheme;delete root.dataset.starTheme;delete root.dataset.publicPortfolio;delete root.dataset.starSkyLive;};
   }, []);
-  const change = (next: Theme,origin:{x:number;y:number}) => {
+  const change = useCallback((next: Theme,origin:{x:number;y:number}) => {
     const root=document.documentElement;
     reveal.current?.cancel();transition.current?.skipTransition();
     const apply=()=>{if(!mounted.current || !themeRoute())return;root.dataset.previewTheme=next;root.dataset.starTheme=next;window.dispatchEvent(new Event(themeEvent));try{localStorage.setItem(PREVIEW_THEME_KEY,next);}catch{/* Per-visit fallback. */}};
-    if(paused || !document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches){apply();return;}
+    if(pausedRef.current || !document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches){apply();return;}
     let current:ViewTransition;
     try{current=document.startViewTransition(()=>flushSync(apply));}catch{apply();return;}
     transition.current=current;
@@ -70,11 +76,12 @@ export default function StarMotionShell({ children }: { children: ReactNode }) {
         {duration:700,easing:"cubic-bezier(.22,1,.36,1)",pseudoElement:"::view-transition-new(root)"});
     }).catch(()=>{/* Skipped or unsupported snapshot: theme still changes. */});
     void current.finished.finally(()=>{if(transition.current===current){transition.current=null;reveal.current=null;}}).catch(()=>{});
-  };
+  },[]);
+  const motion=useMemo(()=>({paused,toggle:()=>setPaused(value=>!value)}),[paused]);
   // Keep the preview subtree mounted while restoring the initial theme; rebuilding
   // it here would replay/consume the first-visit entrance before it can be seen.
   const localPaper=typeof window!=="undefined" && !themeRoute();
-  return <StarMotionContext.Provider value={{paused,toggle:()=>setPaused(value=>!value)}}><ThemeContext.Provider value={{theme, enabled, change}}><div className={`${styles.shell}${localPaper?"":` ${sections.sections}`}`} data-preview-local-theme={localPaper?"paper":undefined} data-star-theme={localPaper?"paper":undefined} data-star-motion-paused={paused || undefined}>
+  return <StarMotionContext.Provider value={motion}><ThemeContext.Provider value={change}><div className={`${styles.shell}${localPaper?"":` ${sections.sections}`}`} data-preview-local-theme={localPaper?"paper":undefined} data-star-theme={localPaper?"paper":undefined} data-star-motion-paused={paused || undefined}>
     <StarSky key={theme} active={enabled} paused={paused} className={styles.stars} />
     {children}
   </div></ThemeContext.Provider></StarMotionContext.Provider>;

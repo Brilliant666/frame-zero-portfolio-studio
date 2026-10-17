@@ -216,6 +216,8 @@ export default function StarSky({ active, paused = false, className }: { active:
       cancelAnimationFrame(frame); frame = 0;
       if (document.hidden) return;
       const now = performance.now(); last = now; step(now); draw(now); drawNebula(now);
+      // the real sky is up: the shell's pre-paint CSS sky hands over
+      document.documentElement.dataset.starSkyLive = "";
       if (!still()) frame = requestAnimationFrame(tick);
     };
     const resize = () => {

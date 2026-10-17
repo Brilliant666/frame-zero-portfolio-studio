@@ -16,6 +16,7 @@ export default function GlassSegments<T extends string>({ options, value, label,
       if(!selected)return;
       element.style.setProperty("--segment-left",`${selected.offsetLeft}px`);
       element.style.setProperty("--segment-width",`${selected.offsetWidth}px`);
+      element.dataset.segmentMeasured="";
     };
     update();const observer=new ResizeObserver(update);observer.observe(element);
     return()=>observer.disconnect();
