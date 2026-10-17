@@ -1,5 +1,19 @@
 # 会话交接
 
+## 当前交接（2026-10-17 文档同步）
+
+先读 [CURRENT_STATUS](CURRENT_STATUS.md)，再按任务读取相关实现记录。PR35 已合并，接受的最终 Head 为 `7eb2a7f7b49271cb58a310fa9662956fbdf8f4f9`，Squash/main 为 `57b12c2b123596b3430bc1a48e208dc84be5ca73`；该合并 SHA 的五项 main push 检查首次运行全部通过。详见[最终收口与检查链接](design/PR35_OCT15_CLOSEOUT.md)。
+
+日常已在 2026-10-16 单独授权下更新为此 main 的构建 `pmh1nOX_Ahuzf-aoygxUv`，旧 `xxT4dPO5CUpMhlnzQ-o9p` 作为兼容回退。部署时应用、登录、本人后台、公开页及资源读取正常，业务内容和 Published 未改变。此处是有日期的验证结果；精确启动方式、配置和恢复记录只在既有本机私有交接中，操作前需核对当前进程，不按旧 PID 或历史停止点盲目恢复。
+
+风险保持 `PREVIEW_RETURN = UNRESOLVED` / `RISK_DISPOSITION = ACCEPTED_FOR_LOCAL_STAGE`：[用户风险接受评论](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/35#issuecomment-6213969172)。手机内嵌拍立得从图集返回首页可能恢复位置不准；停止无新证据的重复复现和猜测式修改。保留首次失败、现有诊断、原 ±2px、焦点、后台滚动断言和超时；后续 CI 失败仍按实际结果处理。
+
+本次仅同步文档。没有新的开发切片、部署、迁移、清理或合并任务；工作分支和工作区保留，等待用户指定下一步。
+
+## 历史交接阅读说明
+
+以下内容保留对应日期的决策和证据。“本轮不合并”、旧构建、进程退出及“最新”等表述均是当时状态；当前基线以上方交接及 CURRENT_STATUS 为准。历史命令和计划不自动成为新会话的执行授权。
+
 ## 2026-10-15：PR35集中收口
 
 既有主题／套餐／前后台连续性修改统一收口；219项后台与192项视觉交互、lint、类型、Public Safety通过。复用成功构建补齐真实隔离保存→刷新→发布验收；原草稿内容和Published指针恢复，目标测试历史保留。日常六表／素材／配置以及隔离非目标保护摘要匹配。[收口记录](design/PR35_OCT15_CLOSEOUT.md)说明范围与限制。

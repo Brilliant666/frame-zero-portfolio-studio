@@ -5,8 +5,8 @@
 > - Baseline and active head: [CURRENT_STATUS.md](CURRENT_STATUS.md)
 > - Current phase: `SELF_HOSTED_V1`
 > - Execution: product milestones M1–M5; remote deployment remains separately frozen
-> - 2026-09-28 checkpoint: M1/M2、M3 本机资源及高级 M4 已实现；PR32 交接后等待用户选择。
->   具体未完成范围见 CURRENT_STATUS 与 SESSION_HANDOFF，不将目标当成上线事实。
+> - 2026-10-17 checkpoint: PR35 已合并，基础版、拍立得、流影视廊独立编辑与发布已交付本机；main `57b12c2` 已在单独授权下更新日常。
+>   手机拍立得内嵌预览返回风险仍为 UNRESOLVED / ACCEPTED_FOR_LOCAL_STAGE。具体证据与剩余范围见 CURRENT_STATUS 与 SESSION_HANDOFF，不将本机交付当成公网上线。
 
 This document is the highest project-level constraint for the current product
 goal, V1 scope, and launch priority. It does not silently override an Accepted

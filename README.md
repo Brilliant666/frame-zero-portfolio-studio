@@ -1,22 +1,23 @@
 # 摄影作品集平台 / Portfolio Platform
 
-摄影师登录后管理自己的 Site，在基础十一模板或高级拍立得后台编辑内容，保存私人草稿，并通过高级拍立得发布摄影主页。
+摄影师登录后管理自己的 Site，在基础十一模板、高级拍立得或流影视廊后台编辑内容，保存私人草稿，并发布摄影主页。
 
-当前已具备本机可用的账号、Site 授权、两套编辑器、私有作品资源和高级发布链路。**本机验收不等于公网部署或 V1 上线**。当前 `star`、`phototest` 是模拟测试账号，不是真实客户认证证明。`FRAME//ZERO` 是历史代号和技术命名空间，不是正式品牌。
+当前已具备本机可用的账号、Site 授权、三类独立内容空间与编辑器、私有作品资源和发布链路。**本机验收不等于公网部署或 V1 上线**。本机账号验收不是真实客户认证证明。`FRAME//ZERO` 是历史代号和技术命名空间，不是正式品牌。
 
-新会话先读 [AGENTS.md](AGENTS.md) → [当前状态](docs/CURRENT_STATUS.md) → [会话交接](docs/SESSION_HANDOFF.md)。本轮阶段接受、合并和日常切换的最终证据以 [PR #32](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/32) 及仓库外本机交接记录为准；不要从旧阶段文档推断现有服务状态。
+新会话先读 [AGENTS.md](AGENTS.md) → [当前状态](docs/CURRENT_STATUS.md) → [会话交接](docs/SESSION_HANDOFF.md)。当前已交付基线为 [PR #35](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/35) 合并后的 `main` 提交 `57b12c2`；合并验证、已知风险及日常切换记录见 [PR35 收口记录](docs/design/PR35_OCT15_CLOSEOUT.md)。精确启动方式以仓库外本机交接记录为准，不从旧阶段文档推断服务是否正在运行。
 
 ## 1. 已实现的核心能力
 
 - PostgreSQL、Better Auth 会话、账号与 Site 归属检查、模板使用授权；尚不开放公众注册。
 - 十一套基础模板共用基础后台，保留模板、资料、套餐、素材排版、联系、高级设置六分区。
-- 高级拍立得使用独立后台，分为图集管理、主页资料、拍摄套餐、联系约拍；保留星座/散落/跨页构图及纸面/夜空主题。
-- 两套内容分别保存、分别校验 schema 和版本；版本冲突拒绝覆盖，保存中继续编辑不会被旧响应抹掉。
+- 高级拍立得使用独立后台，分为图库、图集、主页资料、拍摄套餐、联系约拍；保留星座/散落/跨页构图及纸面/夜空主题，深浅主题使用同一套布局与操作结构。
+- 流影视廊使用专属后台管理首页作品速览、分类、价格与活动及联系方式；前台支持作品轨道、分类浏览、大图与联系入口。
+- 基础版、拍立得和流影视廊内容分别保存、分别校验 schema 和版本；版本冲突拒绝覆盖，保存中继续编辑不会被旧响应抹掉。
 - 同一 Site 复用自己的作品资源；上传、选片、草稿预览和资源读取经过服务端授权，不跨用户共享私人资源。
-- 高级拍立得支持保存草稿、发布已保存版本、发布历史和回退；公开页只解析 Published，保存不会自动改变公开页。
-- 第一轮后台 UI 整理包含保存吸顶、照片网格、次要操作收纳，以及平台首页、登录和工作台的统一界面，不代表全部体验问题已解决。
+- 三类内容空间均支持保存草稿、发布、发布历史和回退；公开页只解析 Published，保存不会自动改变公开页。相同发布内容复用已有记录，历史按保留策略去重；回退不覆盖当前草稿。
+- 后台已整理预览与发布状态、基础编辑路径，以及高级图库筛选、跨页选择、图集整理、预览返回和套餐重排；不代表全部体验问题已解决。
 
-基础模板发布尚未接线。完整原图归档、正式客户验收、公网运行及恢复演练仍未完成。
+完整原图归档、正式客户验收、公网运行及恢复演练仍未完成。手机拍立得内嵌预览存在已接受的本机阶段剩余风险，见第 7 节。
 
 ## 2. 页面与后台入口
 
@@ -30,8 +31,10 @@
 | `/:siteSlug/admin` | 本人 Site 工作台，选择获授权的编辑器 |
 | `/:siteSlug/admin/basic/template` | 基础后台；同层还有 `profile`、`packages`、`layout`、`contact`、`advanced` |
 | `/:siteSlug/admin/premium-polaroid` | 高级拍立得后台 |
+| `/:siteSlug/admin/premium-flow-gallery` | 流影视廊后台 |
 | `/:siteSlug/admin/preview/basic` | 本人基础版已保存草稿预览 |
-| `/:siteSlug/admin/preview/premium-polaroid` | 本人高级已保存草稿预览 |
+| `/:siteSlug/admin/preview/premium-polaroid` | 本人拍立得已保存草稿预览 |
+| `/:siteSlug/admin/preview/premium-flow-gallery` | 本人流影视廊已保存草稿预览 |
 | `/test` | 本机安全模板实验室，不是全体用户共用的内容后台 |
 | `/test/admin` | 本机验收配置开启时，进入当前登录者的基础后台；匿名转登录 |
 
@@ -43,14 +46,14 @@
 
 ## 3. 产品与数据边界
 
-基础版与高级拍立得只共享本站点作品资源和必要平台支撑能力；资料、套餐、联系方式、图集/排版及专属配置独立演进，不强制同步，不自动使用账号邮箱作为公开联系方式。共享按钮外观不等于合并业务格式。
+基础版、高级拍立得与流影视廊共享本站点作品资源和必要平台支撑能力；资料、套餐、联系方式、图集/排版及专属配置独立演进，不强制同步，不自动使用账号邮箱作为公开联系方式。共享按钮外观不等于合并业务格式。
 
 保存、预览、发布、公开访问是不同状态：
 
 1. 当前编辑预览是内存快照，不保存、不发布。
 2. 保存写入对应 Site、内容空间及预期版本的私人草稿。
 3. 已保存草稿预览需要本人授权，不能用匿名参数开放。
-4. 高级发布创建不可变版本并更新 Published 指针；回退不重写当前草稿。
+4. 发布在权限校验后创建或复用不可变内容版本，并更新 Published 指针；回退不重写当前草稿。
 
 高级模板使用权不等于平台管理员权限。旧 SQLite 记录 `1` / `2601`、全局 manifest、catalog 和平台卡是兼容/受控接入来源，不是多用户权威存储，也不是新 Site 的 fallback。
 
@@ -140,7 +143,7 @@ npm run check:bundle
 npm test
 ```
 
-`test:accounts` 需要准备隔离 `.env.accounts.test` 与 PostgreSQL，不能指向日常库。完整 `npm test` 包含 legacy 和 Standard Next 构建/运行时测试，不代替本机账号或浏览器验收。
+`test:accounts` 需要准备隔离 `.env.accounts.test` 与 PostgreSQL，不能指向日常库；完整数据库套件使用一次性测试环境，不对长期保留的人工样本运行清库包装。完整 `npm test` 包含 legacy 和 Standard Next 构建/运行时测试，不代替本机账号或浏览器验收。
 
 CI 五项：Quality、Public repository safety、Container、Deployment Bootstrap、Local Account PostgreSQL Integration。只使用对应 head/目标的证据，PR 绿灯不替代 main 合并后的 push 检查。
 
@@ -148,7 +151,9 @@ CI 五项：Quality、Public repository safety、Container、Deployment Bootstra
 
 ## 7. 限制、历史定位与交接
 
-尚未完成：高级素材搜索/筛选/批选、基础 Site 资源元信息、分享卡新增替换、预览呈现一致性补齐、基础发布、资源回收与完整原图归档。登录后自动进入后台仅讨论过，未实施；文档交接不自动授权这些候选任务。
+已知剩余风险：手机拍立得内嵌预览从图集返回图集首页时，内部滚动位置可能不准确。状态保持 `PREVIEW_RETURN = UNRESOLVED`、`RISK_DISPOSITION = ACCEPTED_FOR_LOCAL_STAGE`，不代表已修复或频率很低。保留首次失败、诊断及原位置、焦点、后台滚动断言；同路径有新证据或出现更严重影响时重新评估，后续 CI 失败仍按真实结果处理。见[风险接受决定](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/35#issuecomment-6213969172)。
+
+资源回收、完整原图归档和正式公网交付仍需独立工作。基础模板的空库观察不等于十一套模板均完成非空摄影作品全链验收；匿名组件样本也不替代真实持久化与实体手机验收。文档同步不自动启动这些后续任务。
 
 产品目标见 [North Star](docs/PORTFOLIO_PLATFORM_NORTH_STAR.md)，阶段映射见 [V1 路线图](docs/SELF_HOSTED_V1_ROADMAP.md)。当前能力与停止边界以 [CURRENT_STATUS](docs/CURRENT_STATUS.md) 为准，新对话按 [SESSION_HANDOFF](docs/SESSION_HANDOFF.md) 进入相关代码。
 

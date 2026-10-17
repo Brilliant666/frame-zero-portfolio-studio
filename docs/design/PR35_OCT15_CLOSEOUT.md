@@ -1,5 +1,43 @@
 # PR35 集中收口（2026-10-15）
 
+## 最终结果（2026-10-16 完成，2026-10-17 同步文档）
+
+用户接受当前交付范围作为本机阶段基线，并另行授权 Ready、Squash 合并及合并后检查。[PR35](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/35) 已合并，工作分支与工作区保留；没有创建新开发 PR。
+
+- 最终 PR Head：`7eb2a7f7b49271cb58a310fa9662956fbdf8f4f9`。
+- Squash/main SHA：`57b12c2b123596b3430bc1a48e208dc84be5ca73`；合并树与接受的 Head 一致。
+- [最终合并结果评论](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/35#issuecomment-6214833250)。
+
+以下均为该 Squash SHA 的实际 `push` / `main` 运行，attempt 1 成功，不以 PR 检查替代：
+
+| 检查 | 结果与运行 |
+| --- | --- |
+| Quality | [SUCCESS](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/38895356249) |
+| Container | [SUCCESS](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/38895356513) |
+| Deployment Bootstrap | [SUCCESS](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/38895356299) |
+| Public repository safety | [SUCCESS](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/38895356240) |
+| Local Account PostgreSQL Integration | [SUCCESS](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/38895356239) |
+
+### 剩余风险与接受范围
+
+`PREVIEW_RETURN = UNRESOLVED`，`RISK_DISPOSITION = ACCEPTED_FOR_LOCAL_STAGE`。见[风险接受评论](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/35#issuecomment-6213969172)。这不是修复、误报或低频结论；接受范围限于当前本机使用阶段。
+
+保留[首次失败 attempt 1](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/38709416138/attempts/1)、同 Head 重跑通过记录和全部现有诊断。原 ±2px、封面焦点、后台 scrollY 断言及 15 秒超时不变。最终 Head 的 CI 诊断中，1440、390、320px 基准、点击与返回位置分别一致为 725、2359、2305px，焦点恢复且后台 scrollY 为 0；这些成功采样没有解释首次失败，不改变 UNRESOLVED。
+
+停止无新增证据的重复复现与猜测式产品修改。同路径出现新证据、真实使用可复现，或内容、焦点、操作阻断等更严重影响时重新评估。未来 CI 失败按真实结果处理，不自动忽略或无限重跑。
+
+### 合并后的日常切换
+
+合并本身没有升级日常。随后用户单独要求从最新 main 启动 3001，2026-10-16 构建并部署 `57b12c2`，BUILD_ID 为 `pmh1nOX_Ahuzf-aoygxUv`。正常 Next 构建及类型检查通过；既有汇总 CSS 预算告警保留，没有放宽门禁。
+
+先在候选验证，再按既有启动方式切换日常。首页、登录、公开页、本人后台、照片与 12 项 HTTP 构建资源检查通过；六业务表、135 个素材文件元信息和配置前后匹配。没有迁移、开户、导入、保存或发布，原数据库进程保持。旧构建 `xxT4dPO5CUpMhlnzQ-o9p` 保留为兼容回退，候选 3003 验证后停止。
+
+本次切换新增约 83.08 MiB 最小冻结运行包，未复制完整依赖、数据库或图库；作为当前日常保留，后续淘汰仍须精确路径授权。精确路径、启动命令和原始证据仅存既有本机交接。以上是部署时验证，不代表持续在线监控；历史退出原因仍未确认。
+
+## 历史实施与诊断记录
+
+以下保留原日期的范围、状态和证据；原 OPEN + DRAFT、未升级及未获合并授权等描述不覆盖上述最终决定。当前文档同步没有再次构建、部署或改变风险处置。
+
 ## 本次提交范围
 
 基于 `6ff1d5f` 收齐已经验收的修改，不新增设计方向：
@@ -10,7 +48,7 @@
 - 后台图库与选片分页定位、跨页选择、读取失败恢复、图集步骤与撤销焦点、隐藏预览尺寸保护、套餐重排与保存回执状态连贯。
 - 纳入相关匿名 fixture、回归测试和已有实施记录；补齐本机环境保留规则。
 
-没有修改数据库 schema、权限、发布契约或其他模板设计。相关实现细节见[后台操作链](PR35_ADMIN_CHAIN_CONTINUITY.md)、[交互连续性](PR35_KEYBOARD_FOCUS_CONTINUITY.md)、[主题与套餐](PR35_POLAROID_NIGHT_AND_PACKAGES.md)。
+10 月 15 日收口切片没有修改数据库 schema、权限、发布契约或其他模板设计。相关实现细节见[后台操作链](PR35_ADMIN_CHAIN_CONTINUITY.md)、[交互连续性](PR35_KEYBOARD_FOCUS_CONTINUITY.md)、[主题与套餐](PR35_POLAROID_NIGHT_AND_PACKAGES.md)。
 
 ## 补齐真实持久化验收
 
