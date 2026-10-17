@@ -16,10 +16,10 @@ function boot(pathname,value,blocked=false,missing=false){
   return {dataset,reads};
 }
 
-test("prepaint bootstrap restores night only on the exact preview route",()=>{
+test("prepaint bootstrap restores a saved dawn choice only on the exact preview route",()=>{
   for(const path of ["/preview","/preview/"]){
-    const result=boot(path,"night");
-    assert.deepEqual(result.dataset,{previewTheme:"night",starTheme:"night"});
+    const result=boot(path,"paper");
+    assert.deepEqual(result.dataset,{previewTheme:"paper",starTheme:"paper"});
     assert.deepEqual(result.reads,[PREVIEW_THEME_KEY]);
   }
 });
@@ -31,12 +31,12 @@ test("legacy and admin routes never read or apply preview preferences",()=>{
   }
 });
 
-test("missing, corrupt and inaccessible preference storage safely defaults to paper",()=>{
-  for(const value of [null,undefined,"paper","dark","{broken","NIGHT"]){
-    assert.deepEqual(boot("/preview",value).dataset,{previewTheme:"paper",starTheme:"paper"});
+test("missing, corrupt and inaccessible preference storage safely defaults to the night sky",()=>{
+  for(const value of [null,undefined,"night","light","{broken","PAPER"]){
+    assert.deepEqual(boot("/preview",value).dataset,{previewTheme:"night",starTheme:"night"});
   }
-  assert.equal(boot("/preview","night",true).dataset.previewTheme,"paper");
-  assert.equal(boot("/preview",null,false,true).dataset.previewTheme,"paper");
+  assert.equal(boot("/preview","paper",true).dataset.previewTheme,"night");
+  assert.equal(boot("/preview",null,false,true).dataset.previewTheme,"night");
 });
 
 test("prepaint style remains preview-scoped and gives the loading scene dark paint",()=>{

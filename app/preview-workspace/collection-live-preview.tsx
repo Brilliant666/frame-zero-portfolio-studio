@@ -40,7 +40,7 @@ export default function CollectionLivePreview({ collection, assets, onView, acti
   const logicalWidth = device === "desktop" ? 960 : 390;
   const scale = dimensions.width > 0 ? Math.min(1, dimensions.width / logicalWidth) : 1;
   const scaledHeight = dimensions.height * scale;
-  const [theme, setTheme] = useState<"paper" | "night">("paper");
+  const [theme, setTheme] = useState<"paper" | "night">("night");
   const [unavailable, setUnavailable] = useState<ReadonlyMap<string, string>>(() => new Map());
   const assetMap = useMemo(() => new Map(assets.map(asset => [asset.id, asset])), [assets]);
   const cards = useMemo<SceneCard[]>(() => collection.assetIds.flatMap((id, index) => {
@@ -52,7 +52,7 @@ export default function CollectionLivePreview({ collection, assets, onView, acti
   return <section className={styles.preview} aria-label="当前图集即时效果" data-template-preview data-star-theme={theme}>
     <div className={styles.toolbar}>
       <div><h3>当前编辑 · 即时效果</h3><p>按当前照片顺序展示；此处不保存或发布。构图和主题仅用于查看。</p></div>
-      <button type="button" onClick={() => setTheme(value => value === "paper" ? "night" : "paper")}>{theme === "paper" ? "切换到夜空" : "切换到纸面"}</button>
+      <button type="button" onClick={() => setTheme(value => value === "paper" ? "night" : "paper")}>{theme === "paper" ? "切换到夜空" : "切换到星图"}</button>
     </div>
     <div className={styles.device} role="group" aria-label="即时效果查看尺寸">
       <button type="button" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")}>桌面</button>

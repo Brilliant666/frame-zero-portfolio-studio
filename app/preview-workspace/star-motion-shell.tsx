@@ -18,7 +18,7 @@ type Theme = "paper" | "night";
 const themeEvent="preview:theme-change";
 const subscribeTheme=(notify:()=>void)=>{window.addEventListener(themeEvent,notify);return ()=>window.removeEventListener(themeEvent,notify);};
 const themeRoute=()=>/^\/preview\/?$/.test(location.pathname) || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" && (/^\/[a-z0-9-]+\/admin\/(?:preview\/)?premium-polaroid\/?$/.test(location.pathname) || /^\/[a-z0-9-]+\/?$/.test(location.pathname) && !!document.querySelector("[data-site-premium]"));
-const currentTheme=():Theme|"disabled"=>!themeRoute()?"disabled":document.documentElement.dataset.previewTheme==="night"?"night":"paper";
+const currentTheme=():Theme|"disabled"=>!themeRoute()?"disabled":document.documentElement.dataset.previewTheme==="paper"?"paper":"night";
 const serverTheme=()=>"disabled" as const;
 const ThemeContext = createContext<{ theme: Theme; enabled:boolean; change: (theme: Theme, origin:{x:number;y:number}) => void }>({ theme: "paper", enabled:false, change: () => {} });
 export function StarNavigation({active,onNavigate}:{active:PolaroidView;onNavigate:(event:MouseEvent<HTMLElement>,view:PolaroidView)=>void}) {
@@ -27,7 +27,7 @@ export function StarNavigation({active,onNavigate}:{active:PolaroidView;onNaviga
 export function StarThemeToggle() {
   const { theme, enabled, change } = useContext(ThemeContext);
   if(!enabled)return null;
-  const label=theme==="paper"?"切换到夜空":"切换到纸面";
+  const label=theme==="paper"?"切换到夜空":"切换到星图";
   return <button className={styles.toggle} type="button" aria-label={label} title={label} onClick={event=>{
     const box=event.currentTarget.getBoundingClientRect();change(theme==="paper"?"night":"paper",{x:box.left+box.width/2,y:box.top+box.height/2});
   }}><svg key={theme} className={styles.themeIcon} viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -44,8 +44,9 @@ export default function StarMotionShell({ children }: { children: ReactNode }) {
     if(!themeRoute())return;
     mounted.current=true;
     const root=document.documentElement;
-    let next:Theme=root.dataset.previewTheme==="night"?"night":"paper";
-    try { next=localStorage.getItem(PREVIEW_THEME_KEY)==="night"?"night":"paper"; } catch { /* Private browser uses the prepaint theme. */ }
+    // Night sky is the default; only an explicit saved "paper" (dawn) choice overrides it.
+    let next:Theme=root.dataset.previewTheme==="paper"?"paper":"night";
+    try { next=localStorage.getItem(PREVIEW_THEME_KEY)==="paper"?"paper":"night"; } catch { /* Private browser uses the prepaint theme. */ }
     root.dataset.previewTheme=next;root.dataset.starTheme=next;
     window.dispatchEvent(new Event(themeEvent));
     const reduced=matchMedia("(prefers-reduced-motion: reduce)");
@@ -74,7 +75,7 @@ export default function StarMotionShell({ children }: { children: ReactNode }) {
   // it here would replay/consume the first-visit entrance before it can be seen.
   const localPaper=typeof window!=="undefined" && !themeRoute();
   return <StarMotionContext.Provider value={{paused,toggle:()=>setPaused(value=>!value)}}><ThemeContext.Provider value={{theme, enabled, change}}><div className={`${styles.shell}${localPaper?"":` ${sections.sections}`}`} data-preview-local-theme={localPaper?"paper":undefined} data-star-theme={localPaper?"paper":undefined} data-star-motion-paused={paused || undefined}>
-    <StarSky active={theme === "night"} paused={paused} className={styles.stars} />
+    <StarSky key={theme} active={enabled} paused={paused} className={styles.stars} />
     {children}
   </div></ThemeContext.Provider></StarMotionContext.Provider>;
 }

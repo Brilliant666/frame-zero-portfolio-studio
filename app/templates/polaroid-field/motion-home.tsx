@@ -68,6 +68,8 @@ export default function MotionHome({ cards, content, onOpen, onPrepare, onWarm, 
     };
     pendingSource.current=source;
     source.flight = createCollectionFlight(source);
+    // the sky dollies toward the chosen cover while the home exits; the album entrance settles it
+    if (box) window.dispatchEvent(new CustomEvent("preview:star-boost", { detail: { phase: "in", origin: { x: box.left + box.width / 2, y: box.top + box.height / 2 } } }));
     const exit = playHomeExit(root.current, id);
     exitCleanup.current = exit.cleanup;
     void Promise.resolve(onOpen(id, source, exit.finished)).catch(()=>{
