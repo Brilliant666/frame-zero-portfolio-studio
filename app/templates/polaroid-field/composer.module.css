@@ -1,5 +1,5 @@
 .stage { position: relative; height: calc(100svh - var(--nav, 80px)); min-height: 480px; overflow: hidden; overflow: clip; isolation: isolate; touch-action: pinch-zoom; color: var(--star-paper-ink); background: linear-gradient(var(--star-line) 1px, transparent 1px) 0 0/64px 64px, linear-gradient(90deg,var(--star-line) 1px,transparent 1px) 0 0/64px 64px,radial-gradient(circle,var(--star-line) 0 .7px,transparent .8px) 0 0/10px 10px,var(--star-paper); box-shadow: inset 0 0 5rem var(--star-line); }
-.header { position: absolute; z-index: 3; inset: 18px 24px auto; display: flex; justify-content: space-between; align-items: start; gap: 16px; pointer-events: none; }
+.header { position: absolute; z-index: 3; inset: 18px 24px auto; transition: opacity .55s ease .1s, translate .55s cubic-bezier(.2,.8,.2,1) .1s; display: flex; justify-content: space-between; align-items: start; gap: 16px; pointer-events: none; }
 .header button, .header select, .header details { pointer-events: auto; }
 .identity { display: flex; align-items: start; gap: 18px; max-width: 58%; }
 .identity > div { position: relative; display: grid; gap: 5px; max-width: 440px; padding: 9px 16px 11px; background: var(--star-glass); box-shadow: 1px 3px 5px var(--star-line); border-radius: 1px 2px 5px 1px; overflow-wrap: anywhere; }
@@ -47,7 +47,7 @@
 .note strong { display: block; font-size: 26px; line-height: 1.2; font-weight: 400; max-height: 92px; overflow: auto; overflow-wrap: anywhere; }
 .note span { display: block; margin-top: 10px; font-size: 20px; }
 .note i { position: absolute; right: 12px; top: 8px; color: var(--star-accent); }
-.camera { position: absolute; z-index: 3; right: 16px; bottom: 16px; display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: 10px; background: var(--star-glass); box-shadow: 0 4px 14px var(--star-line); }
+.camera { position: absolute; z-index: 3; right: 16px; bottom: 16px; transition: opacity .55s ease .25s, translate .55s cubic-bezier(.2,.8,.2,1) .25s; display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: 10px; background: var(--star-glass); box-shadow: 0 4px 14px var(--star-line); }
 .camera button { border: 0; padding: 8px 12px; color: var(--star-paper-ink); background: transparent; font: inherit; font-size: 13px; cursor: pointer; }
 .camera output { min-width: 48px; text-align: center; font-size: 12px; }
 .empty { position: absolute; top: 45%; width: 100%; text-align: center; }
@@ -122,3 +122,50 @@
 :global([data-star-theme]) .stage[data-editor-embedded="true"][data-compact="true"] .options { display:flex; width:100%; gap:8px; flex-wrap:wrap; justify-content:space-between; }
 :global(html[data-preview-theme]) .stage[data-editor-embedded="true"] { height:520px; }
 :global(html[data-preview-theme]) .stage[data-editor-embedded="true"][data-compact="true"] { height:auto; }
+
+/* Entering from the homepage: chrome stays out of the way until the album's own entrance starts. */
+.stage[data-entering] .header,.stage[data-entering] .camera { opacity:0; translate:0 -8px; pointer-events:none; transition:none; }
+.stage[data-entering] .header * { pointer-events:none; }
+
+/* 星轨: photos are not paper stuck on the sky. At night each one is a window of light;
+   on the 星图 chart each one is a printed plate. Both hang upright, without pins or tape. */
+.spill { position: absolute; display: none; pointer-events: none; }
+.spill img { position: absolute; inset: -14%; width: 128%; height: 128%; object-fit: cover; }
+:global([data-star-theme]) .card { transform: none; }
+:global([data-star-theme]) .tape,
+:global([data-star-theme]) .pin { display: none; }
+:global([data-star-theme]) .note { transform: none !important; }
+:global([data-star-theme]) .caption { font: italic 400 13px/1 var(--star-serif, "Noto Serif SC", serif) !important; letter-spacing: .28em; color: var(--star-muted); }
+
+/* night: a thin lit edge, the picture's own colour spilling onto the sky, nearer windows brighter */
+:global([data-star-theme="night"]) .sheet { background: transparent; outline: none; box-shadow: none; }
+:global([data-star-theme="night"]) .card[data-role] .sheet { box-shadow: none; }
+:global([data-star-theme="night"]) .sheet::after { display: none; }
+:global([data-star-theme="night"]) .spill { display: block; z-index: 0; }
+:global([data-star-theme="night"]) .spill img { filter: blur(34px) saturate(1.5); opacity: .42; mix-blend-mode: screen; transition: opacity .5s; }
+:global([data-star-theme="night"]) .photo { z-index: 1; background: transparent; box-shadow: inset 0 0 0 1px rgba(255,255,255,.16), 0 0 70px 2px rgba(255,236,210,.1); }
+:global([data-star-theme="night"]) .photo::after { content: ""; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); background: linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,0) 30%); }
+:global([data-star-theme="night"]) .photo img { transition: filter .5s; }
+:global([data-star-theme="night"]) .card[data-role="lead"] .photo img { filter: brightness(.9); }
+:global([data-star-theme="night"]) .card[data-role="support"] .photo img { filter: brightness(.74) blur(.4px); }
+:global([data-star-theme="night"]) .card[data-role="support"] .spill img { opacity: .28; }
+:global([data-star-theme="night"]) .card:hover .photo img,
+:global([data-star-theme="night"]) .card:focus-visible .photo img { filter: brightness(1.06); }
+:global([data-star-theme="night"]) .card:hover .spill img,
+:global([data-star-theme="night"]) .card:focus-visible .spill img { opacity: .7; }
+:global([data-star-theme="night"]) .card:hover .sheet { transform: translateY(-4px); }
+:global([data-star-theme="night"]) .lines path { stroke: rgba(255,236,200,.5); opacity: .9; filter: drop-shadow(0 0 3px rgba(255,220,170,.55)); }
+:global([data-star-theme="night"]) .note { background: none; box-shadow: none; color: var(--star-ink); }
+:global([data-star-theme="night"]) .note strong { font-family: var(--star-serif, "Noto Serif SC", serif); font-weight: 300; letter-spacing: .24em; }
+:global([data-star-theme="night"]) .note span { font-size: 13px; letter-spacing: .3em; color: var(--star-muted); }
+
+/* 星图: a plate in a star atlas. Paper, a hairline double ink frame, no cast shadow */
+:global([data-star-theme="paper"]) .sheet { background: #fbf8f2; box-shadow: 0 0 0 .6px rgba(34,31,63,.55), 0 0 0 5px #fbf8f2, 0 0 0 5.6px rgba(34,31,63,.32); }
+:global([data-star-theme="paper"]) .card[data-role] .sheet { box-shadow: 0 0 0 .6px rgba(34,31,63,.55), 0 0 0 5px #fbf8f2, 0 0 0 5.6px rgba(34,31,63,.32); }
+:global([data-star-theme="paper"]) .sheet::after { display: none; }
+:global([data-star-theme="paper"]) .photo { box-shadow: inset 0 0 0 .5px rgba(34,31,63,.3); }
+:global([data-star-theme="paper"]) .card[data-role="support"] { opacity: .84; }
+:global([data-star-theme="paper"]) .card:hover { opacity: 1; }
+:global([data-star-theme="paper"]) .caption { color: var(--star-ink); }
+:global([data-star-theme="paper"]) .note { background: #fbf8f2; box-shadow: 0 0 0 .6px rgba(34,31,63,.55), 0 0 0 5px #fbf8f2, 0 0 0 5.6px rgba(34,31,63,.32); }
+:global([data-star-theme="paper"]) .note strong { font-family: var(--star-serif, "Noto Serif SC", serif); font-weight: 300; letter-spacing: .24em; }

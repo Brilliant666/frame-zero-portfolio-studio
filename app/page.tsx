@@ -45,7 +45,7 @@ export default function PlatformHome() {
           <p className={showcase.note}>基础模板布局示意 · 照片与文字由你填写</p>
           <dl className={showcase.spaces}>
             <div><dt>基础版</dt><dd>一个内容空间，十一种视觉风格。</dd></div>
-            <div><dt>高级拍立得</dt><dd>独立图集，以拍立得封面进入作品。</dd></div>
+            <div><dt>星轨</dt><dd>星空下的星座图集，以拍立得封面进入作品。</dd></div>
             <div><dt>流影视廊</dt><dd>独立分类，以双轨速览进入完整画廊。</dd></div>
           </dl>
           <p className={showcase.note}>三套内容独立编辑，共用本站图库。一个主页地址，展示你最后发布的版本。</p>
@@ -54,7 +54,7 @@ export default function PlatformHome() {
           <div className={styles.sectionHeading}><p className={styles.eyebrow}>从创作到展示</p><h2 id="workflow-title">内容在后台整理，作品在主页被看见</h2></div>
           <div className={styles.steps}>
             <article><span>01</span><h3>进入自己的站点</h3><p>使用统一账号登录，进入只属于你的站点后台。</p></article>
-            <article><span>02</span><h3>整理作品与服务</h3><p>选择基础版、高级拍立得或流影视廊，编辑各自的作品、资料、服务与联系信息。</p></article>
+            <article><span>02</span><h3>整理作品与服务</h3><p>选择基础版、星轨或流影视廊，编辑各自的作品、资料、服务与联系信息。</p></article>
             <article><span>03</span><h3>查看效果，保存并发布</h3><p>仅保存草稿可以继续编辑；保存并发布后，本站唯一主页展示这次发布的内容。</p></article>
           </div>
         </section>

@@ -73,7 +73,7 @@ function measure() {
   if (subject !== "prism") {
     const preview = document.querySelector('[aria-label="当前图集即时效果"]');
     const buttons = [...preview.querySelectorAll("button")].filter(button => button.offsetWidth && button.offsetHeight).map(buttonMeasure);
-    const controls = buttons.filter(button => ["切换到纸面", "切换到夜空", "桌面", "手机", "星座", "散落", "跨页"].includes(button.text));
+    const controls = buttons.filter(button => ["切换到星图", "切换到夜空", "桌面", "手机", "星座", "散落", "跨页"].includes(button.text));
     return { subject, embedded, theme: preview.dataset.starTheme, pass: controls.every(button => button.contrast >= 4.5), controls, buttons, contrastLimit: "Solid-color alpha compositing; gradient/image layers are listed and require visual verification." };
   }
   const hero = document.querySelector("#prism-top"), rail = document.querySelector('[aria-label="选择主视觉作品"]');

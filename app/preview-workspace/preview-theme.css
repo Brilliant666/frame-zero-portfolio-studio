@@ -1,20 +1,21 @@
 html[data-preview-theme], [data-preview-local-theme="paper"] {
   color-scheme:light; --star-serif:"Noto Serif SC",serif;
-  --star-ink:#1c2433; --star-muted:#5b6576; --star-line:rgba(28,36,51,.14); --star-line-2:rgba(28,36,51,.3);
-  --star-glass:rgba(255,255,255,.66); --star-glass-2:rgba(255,255,255,.94); --star-segment-highlight:rgba(255,255,255,.55); --star-top-fade:rgba(243,246,249,.9);
-  --star-accent:#4a9be0; --star-accent-2:#2f76b8; --star-on-accent:#0f2a46; --star-accent-soft:rgba(74,155,224,.16);
-  --star-grad:linear-gradient(180deg,#e6f3ff,#b3dafc); --star-glow:rgba(74,155,224,.40); --star-focus:#2f76b8;
+  --star-ink:#1f2340; --star-muted:#5c5f7d; --star-line:rgba(31,35,64,.14); --star-line-2:rgba(31,35,64,.3);
+  --star-glass:rgba(255,255,255,.56); --star-glass-2:rgba(255,255,255,.88); --star-segment-highlight:rgba(255,255,255,.55); --star-top-fade:rgba(198,201,236,.9);
+  --star-accent:#6a63c6; --star-accent-2:#4f48a8; --star-on-accent:#241f5c; --star-accent-soft:rgba(106,99,198,.14);
+  --star-grad:linear-gradient(180deg,#f7f4ff,#d9d3fa); --star-glow:rgba(106,99,198,.34); --star-focus:#4f48a8;
   --star-gold:#f1c86a; --star-gold-2:#b98a2e;
-  --star-paper:#ffffff; --star-paper-ink:#1c2433; --star-thread:rgba(28,36,51,.34); --star-intro-bg:#f5f8fb;
-  --star-shadow:0 16px 32px -14px rgba(28,36,51,.38),0 2px 3px rgba(28,36,51,.14);
-  --star-shadow-up:0 34px 60px -22px rgba(28,36,51,.48),0 4px 8px rgba(28,36,51,.16);
+  --star-paper:#ffffff; --star-paper-ink:#1f2340; --star-thread:rgba(31,35,64,.34); --star-intro-bg:#cdcff0;
+  --star-shadow:0 16px 32px -14px rgba(31,35,64,.4),0 2px 3px rgba(31,35,64,.14);
+  --star-shadow-up:0 34px 60px -22px rgba(31,35,64,.5),0 4px 8px rgba(31,35,64,.16);
   --star-caption-muted:var(--star-muted); --star-caption-accent:var(--star-accent-2); --star-tape:color-mix(in srgb,var(--star-accent) 35%,var(--star-paper));
-  --star-paper-muted:#5b6576; --star-paper-border:rgba(28,36,51,.10); --star-placeholder:#e1e8f0;
-  --star-overlay:rgba(243,246,249,.96); --star-shine:radial-gradient(circle at var(--gx,50%) var(--gy,0%),#fff5,transparent 55%);
-  --star-panel-shadow:0 20px 50px -26px rgba(28,36,51,.45); --star-pin-shadow:drop-shadow(0 2px 2px rgba(28,36,51,.19));
-  --star-sky-star:#dfe6ff; --star-sky-highlight:#f6d68c;
-  --star-background:radial-gradient(55% 45% at 88% 8%,rgba(150,205,255,.28),rgba(150,205,255,0) 62%),radial-gradient(50% 42% at 4% 96%,rgba(185,190,255,.20),rgba(185,190,255,0) 62%),radial-gradient(38% 30% at 42% 58%,rgba(255,225,150,.08),rgba(255,225,150,0) 70%),linear-gradient(rgba(40,70,110,.05) 1px,transparent 1px) 0 0/64px 64px,linear-gradient(90deg,rgba(40,70,110,.05) 1px,transparent 1px) 0 0/64px 64px,radial-gradient(circle,rgba(40,70,110,.11) 0 .7px,transparent .8px) 0 0/10px 10px,#f3f6f9;
+  --star-paper-muted:#5c5f7d; --star-paper-border:rgba(31,35,64,.10); --star-placeholder:#e3e1f2;
+  --star-overlay:rgba(242,236,244,.96); --star-shine:radial-gradient(circle at var(--gx,50%) var(--gy,0%),#fff5,transparent 55%);
+  --star-panel-shadow:0 20px 50px -26px rgba(31,35,64,.45); --star-pin-shadow:drop-shadow(0 2px 2px rgba(31,35,64,.19));
+  --star-sky-style:chart; --star-sky-trails:.4; --star-sky-star:#2a2650; --star-sky-highlight:#b98a2e; --star-sky-band:#2a2650; --star-sky-grid:rgba(34,31,63,.13); --star-sky-density:1;
+  --star-background:radial-gradient(120% 60% at 50% -12%,rgba(84,92,170,.42),rgba(84,92,170,0) 62%),radial-gradient(85% 45% at 50% 108%,rgba(255,182,138,.5),rgba(255,182,138,0) 70%),linear-gradient(180deg,#c3c6ec 0%,#d8d6f0 30%,#ece2ec 60%,#f8e4da 84%,#fde8d4 100%);
 }
+/* Light is 星图: an ink star atlas printed on dawn paper (StarSky draws the chart in ink). */
 html[data-preview-theme="night"] {
   color-scheme:dark;
   --star-ink:#eeeae3; --star-muted:#b8b4ad;
@@ -27,7 +28,8 @@ html[data-preview-theme="night"] {
   --star-paper-border:#ffffff24; --star-placeholder:#35332f;
   --star-caption-accent:#d2ccc2; --star-caption-muted:#b8b4ad;
   --star-thread:#c8bfa65c; --star-tape:#b7ac9980;
-  --star-sky-star:#bdb6aa; --star-sky-highlight:#df9075;
+  /* The original charcoal night; StarSky adds star trails, a Milky Way of dust and a slow nebula. */
+  --star-sky-style:sky; --star-sky-trails:.5; --star-sky-star:#f1ece2; --star-sky-highlight:#f2b296; --star-sky-band:#eee6d8; --star-sky-density:1;
   --star-glow:transparent; --star-pin-shadow:none;
   --star-shadow:0 12px 30px #0004; --star-shadow-up:0 20px 40px #0006;
   --star-panel-shadow:none; --star-segment-highlight:transparent;
@@ -35,8 +37,10 @@ html[data-preview-theme="night"] {
   --star-background:radial-gradient(ellipse at 80% 0,#36322c55,transparent 60%),#171716;
   --star-shine:radial-gradient(circle at var(--gx,50%) var(--gy,0%),rgba(232,236,245,.08),transparent 55%);
 }
-html[data-preview-theme="night"] [data-site-premium] canvas[aria-hidden="true"] { opacity:.22; }
-html[data-preview-theme="night"]:has(#polaroid-packages:not([hidden]),#polaroid-booking:not([hidden])) [data-site-premium] canvas[aria-hidden="true"] { opacity:.12; }
+/* The sky is the canvas: full strength on the work field, softened behind reading-heavy sections. */
+html[data-preview-theme]:has(#polaroid-packages:not([hidden]),#polaroid-booking:not([hidden])) [data-site-premium] canvas[aria-hidden="true"] { opacity:.5; }
+/* Reading pages: the sky still turns, but never smears behind the text. */
+html[data-preview-theme]:has(#polaroid-packages:not([hidden]),#polaroid-booking:not([hidden])) { --star-sky-trails:0; }
 html[data-preview-theme]::view-transition-old(root),html[data-preview-theme]::view-transition-new(root) { animation:none; mix-blend-mode:normal; }
 html[data-preview-theme]::view-transition-old(root) { z-index:1; }
 html[data-preview-theme]::view-transition-new(root) { z-index:2; }

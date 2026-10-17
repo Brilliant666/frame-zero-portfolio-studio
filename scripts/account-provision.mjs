@@ -30,7 +30,7 @@ try {
   const username = (await prompt.question('用户名（例如 star）：')).trim();
   const slug = (await prompt.question('Site slug（例如 star）：')).trim();
   const email = (await prompt.question('真实登录邮箱：')).trim();
-  const premium = (await prompt.question('授予高级拍立得内部测试权限？输入 yes：')).trim() === 'yes';
+  const premium = (await prompt.question('授予星轨内部测试权限？输入 yes：')).trim() === 'yes';
   prompt.close();
   const password = await hiddenPassword();
   runtime = createAccountRuntime(config);

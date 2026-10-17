@@ -95,6 +95,8 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
   const returnHome = useCallback((push = true) => {
     if (ComposerScene) entryGeneration.current++;
     setEntry(undefined);
+    // pull the sky back as the home returns
+    window.dispatchEvent(new CustomEvent("preview:star-boost", { detail: { phase: "out" } }));
     const scrollTop = scrollPositions.current.get(cameraKey("home")) ?? 0;
     onBeforeViewChange?.(); setRestoredView(cameras.current.get(cameraKey("home"))); setSelectedId(null);
     if (push && !isPreview) window.history.pushState(null, "", "#polaroid-top");
@@ -148,7 +150,7 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
         const generation=++entryGeneration.current;
         await loadComposer();
         if (entryGeneration.current!==generation || source?.cancelled) {source?.flight?.cleanup();return;}
-        if(source)source.accepted=true;
+        if(source){source.accepted=true;source.exited=exit;}
         setEntry({source,exiting:Boolean(exit)});
         void (exit ?? Promise.resolve()).then(() => {
           if(entryGeneration.current===generation) setEntry(current=>current&&{...current,exiting:false});

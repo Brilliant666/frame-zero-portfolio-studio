@@ -15,7 +15,7 @@ export type PublicationEditorProps = {
   saveDraft: (options?: DraftSaveOptions) => Promise<DraftSaveReceipt | null>;
 };
 type PublicationState = { current: Publication | null; history: Publication[] };
-const spaceName = (space: ContentSpace) => space === "basic" ? "基础版" : space === "premium-flow-gallery" ? "流影视廊" : "高级拍立得";
+const spaceName = (space: ContentSpace) => space === "basic" ? "基础版" : space === "premium-flow-gallery" ? "流影视廊" : "星轨";
 const title = (value: Publication) => `${spaceName(value.space)}${value.space === "basic" ? ` · ${templateCatalog.find(item => item.id === value.templateId)?.name ?? value.templateId}` : ""}`;
 const versionDetail = (value: Publication) => `内容版本 v${value.draftRevision} · ${new Date(value.publishedAt).toLocaleString()}`;
 const retentionHint = "每个内容空间保留最近 10 个不同内容版本，另保留当前公开版本。恢复只切换公开版本，当前编辑与草稿保留。";

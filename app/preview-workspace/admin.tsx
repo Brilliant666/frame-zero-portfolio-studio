@@ -206,7 +206,7 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
       if (!result.content || result.revision <= revision) throw new Error("未收到有效保存确认，草稿保留；请核对重新读取。");
       const reconciled = reconcilePreviewSave(submitted, current.current, result.content);
       current.current = reconciled.draft; draftVersion.current += 1; setDraft(reconciled.draft); setSaved(reconciled.saved); setRevision(result.revision); setUpdatedAt(result.updatedAt);
-      setMessage(forPublication ? "" : reconciled.changedWhileSaving ? "提交的版本已保存；保存期间的新编辑仍保留为未保存修改。" : siteMode ? "本站高级拍立得草稿已保存。基础版内容和公开页面未改变。" : "新版保存成功。/preview 刷新后读取此版本；旧站内容未改变。");
+      setMessage(forPublication ? "" : reconciled.changedWhileSaving ? "提交的版本已保存；保存期间的新编辑仍保留为未保存修改。" : siteMode ? "本站星轨草稿已保存。基础版内容和公开页面未改变。" : "新版保存成功。/preview 刷新后读取此版本；旧站内容未改变。");
       return { content: result.content, revision: result.revision, updatedAt: result.updatedAt };
     } catch (error) {
       if (signal.aborted) return null;
@@ -223,7 +223,7 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
     return receipt;
   };
   useEffect(() => {
-    if (!siteMode || message !== "本站高级拍立得草稿已保存。基础版内容和公开页面未改变。") return;
+    if (!siteMode || message !== "本站星轨草稿已保存。基础版内容和公开页面未改变。") return;
     const timer = setTimeout(() => setMessage(""), 6000);
     return () => clearTimeout(timer);
   }, [message, siteMode]);
@@ -332,17 +332,17 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
 
   return <main data-photo-workspace className={styles.workspace} data-site-editor={siteMode ? "premium" : undefined}>
     {siteMode ? <header data-photo-scroll-header className={styles.topbar}>
-      <div><p className={styles.breadcrumb}>{siteName} <span>/</span> 高级拍立得</p><h1>{section === "collections" ? "图集编辑" : sections.find(([id]) => id === section)?.[1]}</h1></div>
+      <div><p className={styles.breadcrumb}>{siteName} <span>/</span> 星轨</p><h1>{section === "collections" ? "图集编辑" : sections.find(([id]) => id === section)?.[1]}</h1></div>
 
     </header> : <>
-    <header data-photo-scroll-header className={styles.topbar}><div><h1>新版摄影作品集后台</h1><p>{siteMode ? "本站高级拍立得草稿" : "独立本地工作区"} · {dirty ? "有未保存修改" : saved ? `已保存 · 版本 ${revision}` : "尚未配置"}{saving ? " · 保存中" : ""}</p></div><div className={styles.actions}>
+    <header data-photo-scroll-header className={styles.topbar}><div><h1>新版摄影作品集后台</h1><p>{siteMode ? "本站星轨草稿" : "独立本地工作区"} · {dirty ? "有未保存修改" : saved ? `已保存 · 版本 ${revision}` : "尚未配置"}{saving ? " · 保存中" : ""}</p></div><div className={styles.actions}>
       <a href={siteScope?.previewHref ?? "/preview"} target="_blank" rel="noreferrer">{siteMode ? "查看受保护草稿 ↗" : "查看已保存主页 ↗"}</a>
       <button type="button" disabled={loadState !== "ready"} onClick={() => { setPreviewCollectionId(undefined); setPreview(structuredClone(draft)); }}>查看草稿效果</button>
       <button type="button" disabled={saving || loadState === "loading"} onClick={() => { if ((!dirty && !conflict) || confirm("重新读取将替换当前未保存草稿。若有冲突，请先导出留存，确认继续？")) void reload(); }}>重新读取</button>
       <button className={styles.primary} type="button" onClick={() => void save()} disabled={loadState !== "ready" || saving || !dirty || conflict}>保存新版修改</button>
     </div></header></>}
     <div className={styles.workArea}>
-    {siteMode && <aside className={styles.sidebar}><a className={styles.siteBack} href={siteScope?.adminBasePath.replace(/\/premium-polaroid$/, "")} onClick={(event) => { if (dirty && !window.confirm("当前草稿尚未保存，确认返回内容空间选择？")) event.preventDefault(); }}>← 站点工作台</a><nav aria-label="高级拍立得编辑分区">{sections.map(([id, label], index) => <button key={id} type="button" aria-pressed={section === id || (id === "albums" && section === "collections")} onClick={() => changeSection(id)}><span aria-hidden="true">0{index + 1}</span>{label}</button>)}</nav><p>高级拍立得<br /><small>独立内容 · 本站照片共享</small></p></aside>}
+    {siteMode && <aside className={styles.sidebar}><a className={styles.siteBack} href={siteScope?.adminBasePath.replace(/\/premium-polaroid$/, "")} onClick={(event) => { if (dirty && !window.confirm("当前草稿尚未保存，确认返回内容空间选择？")) event.preventDefault(); }}>← 站点工作台</a><nav aria-label="星轨编辑分区">{sections.map(([id, label], index) => <button key={id} type="button" aria-pressed={section === id || (id === "albums" && section === "collections")} onClick={() => changeSection(id)}><span aria-hidden="true">0{index + 1}</span>{label}</button>)}</nav><p>星轨<br /><small>独立内容 · 本站照片共享</small></p></aside>}
     <div className={styles.body}>
       {siteMode && props?.PublicationControls && <props.PublicationControls revision={revision} dirty={dirty} disabled={loadState !== "ready" || saving || conflict || pendingSave || !!pickerCollectionId || creatingCollection} templateId="premium-polaroid" saveDraft={saveForPublication}
         presentation="polaroid" onPublishStart={() => setMessage("")}
@@ -432,7 +432,7 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
           </section>
           <section className={styles.panel}>
             <h2>平台账号</h2>
-            <p className={styles.hint}>填写抖音、小红书的 HTTPS 主页链接或分享文案，可在新标签页打开；普通账号会显示为文字。内容仅属于当前高级拍立得。</p>
+            <p className={styles.hint}>填写抖音、小红书的 HTTPS 主页链接或分享文案，可在新标签页打开；普通账号会显示为文字。内容仅属于当前星轨。</p>
             {draft.social.length >= POLAROID_SOCIAL_LIMIT && (!readPolaroidSocial(draft.social, "douyin") || !readPolaroidSocial(draft.social, "xiaohongshu")) && <p className={styles.notice}>平台账号已达 20 项，尚未添加的渠道暂不可填写。请展开下方“兼容设置与联系卡恢复”处理不需要的记录；已有渠道仍可编辑。</p>}
             <div className={styles.grid}>
               <Field label="抖音账号或主页链接" value={readPolaroidSocial(draft.social, "douyin")?.handle ?? ""} disabled={draft.social.length >= POLAROID_SOCIAL_LIMIT && !readPolaroidSocial(draft.social, "douyin")} onChange={(handle) => edit((doc) => ({ ...doc, social: writePolaroidSocial(doc.social, "douyin", handle) }))} />
@@ -442,7 +442,7 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
           <section className={styles.panel}><details className={styles.lowFrequency}>
             <summary><strong>兼容设置与联系卡恢复</strong><span>邮箱、其他平台、重复账号及图片引用</span><small>展开编辑</small></summary>
             <div>
-              <p className={styles.hint}>高级拍立得公开页仅显示上方四种渠道，不显示邮箱、其他平台或平台二维码；原内容与图片引用仍保留，可在此编辑或恢复。同一渠道有多项时，上方仅使用列表中的第一项；清空上方输入不会删除其图片引用或后续重复项。</p>
+              <p className={styles.hint}>星轨公开页仅显示上方四种渠道，不显示邮箱、其他平台或平台二维码；原内容与图片引用仍保留，可在此编辑或恢复。同一渠道有多项时，上方仅使用列表中的第一项；清空上方输入不会删除其图片引用或后续重复项。</p>
               <Field label="原邮箱（高级公开页不显示）" value={draft.contact.email} onChange={(email) => edit((doc) => ({ ...doc, contact: { ...doc.contact, email } }))} />
           <section className={styles.panel}><h3>原平台账号与联系卡引用</h3><p className={styles.hint}>{siteMode ? "文字账号、合法主页网址和图片卡均可独立使用。选用或移除卡片仅修改本空间草稿。" : "分享卡可通过一次性复制原站资料复用现有引用；文件保持 local-only。此处不另建上传系统。"}</p>{draft.social.map((item, index) => <div className={styles.panel} key={index}><details className={styles.lowFrequency}><summary><strong>{item.label || `平台 ${index + 1}`}</strong><span>{item.handle || "未填写账号或网址"}</span><small>编辑账号</small></summary><div><TextFields value={{ label: item.label, handle: item.handle }} prefix={`平台 ${index + 1} · `} onChange={(next) => edit((doc) => ({ ...doc, social: doc.social.map((entry, i) => i === index ? { ...entry, ...next } : entry) }))} /></div></details>{siteScope ? <SiteContactCard assetsEndpoint={siteScope.assetsEndpoint} assetId={item.qrAssetId} targetKey={item} onChange={(id) => edit((doc) => { const social = setContactCardReference(doc.social, item, id); return social === doc.social ? doc : { ...doc, social }; })} /> : getPlatformQrAssetPath(item.qrAssetId) && <img className={styles.qr} alt={`${item.label}分享卡`} src={(siteMode ? assetMap.get(item.qrAssetId ?? "")?.variants.full.src : getPlatformQrAssetPath(item.qrAssetId))!} />}<div className={styles.row}><button type="button" disabled={index === 0} onClick={() => edit((doc) => ({ ...doc, social: moveItem(doc.social, index, index - 1) }))}>上移</button>{!siteMode && item.qrAssetId && <button type="button" onClick={() => edit((doc) => ({ ...doc, social: doc.social.map((entry, i) => i === index ? { label: entry.label, handle: entry.handle } : entry) }))}>移除分享卡引用</button>}<button type="button" onClick={() => edit((doc) => ({ ...doc, social: doc.social.filter((_, i) => i !== index) }))}>移除平台</button></div></div>)}<button type="button" disabled={draft.social.length >= 8} onClick={() => edit((doc) => ({ ...doc, social: [...doc.social, { label: "", handle: "" }] }))}>添加平台账号</button></section>
             </div>

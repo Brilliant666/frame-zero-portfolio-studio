@@ -25,7 +25,8 @@ function fixture(reduced=false){
   return {world,cards,running,ghosts,events,listeners,media};
 }
 test("entrance preserves saved order and distinct theme timing",()=>{
-  assert.equal(collectionEntranceTiming(2,true,false).delay,1100);
+  assert.equal(collectionEntranceTiming(2,true,false).delay,410);
+  assert.equal(collectionEntranceTiming(0,true,false).duration,900);
   assert.equal(collectionEntranceTiming(2,false,true).delay,120);
   assert.equal(collectionEntranceTiming(0,false,false).duration,760);
   assert.notEqual(collectionEntranceTiming(0,false,false).easing,collectionEntranceTiming(0,false,true).easing);
@@ -38,7 +39,12 @@ test("flight, developing, line redraw and cancellation are scene owned",()=>{
   assert.equal(f.ghosts[0].dataset.cardId,undefined);
   assert.equal(f.running.filter(a=>a.options.duration===1200).length,2);
   assert.ok(!f.running.some(a=>a.element===f.cards[0] || a.element===f.cards[0].querySelector("img")));
-  assert.ok(f.running.filter(a=>a.options.duration===1200).every(a=>a.frames[0].filter==="brightness(1.2) saturate(.6)" && a.frames.every(frame=>frame.opacity===undefined)));
+  assert.ok(f.running.filter(a=>a.options.duration===1200).every(a=>a.frames[0].filter==="brightness(.22) contrast(.7) saturate(0)" && a.frames.at(-1).filter==="none" && a.frames.every(frame=>frame.opacity===undefined)));
+  // from the homepage every other paper is born at the clicked cover's centre (5+50, 10+70) and grows into place
+  const births=f.running.filter(a=>f.cards.includes(a.element));
+  // the offset is divided by the world's scale (here the fixture's rotated -3deg paper)
+  const birthScale=collectionLandingGeometry({left:200,top:100,width:240,height:350},240,350,-3).scale;
+  assert.ok(births.length===2&&births.every(a=>a.frames[0].opacity===0&&a.frames[0].scale===".12"&&a.frames[0].translate===`${Math.round(-265/birthScale)}px ${Math.round(-195/birthScale)}px`&&a.frames.at(-1).translate==="0 0"&&a.options.duration===900));
   assert.equal(f.running.at(-1).frames[0].strokeDashoffset,1);
   assert.equal(f.world.style.visibility,"visible");assert.equal(f.events[0].detail.duration,1100);
   cleanup();cleanup();

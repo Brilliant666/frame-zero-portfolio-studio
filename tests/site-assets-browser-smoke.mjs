@@ -157,9 +157,11 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
         assert.equal(await savedPreview.getByRole('button', { name: mode, exact: true }).getAttribute('aria-pressed'), 'true');
         await images(); await shot(`03-${mode}`);
       }
-      await savedPreview.getByRole('button', { name: '切换到夜空', exact: true }).click();
-      await savedPreview.getByRole('button', { name: '切换到纸面', exact: true }).waitFor();
+      // Night sky is the default; capture it, then the dawn variant.
       await shot('03-night');
+      await savedPreview.getByRole('button', { name: '切换到星图', exact: true }).click();
+      await savedPreview.getByRole('button', { name: '切换到夜空', exact: true }).waitFor();
+      await shot('03-chart');
       await savedPreview.getByRole('button', { name: '散落', exact: true }).click();
       await savedPreview.getByRole('button', { name: /查看第 1 张照片/ }).click();
       await page.getByRole('dialog', { name: /第 \d+ 张照片预览/ }).waitFor(); await images(); await shot('03-lightbox');
