@@ -286,6 +286,8 @@ test('responsive sources use actual portrait widths, retain DPR choices and requ
   assert.equal(props.src, `/api/sites/test/assets/${ASSET}/card`);
   assert.equal(props.sizes, '386px');
   assert.equal(props.srcSet, `\/api/sites/test/assets/${ASSET}/thumbnail 267w, /api/sites/test/assets/${ASSET}/card 734w, /api/sites/test/assets/${ASSET}/full 1467w`);
+  // A deferred rail photo receives these together; src last avoids a fallback request.
+  assert.deepEqual(Object.keys(props), ['sizes', 'srcSet', 'src']);
   assert.deepEqual(copy(sources.galleryPhotoSource(photo, '386px', true)), { src: photo.fullUrl });
   const duplicate = { ...photo, variants: [{ url: 'thumb', width: 200 }, { url: 'card', width: 200 }, { url: 'full', width: 400 }, { url: 'invalid', width: 0 }] };
   assert.equal(sources.galleryPhotoSource(duplicate, '150px').srcSet, 'thumb 200w, full 400w');
