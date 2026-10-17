@@ -65,6 +65,8 @@ export default function MotionHome({ cards, content, onOpen, onPrepare, onWarm, 
     const source: CollectionEntranceSource = {
       assetId:assetId ?? "", x:box?.left??0, y:box?.top??0, width:box?.width??0, height:box?.height??0, src:image?.complete&&image.naturalWidth?image.currentSrc || image.src:"",
       startedAt:performance.now(), ready,
+      // at night the cover is a window of light, so its flying stand-in carries no paper
+      paperColor: document.documentElement.dataset.starTheme === "night" ? "transparent" : undefined,
     };
     pendingSource.current=source;
     source.flight = createCollectionFlight(source);

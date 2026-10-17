@@ -348,7 +348,8 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
           setPhotoSources(old=>{const next={...old};if(upgraded.previous)next[card.id]=upgraded.previous;else delete next[card.id];return next;});
           worldRef.current?.dispatchEvent(new CustomEvent("composer:photo-error",{detail:{id:card.id,src:upgraded.src}}));
         };
-        return <button type="button" className={styles.card} data-card-id={card.id} data-role={card.role} data-rotation={card.rot} key={card.id}
+        // 星轨 hangs every photo upright (a window of light, a printed plate); the layout keeps its angles for spacing only.
+        return <button type="button" className={styles.card} data-card-id={card.id} data-role={card.role} data-rotation={0} key={card.id}
           aria-label={`查看第 ${card.i + 1} 张照片${card.role === "hero" ? "（主角）" : ""}`} onClick={() => {motion.stop();onOpen(card.id);}}
           onPointerMove={event => {
             if (event.pointerType !== "mouse" || event.buttons || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -363,8 +364,9 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
             cameraMode.current = "manual";
             motion.move(composerView({ ...layout, note: null, heroIdx: [card.i], heroOnly: [card.i], heroPad: 0 }, size.width, size.height, size.top, "hero"),800);
           }}
-          style={{ left: card.x - card.w / 2, top: card.y - card.h / 2, width: card.w, height: card.h, zIndex: card.z, "--angle": `${card.rot}deg`, "--enter-delay": `${Math.min(card.i,12)*35}ms` } as CSSProperties}>
+          style={{ left: card.x - card.w / 2, top: card.y - card.h / 2, width: card.w, height: card.h, zIndex: card.z, "--angle": "0deg", "--enter-delay": `${Math.min(card.i,12)*35}ms` } as CSSProperties}>
           <span className={styles.sheet}>
+            {source.asset && <span className={styles.spill} aria-hidden="true" style={{ left: card.f.side, top: card.f.top, width: card.pw, height: card.ph }}><img src={source.asset.variants.thumbnail.src} alt="" draggable={false} loading="lazy" /></span>}
             <span className={styles.photo} style={{ left: card.f.side, top: card.f.top, width: card.pw, height: card.ph }}>{source.asset ? <img src={upgraded?.src ?? entryPhotoSource(source.asset)} data-photo-id={card.id} data-photo-tier={upgraded?.tier ?? Math.min(600,Math.max(source.asset.variants.card.width,source.asset.variants.full.width))} style={{opacity:card.id===entranceSource?.assetId?1:0}} onLoad={event=>revealEntryImage(event.currentTarget,card.id===entranceSource?.assetId)} alt={`图集照片 ${card.i + 1}`} width={source.asset.variants.card.width} height={source.asset.variants.card.height} loading={card.i < 3 || card.role === "hero" || card.id === coverId || card.id === entranceSource?.assetId ? "eager" : "lazy"} draggable={false} onError={imageFailed} /> : "照片暂不可用"}</span>
             <span className={styles.caption} style={{ height: card.f.bottom, paddingInline: card.f.side, justifyContent: card.cap === "right" ? "flex-end" : undefined, fontSize: Math.max(15, Math.min(34, card.f.bottom * .5)) }}>{card.role === "hero" ? "✦ " : ""}No.{String(card.i + 1).padStart(2, "0")}</span>
           </span>
