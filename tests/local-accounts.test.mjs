@@ -225,7 +225,7 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1800000 },
       assert.match(html, /data-site-admin="true"/);
       assert.doesNotMatch(html, /<form\b|<input\b|<textarea\b|<button\b|href="\/admin(?:\/|")/i);
     }
-    assert.match(a, /高级拍立得（已授权）/);
+    assert.match(a, /星轨（已授权）/);
     assert.match(b, /尚未授权/);
     assert.match(a, /href="\/fixturealpha\/admin\/basic\/profile"/);
     assert.match(a, /href="\/fixturealpha\/admin\/premium-polaroid"/);

@@ -57,6 +57,9 @@ export default function StarSky({ active, paused = false, className }: { active:
     const starColor = token("--star-sky-star"), goldColor = token("--star-sky-highlight"), dustColor = token("--star-sky-band") || starColor;
     const gridColor = token("--star-sky-grid") || "rgba(34,31,63,.13)";
     const density = Math.max(.5, Math.min(2, Number(token("--star-sky-density")) || 1));
+    // How much scrolling smears the sky (0 = never). Re-read on scroll so reading-heavy pages can switch it off.
+    const readTrails = () => { const value = Number(getComputedStyle(canvas).getPropertyValue("--star-sky-trails")); return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : .5; };
+    let trails = readTrails();
     let width = 0, height = 0, dpr = 1, frame = 0, last = 0, mobile = false;
     let pole = { x: 0, y: 0 }, th0 = 0, span = 1, stars: Star[] = [], dust: Dust[] = [];
     let rot = 0, rotTarget = 0, rotPrev = 0, idle = 0;
@@ -125,8 +128,11 @@ export default function StarSky({ active, paused = false, className }: { active:
       const t = now / 1000;
       const omega = Math.abs(rot - rotPrev), zeta = Math.abs(zoom.v - zoom.prev);
       rotPrev = rot; zoom.prev = zoom.v;
-      const motion = Math.max(0, omega - .00008) * 5200 + zeta * 70;
-      const fade = still() ? 1 : Math.max(chart ? .08 : .045, Math.min(1, 1 / (1 + motion)));
+      // Scrolling leaves only a short, soft streak (a hint of motion blur); the dolly between
+      // pages keeps its long warp streaks because it is a deliberate, momentary transition.
+      const scrollFade = trails ? Math.max(1 - .64 * trails, 1 / (1 + Math.max(0, omega - .0004) * 2600 * trails)) : 1;
+      const zoomFade = Math.max(chart ? .08 : .045, 1 / (1 + zeta * 70));
+      const fade = still() ? 1 : Math.min(1, scrollFade, zoomFade);
       const streak = fade < .9;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.globalCompositeOperation = "destination-out"; ctx.globalAlpha = 1; ctx.fillStyle = `rgba(0,0,0,${fade})`; ctx.fillRect(0, 0, width, height);
@@ -227,6 +233,7 @@ export default function StarSky({ active, paused = false, className }: { active:
       const top = target.scrollTop, before = scrollTops.get(target);
       scrollTops.set(target, top);
       if (before === undefined) return;
+      trails = readTrails();
       rotTarget += Math.max(-.25, Math.min(.25, (top - before) * (mobile ? .00055 : .00042)));
       if (!frame && !document.hidden && !still()) resume();
     };

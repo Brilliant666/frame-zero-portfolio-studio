@@ -64,7 +64,7 @@ function text(node) {
 const button = (tree, label) => find(tree, node => node.type === 'button' && text(node) === label);
 
 test('success detail follows latest dirty and synchronized state, without a stale request warning', () => {
-  const base = '发布成功：高级拍立得 · v3。';
+  const base = '发布成功：星轨 · v3。';
   const detail = feedbackHelpers.publicationSuccessDetail;
   assert.equal(detail(base, true, false, true), base);
   assert.match(detail(base, true, true, false), /仍有未保存修改，尚未发布/);
@@ -83,7 +83,7 @@ test('Polaroid uses separate draft/public status, preview affordances, more tool
   assert.ok(find(tree, node => node.props?.title === '草稿版本 v2'));
   assert.match(text(tree), /最近 10 个不同内容版本/);
   assert.ok(find(tree, node => node.type === 'time' && node.props.dateTime === current.publishedAt));
-  assert.match(text(tree), /当前公开：高级拍立得/);
+  assert.match(text(tree), /当前公开：星轨/);
   assert.match(text(tree), /无待发布改动/);
   const more = find(tree, node => typeof node.type === 'function' && node.props.label === '更多 ⋯');
   assert.ok(more);
@@ -119,7 +119,7 @@ test('basic compact header distinguishes its draft from a different public space
   const props = { presentation: 'basic', space: 'basic', templateId: 'neon-hud', savedPreviewHref: '/fixture/preview' };
   ui.render(props); await ui.effects();
   const tree = ui.render(props);
-  assert.match(text(tree), /当前公开：高级拍立得/);
+  assert.match(text(tree), /当前公开：星轨/);
   assert.match(text(tree), /草稿尚未发布/);
   assert.doesNotMatch(text(tree), /无待发布改动/);
   assert.ok(find(tree, node => node.type === 'dialog'));
