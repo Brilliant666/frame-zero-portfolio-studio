@@ -8,9 +8,11 @@ export function galleryPhotoSource(photo: GalleryPhoto, sizes: string, full = fa
     if (Number.isFinite(variant.width) && variant.width > 0 && !widths.has(variant.width)) widths.set(variant.width, variant.url);
   }
   if (!widths.size) return { src: photo.url };
+  // Sizes and srcset precede src: an engine that selects synchronously on attribute
+  // changes must not start the fallback when a deferred photo receives its sources.
   return {
-    src: photo.url,
-    srcSet: [...widths].sort(([a], [b]) => a - b).map(([width, url]) => `${url} ${width}w`).join(", "),
     sizes,
+    srcSet: [...widths].sort(([a], [b]) => a - b).map(([width, url]) => `${url} ${width}w`).join(", "),
+    src: photo.url,
   };
 }

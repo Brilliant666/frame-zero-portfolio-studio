@@ -23,13 +23,14 @@ function readScene(available: Scene[]): Scene {
   return [...available, "gallery"].includes(hash) ? hash as Scene : "works";
 }
 
-function Photo({ photo, className, style, sizes = "100vw", full = false, lazy = false }: { photo: GalleryPhoto; className?: string; style?: CSSProperties; sizes?: string; full?: boolean; lazy?: boolean }) {
+function Photo({ photo, className, style, sizes = "100vw", full = false, lazy = false, deferred = false, priority }: { photo: GalleryPhoto; className?: string; style?: CSSProperties; sizes?: string; full?: boolean; lazy?: boolean; deferred?: boolean; priority?: "high" }) {
   // Intrinsic dimensions preserve layout; responsive sources only change transferred pixels.
+  // A deferred photo keeps the same box and loading appearance but requests nothing yet.
   // eslint-disable-next-line @next/next/no-img-element
-  return <img className={className} style={style} {...galleryPhotoSource(photo, sizes, full)} loading={lazy ? "lazy" : "eager"} decoding="async" width={photo.width} height={photo.height} alt={photo.alt} draggable={false} />;
+  return <img className={className} style={style} {...(deferred ? {} : galleryPhotoSource(photo, sizes, full))} loading={lazy ? "lazy" : "eager"} fetchPriority={priority} decoding="async" width={photo.width} height={photo.height} alt={photo.alt} draggable={false} />;
 }
 
-function Rail({ group, reverse, onSelect, widthPercent, single }: { group: GalleryDocument["groups"][number]; reverse: boolean; onSelect: (photo: GalleryPhoto) => void; widthPercent: number; single: boolean }) {
+function Rail({ group, reverse, onSelect, widthPercent, single, loadPhotos }: { group: GalleryDocument["groups"][number]; reverse: boolean; onSelect: (photo: GalleryPhoto) => void; widthPercent: number; single: boolean; loadPhotos: boolean }) {
   const rail = useRef<HTMLDivElement>(null);
   const railWindow = useRef<HTMLDivElement>(null);
   const copy = useRef<HTMLDivElement>(null);
@@ -117,7 +118,7 @@ function Rail({ group, reverse, onSelect, widthPercent, single }: { group: Galle
         // Loop duplicates disappear in keyboard mode; return to their accessible original.
         if (repeat) primaryButtons.current.get(photo.id)?.focus({ preventScroll: true });
         onSelect(photo);
-      }} aria-label={`查看大图：${photo.alt}`}><Photo photo={photo} sizes={photoSizes} /></button>)}</div>)}
+      }} aria-label={`查看大图：${photo.alt}`}><Photo photo={photo} sizes={photoSizes} deferred={!loadPhotos} /></button>)}</div>)}
     </div></div>
   </div>;
 }
@@ -185,6 +186,10 @@ export default function FlowGallery({ document: content, previewGroupId }: { doc
   const [selectedScope, setSelectedScope] = useState<readonly GalleryPhoto[]>([]);
   const root = useRef<HTMLDivElement>(null);
   const introduction = useRef<HTMLDivElement>(null);
+  const backgroundLayer = useRef<HTMLDivElement>(null);
+  // Rails start only after the background (the first-screen LCP image) settles,
+  // so their photos no longer share its bandwidth.
+  const [railsLoad, setRailsLoad] = useState(() => !content.background);
   const [introHeight, setIntroHeight] = useState(58);
   const [viewportHeight, setViewportHeight] = useState<number | null>(null);
   const [gridPhotoWidth, setGridPhotoWidth] = useState<number | null>(null);
@@ -297,6 +302,16 @@ export default function FlowGallery({ document: content, previewGroupId }: { doc
     return () => cancelAnimationFrame(frame);
   }, [scene, previewGroupId]);
   useLayoutEffect(() => {
+    if (railsLoad) return;
+    const image = backgroundLayer.current?.querySelector("img");
+    // A server-rendered background may finish before hydration attaches listeners.
+    if (!image || image.complete) { setRailsLoad(true); return; }
+    const settle = () => setRailsLoad(true);
+    image.addEventListener("load", settle);
+    image.addEventListener("error", settle);
+    return () => { image.removeEventListener("load", settle); image.removeEventListener("error", settle); };
+  }, [railsLoad]);
+  useLayoutEffect(() => {
     const port = galleryScrollport(root.current);
     if (!port) return;
     const measure = () => setViewportHeight(port.clientHeight);
@@ -369,7 +384,7 @@ export default function FlowGallery({ document: content, previewGroupId }: { doc
       {displayScene === "works" && <>
         <div ref={leaving ? undefined : introduction} className={styles.introduction}><h1 data-flow-scene-heading tabIndex={-1}>{content.profile.title}</h1><a data-flow-expand className={styles.expand} href="#gallery" onClick={event => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) sceneFocus.current = "heading"; }}>展开完整作品</a><p>{content.profile.intro}</p></div>
         <div className={`${styles.rails} ${railLayout.mode === "single" ? styles.singleRail : ""}`} data-flow-rail-layout={railLayout.mode} aria-label="作品速览" style={railLayout.mode !== "dual" || content.leftRailWidthPercent === undefined ? undefined : { gridTemplateColumns: `minmax(0, ${content.leftRailWidthPercent}fr) minmax(0, ${100 - content.leftRailWidthPercent}fr)` }}>
-          {railLayout.mode === "empty" ? <p className={styles.emptyGallery}>还没有作品</p> : railLayout.columns.map(({ group, side, widthPercent }) => <Rail key={`${side}-${group.id}`} group={group} reverse={side === 1} onSelect={photo => openPhoto(photo, group.photos)} widthPercent={widthPercent} single={railLayout.mode === "single"} />)}
+          {railLayout.mode === "empty" ? <p className={styles.emptyGallery}>还没有作品</p> : railLayout.columns.map(({ group, side, widthPercent }) => <Rail key={`${side}-${group.id}`} group={group} reverse={side === 1} onSelect={photo => openPhoto(photo, group.photos)} widthPercent={widthPercent} single={railLayout.mode === "single"} loadPhotos={railsLoad} />)}
         </div>
       </>}
       {displayScene === "pricing" && content.pricing && <section className={styles.pricePanel}><h1 data-flow-scene-heading tabIndex={-1}>{content.pricing.heading}</h1><p className={styles.priceIntro}>{content.pricing.introduction}</p><div className={styles.packages}>{content.pricing.packages.map((item) => <article key={item.id}><h2>{item.name}</h2><p className={styles.price}>{item.price}</p><p>{item.description}</p><ul>{item.details.map((line, index) => <li key={index}>{line}</li>)}</ul></article>)}</div></section>}
@@ -395,7 +410,7 @@ export default function FlowGallery({ document: content, previewGroupId }: { doc
     </main>;
 
   return <div ref={root} data-flow-scene={scene} style={{ "--intro-height": `${introHeight}px`, ...(viewportHeight ? { "--gallery-viewport-height": `${viewportHeight}px` } : {}) } as CSSProperties} className={`${styles.root} ${scene === "gallery" ? styles.galleryRoot : ""}`}>
-    <div className={styles.background} aria-hidden="true">{content.background && <Photo photo={content.background} sizes={`max(100vw, ${100 * content.background.width / content.background.height}svh)`} style={{ objectPosition: `${content.backgroundFocus?.x ?? 50}% ${content.backgroundFocus?.y ?? 50}%` }} />}</div>
+    <div ref={backgroundLayer} className={styles.background} aria-hidden="true">{content.background && <Photo photo={content.background} priority="high" sizes={`max(100vw, ${100 * content.background.width / content.background.height}svh)`} style={{ objectPosition: `${content.backgroundFocus?.x ?? 50}% ${content.backgroundFocus?.y ?? 50}%` }} />}</div>
     <header className={styles.navigation}>
       <a className={styles.brand} href="#works" aria-label={content.profile.brand}><span className={styles.avatar} aria-hidden="true">{content.profile.brand.slice(0, 1)}</span><span className={styles.brandName}>{content.profile.brand}</span></a>
       <nav aria-label="主要导航">{available.map((item) => <a key={item} href={`#${item}`} aria-current={scene === item || item === "works" && scene === "gallery" ? "page" : undefined}>{item === "works" ? "作品画廊" : item === "pricing" ? "价格与活动" : "联系方式"}</a>)}</nav>
