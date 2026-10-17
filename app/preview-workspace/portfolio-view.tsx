@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import type { PreviewPortfolioDocumentV1 } from "./document";
 import type { SiteContent, Work } from "../site-config";
 import { getClientVisiblePortfolioTitle } from "../client-visible-title";
@@ -10,11 +11,14 @@ import { useTemplateInteractions } from "../templates/shared/use-template-intera
 import { PreviewLoading } from "./preview-loading";
 
 // Keep local-only design assets out of both production runtime artifacts.
-const StarMotionShell = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? lazy(() => import("./star-motion-shell")) : Fragment;
-const StarThemeToggle = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? lazy(() => import("./star-motion-shell").then(module => ({ default: module.StarThemeToggle }))) : () => null;
-const StarNavigation = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? lazy(() => import("./star-motion-shell").then(module => ({ default: module.StarNavigation }))) : () => null;
+// next/dynamic rather than lazy(): when one renders on the server, Next emits its stylesheets
+// and script preloads with that render only, so a 星轨 page gets its CSS in the head (no unstyled
+// first paint, no chunk waterfall) while sites on other templates do not pay for it.
+const StarMotionShell = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? dynamic(() => import("./star-motion-shell")) : Fragment;
+const StarThemeToggle = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? dynamic(() => import("./star-motion-shell").then(module => module.StarThemeToggle)) : () => null;
+const StarNavigation = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? dynamic(() => import("./star-motion-shell").then(module => module.StarNavigation)) : () => null;
 
-const PolaroidFieldTemplate = lazy(() => import("../templates/polaroid-field/template"));
+const PolaroidFieldTemplate = dynamic(() => import("../templates/polaroid-field/template"));
 
 // A rendering adapter only: no legacy defaults, reads, normalization or writes.
 export function previewDisplayContent(document: PreviewPortfolioDocumentV1): SiteContent {

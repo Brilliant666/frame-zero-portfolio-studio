@@ -2,6 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element -- local photo-library thumbnail variants. */
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { assetToWork, parsePhotoLibraryManifest, type PhotoAsset } from "../../photo-library";
 import type { TemplateProps } from "../types";
 import { collectionCover, initialCollections, moveItem, uniqueAvailableAssetIds, type Collection } from "./collection-model";
@@ -20,7 +21,8 @@ const hashPrefix = "#polaroid-collection-";
 let preparedComposer: typeof import("./composer-scene").default | undefined;
 const loadComposer = () => import("./composer-scene").then(module => {preparedComposer=module.default;return module;});
 const ComposerScene = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? lazy(loadComposer) : null;
-const MotionHome = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? lazy(() => import("./motion-home")) : null;
+// next/dynamic: the server render brings the home's CSS into the head (see portfolio-view).
+const MotionHome = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FRAME_ZERO_LOCAL_PREVIEW === "1" || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? dynamic(() => import("./motion-home")) : null;
 const assetLabel = (asset: PhotoAsset, index: number) => `素材 ${String(index + 1).padStart(2, "0")} · ${asset.aspectRatio > 1.05 ? "横幅" : asset.aspectRatio < .95 ? "竖幅" : "方幅"}`;
 
 export default function CollectionExperience({ content, isPreview, homeRequest, isActive, savedCollections, initialCollectionId, suppliedAssets: providedAssets, onOpenWork, onBeforeViewChange }: Props) {
