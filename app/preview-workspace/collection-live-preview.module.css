@@ -13,7 +13,7 @@
   --star-paper-muted:#5c5f7d; --star-paper-border:rgba(31,35,64,.10); --star-placeholder:#e3e1f2;
   --star-overlay:rgba(242,236,244,.96); --star-shine:radial-gradient(circle at var(--gx,50%) var(--gy,0%),#fff5,transparent 55%);
   --star-panel-shadow:0 20px 50px -26px rgba(31,35,64,.45); --star-pin-shadow:drop-shadow(0 2px 2px rgba(31,35,64,.19));
-  --star-sky-style:chart; --star-sky-star:#2a2650; --star-sky-highlight:#b98a2e; --star-sky-band:#2a2650; --star-sky-grid:rgba(34,31,63,.13); --star-sky-label:rgba(34,31,63,.55); --star-sky-density:1;
+  --star-sky-style:chart; --star-sky-star:#2a2650; --star-sky-highlight:#b98a2e; --star-sky-band:#2a2650; --star-sky-grid:rgba(34,31,63,.13); --star-sky-density:1;
   --star-background:radial-gradient(120% 60% at 50% -12%,rgba(84,92,170,.42),rgba(84,92,170,0) 62%),radial-gradient(85% 45% at 50% 108%,rgba(255,182,138,.5),rgba(255,182,138,0) 70%),linear-gradient(180deg,#c3c6ec 0%,#d8d6f0 30%,#ece2ec 60%,#f8e4da 84%,#fde8d4 100%);
 }
 .preview[data-star-theme="night"] {

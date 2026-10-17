@@ -15,7 +15,6 @@ type Star = Particle & { z: number; phase: number; speed: number; gold: boolean;
 type Dust = Particle & { a: number; s: number };
 type BoostDetail = { duration?: number; phase?: "in" | "out"; origin?: { x: number; y: number } };
 
-const NAMES = ["织女", "天狼", "北落师门", "参宿四", "大角", "心宿二", "毕宿五", "轩辕十四", "南河三", "天津四", "河鼓二", "角宿一"];
 /** Deterministic PRNG: the same sky on every visit. */
 const seeded = (seed: number) => () => { seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 
@@ -56,10 +55,10 @@ export default function StarSky({ active, paused = false, className }: { active:
     const tokens = getComputedStyle(canvas), token = (name: string) => tokens.getPropertyValue(name).trim();
     const chart = token("--star-sky-style") === "chart";
     const starColor = token("--star-sky-star"), goldColor = token("--star-sky-highlight"), dustColor = token("--star-sky-band") || starColor;
-    const gridColor = token("--star-sky-grid") || "rgba(34,31,63,.13)", labelColor = token("--star-sky-label") || "rgba(34,31,63,.55)";
+    const gridColor = token("--star-sky-grid") || "rgba(34,31,63,.13)";
     const density = Math.max(.5, Math.min(2, Number(token("--star-sky-density")) || 1));
     let width = 0, height = 0, dpr = 1, frame = 0, last = 0, mobile = false;
-    let pole = { x: 0, y: 0 }, th0 = 0, span = 1, stars: Star[] = [], dust: Dust[] = [], named: { star: Star; name: string }[] = [];
+    let pole = { x: 0, y: 0 }, th0 = 0, span = 1, stars: Star[] = [], dust: Dust[] = [];
     let rot = 0, rotTarget = 0, rotPrev = 0, idle = 0;
     const zoom = { v: 1, target: 1, ease: .05, cx: 0, cy: 0, prev: 1, pulseUntil: 0, holdUntil: 0 };
     const pointer = { x: -999, y: -999 };
@@ -111,7 +110,6 @@ export default function StarSky({ active, paused = false, className }: { active:
       const center = Math.atan2(height * .55 - pole.y, width * .38 - pole.x);
       const dustCount = Math.round((mobile ? 1500 : 4000) * density * span / 1.2);
       dust = Array.from({ length: dustCount }, () => { const rho = radius(); return { rho, th: center + gauss() * Math.min(width, height) * .16 / rho + (random() - .5) * .02, a: random() * random() * .55, s: random() < .9 ? .9 : 1.7 }; });
-      named = stars.filter(star => star.big).slice(0, NAMES.length).map((star, i) => ({ star, name: NAMES[i] }));
       canvas.dataset.particles = String(count);
     };
     const P = { x: 0, y: 0 };
@@ -172,26 +170,20 @@ export default function StarSky({ active, paused = false, className }: { active:
       ctx.globalAlpha = 1;
       drawGrid();
     };
-    // the chart's coordinate net and star names turn with the sky but never leave trails
+    // the chart's coordinate net turns with the sky but never leaves trails. It stays wordless
+    // (no star names or degree labels) so the atlas reads as texture behind the work.
     const drawGrid = () => {
       gg.setTransform(dpr, 0, 0, dpr, 0, 0); gg.clearRect(0, 0, width, height);
       if (!chart) return;
       const z = zoom.v, at = (x: number, y: number) => z === 1 ? [x, y] : [zoom.cx + (x - zoom.cx) * z, zoom.cy + (y - zoom.cy) * z];
       const [px, py] = at(pole.x, pole.y);
-      gg.strokeStyle = gridColor; gg.fillStyle = labelColor; gg.lineWidth = 1; gg.font = '11px "Noto Serif SC",serif';
+      gg.strokeStyle = gridColor; gg.lineWidth = 1;
       const step = Math.max(width, height) * .18, maxR = Math.hypot(width - px, height - py) + Math.hypot(px, py);
-      let degree = 80;
-      for (let r = step; r < maxR; r += step, degree -= 10) {
-        gg.beginPath(); gg.arc(px, py, r * z, 0, Math.PI * 2); gg.stroke();
-        const a = th0 + span * .52 + rot, lx = px + Math.cos(a) * r * z, ly = py + Math.sin(a) * r * z;
-        if (lx > 0 && lx < width && ly > 0 && ly < height) gg.fillText(`+${degree}°`, lx + 4, ly - 4);
-      }
+      for (let r = step; r < maxR; r += step) { gg.beginPath(); gg.arc(px, py, r * z, 0, Math.PI * 2); gg.stroke(); }
       for (let hour = 0; hour < 24; hour++) {
         const a = hour / 24 * Math.PI * 2 + rot;
         gg.beginPath(); gg.moveTo(px, py); gg.lineTo(px + Math.cos(a) * maxR, py + Math.sin(a) * maxR); gg.stroke();
       }
-      gg.font = 'italic 11px "Noto Serif SC",serif';
-      for (const { star, name } of named) { project(star); if (P.x > 10 && P.x < width - 60 && P.y > 70 && P.y < height - 10) gg.fillText(name, P.x + 12, P.y + 4); }
     };
 
     const step = (now: number) => {
