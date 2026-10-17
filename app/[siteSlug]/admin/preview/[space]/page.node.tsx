@@ -5,6 +5,7 @@ import { handleDraftRequest } from "../../../../site-editor/server";
 import DraftView from "../../../../site-editor/draft-view";
 import styles from "../../../../site-editor/preview-notice.module.css";
 import { PREVIEW_THEME_BOOTSTRAP_CSS, PREVIEW_THEME_KEY } from "../../../../preview-workspace/preview-theme";
+import { HOME_INTRO_BOOTSTRAP } from "../../../../templates/polaroid-field/home-intro";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "私人草稿预览", robots: { index: false, follow: false } };
 export default async function DraftPreview({ params }: { params: Promise<{ siteSlug: string; space: string }> }) {
@@ -14,5 +15,5 @@ export default async function DraftPreview({ params }: { params: Promise<{ siteS
   const response = await handleDraftRequest(request, siteSlug, space);
   if (!response.ok) throw new Error("草稿暂不可读");
   const { content } = await response.json();
-  return <>{space === "premium-polaroid" && <><style dangerouslySetInnerHTML={{ __html: PREVIEW_THEME_BOOTSTRAP_CSS }} /><script dangerouslySetInnerHTML={{ __html: `(function(){var t='night';try{if(localStorage.getItem('${PREVIEW_THEME_KEY}')==='paper')t='paper'}catch(e){}document.documentElement.dataset.previewTheme=t;document.documentElement.dataset.starTheme=t})()` }} /></>}<div className={styles.frame} data-site-preview-frame><p data-site-preview-notice className={styles.notice}>已保存草稿预览 · 仅本人可见 · <a href={scope.adminBasePath + (space === "basic" ? "/profile" : "")}>返回后台</a></p><div className={styles.canvas} data-site-preview-canvas><div className={styles.scrollport} data-preview-scrollport><DraftView space={space} content={content} assetsEndpoint={scope.assetsEndpoint} /></div></div></div></>;
+  return <>{space === "premium-polaroid" && <><style dangerouslySetInnerHTML={{ __html: PREVIEW_THEME_BOOTSTRAP_CSS }} /><script dangerouslySetInnerHTML={{ __html: `(function(){var t='night';try{if(localStorage.getItem('${PREVIEW_THEME_KEY}')==='paper')t='paper'}catch(e){}document.documentElement.dataset.previewTheme=t;document.documentElement.dataset.starTheme=t})();${HOME_INTRO_BOOTSTRAP}` }} /></>}<div className={styles.frame} data-site-preview-frame><p data-site-preview-notice className={styles.notice}>已保存草稿预览 · 仅本人可见 · <a href={scope.adminBasePath + (space === "basic" ? "/profile" : "")}>返回后台</a></p><div className={styles.canvas} data-site-preview-canvas><div className={styles.scrollport} data-preview-scrollport><DraftView space={space} content={content} assetsEndpoint={scope.assetsEndpoint} /></div></div></div></>;
 }

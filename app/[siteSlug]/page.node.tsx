@@ -4,6 +4,7 @@ import { publicSite } from "../site-editor/public-server";
 import { SitePortfolioView } from "../site-editor/premium-view";
 import { SiteBasicView } from "../site-editor/basic-view";
 import { PREVIEW_THEME_BOOTSTRAP_CSS, PREVIEW_THEME_KEY } from "../preview-workspace/preview-theme";
+import { HOME_INTRO_BOOTSTRAP } from "../templates/polaroid-field/home-intro";
 import { publishedSiteMetadata } from "../site-editor/public-metadata";
 import { getAccountRuntime } from "../../db/accounts/http.mjs";
 import { isContentSpace } from "../site-editor/content-schema";
@@ -28,6 +29,6 @@ export default async function PublicPortfolio({ params }: { params: Promise<{ si
   if (result.snapshot.space === "basic") return <div data-publication-space="basic" data-publication-template={result.snapshot.templateId} data-publication-id={result.snapshot.id}>
     <script dangerouslySetInnerHTML={{ __html: "delete document.documentElement.dataset.previewTheme;delete document.documentElement.dataset.starTheme;delete document.documentElement.dataset.publicPortfolio" }} />
     <SiteBasicView key={result.snapshot.id} content={result.snapshot.content} assets={result.assets} /></div>;
-  if (result.snapshot.space === "premium-polaroid") return <div data-publication-space="premium-polaroid" data-publication-template="premium-polaroid" data-publication-id={result.snapshot.id}><style dangerouslySetInnerHTML={{ __html: PREVIEW_THEME_BOOTSTRAP_CSS }} /><script dangerouslySetInnerHTML={{ __html: `(function(){var t='night';try{if(localStorage.getItem('${PREVIEW_THEME_KEY}')==='paper')t='paper'}catch(e){}document.documentElement.dataset.previewTheme=t;document.documentElement.dataset.starTheme=t;document.documentElement.dataset.publicPortfolio='premium-polaroid'})()` }} /><SitePortfolioView document={result.snapshot.content} assets={result.assets} /></div>;
+  if (result.snapshot.space === "premium-polaroid") return <div data-publication-space="premium-polaroid" data-publication-template="premium-polaroid" data-publication-id={result.snapshot.id}><style dangerouslySetInnerHTML={{ __html: PREVIEW_THEME_BOOTSTRAP_CSS }} /><script dangerouslySetInnerHTML={{ __html: `(function(){var t='night';try{if(localStorage.getItem('${PREVIEW_THEME_KEY}')==='paper')t='paper'}catch(e){}document.documentElement.dataset.previewTheme=t;document.documentElement.dataset.starTheme=t;document.documentElement.dataset.publicPortfolio='premium-polaroid'})();${HOME_INTRO_BOOTSTRAP}` }} /><SitePortfolioView document={result.snapshot.content} assets={result.assets} /></div>;
   notFound();
 }
