@@ -13,6 +13,7 @@ import { AdminSection } from "../admin-form";
 import { useAdmin } from "../admin-provider";
 import styles from "../admin-v2.module.css";
 import TemplateStructurePreview from "./template-structure-preview";
+import { Select } from "../../admin-kit/select";
 
 const mobileModeLabels: Record<TemplateMaterialProfile["mobileBehavior"]["mode"], string> = {
   stack: "顺序堆叠",
@@ -66,20 +67,18 @@ export default function TemplateEditor() {
           <div className={styles.templateSelectorPane}>
             <label className={styles.templateMobileSelector}>
               <span>查看模板详情</span>
-              <select
-                value={inspectedId}
-                onChange={(event) => inspectTemplate(event.target.value)}
-                data-template-mobile-selector="true"
-              >
-                {templateCatalog.map((template, index) => {
-                  const labels = statusLabels(template.id);
-                  return (
-                    <option value={template.id} key={template.id}>
-                      {String(index + 1).padStart(2, "0")} · {template.name}{labels.length ? ` · ${labels.join(" / ")}` : ""}
-                    </option>
-                  );
-                })}
-              </select>
+              <div data-template-mobile-selector="true">
+                <Select
+                  label="查看模板详情"
+                  value={inspectedId}
+                  onChange={inspectTemplate}
+                  minWidth={280}
+                  options={templateCatalog.map((template, index) => {
+                    const labels = statusLabels(template.id);
+                    return { value: template.id, label: `${String(index + 1).padStart(2, "0")} · ${template.name}`, description: labels.length ? labels.join(" / ") : undefined };
+                  })}
+                />
+              </div>
             </label>
 
             <ol className={styles.templateList} aria-label="正式页面模板">

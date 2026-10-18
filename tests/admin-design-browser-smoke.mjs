@@ -5,6 +5,7 @@ import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { chromium } from 'playwright';
+import { chooseOption } from './kit-select-helpers.mjs';
 
 // Anonymous proof only: never authenticates, provisions accounts or calls a
 // business API. The caller owns the independent build/server and its cleanup.
@@ -181,8 +182,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       await shot('flow-gallery');
       await effect.getByRole('button', { name: '返回编辑', exact: true }).click();
       await page.getByRole('button', { name: '下一步：配置首页轨道', exact: true }).click();
-      await page.getByRole('combobox', { name: '左侧轨道', exact: true }).selectOption({ label: `匿名流程 ${viewport.width}` });
-      await page.getByRole('combobox', { name: '右侧轨道', exact: true }).selectOption({ label: '人物与片刻' });
+      await chooseOption(page.getByRole('combobox', { name: '左侧轨道', exact: true }), { label: `匿名流程 ${viewport.width}` });
+      await chooseOption(page.getByRole('combobox', { name: '右侧轨道', exact: true }), { label: '人物与片刻' });
       await page.getByRole('button', { name: '7∶3', exact: true }).click();
       assert.equal(await page.getByRole('button', { name: '7∶3', exact: true }).getAttribute('aria-pressed'), 'true');
       const width = page.getByRole('slider', { name: '左轨宽度', exact: true });
