@@ -172,7 +172,8 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
     finally { readingLock.current = false; }
   }, [endpoint, siteMode]);
   useEffect(() => { const timer = setTimeout(() => void reload(), 0); return () => { clearTimeout(timer); requestNumber.current += 1; }; }, [reload]);
-  const loadLibrary = useCallback(async () => {
+  /** Resolves false when the read failed; a read superseded by a newer one resolves undefined. */
+  const loadLibrary = useCallback(async (): Promise<boolean | undefined> => {
     const request = ++libraryRequest.current;
     setLibraryReady(false);
     setLibraryState("素材库读取中…");
@@ -181,14 +182,19 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
         const manifest = await loadSiteAssets(siteScope.assetsEndpoint);
         if (request !== libraryRequest.current) return;
         setLibraryTruncated(Boolean(manifest.truncated));
-        setAssets(manifest.assets); setLibraryReady(true); setLibraryState(`已载入本站素材 ${manifest.assets.length} 张；两套内容独立引用。`); return;
+        setAssets(manifest.assets); setLibraryReady(true); setLibraryState(`已载入本站素材 ${manifest.assets.length} 张；两套内容独立引用。`); return true;
       }
       const response = await fetch("/photos/library-manifest.json", { cache: "no-store" });
       if (!response.ok) throw new Error("unavailable");
       const manifest = parsePhotoLibraryManifest(await response.json());
       if (!manifest) throw new Error("invalid");
       setAssets(manifest.assets); setLibraryReady(true); setLibraryState(`可用素材 ${manifest.assets.length} 张。已回收素材不在选片列表；已保存引用会保留。`);
-    } catch { if (request === libraryRequest.current) { setLibraryReady(false); setLibraryState("素材库读取失败。已有引用全部保留，不会因读取失败清空成员；请重新读取素材。"); } }
+      return true;
+    } catch {
+      if (request !== libraryRequest.current) return undefined;
+      setLibraryReady(false); setLibraryState("素材库读取失败。已有引用全部保留，不会因读取失败清空成员；请重新读取素材。");
+      return false;
+    }
   }, [siteScope]);
   useEffect(() => { const timer = setTimeout(() => void loadLibrary(), 0); return () => clearTimeout(timer); }, [loadLibrary]);
 

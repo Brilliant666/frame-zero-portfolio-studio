@@ -12,7 +12,7 @@ type Props = {
   /** Every album of the space, for the membership badges and filters. */
   albums: readonly LibraryAlbum[];
   assets: readonly SiteAsset[];
-  ready: boolean; truncated: boolean; state: string; onReload: () => Promise<void>;
+  ready: boolean; truncated: boolean; state: string; onReload: () => Promise<boolean | undefined | void>;
   /** Appends in pick order and returns the ids added; the parent closes the picker. Failures must throw. */
   onAdd: (ids: readonly string[]) => readonly string[];
   onClose: () => void;

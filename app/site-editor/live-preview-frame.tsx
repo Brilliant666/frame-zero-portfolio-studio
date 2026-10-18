@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PhotoAsset } from "../photo-library";
 import type { SiteContent } from "../site-config";
 import type { PreviewPortfolioDocumentV1 } from "../preview-workspace/document";
@@ -12,6 +12,9 @@ import { SiteBasicView } from "./basic-view";
 import { SitePortfolioView } from "./premium-view";
 import { SiteFlowGalleryView } from "./flow-gallery-view";
 
+/** Site asset IDs are UUIDs. Other UUIDs in a draft (album IDs) are simply never found, and asked for once. */
+const UUIDS = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+
 /**
  * Inside the editor's preview iframe: renders the editor's in-memory draft with the real template.
  * It only reads the parent window (same origin) and the Site's asset list; it never saves anything.
@@ -20,11 +23,23 @@ export default function LivePreviewFrame({ space, assetsEndpoint }: { space: Wor
   const [content, setContent] = useState<unknown>(null);
   const [assets, setAssets] = useState<PhotoAsset[] | null>(null);
   const [detached, setDetached] = useState(false);
+  const mounted = useRef(true);
+  const asked = useRef(new Set<string>());
   useEffect(() => {
-    let active = true;
-    void loadSiteAssets(assetsEndpoint).then(manifest => { if (active) setAssets(manifest.assets); }, () => { if (active) setAssets([]); });
-    return () => { active = false; };
+    mounted.current = true;
+    void loadSiteAssets(assetsEndpoint).then(manifest => { if (mounted.current) setAssets(manifest.assets); }, () => { if (mounted.current) setAssets([]); });
+    return () => { mounted.current = false; };
   }, [assetsEndpoint]);
+  useEffect(() => {
+    // A photo uploaded after the preview opened is not in its first asset list: read the list again,
+    // once per newly referenced ID, so the preview shows it instead of silently leaving it out.
+    if (content === null || assets === null) return;
+    const known = new Set(assets.map(asset => asset.id));
+    const fresh = [...new Set(JSON.stringify(content).match(UUIDS) ?? [])].map(id => id.toLowerCase()).filter(id => !known.has(id) && !asked.current.has(id));
+    if (!fresh.length) return;
+    fresh.forEach(id => asked.current.add(id));
+    void loadSiteAssets(assetsEndpoint).then(manifest => { if (mounted.current) setAssets(manifest.assets); }, () => {});
+  }, [content, assets, assetsEndpoint]);
   useEffect(() => {
     let parent: Window | null = null;
     try { parent = window.parent; void parent.location.href; } catch { parent = null; }

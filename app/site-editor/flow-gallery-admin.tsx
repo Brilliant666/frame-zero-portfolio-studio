@@ -45,7 +45,7 @@ function FlowMemberEditor({ group, assets, onChange, onView }: { group: FlowGrou
   return <CollectionMemberEditor collection={collection} assets={assets} onChange={next => { setCollection(next); onChange(next.assetIds); }} onView={asset => onView(asset.id)} />;
 }
 
-function BackgroundPicker({ manifest, ready, state, reload, select, close }: { manifest: SiteAssetManifest; ready: boolean; state: string; reload: () => Promise<void>; select: (id: string) => void; close: () => void }) {
+function BackgroundPicker({ manifest, ready, state, reload, select, close }: { manifest: SiteAssetManifest; ready: boolean; state: string; reload: () => Promise<unknown>; select: (id: string) => void; close: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(0);
@@ -158,17 +158,20 @@ function FlowGallerySession({ siteScope }: { siteScope: SiteEditorScope }) {
     removedCaptions.current.clear();
     setPicker(null); setEnlarged(null); setPreview(false); setManifest(emptyManifest); setAssetsReady(false);
   }, [setPicker, setEnlarged]);
-  const reloadAssets = useCallback(async () => {
+  /** Resolves false when the read failed; a superseded or abandoned read resolves undefined. */
+  const reloadAssets = useCallback(async (): Promise<boolean | undefined> => {
     const token = ++assetToken.current;
     setAssetsReady(false); setAssetState("正在读取本站素材…");
     try {
       const next = await loadSiteAssets(siteScope.assetsEndpoint);
-      if (lifetime.current.signal.aborted || token !== assetToken.current) return;
+      if (lifetime.current.signal.aborted || token !== assetToken.current) return undefined;
       setManifest(next); setAssetsReady(true); setAssetState(`本站图库 ${next.assets.length} 张`);
+      return true;
     } catch (cause) { if (!lifetime.current.signal.aborted && token === assetToken.current) {
       if (cause instanceof SiteAssetRequestError && (cause.status === 401 || cause.status === 403)) clearPrivateLookup();
       setAssetState(cause instanceof Error ? cause.message : "素材读取失败，请重试。");
-    } }
+      return false;
+    } return undefined; }
   }, [siteScope.assetsEndpoint, clearPrivateLookup]);
   const reload = useCallback(async (signal?: AbortSignal) => {
     setLoadState("loading");

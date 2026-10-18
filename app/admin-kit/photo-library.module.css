@@ -263,7 +263,23 @@
 .dragGhost { position: fixed; top: -100px; left: -100px; padding: 6px 12px; border-radius: 9px; background: var(--kit-accent, #3d4a5c); color: #fff; font: 600 13px/1.3 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; }
 
 @media (max-width: 720px) {
-  .root { --library-tile: 96px !important; }
+  /* Phones: photos first. Desktop-only tips (Shift, dragging) and the editor blurb go, controls become
+     single scrolling rows, so the first row of photos clears the bottom save bar. */
+  .root { --library-tile: 96px !important; gap: 8px; }
+  .header { gap: 8px; }
+  .title { min-width: 0; flex-basis: 100%; }
+  .title h2 { font-size: 18px; }
+  .title .description, .hint { display: none; }
+  .headerActions { flex-wrap: nowrap; overflow-x: auto; width: calc(100% + 32px); margin: 0 -16px; padding: 0 16px 2px; scrollbar-width: none; }
+  .headerActions .primaryButton { order: -1; }
+  .headerActions > button { flex: none; min-height: 34px; padding: 0 12px; font-size: 13px; }
+  .toolbar { flex-wrap: nowrap; overflow-x: auto; margin: 0 -16px; padding: 0 16px 8px; gap: 8px; scrollbar-width: none; }
+  .toolbar > * { flex: none; }
+  .lookup { display: none; }
+  .batchHead { padding-top: 6px; }
+  /* One message at a time on a phone: stacked toasts would cover the photos being sorted. */
+  .toasts > .toast:not(:last-child) { display: none; }
+  .toast { width: 100%; }
   .grid { gap: 3px; }
   .tile { border-radius: 4px; }
   .check, .zoom { opacity: 1; }

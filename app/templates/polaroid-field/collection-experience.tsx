@@ -34,6 +34,10 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
   const suppliedAssets = process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? providedAssets : undefined;
   const [collections, setCollections] = useState<Collection[]>(() => savedCollections ? structuredClone([...savedCollections]) : initialCollections.map((item) => ({ ...item, assetIds: [] })));
   const [assets, setAssets] = useState<PhotoAsset[]>(() => suppliedAssets ? [...suppliedAssets] : []);
+  // Album changes remount this component (the template keys it by the album list), but a newer asset
+  // list alone does not: the live preview re-reads assets after an upload, so follow that prop.
+  const [followedAssets, setFollowedAssets] = useState(suppliedAssets);
+  if (suppliedAssets && suppliedAssets !== followedAssets) { setFollowedAssets(suppliedAssets); setAssets([...suppliedAssets]); }
   const [libraryState, setLibraryState] = useState("读取本地素材库…");
   const [libraryError, setLibraryError] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(initialCollectionId ?? null);

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
+import sharp from 'sharp';
 
 // Auto-save and the live preview, in a real browser against the isolated test database.
 // The other browser suites switch auto-save off (manual-save-browser.mjs); this one keeps the default.
@@ -73,6 +74,28 @@ export async function adminAutosaveBrowser({ origin, password, username, signal 
     await page.getByRole('button', { name: '仅保存草稿', exact: true }).click();
     await page.waitForResponse(r => r.request().method() === 'PUT' && new URL(r.url()).pathname === draftPath('premium-polaroid'));
     await page.getByRole('switch', { name: '自动保存草稿', exact: true }).click();
+
+    // 3b. A photo uploaded after the preview opened appears in it: the frame reads the asset list again.
+    await pane.getByRole('radio', { name: '桌面', exact: true }).click();
+    const assetsUrl = `${origin}/api/sites/${username}/assets`;
+    const known = new Set((await (await context.request.get(assetsUrl)).json()).assets.map(asset => asset.id));
+    await page.getByRole('button', { name: '图集', exact: true }).click();
+    await page.getByRole('button', { name: '新建图集', exact: true }).click();
+    const creation = page.getByRole('dialog', { name: '新建图集', exact: true });
+    await creation.getByLabel('图集名称', { exact: true }).fill('Live preview album');
+    await creation.getByRole('button', { name: '创建并选片', exact: true }).click();
+    const picker = page.getByRole('dialog', { name: '从图库选片', exact: true });
+    await picker.getByRole('button', { name: '上传照片', exact: true }).click();
+    const uploader = page.getByRole('dialog', { name: '上传照片到本站图库', exact: true });
+    await uploader.getByLabel('选择要上传的照片', { exact: true }).setInputFiles({ name: 'live-preview-upload.png', mimeType: 'image/png', buffer: await sharp({ create: { width: 160, height: 120, channels: 3, background: '#4a7d9c' } }).png().toBuffer() });
+    await uploader.getByRole('button', { name: '开始上传（1 张）', exact: true }).click();
+    await picker.waitFor({ state: 'hidden', timeout: 20000 });
+    const uploaded = (await (await context.request.get(assetsUrl)).json()).assets.filter(asset => !known.has(asset.id)).map(asset => asset.id);
+    assert.equal(uploaded.length, 1, 'One new Site photo');
+    const previewFrame = page.frame({ url: url => url.pathname.endsWith('/admin/live/premium-polaroid') });
+    assert.ok(previewFrame, 'The live preview frame is open');
+    await previewFrame.waitForFunction(id => [...document.images].some(image => (image.currentSrc || image.src).includes(id))
+      || [...document.querySelectorAll('[style*="url("]')].some(node => node.getAttribute('style').includes(id)), uploaded[0], { timeout: 15000 });
 
     // 4. The basic editor auto-saves too.
     const basicPuts = recordPuts(page, 'basic');
