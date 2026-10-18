@@ -1,14 +1,16 @@
 # 会话交接
 
-## 当前交接（2026-10-17 文档同步）
+## 当前交接（2026-10-18 文档同步）
 
-先读 [CURRENT_STATUS](CURRENT_STATUS.md)，再按任务读取相关实现记录。PR35 已合并，接受的最终 Head 为 `7eb2a7f7b49271cb58a310fa9662956fbdf8f4f9`，Squash/main 为 `57b12c2b123596b3430bc1a48e208dc84be5ca73`；该合并 SHA 的五项 main push 检查首次运行全部通过。详见[最终收口与检查链接](design/PR35_OCT15_CLOSEOUT.md)。
+先读 [CURRENT_STATUS](CURRENT_STATUS.md)。main 最新为 PR41 合并提交 `3466ffb7c01605ed05bc1e48b1fca993b7e3a68a`；PR36、PR37、PR40、PR41 均已 Squash 合并，PR38、PR39 已并入 PR37 后关闭。
 
-日常已在 2026-10-16 单独授权下更新为此 main 的构建 `pmh1nOX_Ahuzf-aoygxUv`，旧 `xxT4dPO5CUpMhlnzQ-o9p` 作为兼容回退。部署时应用、登录、本人后台、公开页及资源读取正常，业务内容和 Published 未改变。此处是有日期的验证结果；精确启动方式、配置和恢复记录只在既有本机私有交接中，操作前需核对当前进程，不按旧 PID 或历史停止点盲目恢复。
+- **间歇超时：** `3466ffb` 的 Local Account PostgreSQL Integration 首次运行在基础版模板矩阵（霓虹取景器选模板后未跳转素材排版）超时失败，重跑一次通过；`ad8bb27` 曾在流影视廊场景几何超时失败，后续 main 提交通过。两者都未修复根因；再次出现时先看 Actions 产物里的 `failure-1440.png` 与步骤日志定位，不盲目重跑。
+- **日常：** 3001 运行与 main `3466ffb` 内容一致的构建 `VgljNITSdrBuQBdqLgKrQ`，回退为 `nFXeWM9-cOUhF5uxKO6IU`。日常构建位于开发工作目录内，新的候选不要在该目录重建或切分支。精确启动方式与路径只在本机私有交接中；操作前重新核对现场进程。
+- **自动保存默认开启**（按浏览器保存开关）：在日常后台里改动会在约 1.5 秒后保存草稿，不会发布。浏览器测试套件通过 `tests/manual-save-browser.mjs` 关闭它，除专门的自动保存套件外。
+- **图库组件：** `app/admin-kit/photo-library*`、`photo-library-model.ts`、`library-upload.ts`；浏览器测试选择器集中在 `tests/library-browser-helpers.mjs`。`tests/flow-gallery-full-admin-browser.mjs` 是旧的 Windows 专用切片，本机无法运行，其中旧图库选择器未更新。
+- **提交身份：** 公开仓库检查会拒绝历史中的真实邮箱，提交一律使用 GitHub noreply 身份。两个旧本地分支 `feat/polaroid-starry-sky*` / `feat/polaroid-star-trail-polish` 含旧邮箱提交，保留在本地但不要推送。
 
-风险保持 `PREVIEW_RETURN = UNRESOLVED` / `RISK_DISPOSITION = ACCEPTED_FOR_LOCAL_STAGE`：[用户风险接受评论](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/35#issuecomment-6213969172)。手机内嵌拍立得从图集返回首页可能恢复位置不准；停止无新证据的重复复现和猜测式修改。保留首次失败、现有诊断、原 ±2px、焦点、后台滚动断言和超时；后续 CI 失败仍按实际结果处理。
-
-本次仅同步文档。没有新的开发切片、部署、迁移、清理或合并任务；工作分支和工作区保留，等待用户指定下一步。
+没有进行中的开发切片；下一步等待用户指定。
 
 ## 历史交接阅读说明
 
