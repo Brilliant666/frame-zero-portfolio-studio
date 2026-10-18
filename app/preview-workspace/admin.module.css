@@ -225,3 +225,5 @@
 .collectionSelect { white-space: nowrap; }
 .collectionSelect > [data-admin-kit="select"] { flex: 1; min-width: 0; white-space: normal; }
 .collectionChooser .collectionSelect > [data-admin-kit="select"] { font-size: 13px; }
+/* Room for the shared live preview pane (set by admin-kit/live-preview on wide screens). */
+.workspace[data-site-editor="premium"] .workArea { padding-right: var(--live-preview-inset, 0px); }

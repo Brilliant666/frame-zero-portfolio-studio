@@ -9,6 +9,7 @@ import { exerciseLargeCollections } from './site-large-collection-browser.mjs';
 import { exerciseSiteLibrary } from './site-library-browser.mjs';
 import { provisionAccount } from '../db/accounts/provision.mjs';
 import { chooseOption } from './kit-select-helpers.mjs';
+import { keepManualSave } from './manual-save-browser.mjs';
 
 // Fixture writes are restricted to the dedicated integration database and its
 // temporary asset directory. Browser saves use the actual UI and HTTP handlers.
@@ -40,7 +41,7 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
   const output = join(process.cwd(), 'outputs', 'site-editor-browser', 'photo-picker');
   await mkdir(output, { recursive: true });
   const checkpoints = [], screenshots = [];
-  const browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined });
+  const browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined }); keepManualSave(browser);
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
   context.setDefaultTimeout(15000);
   const page = await context.newPage();

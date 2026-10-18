@@ -11,6 +11,7 @@ import PublicationControls from "../site-editor/publication-controls";
 import DraftTemplatePreviewTrigger from "./draft-preview";
 import { Select } from "../admin-kit/select";
 import { WorkbenchBar, WorkbenchNav, workbenchStyle, type WorkbenchIcon } from "../admin-kit/workbench";
+import { LivePreviewPane, LivePreviewToggle, useLivePreviewOpen, useLivePreviewSource } from "../admin-kit/live-preview";
 
 const BASIC_ICONS: Record<string, WorkbenchIcon> = { template: "template", profile: "profile", packages: "packages", layout: "layout", contact: "contact", advanced: "advanced" };
 
@@ -21,6 +22,8 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
   const { dirty, editorLabel, loadState, message, reload, save, saveState, updatedAt, siteScope, conflict, revision, content, pendingSave, checkSave } = useAdmin();
   const sectionHref = (href: string) => siteScope ? `${siteScope.adminBasePath}${href.slice(6)}` : internalTest ? `/test${href}` : href;
   const current = getAdminSection(siteScope ? `/admin${pathname.slice(siteScope.adminBasePath.length)}` : internalTest ? pathname.slice(5) : pathname);
+  const livePreviewOpen = useLivePreviewOpen();
+  useLivePreviewSource("basic", content, Boolean(siteScope) && livePreviewOpen);
   const savedAt = formatSavedAt(updatedAt);
   const status = getAdminStatus(loadState, saveState, dirty);
   const saveDisabled = conflict || pendingSave || !dirty || loadState !== "ready" || saveState === "saving";
@@ -48,7 +51,7 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
   return (
     <div className={styles.shell} data-admin-v2="true" data-site-editor={siteScope ? "basic" : undefined} style={siteScope ? workbenchStyle("basic") : undefined}>
       <a className={styles.skipLink} href="#admin-main">跳到当前编辑区域</a>
-      {siteScope ? <WorkbenchBar space="basic" siteSlug={siteScope.adminBasePath.split("/")[1] ?? ""} spaces={siteScope.spaces} publicationEndpoint={siteScope.publicationEndpoint}
+      {siteScope ? <WorkbenchBar space="basic" titleIsPageHeading autosave actions={<LivePreviewToggle />} siteSlug={siteScope.adminBasePath.split("/")[1] ?? ""} spaces={siteScope.spaces} publicationEndpoint={siteScope.publicationEndpoint}
         title={current.id === "advanced" ? "兼容内容与工具" : current.label} status={status.label}
         confirmLeave={() => !dirty || window.confirm("当前基础版草稿尚未保存。离开后未保存修改会丢失，确认离开？")} /> : <header className={styles.topbar}>
         <div className={styles.adminTitleBlock} data-admin-title="true">
@@ -123,6 +126,7 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
           </div>
         </aside>}
 
+        {siteScope && <LivePreviewPane src={`/${siteScope.adminBasePath.split("/")[1] ?? ""}/admin/live/basic`} label="基础版" />}
         <main id="admin-main" className={styles.main} tabIndex={-1}>
           {siteScope?.publicationEndpoint && siteScope.publicHref && <PublicationControls endpoint={siteScope.publicationEndpoint} publicHref={siteScope.publicHref} space="basic" templateId={content.activeTemplate} revision={revision} dirty={dirty} disabled={loadState !== "ready" || saveState === "saving" || conflict || pendingSave} saveDraft={save}
             draftStatus={status.label}

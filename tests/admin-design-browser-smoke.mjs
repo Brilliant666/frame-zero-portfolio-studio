@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { chromium } from 'playwright';
 import { chooseOption } from './kit-select-helpers.mjs';
+import { keepManualSave } from './manual-save-browser.mjs';
 
 // Anonymous proof only: never authenticates, provisions accounts or calls a
 // business API. The caller owns the independent build/server and its cleanup.
@@ -25,7 +26,7 @@ if (process.env.ADMIN_DESIGN_EVIDENCE_DIR) {
 }
 
 async function fixture(viewport, run) {
-  const browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined });
+  const browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined }); keepManualSave(browser);
   const context = await browser.newContext({ viewport, isMobile: viewport.width === 390, hasTouch: viewport.width === 390 });
   const page = await context.newPage();
   page.setDefaultTimeout(15_000);

@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import sharp from 'sharp';
 import { chromium } from 'playwright';
 import { chooseOption } from './kit-select-helpers.mjs';
+import { keepManualSave } from './manual-save-browser.mjs';
 
 // Anonymous fixtures only. Keep all writes in the actual existing editors;
 // API reads below are assertions, not a replacement for the browser save flow.
@@ -11,7 +12,7 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
   assert.equal(origin, 'http://127.0.0.1:3004');
   const output = join(process.cwd(), 'outputs', 'site-editor-browser', 'm3-assets');
   await mkdir(output, { recursive: true });
-  const browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined });
+  const browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined }); keepManualSave(browser);
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
   context.setDefaultTimeout(15000); context.setDefaultNavigationTimeout(20000);
   const a = 'assetsmokea', b = 'assetsmokeb';

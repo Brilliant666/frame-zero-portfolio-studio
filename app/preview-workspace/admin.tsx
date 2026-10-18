@@ -31,6 +31,8 @@ import NewCollectionDialog from "./new-collection-dialog";
 import PackagesEditor from "./packages-editor";
 import styles from "./admin.module.css";
 import { Select } from "../admin-kit/select";
+import { useAutosavePreference, useDraftAutosave } from "../admin-kit/autosave";
+import { LivePreviewPane, LivePreviewToggle, useLivePreviewOpen, useLivePreviewSource } from "../admin-kit/live-preview";
 import { WorkbenchBar, WorkbenchNav, workbenchStyle, type WorkbenchIcon, type WorkbenchNavItem } from "../admin-kit/workbench";
 
 const COVER_FITS = [{ value: "natural", label: "完整原比例" }, { value: "fill", label: "填充裁切" }] as const satisfies readonly { value: Collection["coverFit"]; label: string }[];
@@ -220,6 +222,11 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
     }
     finally { savingLock.current = false; if (!signal.aborted) setSaving(false); }
   }, [conflict, dirty, endpoint, loadState, revision, saved, siteMode, updatedAt]);
+  const autosave = useAutosavePreference() && siteMode;
+  useDraftAutosave({ enabled: autosave, dirty, version: draft, save: () => save(),
+    blocked: loadState !== "ready" || saving || conflict || pendingSave || Boolean(pickerCollectionId) || creatingCollection || Boolean(preview) || Boolean(enlargedMember) });
+  const livePreviewOpen = useLivePreviewOpen();
+  useLivePreviewSource("premium-polaroid", draft, siteMode && livePreviewOpen);
   // Publication owns its completion message; retain draft failures for recovery.
   const saveForPublication = async (options?: DraftSaveOptions) => {
     const receipt = await save(options, true);
@@ -341,8 +348,9 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
       count: id === "library" && libraryReady ? assets.length : id === "albums" ? draft.collections.length : undefined };
   };
   return <main data-photo-workspace className={styles.workspace} data-site-editor={siteMode ? "premium" : undefined} style={siteMode ? workbenchStyle("premium-polaroid") : undefined}>
-    {siteMode ? <WorkbenchBar space="premium-polaroid" siteSlug={siteName} spaces={siteScope?.spaces} publicationEndpoint={siteScope?.publicationEndpoint}
+    {siteMode ? <WorkbenchBar space="premium-polaroid" titleIsPageHeading siteSlug={siteName} spaces={siteScope?.spaces} publicationEndpoint={siteScope?.publicationEndpoint}
       title={section === "collections" ? "图集编辑" : sections.find(([id]) => id === section)?.[1]}
+      autosave actions={<LivePreviewToggle />} status={saving ? "正在保存…" : dirty ? (autosave ? "有修改 · 稍后自动保存" : "有未保存修改") : saved ? "草稿已保存" : undefined}
       confirmLeave={() => !dirty || window.confirm("当前草稿尚未保存，确认离开？")} /> : <>
     <header data-photo-scroll-header className={styles.topbar}><div><h1>新版摄影作品集后台</h1><p>{siteMode ? "本站星轨草稿" : "独立本地工作区"} · {dirty ? "有未保存修改" : saved ? `已保存 · 版本 ${revision}` : "尚未配置"}{saving ? " · 保存中" : ""}</p></div><div className={styles.actions}>
       <a href={siteScope?.previewHref ?? "/preview"} target="_blank" rel="noreferrer">{siteMode ? "查看受保护草稿 ↗" : "查看已保存主页 ↗"}</a>
@@ -465,6 +473,7 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
         </>}
       </fieldset>
     </div></div>
+    {siteMode && <LivePreviewPane src={`/${siteName}/admin/live/premium-polaroid`} label="星轨" />}
     {enlargedMember && <MemberPhoto asset={enlargedMember} onClose={() => setEnlargedMember(null)} />}
     {siteMode && pickerTarget && <SitePhotoPicker returnFocus={pickerTrigger} key={pickerTarget.id} collectionName={pickerTarget.name || "未命名图集"} members={pickerTarget.assetIds} assets={assets} ready={libraryReady} truncated={libraryTruncated} state={libraryState} onReload={loadLibrary} onClose={() => setPickerCollectionId(null)} onAdd={addPickedPhotos} />}
     {preview && createPortal(<section ref={previewRef} className={styles.preview} role="dialog" aria-modal="true" aria-label="新版未保存草稿效果"><div className={styles.previewBar}><p>{siteMode ? "当前编辑快照 · 预览不会保存或发布" : "草稿快照 · 尚未保存到主页"}</p><button type="button" onClick={() => setPreview(null)}>关闭草稿效果</button></div><PortfolioView document={preview} embedded initialCollectionId={previewCollectionId} {...(siteMode ? { assets } : {})} /></section>, document.body)}

@@ -70,12 +70,15 @@ export function Select<V extends string>({ value, options, onChange, label, plac
     const below = window.innerHeight - box.bottom - 12, above = box.top - 12;
     const openUp = below < 220 && above > below;
     const maxHeight = Math.max(160, Math.min(360, openUp ? above : below));
-    setPosition({ left, width, maxHeight, top: openUp ? Math.max(8, box.top - 6 - Math.min(maxHeight, (list.current?.scrollHeight ?? maxHeight))) : box.bottom + 6 });
-  }, [minWidth]);
+    // Before the list exists its height is estimated from the option count; the layout effect refines it.
+    const height = Math.min(maxHeight, list.current?.scrollHeight ?? options.length * 44 + 10);
+    setPosition({ left, width, maxHeight, top: openUp ? Math.max(8, box.top - 6 - height) : box.bottom + 6 });
+  }, [minWidth, options.length]);
   const show = (index = selectedIndex) => {
     if (disabled) return;
     setActive(enabled(index) ? index : step(-1, 1));
     setHost(trigger.current?.closest("dialog") ?? document.body);
+    place();
     setOpen(true);
   };
   const hide = useCallback((restoreFocus = true) => { setOpen(false); setPosition(null); if (restoreFocus) trigger.current?.focus({ preventScroll: true }); }, []);
@@ -84,16 +87,32 @@ export function Select<V extends string>({ value, options, onChange, label, plac
     hide();
     if (options[index].value !== value) onChange(options[index].value);
   };
-  useLayoutEffect(() => { if (open) place(); }, [open, place, options.length]);
+  useLayoutEffect(() => { if (open) place(); }, [open, place]);
   useEffect(() => {
     if (!open) return;
     const outside = (event: PointerEvent) => { const target = event.target as Node; if (!trigger.current?.contains(target) && !list.current?.contains(target)) hide(false); };
-    const away = (event: Event) => { if (!list.current?.contains(event.target as Node)) hide(false); };
+    // Follow the trigger when the page scrolls or resizes; only close once it has left the screen.
+    let frame = 0;
+    const follow = (event: Event) => {
+      if (list.current?.contains(event.target as Node)) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const box = trigger.current?.getBoundingClientRect();
+        if (!box || box.bottom < 0 || box.top > window.innerHeight) hide(false); else place();
+      });
+    };
     document.addEventListener("pointerdown", outside, true);
-    window.addEventListener("resize", away); document.addEventListener("scroll", away, true);
-    return () => { document.removeEventListener("pointerdown", outside, true); window.removeEventListener("resize", away); document.removeEventListener("scroll", away, true); };
-  }, [open, hide]);
-  useEffect(() => { if (open && active >= 0) list.current?.querySelector<HTMLElement>(`#${CSS.escape(`${baseId}-o${active}`)}`)?.scrollIntoView({ block: "nearest" }); }, [open, active, baseId]);
+    window.addEventListener("resize", follow); document.addEventListener("scroll", follow, true);
+    return () => { cancelAnimationFrame(frame); document.removeEventListener("pointerdown", outside, true); window.removeEventListener("resize", follow); document.removeEventListener("scroll", follow, true); };
+  }, [open, hide, place]);
+  useEffect(() => {
+    // Scroll only the listbox: scrollIntoView would also scroll the page under a fixed popover.
+    const box = list.current, option = open && active >= 0 ? box?.querySelector<HTMLElement>(`#${CSS.escape(`${baseId}-o${active}`)}`) : null;
+    if (!box || !option) return;
+    const top = option.offsetTop, bottom = top + option.offsetHeight;
+    if (top < box.scrollTop) box.scrollTop = top - 4;
+    else if (bottom > box.scrollTop + box.clientHeight) box.scrollTop = bottom - box.clientHeight + 4;
+  }, [open, active, baseId]);
   const keydown = (event: KeyboardEvent<HTMLButtonElement>) => {
     const key = event.key;
     if (!open) {
@@ -127,7 +146,7 @@ export function Select<V extends string>({ value, options, onChange, label, plac
       <svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
     </button>
     {open && host && createPortal(<div ref={list} id={listId} data-admin-kit="listbox" role="listbox" aria-label={label} className={styles.listbox}
-      style={position ? { left: position.left, top: position.top, width: position.width, maxHeight: position.maxHeight } : { visibility: "hidden" }}>
+      style={position ? { left: position.left, top: position.top, width: position.width, maxHeight: position.maxHeight } : undefined}>
       {options.map((option, index) => {
         const heading = option.group && option.group !== group ? <div className={styles.group} role="presentation">{option.group}</div> : null;
         group = option.group ?? group;

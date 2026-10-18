@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Select } from "./select";
 import { Chip } from "./chip";
+import { setAutosavePreference, useAutosavePreference } from "./autosave";
 import styles from "./workbench.module.css";
 
 export type WorkbenchSpace = "basic" | "premium-polaroid" | "premium-flow-gallery";
@@ -28,10 +29,16 @@ type BarProps = {
   status?: ReactNode;
   /** Same-tab navigation guard; return false to stay (e.g. unsaved edits). */
   confirmLeave?: () => boolean;
+  /** Show the per-browser 自动保存 switch (Site editors only). */
+  autosave?: boolean;
+  /** Extra controls at the bar's end, e.g. the live preview toggle. */
+  actions?: ReactNode;
+  /** The title is the page heading (h1) only for editors without their own module h1. */
+  titleIsPageHeading?: boolean;
 };
 
 /** One top bar for every Site editor: where you are, which template, and whether it is live. */
-export function WorkbenchBar({ space, siteSlug, spaces = [space], publicationEndpoint, title, status, confirmLeave }: BarProps) {
+export function WorkbenchBar({ space, siteSlug, spaces = [space], publicationEndpoint, title, status, confirmLeave, autosave, actions, titleIsPageHeading }: BarProps) {
   const [live, setLive] = useState<WorkbenchSpace | null | undefined>(undefined);
   useEffect(() => {
     if (!publicationEndpoint) return;
@@ -59,9 +66,19 @@ export function WorkbenchBar({ space, siteSlug, spaces = [space], publicationEnd
         trailing={chip(space)}
         options={spaces.map(key => ({ value: key, label: WORKBENCH_SPACES[key].name, description: WORKBENCH_SPACES[key].description, color: WORKBENCH_SPACES[key].accent, chip: chip(key) }))} />
     </div>
-    <h1 className={styles.title}>{title}</h1>
+    {titleIsPageHeading ? <h1 className={styles.title}>{title}</h1> : <p className={styles.title}>{title}</p>}
     {status && <div className={styles.status}>{status}</div>}
+    {autosave && <AutosaveSwitch />}
+    {actions}
   </header>;
+}
+
+function AutosaveSwitch() {
+  const enabled = useAutosavePreference();
+  return <label className={styles.autosave} title="开启后，停止输入约 1.5 秒自动保存草稿；不会发布。">
+    <button type="button" role="switch" aria-checked={enabled} aria-label="自动保存草稿" className={styles.switch} onClick={() => setAutosavePreference(!enabled)} />
+    <span aria-hidden="true">自动保存</span>
+  </label>;
 }
 
 export type WorkbenchNavItem = {

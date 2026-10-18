@@ -12,6 +12,7 @@ import { isSiteSlug } from '../db/accounts/site-slug.mjs';
 import { assertPublishedMetadata } from './public-metadata-browser.mjs';
 import { measureFlowGalleryRoutes } from './flow-gallery-route-performance.mjs';
 import { chooseOption, kitValue, kitOptionValues } from './kit-select-helpers.mjs';
+import { keepManualSave } from './manual-save-browser.mjs';
 
 const SPACE = 'premium-flow-gallery';
 const DEFAULT_SLUG = 'flowuxfixture';
@@ -104,7 +105,7 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
     } finally { await persist(); }
   }
   try {
-    browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined });
+    browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined }); keepManualSave(browser);
     const context = await browser.newContext({ viewport: VIEWPORTS[0], reducedMotion: 'reduce' });
     const anonymous = await browser.newContext({ viewport: VIEWPORTS[0], reducedMotion: 'no-preference' });
     for (const ctx of [context, anonymous]) {

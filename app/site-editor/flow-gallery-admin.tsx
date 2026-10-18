@@ -21,6 +21,8 @@ import { resolveFlowGroupPreview } from "./flow-gallery-preview";
 import { flowAssetName, flowPhotoName } from "./flow-gallery-photo-names";
 import styles from "./flow-gallery-admin.module.css";
 import { Select } from "../admin-kit/select";
+import { useAutosavePreference, useDraftAutosave } from "../admin-kit/autosave";
+import { LivePreviewPane, LivePreviewToggle, useLivePreviewOpen, useLivePreviewSource } from "../admin-kit/live-preview";
 import { WorkbenchBar, WorkbenchNav, workbenchStyle, type WorkbenchIcon, type WorkbenchNavItem } from "../admin-kit/workbench";
 
 const SPACE = "premium-flow-gallery";
@@ -214,6 +216,11 @@ function FlowGallerySession({ siteScope }: { siteScope: SiteEditorScope }) {
       setMessage(cause instanceof Error ? cause.message : "保存失败，当前编辑保留。"); return null;
     } finally { lock.current = false; if (!lifetime.current.signal.aborted) setSaving(false); }
   }
+  const autosave = useAutosavePreference();
+  useDraftAutosave({ enabled: autosave, dirty, version: draft, save: () => save(),
+    blocked: loadState !== "ready" || saving || conflict || Boolean(pending) || Boolean(picker) || preview || Boolean(enlarged) || creatingGroup });
+  const livePreviewOpen = useLivePreviewOpen();
+  useLivePreviewSource("premium-flow-gallery", draft, livePreviewOpen);
   async function checkSave() {
     if (!pending || lock.current) return;
     lock.current = true; setSaving(true);
@@ -303,7 +310,7 @@ function FlowGallerySession({ siteScope }: { siteScope: SiteEditorScope }) {
 
   return <div className={styles.root} data-flow-editor-section={section} data-flow-dirty={dirty} style={workbenchStyle("premium-flow-gallery")}>
     <WorkbenchBar space="premium-flow-gallery" siteSlug={siteScope.adminBasePath.split("/")[1] ?? ""} spaces={siteScope.spaces} publicationEndpoint={siteScope.publicationEndpoint}
-      title={activeModule.label} status={`当前编辑 · ${loadState === "loading" ? "正在读取" : loadState === "error" ? "读取失败" : pending ? "保存结果待确认" : conflict ? "版本冲突" : dirty ? "尚未保存" : "已保存草稿"}`}
+      title={activeModule.label} status={`当前编辑 · ${loadState === "loading" ? "正在读取" : loadState === "error" ? "读取失败" : pending ? "保存结果待确认" : conflict ? "版本冲突" : dirty ? (autosave ? "稍后自动保存" : "尚未保存") : "已保存草稿"}`} autosave actions={<LivePreviewToggle />}
       confirmLeave={() => !dirty || confirm("当前有未保存修改，确认离开？")} />
     <aside className={styles.sidebar}>
       <WorkbenchNav label="流影视廊后台模块" onSelect={id => changeSection(id as Section)}
@@ -362,6 +369,7 @@ function FlowGallerySession({ siteScope }: { siteScope: SiteEditorScope }) {
         {section === "contact" && <FlowContactEditor value={draft.contact} restoredItemId={restoredItemId} onRestoredItemFocus={consumeRestoredItemFocus} assetsEndpoint={siteScope.assetsEndpoint} onPageChange={patch => update({ ...current.current, contact: { ...current.current.contact, ...patch } })} onItemChange={(id, patch) => update({ ...current.current, contact: { ...current.current.contact, items: current.current.contact.items.map(item => item.id === id ? { ...item, ...patch } : item) } })} onQrChange={(id, assetId) => { update({ ...current.current, contact: { ...current.current.contact, items: current.current.contact.items.map(item => { if (item.id !== id) return item; const next = { ...item }; delete next.qrAssetId; return assetId ? { ...next, qrAssetId: assetId } : next; }) } }); void reloadAssets(); }} onAdd={() => { const id = crypto.randomUUID(); update({ ...current.current, contact: { ...current.current.contact, items: [...current.current.contact.items, { id, label: "", value: "", href: "" }] } }); return id; }} onRemove={id => { const index = current.current.contact.items.findIndex(item => item.id === id); if (index < 0) return; setRestoredItemId(undefined); setUndoRemoval({ kind: "contact", item: current.current.contact.items[index], index }); update({ ...current.current, contact: { ...current.current.contact, items: current.current.contact.items.filter(item => item.id !== id) } }); }} onPreview={trigger => openPreview("contact", trigger, "contact")} previewDisabled={!assetsReady} />}
       </fieldset>
     </div>
+    <LivePreviewPane src={`/${siteScope.adminBasePath.split("/")[1] ?? ""}/admin/live/premium-flow-gallery`} label="流影视廊" />
     {creatingGroup && <dialog ref={createDialog} className={styles.newGroupDialog} aria-labelledby="new-flow-group-title" onCancel={event => { event.preventDefault(); setCreatingGroup(false); }}><form onSubmit={event => { event.preventDefault(); createGroup(); }}><h2 id="new-flow-group-title">新建作品分类</h2><p>填写名称后直接从本站图库选片，再确认顺序与说明。创建本身不会保存或发布。</p><label>分类名称<input autoComplete="off" maxLength={120} value={newName} placeholder="例如：人物、城市、旅行" onChange={event => setNewName(event.target.value)} /></label><footer><button type="button" onClick={() => setCreatingGroup(false)}>取消</button><button type="submit" className={styles.primary} disabled={!newName.trim() || draft.groups.length >= FLOW_GALLERY_LIMITS.groups}>新建并从图库选片</button></footer></form></dialog>}
     {picker === "background" && <BackgroundPicker manifest={manifest} ready={assetsReady} state={assetState} reload={reloadAssets} close={() => setPicker(null)} select={id => { if (!assetMap.has(id)) return; update({ ...current.current, background: { ...current.current.background, assetId: id } }); setPicker(null); }} />}
     {picker && picker !== "background" && <SitePhotoPicker key={`${siteScope.assetsEndpoint}:${picker}`} appearance="flow" siteScopeKey={siteScope.assetsEndpoint} flowLibraryLookup={{ siteScopeKey: siteScope.assetsEndpoint, query, orientation, order }} collectionName={draft.groups.find(item => item.id === picker)?.name ?? "作品分类"} members={draft.groups.find(item => item.id === picker)?.assetIds ?? []} assets={manifest.assets} ready={assetsReady} truncated={Boolean(manifest.truncated)} state={assetState} onReload={reloadAssets} onClose={() => setPicker(null)} onAdd={ids => {

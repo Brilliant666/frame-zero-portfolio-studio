@@ -179,3 +179,5 @@
 
 .moduleContext{margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.7}
 @media(max-width:760px){.libraryPanel{margin-top:2px}.libraryTaskHeader{gap:4px}.libraryTaskTitle{gap:10px}.libraryPanel .libraryPurpose{margin:2px 0 2px}.libraryUtilities{margin-bottom:4px;gap:0 12px}.libraryPanel .photoFilters{padding-block:6px}.libraryPanel .library{margin-top:8px}.pageHeading{padding-top:14px;margin-bottom:8px}.moduleContext{margin-bottom:10px}.stepTabs{margin-top:16px;margin-bottom:18px}}
+/* Room for the shared live preview pane (set by admin-kit/live-preview on wide screens). */
+.workspace{margin-right:var(--live-preview-inset,0px)}

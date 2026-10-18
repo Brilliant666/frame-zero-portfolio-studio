@@ -53,6 +53,34 @@
   white-space: nowrap;
 }
 .status { flex: none; color: #7a766e; font-size: 13px; }
+.autosave { display: inline-flex; align-items: center; gap: 7px; flex: none; min-height: 44px; color: #4a4741; font-size: 13px; cursor: pointer; }
+.switch {
+  position: relative;
+  width: 36px;
+  height: 21px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #d6d1c7;
+  cursor: pointer;
+  transition: background .2s;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .2);
+  transition: transform .2s;
+}
+.switch[aria-checked="true"] { background: var(--kit-accent, #3d4a5c); }
+.switch[aria-checked="true"]::after { transform: translateX(15px); }
+.switch:focus-visible { outline: 2px solid var(--kit-accent, #3d4a5c); outline-offset: 2px; }
 
 .side {
   container: workbench-nav / inline-size;
@@ -128,6 +156,7 @@
   .switcher { width: auto; flex: 1; min-width: 0; max-width: 260px; }
   .title { display: none; }
   .status { display: none; }
+  .autosave > span { display: none; }
 }
 /* When the navigation spans the screen (editors stack it on phones), every entry stays visible
    in a wrapping grid, never a horizontal scroller. As a sidebar column it stays a list. */
@@ -149,3 +178,7 @@
 @media (max-width: 360px) {
   .item .icon { display: none; }
 }
+
+/* overflow-x:hidden on <body> (globals) makes it a scroll container, which pins sticky bars to it
+   instead of the viewport. Editors with the shared bar clip instead, as the 星轨 editor already did. */
+:global(body):has([data-workbench-bar]) { overflow-x: clip; }

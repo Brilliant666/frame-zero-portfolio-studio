@@ -18,6 +18,8 @@ export async function kitValue(combobox) {
 }
 
 export async function kitOptionValues(combobox) {
+  // Like reading <option>s of an absent <select>: no control (e.g. a category without photos) means no options.
+  if (await combobox.count() === 0) return [];
   await combobox.click();
   const list = await listFor(combobox);
   await list.waitFor();

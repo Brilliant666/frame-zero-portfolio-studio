@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { chromium } from 'playwright';
 import { chooseOption, kitValue, kitText } from './kit-select-helpers.mjs';
+import { keepManualSave } from './manual-save-browser.mjs';
 
 const SPACE = 'premium-flow-gallery';
 const MODULES = ['library', 'groups', 'home', 'pricing', 'contact'];
@@ -22,7 +23,7 @@ export async function flowGalleryAdminMemoryLayout({ runtime, origin, password, 
   await mkdir(output, { recursive: true });
   const report = { scope: 'GET draft response substituted only in browser memory; no persisted business writes; emulated touch, not physical device', scenarios: [], forbidden: [], pageErrors: [] };
   const redact = value => String(value).split(password).join('[redacted]');
-  const browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined });
+  const browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined }); keepManualSave(browser);
   try {
     for (const viewport of VIEWPORTS) {
       const touch = viewport.width === 390;
@@ -132,7 +133,7 @@ export async function flowGalleryFullAdminBrowser({ runtime, origin, password, f
   signal?.addEventListener('abort', abort, { once: true });
   const persist = () => writeFile(join(output, 'acceptance.json'), JSON.stringify(report, null, 2));
   try {
-    browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined });
+    browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined }); keepManualSave(browser);
     const context = await browser.newContext({ viewport: VIEWPORTS[0], reducedMotion: 'reduce' });
     context.setDefaultTimeout(15000);
     context.setDefaultNavigationTimeout(25000);

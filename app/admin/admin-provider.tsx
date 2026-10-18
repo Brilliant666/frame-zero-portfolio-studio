@@ -16,6 +16,7 @@ import { cloneSiteContent, siteConfig, type SiteContent } from "../site-config";
 import type { SiteEditorScope } from "../site-editor/scope";
 import { hydrateConfirmedSiteWorks, hydrateSiteWorks, loadSiteAssets } from "../site-editor/assets-client";
 import { confirmDraftSave, DraftSaveRejected, DraftSaveUncertain, writeSiteDraft, type DraftSaveOptions, type DraftSaveReceipt, type PendingDraftSave } from "../site-editor/draft-save";
+import { useAutosavePreference, useDraftAutosave } from "../admin-kit/autosave";
 import {
   canSubmitAdminSave,
   hasAdminChanges,
@@ -229,6 +230,10 @@ export function AdminProvider({
       savingRef.current = false;
     }
   }, [conflict, endpoint, loadState, replaceContent, revision, savedContent, saveState, siteScope, updatedAt]);
+  // Site drafts save themselves after a pause; the legacy single-site admin keeps manual saving.
+  const autosavePreference = useAutosavePreference();
+  useDraftAutosave({ enabled: autosavePreference && Boolean(siteScope), dirty, version: content, save: () => save(),
+    blocked: conflict || pendingSave || loadState !== "ready" || saveState === "saving" });
 
   const checkSave = useCallback(async () => {
     const pending = pendingRef.current;

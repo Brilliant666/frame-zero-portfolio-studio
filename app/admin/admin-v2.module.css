@@ -1555,3 +1555,5 @@
 .shell[data-site-editor="basic"] .sidebar { background: #fff; border-right: 1px solid #e6e2db; padding: 18px 12px; }
 .shell[data-site-editor="basic"] { --admin-v2-topbar-height: 60px; }
 .shell[data-site-editor="basic"] { padding-top: 0; }
+/* Room for the shared live preview pane (set by admin-kit/live-preview on wide screens). */
+.shell[data-site-editor="basic"] .body { padding-right: var(--live-preview-inset, 0px); }
