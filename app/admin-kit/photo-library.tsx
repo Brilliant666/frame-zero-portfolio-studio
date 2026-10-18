@@ -18,7 +18,8 @@ export type PhotoLibraryProps = {
   ready: boolean;
   truncated: boolean;
   state: string;
-  onReload: () => Promise<void>;
+  /** Re-reads the Site library. Resolve false when the read failed (a superseded read may resolve undefined). */
+  onReload: () => Promise<boolean | undefined | void>;
   /** Appends in the given order and returns the ids actually added; throws a message the person can act on. */
   onAdd: (albumId: string, ids: readonly string[]) => readonly string[];
   /** Replaces an album's members (removal, and undoing an add or a removal). */
@@ -197,12 +198,23 @@ export default function PhotoLibrary(props: PhotoLibraryProps) {
   async function reload() {
     if (reloading) return;
     setReloading(true); setError("");
-    try { await onReload(); } catch (cause) { setError(message(cause, "图库读取失败，选择已保留。")); }
+    try { if (await onReload() === false) setError("图库读取失败，选择已保留。请稍后再点「重新读取图库」。"); }
+    catch (cause) { setError(message(cause, "图库读取失败，选择已保留。")); }
     finally { setReloading(false); }
   }
 
   /* After an upload, wait for the reloaded library before adding to an album or selecting. */
   const [afterUpload, setAfterUpload] = useState<{ ids: string[]; albumId: string | null } | null>(null);
+  useEffect(() => {
+    // The refresh succeeded, so the photos should arrive with the next render. If they never do,
+    // give up visibly rather than adding them to an album at some later, unrelated reload.
+    if (!afterUpload) return;
+    const expiry = setTimeout(() => {
+      setAfterUpload(null);
+      setError(`刚上传的 ${afterUpload.ids.length} 张没有出现在图库里，没有加入任何${noun}。请点「重新读取图库」核对。`);
+    }, 10_000);
+    return () => clearTimeout(expiry);
+  }, [afterUpload, noun]);
   useEffect(() => {
     if (!afterUpload || !afterUpload.ids.every(id => assetMap.has(id))) return;
     const { ids, albumId } = afterUpload;
@@ -510,7 +522,7 @@ function LibraryViewer({ asset, order, assetMap, noun, albums, onMove, onToggle,
 
 const STATUS_TEXT: Record<QueueItem["status"], string> = { queued: "排队中", uploading: "上传中…", uploaded: "已入库", duplicate: "已在图库", rejected: "未完成", uncertain: "结果待核对", skipped: "已跳过" };
 
-function LibraryUploader({ endpoint, noun, albums, initialAlbum, onReload, onFinished, onClose }: { endpoint: string; noun: string; albums: readonly LibraryAlbum[]; initialAlbum: string; onReload: () => Promise<void>; onFinished: (ids: string[], albumId: string | null) => void; onClose: () => void }) {
+function LibraryUploader({ endpoint, noun, albums, initialAlbum, onReload, onFinished, onClose }: { endpoint: string; noun: string; albums: readonly LibraryAlbum[]; initialAlbum: string; onReload: () => Promise<boolean | undefined | void>; onFinished: (ids: string[], albumId: string | null) => void; onClose: () => void }) {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [albumId, setAlbumId] = useState(albums.some(album => album.id === initialAlbum) ? initialAlbum : "");
   const [running, setRunning] = useState(false);
@@ -543,10 +555,10 @@ function LibraryUploader({ endpoint, noun, albums, initialAlbum, onReload, onFin
       if ("id" in outcome) { ids.push(outcome.id); patch(item.key, { status: outcome.status, id: outcome.id }); }
       else { problems++; patch(item.key, { status: outcome.status, note: outcome.message }); }
     }
-    let refreshed = true;
-    try { await onReload(); } catch { refreshed = false; }
+    // The editors report a failed read by resolving false; a thrown error counts as failed too.
+    const refreshed = await onReload().then(result => result !== false, () => false);
     setRunning(false);
-    if (!refreshed) { setNote(`已确认 ${ids.length} 张入库，但图库刷新失败。请关闭后点「重新读取图库」核对，避免重复上传。`); return; }
+    if (!refreshed) { setNote(`已确认 ${ids.length} 张入库，但图库刷新失败，${albumId ? `没有加入所选${noun}` : "无法自动选中它们"}。请关闭后点「重新读取图库」核对，避免重复上传。`); return; }
     onFinished(ids, albumId || null);
     if (!problems && !stop.current) onClose();
     else setNote(stop.current ? `已停止；已确认 ${ids.length} 张入库，其余未上传。` : `已确认 ${ids.length} 张入库，${problems} 张需要核对（见下方列表）。结果待核对的照片可能已经入库，请先查看图库再决定是否重传。`);

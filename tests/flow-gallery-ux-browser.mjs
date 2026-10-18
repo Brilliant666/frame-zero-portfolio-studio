@@ -1239,6 +1239,23 @@ export async function flowGalleryUxBrowser({ runtime, origin, password, signal, 
         const unfiled = await tileIds(library);
         assert.equal(unfiled.length, 55 - filed.size); assert.ok(unfiled.every(id => !filed.has(id)), 'The unfiled view hides photos in any category');
         await library.getByRole('group', { name: '按归属查看', exact: true }).getByRole('button', { name: /^全部/ }).click();
+        // Phone: the first row of photos is fully visible above the bottom save bar without scrolling.
+        // Open the page at phone size, as a phone does, so the editor's responsive layout is settled.
+        await b1.setViewportSize({ width: 390, height: 844 });
+        await b1.reload();
+        await b1.getByText('本站图库 55 张', { exact: true }).waitFor();
+        await library.locator('[role="option"]').first().waitFor();
+        await b1.evaluate(() => window.scrollTo(0, 0));
+        const phone = await b1.evaluate(() => {
+          const first = document.querySelector('[data-admin-kit="photo-library"] [role="option"]')?.getBoundingClientRect();
+          const bar = document.querySelector('[data-editor-save-actions]')?.getBoundingClientRect();
+          return { firstTop: first && Math.round(first.top), firstBottom: first && Math.round(first.bottom), saveBarTop: bar ? Math.round(bar.top) : innerHeight };
+        });
+        console.log(`[flow-ux-browser] phone 390x844 first photo ${phone.firstTop}-${phone.firstBottom}px, save bar at ${phone.saveBarTop}px`);
+        await b1.screenshot({ path: join(output, 'flow-library-phone-390.png') });
+        assert.ok(phone.firstBottom <= phone.saveBarTop, `First photo row clears the save bar on a phone (${JSON.stringify(phone)})`);
+        report.mobileNavigation.push({ source: 'flow library at 390x844', ...phone });
+        await b1.setViewportSize(VIEWPORTS[0]);
         const group = before.draft.content.groups[0];
         await b1module('groups');
         await b1.locator('nav[aria-label="作品分类"]').getByRole('button', { name: new RegExp(group.name) }).click();
