@@ -117,6 +117,7 @@ export async function exerciseSiteLibrary({ page, read, published, shot }) {
   });
   console.log(`[library-browser] phone 390x844 first photo ${phone.firstTop}-${phone.firstBottom}px, save bar at ${phone.saveBarTop}px`);
   assert.ok(phone.firstBottom <= phone.saveBarTop, `First photo row clears the save bar on a phone (${JSON.stringify(phone)})`);
+  assert.ok(await page.evaluate(() => [...document.querySelectorAll('[aria-label="图库"] [role="status"] > *')].filter(node => node.getClientRects().length).length <= 1), 'A phone shows at most one toast at a time');
   await shot('library-phone');
   await page.setViewportSize({ width: 1440, height: 900 });
 

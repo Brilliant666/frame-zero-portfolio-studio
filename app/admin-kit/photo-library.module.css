@@ -277,6 +277,9 @@
   .toolbar > * { flex: none; }
   .lookup { display: none; }
   .batchHead { padding-top: 6px; }
+  /* One message at a time on a phone: stacked toasts would cover the photos being sorted. */
+  .toasts > .toast:not(:last-child) { display: none; }
+  .toast { width: 100%; }
   .grid { gap: 3px; }
   .tile { border-radius: 4px; }
   .check, .zoom { opacity: 1; }
