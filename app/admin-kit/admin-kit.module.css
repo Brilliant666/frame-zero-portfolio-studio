@@ -1,0 +1,152 @@
+/* Shared admin controls. Colours come from the surrounding editor through --kit-* tokens;
+   the fallbacks are the neutral workbench palette. */
+.select {
+  position: relative;
+  min-width: 0;
+  width: 100%;
+}
+.select > button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--kit-line-strong, #d6d1c7);
+  border-radius: var(--kit-radius, 8px);
+  background: var(--kit-surface, #fff);
+  color: var(--kit-ink, #1c1b19);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+.select[data-size="compact"] > button { min-height: 34px; font-size: 13px; }
+.select > button:hover:not(:disabled) { border-color: var(--kit-muted, #a29d93); }
+.select > button[aria-expanded="true"],
+.select > button:focus-visible {
+  outline: 0;
+  border-color: var(--kit-accent, #3d4a5c);
+  box-shadow: 0 0 0 3px var(--kit-accent-soft, rgba(61, 74, 92, .14));
+}
+.select > button:disabled { cursor: not-allowed; opacity: .55; }
+.value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.placeholder { color: var(--kit-muted, #8a857c); }
+.chevron {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: var(--kit-muted, #8a857c);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform .15s;
+}
+.select > button[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+.thumb {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 5px;
+  object-fit: cover;
+  background: var(--kit-sunken, #f0eee9);
+}
+.dot {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+}
+
+.listbox {
+  position: fixed;
+  z-index: 2147483000;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 5px;
+  border: 1px solid var(--kit-line, #e6e2db);
+  border-radius: 12px;
+  background: var(--kit-surface, #fff);
+  color: var(--kit-ink, #1c1b19);
+  box-shadow: 0 6px 30px rgba(28, 27, 25, .16), 0 1px 3px rgba(28, 27, 25, .1);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  animation: kit-pop .12s ease-out;
+}
+@keyframes kit-pop { from { opacity: 0; transform: translateY(-4px); } }
+.group {
+  padding: 8px 10px 4px;
+  color: var(--kit-muted, #a29d93);
+  font-size: 11px;
+  letter-spacing: .06em;
+}
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.option .thumb { width: 34px; height: 34px; }
+.option[data-active] { background: var(--kit-sunken, #f0eee9); }
+.option[aria-selected="true"] { color: var(--kit-accent-ink, var(--kit-accent, #3d4a5c)); font-weight: 600; }
+.option[aria-disabled="true"] { cursor: not-allowed; opacity: .45; }
+.optionText { flex: 1; min-width: 0; }
+.optionText > span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.optionText small {
+  display: block;
+  color: var(--kit-muted, #7a766e);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+.check {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: var(--kit-accent, #3d4a5c);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+}
+.option[aria-selected="true"] .check { opacity: 1; }
+
+/* A status chip that can sit inside triggers and options. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--kit-sunken, #f0eee9);
+  color: var(--kit-ink-2, #4a4741);
+  font-size: 12px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+.chip[data-tone="live"] { background: #e5f3ea; color: #2f7d55; }
+.chip[data-tone="draft"] { background: #fbf0dd; color: #a4661a; }
+.chip[data-tone="live"]::before,
+.chip[data-tone="draft"]::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+@media (prefers-reduced-motion: reduce) {
+  .listbox { animation: none; }
+  .chevron { transition: none; }
+}

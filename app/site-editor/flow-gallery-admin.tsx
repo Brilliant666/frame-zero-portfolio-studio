@@ -20,6 +20,10 @@ import { PhotoFilters, PhotoMetadata, PhotoCaptionEditor, filterFlowPhotos, focu
 import { resolveFlowGroupPreview } from "./flow-gallery-preview";
 import { flowAssetName, flowPhotoName } from "./flow-gallery-photo-names";
 import styles from "./flow-gallery-admin.module.css";
+import { Select } from "../admin-kit/select";
+import { useAutosavePreference, useDraftAutosave } from "../admin-kit/autosave";
+import { LivePreviewPane, LivePreviewToggle, useLivePreviewOpen, useLivePreviewSource } from "../admin-kit/live-preview";
+import { WorkbenchBar, WorkbenchNav, workbenchStyle, type WorkbenchIcon, type WorkbenchNavItem } from "../admin-kit/workbench";
 
 const SPACE = "premium-flow-gallery";
 const emptyManifest: SiteAssetManifest = { version: 1, assets: [] };
@@ -212,6 +216,11 @@ function FlowGallerySession({ siteScope }: { siteScope: SiteEditorScope }) {
       setMessage(cause instanceof Error ? cause.message : "保存失败，当前编辑保留。"); return null;
     } finally { lock.current = false; if (!lifetime.current.signal.aborted) setSaving(false); }
   }
+  const autosave = useAutosavePreference();
+  useDraftAutosave({ enabled: autosave, dirty, version: draft, save: () => save(),
+    blocked: loadState !== "ready" || saving || conflict || Boolean(pending) || Boolean(picker) || preview || Boolean(enlarged) || creatingGroup });
+  const livePreviewOpen = useLivePreviewOpen();
+  useLivePreviewSource("premium-flow-gallery", draft, livePreviewOpen);
   async function checkSave() {
     if (!pending || lock.current) return;
     lock.current = true; setSaving(true);
@@ -288,25 +297,28 @@ function FlowGallerySession({ siteScope }: { siteScope: SiteEditorScope }) {
     setNewName(""); setActiveGroup(id); setGroupStep("photos"); setCreatingGroup(false); setPicker(id); setMessage("已建立分类，接着从本站图库选片。选片确认后仍需保存。");
   }
   const blocked = loadState !== "ready" || saving || conflict || Boolean(pending) || Boolean(picker) || preview || Boolean(enlarged) || creatingGroup;
-  const workbenchHref = siteScope.adminBasePath.replace(/\/premium-flow-gallery\/?$/, "");
   const assetMap = new Map(manifest.assets.map(asset => [asset.id, asset]));
   const filtered = filterFlowPhotos(manifest.assets, query, orientation, order);
   const pages = Math.max(1, Math.ceil(filtered.length / 48)), page = Math.min(libraryPage, pages - 1);
   const large = enlarged ? assetMap.get(enlarged) : null;
   const activeModule = FLOW_EDITOR_MODULES.find(item => item.id === section)!;
+  const flowIcons: Record<Section, WorkbenchIcon> = { library: "library", home: "home", groups: "albums", pricing: "packages", contact: "contact" };
+  const flowNavItem = ({ id, label }: { id: Section; label: string }): WorkbenchNavItem => ({ id, label, icon: flowIcons[id], current: section === id, attributes: { "data-flow-section": id },
+    count: id === "library" && assetsReady ? manifest.assets.length : id === "groups" ? draft.groups.length : undefined });
   const previewDocument = previewModule ? flowModulePreview(draft, previewModule) : draft;
   const previewOnlyScene = previewModule === "pricing" && !draft.pricing.enabled || previewModule === "contact" && !draft.contact.enabled;
 
-  return <div className={styles.root} data-flow-editor-section={section} data-flow-dirty={dirty}>
+  return <div className={styles.root} data-flow-editor-section={section} data-flow-dirty={dirty} style={workbenchStyle("premium-flow-gallery")}>
+    <WorkbenchBar space="premium-flow-gallery" siteSlug={siteScope.adminBasePath.split("/")[1] ?? ""} spaces={siteScope.spaces} publicationEndpoint={siteScope.publicationEndpoint}
+      title={activeModule.label} status={`当前编辑 · ${loadState === "loading" ? "正在读取" : loadState === "error" ? "读取失败" : pending ? "保存结果待确认" : conflict ? "版本冲突" : dirty ? (autosave ? "稍后自动保存" : "尚未保存") : "已保存草稿"}`} autosave actions={<LivePreviewToggle />}
+      confirmLeave={() => !dirty || confirm("当前有未保存修改，确认离开？")} />
     <aside className={styles.sidebar}>
-      <a className={styles.backLink} href={workbenchHref} onClick={event => { if (dirty && !confirm("当前有未保存修改，确认离开？")) event.preventDefault(); }}>← 站点工作台</a>
-      <div className={styles.brand}><span aria-hidden="true">流</span><div><strong>流影视廊</strong><small>作品与内容管理</small></div></div>
-      <p className={styles.navLabel}>内容工作区</p>
-      <nav aria-label="流影视廊后台模块">{FLOW_EDITOR_MODULES.map(({ id, label }, index) => <button type="button" key={id} data-flow-section={id} aria-current={section === id ? "page" : undefined} onClick={() => changeSection(id)}><span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>{label}</button>)}</nav>
-      <small className={styles.spaceNote}>独立内容空间<br />图库供本站模板共享</small>
+      <WorkbenchNav label="流影视廊后台模块" onSelect={id => changeSection(id as Section)}
+        groups={[{ heading: "本站共享", items: FLOW_EDITOR_MODULES.filter(item => item.id === "library").map(flowNavItem) }, { heading: "流影视廊的内容", items: FLOW_EDITOR_MODULES.filter(item => item.id !== "library").map(flowNavItem) }]}
+        note="图库供本站模板共享；首页、作品、价格与联系方式只属于流影视廊。" />
     </aside>
     <div className={styles.workspace}>
-      <header className={styles.topbar}><span>流影视廊 <span aria-hidden="true">/</span> {activeModule.label}</span><small>当前编辑 · {loadState === "loading" ? "正在读取" : loadState === "error" ? "读取失败" : pending ? "保存结果待确认" : conflict ? "版本冲突" : dirty ? "尚未保存" : "已保存草稿"}</small></header>
+      
       <div className={styles.publicationShell}>
         {siteScope.publicationEndpoint && siteScope.publicHref && <PublicationControls compactTools space={SPACE} endpoint={siteScope.publicationEndpoint} publicHref={siteScope.publicHref} revision={revision} dirty={dirty} disabled={blocked} templateId={SPACE} saveDraft={save}
           draftStatus={loadState === "loading" ? "正在读取" : loadState === "error" ? "读取失败" : pending ? "保存结果待确认" : conflict ? "版本冲突" : dirty ? "未保存修改" : "已保存"}
@@ -350,12 +362,14 @@ function FlowGallerySession({ siteScope }: { siteScope: SiteEditorScope }) {
         {section === "home" && <div className={styles.homeWorkspace}>
           <div><section className={styles.panel}><h2>首页身份与文字</h2><p>品牌显示在顶部导航，标题与介绍在首页左侧。</p>{(["brand", "title", "intro"] as const).map(key => <label key={key}>{key === "brand" ? "导航品牌名" : key === "title" ? "首页标题" : "首页介绍"}<textarea rows={key === "intro" ? 3 : 1} maxLength={key === "brand" ? 120 : key === "title" ? 500 : 2000} value={draft.profile[key]} onChange={event => update({ ...current.current, profile: { ...current.current.profile, [key]: event.target.value } })} /></label>)}</section>
           <section className={styles.panel}><div className={styles.sectionHeading}><h2>全屏背景</h2><button type="button" onClick={() => setPicker("background")}>从图库选择背景</button></div><p>背景用于首页及其它前台栏目，焦点决定裁切时优先保留的位置。</p><div className={styles.background}>{draft.background.assetId && assetMap.get(draft.background.assetId) ? <img src={assetMap.get(draft.background.assetId)!.variants.card.src} alt="当前首页背景" style={{ objectPosition: `${draft.background.focalPoint.x}% ${draft.background.focalPoint.y}%` }} /> : <p>未选择背景，使用深绿色底色。</p>}</div><div className={styles.columns}>{(["x", "y"] as const).map(axis => <label key={axis}>背景焦点 {axis.toUpperCase()} · {draft.background.focalPoint[axis]}%<input type="range" min="0" max="100" value={draft.background.focalPoint[axis]} onChange={event => update({ ...current.current, background: { ...current.current.background, focalPoint: { ...current.current.background.focalPoint, [axis]: Number(event.target.value) } } })} /></label>)}</div>{draft.background.assetId && <button type="button" className={styles.textButton} onClick={() => update({ ...current.current, background: { ...current.current.background, assetId: null } })}>移除背景引用</button>}</section></div>
-          <section className={`${styles.panel} ${styles.railPanel}`}><h2>首页作品速览</h2><p>左右轨道引用分类中已确认的照片顺序，不复制图库资源。</p><div className={styles.columns}>{(["leftGroupId", "rightGroupId"] as const).map(key => { const featured = draft.groups.find(item => item.id === draft.rails[key]); return <div key={key}><label>{key === "leftGroupId" ? "左侧轨道" : "右侧轨道"}<select value={draft.rails[key] ?? ""} onChange={event => update({ ...current.current, rails: { ...current.current.rails, [key]: event.target.value || null } })}><option value="">暂不展示此轨道</option>{draft.groups.map(item => <option key={item.id} value={item.id}>{item.name}{item.visible ? "" : "（隐藏，首页也不展示）"}</option>)}</select></label><div className={styles.railSample}>{featured?.visible ? featured.assetIds.slice(0, 3).map((id, index) => { const asset = assetMap.get(id); return asset && <img key={id} src={asset.variants.thumbnail.src} alt={flowPhotoName(featured.name, index, featured.captions[id])} />; }) : <p>{featured ? "分类已隐藏" : "未指定分类"}</p>}</div></div>; })}</div><RailWidthControls rails={draft.rails} onChange={rails => update({ ...current.current, rails })} /><div className={styles.actions}><button type="button" onClick={() => changeSection("groups")}>管理完整作品分类</button></div></section>
+          <section className={`${styles.panel} ${styles.railPanel}`}><h2>首页作品速览</h2><p>左右轨道引用分类中已确认的照片顺序，不复制图库资源。</p><div className={styles.columns}>{(["leftGroupId", "rightGroupId"] as const).map(key => { const featured = draft.groups.find(item => item.id === draft.rails[key]); return <div key={key}><label>{key === "leftGroupId" ? "左侧轨道" : "右侧轨道"}<Select label={key === "leftGroupId" ? "左侧轨道" : "右侧轨道"} value={draft.rails[key] ?? ""} onChange={value => update({ ...current.current, rails: { ...current.current.rails, [key]: value || null } })}
+            options={[{ value: "", label: "暂不展示此轨道" }, ...draft.groups.map(item => ({ value: item.id, label: item.name, thumb: assetMap.get(item.assetIds[0])?.variants.thumbnail.src, description: `${item.assetIds.length} 张${item.visible ? "" : " · 分类已隐藏，首页也不展示"}` }))]} /></label><div className={styles.railSample}>{featured?.visible ? featured.assetIds.slice(0, 3).map((id, index) => { const asset = assetMap.get(id); return asset && <img key={id} src={asset.variants.thumbnail.src} alt={flowPhotoName(featured.name, index, featured.captions[id])} />; }) : <p>{featured ? "分类已隐藏" : "未指定分类"}</p>}</div></div>; })}</div><RailWidthControls rails={draft.rails} onChange={rails => update({ ...current.current, rails })} /><div className={styles.actions}><button type="button" onClick={() => changeSection("groups")}>管理完整作品分类</button></div></section>
         </div>}
         {section === "pricing" && <FlowPricingEditor value={draft.pricing} restoredItemId={restoredItemId} onRestoredItemFocus={consumeRestoredItemFocus} onPageChange={patch => update({ ...current.current, pricing: { ...current.current.pricing, ...patch } })} onItemChange={(id, patch) => update({ ...current.current, pricing: { ...current.current.pricing, packages: current.current.pricing.packages.map(item => item.id === id ? { ...item, ...patch } : item) } })} onAdd={() => { const id = crypto.randomUUID(); update({ ...current.current, pricing: { ...current.current.pricing, packages: [...current.current.pricing.packages, { id, name: "", price: "", description: "", details: [], enabled: true }] } }); return id; }} onRemove={id => { const index = current.current.pricing.packages.findIndex(item => item.id === id); if (index < 0) return; setRestoredItemId(undefined); setUndoRemoval({ kind: "price", item: current.current.pricing.packages[index], index }); update({ ...current.current, pricing: { ...current.current.pricing, packages: current.current.pricing.packages.filter(item => item.id !== id) } }); }} onPreview={trigger => openPreview("pricing", trigger, "pricing")} previewDisabled={!assetsReady} />}
         {section === "contact" && <FlowContactEditor value={draft.contact} restoredItemId={restoredItemId} onRestoredItemFocus={consumeRestoredItemFocus} assetsEndpoint={siteScope.assetsEndpoint} onPageChange={patch => update({ ...current.current, contact: { ...current.current.contact, ...patch } })} onItemChange={(id, patch) => update({ ...current.current, contact: { ...current.current.contact, items: current.current.contact.items.map(item => item.id === id ? { ...item, ...patch } : item) } })} onQrChange={(id, assetId) => { update({ ...current.current, contact: { ...current.current.contact, items: current.current.contact.items.map(item => { if (item.id !== id) return item; const next = { ...item }; delete next.qrAssetId; return assetId ? { ...next, qrAssetId: assetId } : next; }) } }); void reloadAssets(); }} onAdd={() => { const id = crypto.randomUUID(); update({ ...current.current, contact: { ...current.current.contact, items: [...current.current.contact.items, { id, label: "", value: "", href: "" }] } }); return id; }} onRemove={id => { const index = current.current.contact.items.findIndex(item => item.id === id); if (index < 0) return; setRestoredItemId(undefined); setUndoRemoval({ kind: "contact", item: current.current.contact.items[index], index }); update({ ...current.current, contact: { ...current.current.contact, items: current.current.contact.items.filter(item => item.id !== id) } }); }} onPreview={trigger => openPreview("contact", trigger, "contact")} previewDisabled={!assetsReady} />}
       </fieldset>
     </div>
+    <LivePreviewPane src={`/${siteScope.adminBasePath.split("/")[1] ?? ""}/admin/live/premium-flow-gallery`} label="流影视廊" />
     {creatingGroup && <dialog ref={createDialog} className={styles.newGroupDialog} aria-labelledby="new-flow-group-title" onCancel={event => { event.preventDefault(); setCreatingGroup(false); }}><form onSubmit={event => { event.preventDefault(); createGroup(); }}><h2 id="new-flow-group-title">新建作品分类</h2><p>填写名称后直接从本站图库选片，再确认顺序与说明。创建本身不会保存或发布。</p><label>分类名称<input autoComplete="off" maxLength={120} value={newName} placeholder="例如：人物、城市、旅行" onChange={event => setNewName(event.target.value)} /></label><footer><button type="button" onClick={() => setCreatingGroup(false)}>取消</button><button type="submit" className={styles.primary} disabled={!newName.trim() || draft.groups.length >= FLOW_GALLERY_LIMITS.groups}>新建并从图库选片</button></footer></form></dialog>}
     {picker === "background" && <BackgroundPicker manifest={manifest} ready={assetsReady} state={assetState} reload={reloadAssets} close={() => setPicker(null)} select={id => { if (!assetMap.has(id)) return; update({ ...current.current, background: { ...current.current.background, assetId: id } }); setPicker(null); }} />}
     {picker && picker !== "background" && <SitePhotoPicker key={`${siteScope.assetsEndpoint}:${picker}`} appearance="flow" siteScopeKey={siteScope.assetsEndpoint} flowLibraryLookup={{ siteScopeKey: siteScope.assetsEndpoint, query, orientation, order }} collectionName={draft.groups.find(item => item.id === picker)?.name ?? "作品分类"} members={draft.groups.find(item => item.id === picker)?.assetIds ?? []} assets={manifest.assets} ready={assetsReady} truncated={Boolean(manifest.truncated)} state={assetState} onReload={reloadAssets} onClose={() => setPicker(null)} onAdd={ids => {

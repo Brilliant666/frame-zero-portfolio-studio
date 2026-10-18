@@ -9,6 +9,11 @@ import { getAdminStatus } from "./admin-state";
 import styles from "./admin-v2.module.css";
 import PublicationControls from "../site-editor/publication-controls";
 import DraftTemplatePreviewTrigger from "./draft-preview";
+import { Select } from "../admin-kit/select";
+import { WorkbenchBar, WorkbenchNav, workbenchStyle, type WorkbenchIcon } from "../admin-kit/workbench";
+import { LivePreviewPane, LivePreviewToggle, useLivePreviewOpen, useLivePreviewSource } from "../admin-kit/live-preview";
+
+const BASIC_ICONS: Record<string, WorkbenchIcon> = { template: "template", profile: "profile", packages: "packages", layout: "layout", contact: "contact", advanced: "advanced" };
 
 export default function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
@@ -17,6 +22,8 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
   const { dirty, editorLabel, loadState, message, reload, save, saveState, updatedAt, siteScope, conflict, revision, content, pendingSave, checkSave } = useAdmin();
   const sectionHref = (href: string) => siteScope ? `${siteScope.adminBasePath}${href.slice(6)}` : internalTest ? `/test${href}` : href;
   const current = getAdminSection(siteScope ? `/admin${pathname.slice(siteScope.adminBasePath.length)}` : internalTest ? pathname.slice(5) : pathname);
+  const livePreviewOpen = useLivePreviewOpen();
+  useLivePreviewSource("basic", content, Boolean(siteScope) && livePreviewOpen);
   const savedAt = formatSavedAt(updatedAt);
   const status = getAdminStatus(loadState, saveState, dirty);
   const saveDisabled = conflict || pendingSave || !dirty || loadState !== "ready" || saveState === "saving";
@@ -42,17 +49,19 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
   };
 
   return (
-    <div className={styles.shell} data-admin-v2="true" data-site-editor={siteScope ? "basic" : undefined}>
+    <div className={styles.shell} data-admin-v2="true" data-site-editor={siteScope ? "basic" : undefined} style={siteScope ? workbenchStyle("basic") : undefined}>
       <a className={styles.skipLink} href="#admin-main">跳到当前编辑区域</a>
-      <header className={styles.topbar}>
+      {siteScope ? <WorkbenchBar space="basic" titleIsPageHeading autosave actions={<LivePreviewToggle />} siteSlug={siteScope.adminBasePath.split("/")[1] ?? ""} spaces={siteScope.spaces} publicationEndpoint={siteScope.publicationEndpoint}
+        title={current.id === "advanced" ? "兼容内容与工具" : current.label} status={status.label}
+        confirmLeave={() => !dirty || window.confirm("当前基础版草稿尚未保存。离开后未保存修改会丢失，确认离开？")} /> : <header className={styles.topbar}>
         <div className={styles.adminTitleBlock} data-admin-title="true">
           <strong>{siteScope ? "基础版空间" : "ADMIN"}</strong>
           <span>内容管理</span>
         </div>
 
         <div className={styles.currentSection}>
-          <span>{siteScope ? `${siteScope.adminBasePath.split("/")[1]} / 基础版` : "当前分区"}</span>
-          <h1>{siteScope && current.id === "advanced" ? "兼容内容与工具" : current.label}</h1>
+          <span>当前分区</span>
+          <h1>{current.label}</h1>
         </div>
 
         <div className={styles.topbarActions}>
@@ -83,21 +92,22 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
             </span>
           </button>)}
         </div>
-      </header>
+      </header>}
 
       <div className={styles.mobileSwitcher}>
         <label>
           <span>切换后台分区</span>
-          <select value={sectionHref(current.href)} onChange={(event) => router.push(event.target.value)}>
-            {ADMIN_SECTIONS.map((section) => (
-              <option value={sectionHref(section.href)} key={section.id}>{siteScope && section.id === "advanced" ? "更多 → 兼容内容与工具" : section.label}</option>
-            ))}
-          </select>
+          <Select label="切换后台分区" value={sectionHref(current.href)} onChange={(href) => router.push(href)}
+            options={ADMIN_SECTIONS.map((section) => ({ value: sectionHref(section.href), label: siteScope && section.id === "advanced" ? "更多 → 兼容内容与工具" : section.label, description: section.description }))} />
         </label>
       </div>
 
       <div className={styles.body}>
-        <aside className={styles.sidebar}>
+        {siteScope ? <aside className={styles.sidebar}>
+          <WorkbenchNav label="后台主要分区" note={<>{editorLabel}<br />十一套基础模板共用本空间内容，与星轨、流影视廊独立。</>}
+            onNavigate={(event, item) => { if (!item.href || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return; event.preventDefault(); router.push(item.href); }}
+            groups={[{ heading: "基础版的内容", items: ADMIN_SECTIONS.filter(section => section.id !== "advanced").map(section => ({ id: section.id, label: section.label, hint: section.description, icon: BASIC_ICONS[section.id], current: section.id === current.id, href: sectionHref(section.href) })) }]} />
+        </aside> : <aside className={styles.sidebar}>
           <nav aria-label="后台主要分区">
             {ADMIN_SECTIONS.filter(section => !siteScope || section.id !== "advanced").map((section, index) => {
               const active = section.id === current.id;
@@ -114,8 +124,9 @@ export default function AdminShell({ children }: Readonly<{ children: ReactNode 
             <span>{editorLabel}</span>
             <small>桌面编辑优先 · 移动端完整可访问</small>
           </div>
-        </aside>
+        </aside>}
 
+        {siteScope && <LivePreviewPane src={`/${siteScope.adminBasePath.split("/")[1] ?? ""}/admin/live/basic`} label="基础版" />}
         <main id="admin-main" className={styles.main} tabIndex={-1}>
           {siteScope?.publicationEndpoint && siteScope.publicHref && <PublicationControls endpoint={siteScope.publicationEndpoint} publicHref={siteScope.publicHref} space="basic" templateId={content.activeTemplate} revision={revision} dirty={dirty} disabled={loadState !== "ready" || saveState === "saving" || conflict || pendingSave} saveDraft={save}
             draftStatus={status.label}

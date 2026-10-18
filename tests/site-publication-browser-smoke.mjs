@@ -6,6 +6,8 @@ import sharp from 'sharp';
 import { chromium } from 'playwright';
 import { provisionAccount } from '../db/accounts/provision.mjs';
 import { siteTemplateBrowserMatrix } from './site-template-browser-matrix.mjs';
+import { chooseOption } from './kit-select-helpers.mjs';
+import { keepManualSave } from './manual-save-browser.mjs';
 
 // Use an already visible control or open its actual disclosure; never force visibility.
 async function expandControl(page, control) {
@@ -36,7 +38,7 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
   const matrixOnly = process.env.FRAME_ZERO_PUBLICATION_MATRIX_ONLY === '1';
   const report = { origin, head: process.env.GITHUB_SHA ?? 'local', fixture: slug, scope: matrixOnly ? 'matrix diagnostic plus fixture/card setup; core stages 03-09 excluded' : 'full browser publication and matrix acceptance', matrixFrom: process.env.FRAME_ZERO_PUBLICATION_MATRIX_FROM ?? 'first template', validation: 'isolated synthetic account; not customer acceptance', checkpoints, screenshots, network, pageErrors, forbiddenRequests, steps, timings };
   const persist = () => writeFile(join(output, 'acceptance.json'), JSON.stringify(report, null, 2));
-  const browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined });
+  const browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined }); keepManualSave(browser);
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
   const anonymous = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
   context.setDefaultTimeout(15000); context.setDefaultNavigationTimeout(25000);
@@ -95,7 +97,7 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
   }
   async function nav(section) {
     const href = `${basic}/${section}`;
-    if (page.viewportSize().width <= 900) await page.getByLabel('切换后台分区').selectOption(href);
+    if (page.viewportSize().width <= 900) await chooseOption(page.getByRole('combobox', { name: '切换后台分区', exact: true }), href);
     else if (section === 'advanced') {
       const compatibility = page.getByRole('link', { name: '兼容内容与工具', exact: true });
       await expandControl(page, page.getByRole('link', { name: '兼容内容与工具', exact: true, includeHidden: true }));
@@ -130,7 +132,7 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
   }
   async function template(id) {
     await nav('template');
-    if (page.viewportSize().width <= 900) await page.getByLabel('查看模板详情').selectOption(id);
+    if (page.viewportSize().width <= 900) await chooseOption(page.getByRole('combobox', { name: '查看模板详情', exact: true }), id);
     else await page.locator(`[data-template-option="${id}"]`).click();
     await page.locator(`[data-template-detail="${id}"] [data-template-primary-action] button`).click();
     await page.waitForURL(`**${basic}/layout`);

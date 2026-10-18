@@ -8,6 +8,8 @@ import { exerciseCollectionOrder } from './site-collection-order-browser.mjs';
 import { exerciseLargeCollections } from './site-large-collection-browser.mjs';
 import { exerciseSiteLibrary } from './site-library-browser.mjs';
 import { provisionAccount } from '../db/accounts/provision.mjs';
+import { chooseOption } from './kit-select-helpers.mjs';
+import { keepManualSave } from './manual-save-browser.mjs';
 
 // Fixture writes are restricted to the dedicated integration database and its
 // temporary asset directory. Browser saves use the actual UI and HTTP handlers.
@@ -39,7 +41,7 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
   const output = join(process.cwd(), 'outputs', 'site-editor-browser', 'photo-picker');
   await mkdir(output, { recursive: true });
   const checkpoints = [], screenshots = [];
-  const browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined });
+  const browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined }); keepManualSave(browser);
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
   context.setDefaultTimeout(15000);
   const page = await context.newPage();
@@ -139,9 +141,9 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
       await picker.getByRole('button', { name: '下一页', exact: true }).click();
       const second = (await idsOnPage())[0];
       await picker.getByRole('checkbox', { name: `选择照片 ${second}`, exact: true }).check();
-      await picker.getByLabel('照片方向', { exact: true }).selectOption('portrait');
+      await chooseOption(picker.getByRole('combobox', { name: '照片方向', exact: true }), 'portrait');
       assert.ok((await idsOnPage()).every(id => assets.find(asset => asset.id === id).orientation === 'portrait'));
-      await picker.getByLabel('加入本站时间', { exact: true }).selectOption('oldest');
+      await chooseOption(picker.getByRole('combobox', { name: '加入本站时间', exact: true }), 'oldest');
       await picker.getByRole('button', { name: '查看已选', exact: true }).click();
       assert.equal(await picker.getByLabel('照片方向', { exact: true }).isDisabled(), true);
       assert.deepEqual(await idsOnPage(), [first, second]);
@@ -192,7 +194,7 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
     await step('mobile picker 390 and 320 with no page or dialog overflow', async () => {
       for (const width of [390, 320]) {
         await page.setViewportSize({ width, height: 844 }); await open();
-        await picker.getByLabel('图集关系', { exact: true }).selectOption('all');
+        await chooseOption(picker.getByRole('combobox', { name: '图集关系', exact: true }), 'all');
         for (const id of selected) {
           await picker.getByLabel('按素材 ID 查找', { exact: true }).fill(id);
           assert.equal(await picker.getByRole('checkbox', { name: `选择照片 ${id}`, exact: true }).isDisabled(), true);

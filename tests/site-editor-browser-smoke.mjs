@@ -3,6 +3,8 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { chromium } from 'playwright';
+import { chooseOption } from './kit-select-helpers.mjs';
+import { keepManualSave } from './manual-save-browser.mjs';
 
 // Open the actual disclosure before editing; never force visibility or bypass UI.
 async function expandControl(page, control) {
@@ -20,7 +22,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
   assert.equal(origin, 'http://127.0.0.1:3004');
   const output = join(process.cwd(), 'outputs', 'site-editor-browser');
   await mkdir(output, { recursive: true });
-  const browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined });
+  const browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined }); keepManualSave(browser);
   let stopped = false, activeStage = '';
   const releases = new Set();
   const network = [], checkpoints = [], screenshots = [], steps = [];
@@ -122,7 +124,7 @@ export async function siteEditorBrowserSmoke({ origin, password, restart, expire
   }
   async function nav(p, section) {
     const href = `${basic}/${section}`;
-    if (p.viewportSize().width <= 900) await p.getByLabel('切换后台分区').selectOption(href);
+    if (p.viewportSize().width <= 900) await chooseOption(p.getByRole('combobox', { name: '切换后台分区', exact: true }), href);
     else if (section === 'advanced') {
       const compatibility = p.getByRole('link', { name: '兼容内容与工具', exact: true });
       await expandControl(p, p.getByRole('link', { name: '兼容内容与工具', exact: true, includeHidden: true }));
