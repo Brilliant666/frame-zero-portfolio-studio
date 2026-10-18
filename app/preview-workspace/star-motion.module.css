@@ -11,6 +11,12 @@
 @keyframes themeIconIn { from { transform:rotate(-90deg) scale(.65); } to { transform:rotate(0deg) scale(1); } }
 .stars { position:fixed; z-index:-1; inset:0; width:100%; height:100svh; overflow:hidden; pointer-events:none; display:none; }
 :global(html[data-preview-theme]) .stars { display:block; }
+/* The sky before the canvas: a sparse CSS starfield painted with the first frame (the stars canvas
+   needs hydration), handed over once StarSky has drawn. Prime tiles keep it from reading as a grid. */
+.shell::before { content:""; position:fixed; z-index:-1; inset:0; pointer-events:none; display:none; opacity:.7; transition:opacity .9s ease; background-image:radial-gradient(circle at 17% 23%, var(--star-sky-star) 0 .7px, transparent calc(.7px + .7px)),radial-gradient(circle at 63% 71%, var(--star-sky-star) 0 .6px, transparent calc(.6px + .7px)),radial-gradient(circle at 41% 12%, var(--star-sky-star) 0 .9px, transparent calc(.9px + .7px)),radial-gradient(circle at 82% 46%, var(--star-sky-star) 0 .6px, transparent calc(.6px + .7px)),radial-gradient(circle at 29% 64%, var(--star-sky-highlight) 0 1.1px, transparent calc(1.1px + .7px)),radial-gradient(circle at 71% 18%, var(--star-sky-star) 0 1.3px, transparent calc(1.3px + .7px)); background-size:97px 89px,131px 149px,173px 163px,211px 197px,263px 241px,307px 331px; }
+:global(html[data-preview-theme]) .shell::before { display:block; }
+:global(html[data-star-theme="paper"]) .shell::before { opacity:.4; }
+:global(html[data-star-sky-live]) .shell::before { opacity:0; }
 
 @media(max-width:767px) { .shell > main > header { grid-template-columns:1fr auto; min-height:108px; gap:8px; padding:10px 16px; } .shell > main > header > nav { grid-row:2; grid-column:1/-1; justify-self:center; } .shell > main > header > a strong { max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .toggle { grid-column:2; grid-row:1; } }
 @media(prefers-reduced-motion:reduce) { .themeIcon { animation:none; } }
