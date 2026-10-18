@@ -5,6 +5,7 @@ import { Select } from "./select";
 import { Chip } from "./chip";
 import { setAutosavePreference, useAutosavePreference } from "./autosave";
 import styles from "./workbench.module.css";
+import { PUBLICATION_CHANGED_EVENT } from "../site-editor/publication-events";
 
 export type WorkbenchSpace = "basic" | "premium-polaroid" | "premium-flow-gallery";
 export const WORKBENCH_SPACES: Record<WorkbenchSpace, { name: string; description: string; accent: string }> = {
@@ -43,14 +44,18 @@ export function WorkbenchBar({ space, siteSlug, spaces = [space], publicationEnd
   useEffect(() => {
     if (!publicationEndpoint) return;
     const controller = new AbortController();
+    const known = (value: unknown) => typeof value === "string" && value in WORKBENCH_SPACES ? value as WorkbenchSpace : null;
     // Read-only: the same summary PublicationControls reads. Failure only hides the live chip.
-    void fetch(publicationEndpoint, { cache: "no-store", signal: controller.signal })
+    const read = () => void fetch(publicationEndpoint, { cache: "no-store", signal: controller.signal })
       .then(response => response.ok ? response.json() : null)
-      .then((body: { current?: { space?: string } | null } | null) => {
-        const value = body?.current?.space;
-        setLive(value && value in WORKBENCH_SPACES ? value as WorkbenchSpace : body ? null : undefined);
-      }, () => {});
-    return () => controller.abort();
+      .then((body: { current?: { space?: string } | null } | null) => { setLive(body ? known(body.current?.space) : undefined); }, () => {});
+    // A publish in this page announces the new pointer; another tab's publish is picked up on return.
+    const changed = (event: Event) => setLive(known((event as CustomEvent<unknown>).detail));
+    const visible = () => { if (document.visibilityState === "visible") read(); };
+    read();
+    window.addEventListener(PUBLICATION_CHANGED_EVENT, changed);
+    document.addEventListener("visibilitychange", visible);
+    return () => { controller.abort(); window.removeEventListener(PUBLICATION_CHANGED_EVENT, changed); document.removeEventListener("visibilitychange", visible); };
   }, [publicationEndpoint]);
   const adminRoot = `/${encodeURIComponent(siteSlug)}/admin`;
   const chip = (key: WorkbenchSpace) => live === undefined ? undefined : live === key ? <Chip tone="live">公开中</Chip> : <Chip>草稿</Chip>;

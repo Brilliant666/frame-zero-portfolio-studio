@@ -349,9 +349,13 @@ function FlowGallerySession({ siteScope }: { siteScope: SiteEditorScope }) {
       <fieldset className={styles.editor} disabled={loadState !== "ready" || saving}>
         {(section === "home" || section === "groups") && <p className={styles.moduleContext}>{section === "home" ? "首页展示身份文字、背景与左右作品轨道。" : "分类、照片顺序和逐张说明用于完整作品页；首页轨道可引用分类。"}</p>}
         {section === "library" && <section className={`${styles.panel} ${styles.libraryPanel}`} aria-labelledby="flow-library-heading">
-          <header className={styles.libraryTaskHeader}><div className={styles.libraryTaskTitle}><h1 id="flow-library-heading" ref={moduleHeading} tabIndex={-1}>图库</h1></div><div className={styles.libraryTaskActions}><button type="button" className={styles.textButton} data-flow-module-preview="library" disabled={!assetsReady || Boolean(picker)} onClick={event => openPreview(activeModule.scene, event.currentTarget, "library")}>完整作品效果 <span aria-hidden="true">↗</span></button><button type="button" aria-label="进入完整作品：新建分类并选片" onClick={() => changeSection("groups")}>完整作品 <span aria-hidden="true">→</span></button></div></header>
-          <p className={styles.libraryPurpose}>本站模板共享图库；上传和整理只改草稿，不会发布。效果预览仅展示已加入完整作品分类的照片。</p>
-          <PhotoLibrary noun="分类" heading={false} assets={manifest.assets} albums={draft.groups} ready={assetsReady} truncated={Boolean(manifest.truncated)} state={assetState} onReload={reloadAssets}
+          <PhotoLibrary noun="分类" heading={<h1 id="flow-library-heading" ref={moduleHeading} tabIndex={-1} className={styles.libraryHeading}>图库</h1>}
+            description="本站模板共享图库；上传和整理只改草稿，不会发布。效果预览仅展示已加入完整作品分类的照片。"
+            actions={[
+              { label: <>完整作品效果 <span aria-hidden="true">↗</span></>, disabled: !assetsReady || Boolean(picker), data: { "data-flow-module-preview": "library" }, onClick: event => openPreview(activeModule.scene, event.currentTarget, "library") },
+              { label: <>完整作品 <span aria-hidden="true">→</span></>, ariaLabel: "进入完整作品：新建分类并选片", onClick: () => changeSection("groups") },
+            ]}
+            assets={manifest.assets} albums={draft.groups} ready={assetsReady} truncated={Boolean(manifest.truncated)} state={assetState} onReload={reloadAssets}
             onAdd={addLibraryMembers} onSetMembers={setGroupMembers} onCreate={createGroupWith} maxAlbums={FLOW_GALLERY_LIMITS.groups} uploadEndpoint={siteScope.assetsEndpoint} editable={!libraryBlocked} />
         </section>}
         {section === "groups" && <>

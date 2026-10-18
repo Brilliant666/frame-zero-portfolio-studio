@@ -54,7 +54,8 @@
 .panel h2,.createGroup h2{font:400 23px/1.4 Georgia,"Songti SC",serif;margin:0 0 12px;overflow-wrap:anywhere}
 .panel h3{font-size:16px;font-weight:500;margin:0 0 14px}
 .panel p{color:var(--muted);font-size:13px;line-height:1.8;margin:8px 0 18px}
-.panel label,.createFields label{display:grid;gap:8px;margin:18px 0;font-size:13px;color:var(--ink);min-width:0}
+.panel label:not([data-admin-kit] *),.createFields label{display:grid;gap:8px;margin:18px 0;font-size:13px;color:var(--ink);min-width:0}
+.workspace .libraryHeading{margin:0;font-size:28px}
 .panel :is(input:not([type=checkbox]):not([type=range]),textarea,select),.createFields input{border:1px solid #d2d9cd;border-radius:5px;padding:11px 12px;width:100%;min-width:0;color:var(--ink);background:#fff;min-height:44px;outline-offset:2px}
 .panel textarea{resize:vertical;min-height:48px}
 .panel .checkbox{display:flex;align-items:center;gap:10px}

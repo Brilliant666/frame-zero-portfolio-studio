@@ -38,6 +38,7 @@ function harness(transport = async () => ({ response: { ok: true, status: 200 },
     if (id.endsWith('.module.css')) return { default: new Proxy({}, { get: (_, key) => key }) };
     if (id === './publication-state') return stateHelpers;
     if (id === './publication-feedback') return feedbackHelpers;
+    if (id === './publication-events') return { announcePublication() {} };
     if (id === './draft-save') return { editorJson: async (...args) => { calls.push(args); return transport(...args); } };
     if (id === './content-schema') return { isContentSpace: value => ['basic', 'premium-polaroid', 'premium-flow-gallery'].includes(value) };
     if (id === '../templates/catalog') return { templateCatalog: [] };

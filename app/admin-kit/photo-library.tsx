@@ -32,8 +32,12 @@ export type PhotoLibraryProps = {
   uploadEndpoint?: string;
   /** False while the draft cannot change (loading, saving, conflict). Browsing and selecting still work. */
   editable?: boolean;
-  /** Replaces the default heading; false keeps only the counts (the editor shows its own title). */
-  heading?: ReactNode | false;
+  /** Replaces the default heading (e.g. the editor's own focusable page title). */
+  heading?: ReactNode;
+  /** One line under the heading. */
+  description?: ReactNode;
+  /** Editor-specific buttons shown before 上传照片. */
+  actions?: readonly LibraryAction[];
   onSelectionChange?: (count: number) => void;
 };
 
@@ -61,11 +65,12 @@ export function batchLabel(start: string | null, end: string | null) {
 }
 const message = (cause: unknown, fallback: string) => cause instanceof Error && cause.message ? cause.message : fallback;
 
+export type LibraryAction = { label: ReactNode; onClick: (event: MouseEvent<HTMLButtonElement>) => void; ariaLabel?: string; disabled?: boolean; data?: Readonly<Record<`data-${string}`, string>> };
 type Toast = { id: number; text: string; undo?: () => void };
 type QueueItem = { key: number; file: File; status: "queued" | "uploading" | UploadOutcome["status"] | "skipped"; note?: string; id?: string };
 
 export default function PhotoLibrary(props: PhotoLibraryProps) {
-  const { noun, assets, albums, ready, truncated, state, onReload, onAdd, onSetMembers, onCreate, maxAlbums = 30, target, onCancel, uploadEndpoint, editable = true, heading, onSelectionChange } = props;
+  const { noun, assets, albums, ready, truncated, state, onReload, onAdd, onSetMembers, onCreate, maxAlbums = 30, target, onCancel, uploadEndpoint, editable = true, heading, description, actions = [], onSelectionChange } = props;
   const uid = useId().replace(/:/g, "");
   const picking = Boolean(target);
   const [view, setView] = useState<LibraryView>(DEFAULT_LIBRARY_VIEW);
@@ -318,11 +323,13 @@ export default function PhotoLibrary(props: PhotoLibraryProps) {
   return <section className={styles.root} data-admin-kit="photo-library" data-dragging={dragging || undefined} style={{ "--library-tile": `${DENSITY[density]}px` } as React.CSSProperties} aria-label={picking ? "选片" : "图库"} onKeyDown={onRootKey}>
     <header className={styles.header}>
       <div className={styles.title}>
-        {heading === false ? null : heading ?? <h2>{picking ? `从图库添加到「${target!.name || `未命名${noun}`}」` : "图库"}</h2>}
-        <p>本站 {assets.length} 张{picking ? ` · 已在${noun}的照片变灰` : <> · <b>{unfiled}</b> 张还没归入任何{noun}</>}</p>
+        {heading ?? <h2>{picking ? `从图库添加到「${target!.name || `未命名${noun}`}」` : "图库"}</h2>}
+        {description && <p className={styles.description}>{description}</p>}
+        <p>本站 {assets.length} 张{picking ? ` · 已在${noun}的照片变灰` : <> · <b>{unfiled}</b> 张还没归入任何{noun}</>}
+          <button type="button" className={styles.linkButton} disabled={reloading} onClick={() => void reload()}>{reloading ? "正在读取…" : "重新读取图库"}</button></p>
       </div>
       <div className={styles.headerActions}>
-        <button type="button" className={styles.ghostButton} disabled={reloading} onClick={() => void reload()}>{reloading ? "正在读取…" : "重新读取图库"}</button>
+        {actions.map((action, index) => <button key={index} type="button" className={styles.ghostButton} aria-label={action.ariaLabel} disabled={action.disabled} onClick={action.onClick} {...action.data}>{action.label}</button>)}
         {uploadEndpoint && <button type="button" className={styles.primaryButton} onClick={() => setUploadOpen(true)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg>上传照片</button>}
       </div>
     </header>
