@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import styles from "../admin-v2.module.css";
+import { Select } from "../../admin-kit/select";
 import {
   LocalPhotoImportUnavailableError,
   localPhotoImportAccept,
@@ -480,15 +481,13 @@ export default function PhotoImportPanel({
               </button>
               <label>
                 <span>页码</span>
-                <select
-                  aria-label="选择缩略图页码"
-                  value={previewPageIndex}
-                  onChange={(event) => selectPreviewPage(Number(event.currentTarget.value))}
-                >
-                  {Array.from({ length: previewPageCount }, (_, pageIndex) => (
-                    <option key={pageIndex} value={pageIndex}>第 {pageIndex + 1} 页</option>
-                  ))}
-                </select>
+                <Select
+                  label="选择缩略图页码"
+                  size="compact"
+                  value={String(previewPageIndex)}
+                  onChange={(value) => selectPreviewPage(Number(value))}
+                  options={Array.from({ length: previewPageCount }, (_, pageIndex) => ({ value: String(pageIndex), label: `第 ${pageIndex + 1} 页` }))}
+                />
               </label>
               <button
                 type="button"

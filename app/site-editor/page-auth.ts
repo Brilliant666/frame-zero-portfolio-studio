@@ -20,5 +20,6 @@ export async function requireEditor(slug: string, space: ContentSpace) {
     assetsEndpoint: `/api/sites/${encodeURIComponent(slug)}/assets`,
     publicationEndpoint: `/api/sites/${encodeURIComponent(slug)}/publications/${space}`,
     publicHref: `/${encodeURIComponent(slug)}`,
+    spaces: ["basic", ...(["premium-polaroid", "premium-flow-gallery"] as const).filter(item => auth.account.templates.premium.includes(item))] as ContentSpace[],
   } };
 }

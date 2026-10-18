@@ -119,7 +119,7 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   assert.match(continueHandler, /activeTemplate: templateId/);
   assert.match(continueHandler, /router\.push\(siteScope \? `\$\{siteScope\.adminBasePath\}\/layout` : pathname\.startsWith\("\/test\/admin"\) \? "\/test\/admin\/layout" : "\/admin\/layout"\)/);
   assert.doesNotMatch(continueHandler, /save|fetch\(|method:\s*"PUT"|applyTemplateCompositionPreview|templateWorks/);
-  assert.match(template, /onChange=\{\(event\) => inspectTemplate\(event\.target\.value\)\}/);
+  assert.match(template, /label="查看模板详情"[\s\S]*?onChange=\{inspectTemplate\}/);
   assert.match(template, /当前草稿/);
   const browseControl = template.slice(
     template.indexOf("data-template-option"),
@@ -408,7 +408,7 @@ test("local photo ingest stays isolated from the shared SiteContent draft", asyn
   assert.match(panel, /pendingBatch\.subdirectoryCount/);
   assert.match(panel, /Math\.ceil\(pendingBatch\.files\.length \/ photoImportPreviewPageSize\)/);
   assert.match(panel, /aria-label="待导入素材缩略图分页"/);
-  assert.match(panel, /aria-label="选择缩略图页码"/);
+  assert.match(panel, /label="选择缩略图页码"/);
   assert.match(panel, /上一页/);
   assert.match(panel, /下一页/);
   assert.match(panel, /第 \{previewPageIndex \+ 1\} \/ \{previewPageCount\} 页 · 共 \{pendingBatch\.files\.length\} 张/);
@@ -623,9 +623,9 @@ test("responsive CSS exposes a mobile section switcher and single-column layout 
     source("app/admin/admin-v2.module.css"),
   ]);
   assert.match(shell, /ADMIN_SECTIONS\.map/);
-  assert.match(shell, /<select value=\{sectionHref\(current\.href\)\}/);
+  assert.match(shell, /<Select label="切换后台分区" value=\{sectionHref\(current\.href\)\} onChange=\{\(href\) => router\.push\(href\)\}/);
   assert.match(shell, /pathname\.startsWith\("\/test\/admin"\)/);
-  assert.match(shell, /<option value=\{sectionHref\(section\.href\)\}/);
+  assert.match(shell, /value: sectionHref\(section\.href\)/);
   assert.match(shell, /data-admin-title="true"/);
   assert.doesNotMatch(shell, /FRAME\/\/ZERO/);
   assert.match(shell, /"正在保存修改"/);

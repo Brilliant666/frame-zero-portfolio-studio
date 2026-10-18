@@ -5,6 +5,7 @@ import { resolve, relative, isAbsolute, sep, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { chromium } from 'playwright';
+import { chooseOption, kitValue, kitText } from './kit-select-helpers.mjs';
 
 const SPACE = 'premium-flow-gallery';
 const MODULES = ['library', 'groups', 'home', 'pricing', 'contact'];
@@ -354,11 +355,11 @@ export async function flowGalleryFullAdminBrowser({ runtime, origin, password, f
       assert.equal(await photos().count(), assets.length - 48);
       await page.getByRole('button', { name: '上一页', exact: true }).click();
       for (const orientation of ['portrait', 'landscape', 'square']) {
-        await page.getByRole('combobox', { name: '画幅', exact: true }).selectOption(orientation);
+        await chooseOption(page.getByRole('combobox', { name: '画幅', exact: true }), orientation);
         assert.equal(await photos().count(), Math.min(48, assets.filter(asset => asset.orientation === orientation).length));
       }
-      await page.getByRole('combobox', { name: '画幅', exact: true }).selectOption('all');
-      await page.getByRole('combobox', { name: '加入本站时间', exact: true }).selectOption('oldest');
+      await chooseOption(page.getByRole('combobox', { name: '画幅', exact: true }), 'all');
+      await chooseOption(page.getByRole('combobox', { name: '加入本站时间', exact: true }), 'oldest');
       const earliest = [...assets].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt) || a.id.localeCompare(b.id))[0];
       assert.equal(await photos().first().getAttribute('aria-label'), `放大照片：第 1 张照片，${({ portrait: "竖幅", landscape: "横幅", square: "方幅" })[earliest.orientation]}`);
       assert.equal(await photos().first().locator("xpath=ancestor::article[1]").getAttribute("data-flow-asset-id"), earliest.id);
@@ -453,7 +454,7 @@ export async function flowGalleryFullAdminBrowser({ runtime, origin, password, f
     });
     await stage('05 homepage rails, price, optional contact QR and memory previews', async () => {
       await module('home');
-      await page.getByRole('combobox', { name: '左侧轨道', exact: true }).selectOption({ label: categoryName });
+      await chooseOption(page.getByRole('combobox', { name: '左侧轨道', exact: true }), { label: categoryName });
       await page.getByRole('button', { name: '7∶3', exact: true }).click();
       assert.equal(await page.getByRole('button', { name: '7∶3', exact: true }).getAttribute('aria-pressed'), 'true');
       await module('pricing');
@@ -506,13 +507,13 @@ export async function flowGalleryFullAdminBrowser({ runtime, origin, password, f
       const picker = page.getByRole('dialog', { name: '从图库选片', exact: true });
       await picker.getByRole('button', { name: '取消选片', exact: true }).click();
       await module('home');
-      await page.getByRole('combobox', { name: '右侧轨道', exact: true }).selectOption({ label: deletedCategoryName });
+      await chooseOption(page.getByRole('combobox', { name: '右侧轨道', exact: true }), { label: deletedCategoryName });
       await module('groups');
       await page.getByRole('button', { name: '分类与说明', exact: true }).click();
       await page.getByRole('button', { name: '删除此分类', exact: true }).click();
       await module('home');
-      assert.equal(await page.getByRole('combobox', { name: '右侧轨道', exact: true }).inputValue(), '');
-      assert.equal(await page.getByRole('combobox', { name: '左侧轨道', exact: true }).locator('option:checked').innerText(), categoryName);
+      assert.equal(await kitValue(page.getByRole('combobox', { name: '右侧轨道', exact: true })), '');
+      assert.equal(await kitText(page.getByRole('combobox', { name: '左侧轨道', exact: true })), categoryName);
       assert.deepEqual((await json(paths.assets)).assets, assets, 'Deleting a class preserves all Site asset identities and metadata');
       assert.deepEqual(await publication(), originalPublished);
     });

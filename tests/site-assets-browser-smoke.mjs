@@ -3,6 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import sharp from 'sharp';
 import { chromium } from 'playwright';
+import { chooseOption } from './kit-select-helpers.mjs';
 
 // Anonymous fixtures only. Keep all writes in the actual existing editors;
 // API reads below are assertions, not a replacement for the browser save flow.
@@ -134,8 +135,8 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
       for (const asset of assets) await picker.getByRole('checkbox', { name: `选择照片 ${asset.id}`, exact: true }).check();
       await picker.getByRole('button', { name: '加入当前图集（3 张）', exact: true }).click();
       await page.getByRole('navigation', { name: '图集编辑内容', exact: true }).getByRole('button', { name: '图集设置', exact: true }).click();
-      await page.getByRole('combobox', { name: '独立封面', exact: true }).selectOption(assets.find(a => a.orientation === 'landscape').id);
-      await page.getByRole('combobox', { name: '星图重点照片', exact: true }).selectOption(assets.find(a => a.orientation === 'portrait').id);
+      await chooseOption(page.getByRole('combobox', { name: '独立封面', exact: true }), assets.find(a => a.orientation === 'landscape').id);
+      await chooseOption(page.getByRole('combobox', { name: '星图重点照片', exact: true }), assets.find(a => a.orientation === 'portrait').id);
       premiumSaved = await save('premium-polaroid');
       assert.deepEqual([...premiumSaved.content.collections[0].assetIds].sort(), assets.map(a => a.id).sort());
       assert.equal(premiumSaved.content.profile.photographer, 'Premium asset photographer');
