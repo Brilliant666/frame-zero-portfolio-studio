@@ -42,6 +42,7 @@ import styles from "../admin-v2.module.css";
 import { LayoutCompositionPreview } from "../template/template-composition-preview";
 import PhotoImportPanel, { type PhotoLibraryStats } from "./photo-import-panel";
 import { loadPreviewPhotoReferences, type PreviewPhotoReferences } from "./preview-photo-references";
+import { Select } from "../../admin-kit/select";
 import {
   loadLocalPhotoLibrary,
   setLocalPhotoLibraryArchived,
@@ -636,19 +637,13 @@ export default function LayoutWorkspace() {
             </div>
             <label className={styles.librarySelect}>
               <span>顺序</span>
-              <select value={librarySort} onChange={(event) => { setLibrarySort(event.target.value as LibrarySort); setAssetPage(0); setArchiveCandidate(null); }}>
-                <option value="recent">{siteScope ? "加入本站：最新优先" : "最近新增"}</option>
-                <option value="oldest">{siteScope ? "加入本站：最早优先" : "最早记录"}</option>
-                <option value="asset-id">素材编号</option>
-              </select>
+              <Select<LibrarySort> label="顺序" size="compact" value={librarySort} onChange={(value) => { setLibrarySort(value); setAssetPage(0); setArchiveCandidate(null); }}
+                options={[{ value: "recent", label: siteScope ? "加入本站：最新优先" : "最近新增" }, { value: "oldest", label: siteScope ? "加入本站：最早优先" : "最早记录" }, { value: "asset-id", label: "素材编号" }]} />
             </label>
             {!siteScope && <label className={styles.librarySelect}>
               <span>导入批次</span>
-              <select value={batchFilter} onChange={(event) => { setBatchFilter(event.target.value); setAssetPage(0); setArchiveCandidate(null); }}>
-                <option value="all">全部批次</option>
-                <option value="legacy">既有素材（时间未知）</option>
-                {batchOptions.map((batch) => <option value={batch.id} key={batch.id}>{batchLabel(batch)} · {batch.count} 张</option>)}
-              </select>
+              <Select label="导入批次" size="compact" value={batchFilter} minWidth={240} onChange={(value) => { setBatchFilter(value); setAssetPage(0); setArchiveCandidate(null); }}
+                options={[{ value: "all", label: "全部批次" }, { value: "legacy", label: "既有素材（时间未知）" }, ...batchOptions.map((batch) => ({ value: batch.id, label: batchLabel(batch), description: `${batch.count} 张` }))]} />
             </label>}
           </div>
           {siteScope && <p className={styles.libraryManagementMessage}>按加入本站时间排序，同时间按素材编号，未知时间置后。此时间不代表拍摄时间或旧导入顺序；当前没有批次数据。浏览排序不会改动作品排版。</p>}

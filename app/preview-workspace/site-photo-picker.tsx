@@ -7,6 +7,7 @@ import { filterPickerAssets, PICKER_PAGE_SIZE, type PickerFilter } from "./photo
 import { applyPickerLookup, clearPickerLookup, currentFlowLibraryLookup, describePickerLookup, type FlowLibraryLookup } from "./flow-picker-lookup";
 import { flowAssetName } from "../site-editor/flow-gallery-photo-names";
 import styles from "./site-photo-picker.module.css";
+import { Select } from "../admin-kit/select";
 import { usePhotoPageFocus } from "./use-photo-page-focus";
 
 type Props = {
@@ -18,6 +19,8 @@ type Props = {
   ready: boolean; truncated: boolean; state: string; onReload: () => Promise<void>;
   onAdd: (ids: readonly string[]) => void; onClose: () => void;
 };
+const ORIENTATIONS = [{ value: "all", label: "全部方向" }, { value: "landscape", label: "横图" }, { value: "portrait", label: "竖图" }, { value: "square", label: "方图" }];
+const SORTS = [{ value: "newest", label: "最新在前" }, { value: "oldest", label: "最早在前" }];
 const initialFilter: PickerFilter = { query: "", orientation: "all", membership: "outside", sort: "newest", onlySelected: false };
 const orientationName = { landscape: "横图", portrait: "竖图", square: "方图" };
 
@@ -80,9 +83,9 @@ export default function SitePhotoPicker({ appearance, siteScopeKey, flowLibraryL
       {flowLookupEnabled && lookupNotice && <p className={styles.hint} role="status">{lookupNotice}</p>}
       <fieldset className={styles.filters} disabled={filter.onlySelected}>
         <label>按素材 ID 查找<input value={filter.query} onChange={event => updateFilter({ query: event.target.value })} placeholder="输入素材 ID 的一部分" /></label>
-        <label>照片方向<select aria-label="照片方向" value={filter.orientation} onChange={event => updateFilter({ orientation: event.target.value })}><option value="all">全部方向</option><option value="landscape">横图</option><option value="portrait">竖图</option><option value="square">方图</option></select></label>
-        <label>{noun}关系<select aria-label={`${noun}关系`} value={filter.membership} onChange={event => updateFilter({ membership: event.target.value })}><option value="outside">未加入当前{noun}</option><option value="all">全部照片</option></select></label>
-        <label>加入本站时间<select aria-label="加入本站时间" value={filter.sort} onChange={event => updateFilter({ sort: event.target.value })}><option value="newest">最新在前</option><option value="oldest">最早在前</option></select></label>
+        <label>照片方向<Select label="照片方向" value={filter.orientation} onChange={orientation => updateFilter({ orientation })} options={ORIENTATIONS} /></label>
+        <label>{noun}关系<Select label={`${noun}关系`} value={filter.membership} onChange={membership => updateFilter({ membership })} options={[{ value: "outside", label: `未加入当前${noun}` }, { value: "all", label: "全部照片" }]} /></label>
+        <label>加入本站时间<Select label="加入本站时间" value={filter.sort} onChange={sort => updateFilter({ sort })} options={SORTS} /></label>
       </fieldset>
       <p className={styles.hint}>按缩略图和方向找照片；加入本站时间不是拍摄时间。选中顺序即追加顺序，改变筛选不会改变已选顺序。</p>
       <div className={styles.tools}>

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { chooseOption } from './kit-select-helpers.mjs';
 
 export async function exerciseSiteLibrary({ page, read, published, shot }) {
   const url = new URL(page.url());
@@ -12,7 +13,7 @@ export async function exerciseSiteLibrary({ page, read, published, shot }) {
   const library = page.getByRole('region', { name: '图库', exact: true });
   const photos = library.locator('[aria-label="图库浏览结果"]');
   const visibleIds = () => photos.getByRole('checkbox').evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label').replace('选择照片 ', '')));
-  await library.getByRole('combobox', { name: '加入高级图集', exact: true }).selectOption(collection.id);
+  await chooseOption(library.getByRole('combobox', { name: '加入高级图集', exact: true }), collection.id);
   assert.equal((await visibleIds()).length, 48);
   await library.getByRole('button', { name: '选择本页照片', exact: true }).click();
   assert.equal(await photos.getByRole('checkbox', { checked: true }).count(), 48);

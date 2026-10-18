@@ -5,6 +5,7 @@ import { useId, useMemo, useState, type ReactNode } from "react";
 import type { SiteAsset } from "../site-editor/assets-client";
 import type { Collection } from "../templates/polaroid-field/collection-model";
 import { filterPickerAssets, PICKER_PAGE_SIZE, type PickerFilter } from "./photo-picker-state";
+import { Select } from "../admin-kit/select";
 import styles from "./site-photo-library.module.css";
 import { usePhotoPageFocus } from "./use-photo-page-focus";
 
@@ -70,9 +71,9 @@ export default function SitePhotoLibrary({ upload, assets, collections, ready, t
     <p role="status" className={ready && !reloading ? styles.screenReaderStatus : styles.warning}>{state}</p>
     {truncated && <p className={styles.warning}>当前仅载入部分本站素材（{assets.length} 张）；筛选、排序和分页只覆盖已载入照片。</p>}
     <fieldset className={styles.filters} disabled={filter.onlySelected}>
-      <label>照片方向<select value={filter.orientation} onChange={event => updateFilter({ orientation: event.target.value })}><option value="all">全部方向</option><option value="landscape">横图</option><option value="portrait">竖图</option><option value="square">方图</option></select></label>
-      <label>加入本站时间<select value={filter.sort} onChange={event => updateFilter({ sort: event.target.value })}><option value="newest">最新在前</option><option value="oldest">最早在前</option></select></label>
-      <label>图集关系<select value={filter.membership} disabled={!target} onChange={event => updateFilter({ membership: event.target.value })}><option value="all">全部照片</option><option value="outside">未加入目标图集</option></select></label>
+      <label>照片方向<Select label="照片方向" value={filter.orientation} onChange={orientation => updateFilter({ orientation })} options={[{ value: "all", label: "全部方向" }, { value: "landscape", label: "横图" }, { value: "portrait", label: "竖图" }, { value: "square", label: "方图" }]} /></label>
+      <label>加入本站时间<Select label="加入本站时间" value={filter.sort} onChange={sort => updateFilter({ sort })} options={[{ value: "newest", label: "最新在前" }, { value: "oldest", label: "最早在前" }]} /></label>
+      <label>图集关系<Select label="图集关系" value={filter.membership} disabled={!target} onChange={membership => updateFilter({ membership })} options={[{ value: "all", label: "全部照片" }, { value: "outside", label: "未加入目标图集" }]} /></label>
     <details className={styles.diagnostics} data-library-id-search><summary>按素材 ID 查找（可选）</summary><label>按素材 ID 查找<input type="search" disabled={filter.onlySelected} value={filter.query} placeholder="输入已知素材 ID 的一部分" onChange={event => updateFilter({ query: event.target.value })} /></label></details>
     </fieldset>
     <div className={styles.tools}>
@@ -95,7 +96,8 @@ export default function SitePhotoLibrary({ upload, assets, collections, ready, t
     <nav className={styles.tools} aria-label="图库分页"><button type="button" disabled={currentPage === 0} onClick={() => changePage(currentPage - 1)}>上一页</button><span id={pageStatusId}>第 {currentPage + 1} / {pages} 页 · {filtered.length} 张匹配</span><button type="button" disabled={currentPage + 1 >= pages} onClick={() => changePage(currentPage + 1)}>下一页</button></nav>
     <p className={styles.hint}>按选择顺序追加；跨页、筛选和切换目标图集均保留选择。加入本站时间不是拍摄时间。</p>
     <footer className={styles.destination}>
-      <label>加入高级图集<select value={target?.id ?? ""} onChange={event => { setTargetId(event.target.value); setPage(0); setError(""); setMessage(""); }}><option value="">请选择目标图集</option>{collections.map(item => <option value={item.id} key={item.id}>{item.name || "未命名图集"} · {item.assetIds.length} 张{item.visible ? "" : " · 隐藏"}</option>)}</select></label>
+      <label>加入高级图集<Select label="加入高级图集" value={target?.id ?? null} placeholder="请选择目标图集" minWidth={280} onChange={value => { setTargetId(value); setPage(0); setError(""); setMessage(""); }}
+        options={collections.map(item => { const cover = assets.find(asset => asset.id === (item.coverAssetId ?? item.assetIds[0])); return { value: item.id, label: item.name || "未命名图集", description: `${item.assetIds.length} 张${item.visible ? "" : " · 隐藏"}`, thumb: cover?.variants.thumbnail.src }; })} /></label>
       <div><strong>{target ? `预计新增 ${additions.length} 张` : "先选择目标图集"}</strong><p>重复照片会由图集自动去重，不保存或发布。</p>{!collections.length && <p>请先到图集管理新建图集。</p>}{targetId && !target && <p role="alert">原目标图集已不存在，请重新选择。</p>}</div>
       <button className={styles.primary} type="button" disabled={!ready || reloading || !target || !additions.length || !!missing.length} onClick={add}>加入所选图集</button>
     </footer>

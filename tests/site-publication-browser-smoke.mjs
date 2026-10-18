@@ -6,6 +6,7 @@ import sharp from 'sharp';
 import { chromium } from 'playwright';
 import { provisionAccount } from '../db/accounts/provision.mjs';
 import { siteTemplateBrowserMatrix } from './site-template-browser-matrix.mjs';
+import { chooseOption } from './kit-select-helpers.mjs';
 
 // Use an already visible control or open its actual disclosure; never force visibility.
 async function expandControl(page, control) {
@@ -95,7 +96,7 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
   }
   async function nav(section) {
     const href = `${basic}/${section}`;
-    if (page.viewportSize().width <= 900) await page.getByLabel('切换后台分区').selectOption(href);
+    if (page.viewportSize().width <= 900) await chooseOption(page.getByRole('combobox', { name: '切换后台分区', exact: true }), href);
     else if (section === 'advanced') {
       const compatibility = page.getByRole('link', { name: '兼容内容与工具', exact: true });
       await expandControl(page, page.getByRole('link', { name: '兼容内容与工具', exact: true, includeHidden: true }));
@@ -130,7 +131,7 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
   }
   async function template(id) {
     await nav('template');
-    if (page.viewportSize().width <= 900) await page.getByLabel('查看模板详情').selectOption(id);
+    if (page.viewportSize().width <= 900) await chooseOption(page.getByRole('combobox', { name: '查看模板详情', exact: true }), id);
     else await page.locator(`[data-template-option="${id}"]`).click();
     await page.locator(`[data-template-detail="${id}"] [data-template-primary-action] button`).click();
     await page.waitForURL(`**${basic}/layout`);

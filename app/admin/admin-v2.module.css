@@ -155,7 +155,7 @@
 }
 
 .saveButton:focus-visible,
-.sidebar a:focus-visible,
+.sidebar a:not([data-admin-kit] *):focus-visible,
 .mobileSwitcher select:focus-visible {
   outline: 3px solid #222;
   outline-offset: 3px;
@@ -180,14 +180,14 @@
   background: var(--admin-v2-paper);
 }
 
-.sidebar nav {
+.sidebar nav:not([data-admin-kit] *) {
   display: grid;
   min-height: 0;
   padding: .9rem;
   overflow-y: auto;
 }
 
-.sidebar a {
+.sidebar a:not([data-admin-kit] *) {
   display: grid;
   grid-template-columns: 2rem 1fr;
   gap: .2rem .4rem;
@@ -195,21 +195,21 @@
   border-left: 3px solid transparent;
 }
 
-.sidebar a > span {
+.sidebar a:not([data-admin-kit] *) > span {
   grid-row: 1 / 3;
   color: var(--admin-v2-muted);
   font: 700 .72rem/1.35 var(--font-geist-mono), monospace;
 }
 
-.sidebar a strong { font-size: .92rem; }
-.sidebar a small { color: var(--admin-v2-muted); font-size: .72rem; line-height: 1.4; }
+.sidebar a:not([data-admin-kit] *) strong { font-size: .92rem; }
+.sidebar a:not([data-admin-kit] *) small { color: var(--admin-v2-muted); font-size: .72rem; line-height: 1.4; }
 
-.sidebar a[aria-current="page"] {
+.sidebar a:not([data-admin-kit] *)[aria-current="page"] {
   border-left-color: var(--admin-v2-accent);
   background: #fff;
 }
 
-.sidebar a[aria-current="page"]::after {
+.sidebar a:not([data-admin-kit] *)[aria-current="page"]::after {
   content: "当前";
   grid-column: 2;
   width: max-content;
@@ -1453,11 +1453,6 @@
 .shell[data-site-editor="basic"] .saveButton { border-radius: 10px; color: #fff; }
 .shell[data-site-editor="basic"] .saveButton:disabled { background: #e8ecf1; border-color: #dce2e9; color: #728095; }
 .shell[data-site-editor="basic"] .body { grid-template-columns: 14.5rem minmax(0, 1fr); }
-.shell[data-site-editor="basic"] .sidebar nav { gap: .35rem; padding: 1rem .75rem; }
-.shell[data-site-editor="basic"] .sidebar a { grid-template-columns: 1.6rem minmax(0, 1fr); border-left: 0; border-radius: 10px; padding: .8rem .75rem; }
-.shell[data-site-editor="basic"] .sidebar a:hover { background: #f3f5f8; }
-.shell[data-site-editor="basic"] .sidebar a[aria-current="page"] { background: #eaf0f7; color: #243e5e; }
-.shell[data-site-editor="basic"] .sidebar a[aria-current="page"]::after { display: none; }
 .shell[data-site-editor="basic"] .main { padding: clamp(1.25rem, 2.3vw, 2rem); }
 .shell[data-site-editor="basic"] .section { border-radius: 14px; }
 .shell[data-site-editor="basic"] .sectionHeader { gap: 1.5rem; padding: 1.4rem 1.5rem; }
@@ -1557,3 +1552,6 @@
 @media (min-width: 761px) {
   .slotQuickActions, .assetPane > .layoutReturn { display: none; }
 }
+.shell[data-site-editor="basic"] .sidebar { background: #fff; border-right: 1px solid #e6e2db; padding: 18px 12px; }
+.shell[data-site-editor="basic"] { --admin-v2-topbar-height: 60px; }
+.shell[data-site-editor="basic"] { padding-top: 0; }
