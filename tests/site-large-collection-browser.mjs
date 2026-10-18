@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { addToTarget, pickRange, selectableTileIds } from './library-browser-helpers.mjs';
 
 // This helper creates only unsaved collections inside the existing anonymous
 // picker fixture. The caller must supply its already isolated 3004 session.
@@ -37,16 +38,11 @@ export async function exerciseLargeCollections({ page, read, published, shot }) 
     await creation.getByLabel('图集名称', { exact: true }).fill(`Anonymous ${count} photo collection`);
     await creation.getByRole('button', { name: '创建并选片', exact: true }).click();
     const picker = page.getByRole('dialog', { name: '从图库选片', exact: true });
-    const original = [];
-    while (original.length < count) {
-      const inputs = picker.getByRole('checkbox', { name: /^选择照片 / });
-      const pageIds = await inputs.evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label').replace('选择照片 ', '')));
-      for (const id of pageIds.slice(0, count - original.length)) {
-        await picker.getByRole('checkbox', { name: `选择照片 ${id}`, exact: true }).check(); original.push(id);
-      }
-      if (original.length < count) await picker.getByRole('button', { name: '下一页', exact: true }).click();
-    }
-    await picker.getByRole('button', { name: `加入当前图集（${count} 张）`, exact: true }).click();
+    await picker.waitFor();
+    const original = (await selectableTileIds(picker)).slice(0, count);
+    assert.equal(original.length, count);
+    await pickRange(picker, original[0], original.at(-1));
+    await addToTarget(picker, `Anonymous ${count} photo collection`, count).click();
     await tab('照片排序').click();
     assert.equal(await effect.isVisible(), false, 'Sorting starts full width without the effect panel');
     await expectOrder(original);

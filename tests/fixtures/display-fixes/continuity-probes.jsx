@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import PreviewPortfolioAdmin from "../../../app/preview-workspace/admin";
-import SitePhotoLibrary from "../../../app/preview-workspace/site-photo-library";
+import PhotoLibrary from "../../../app/admin-kit/photo-library";
 import { createEmptyPreviewDocument } from "../../../app/preview-workspace/document";
 import { parseSitePremiumDocument } from "../../../app/site-editor/content-schema";
 import adminStyles from "../../../app/preview-workspace/admin.module.css";
@@ -21,16 +21,13 @@ export function LibraryContinuityProbe({ assets }) {
     id: `20000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
     createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, index)).toISOString(),
   })) : [], [assets]);
-  const [viewed, setViewed] = useState("");
   if (!photos.length) return <p>图库探针需要匿名照片。请使用 photos=full 打开此夹具。</p>;
   return <main className={adminStyles.workspace} data-continuity-probe="library">
     <section className={adminStyles.panel}>
-      <p>隔离图库分页探针：96 张匿名记录，共两页；只观察翻页、选择与焦点，不连接数据库。</p>
-      <SitePhotoLibrary assets={photos} collections={[]} ready truncated={false}
+      <p>隔离图库探针：96 张匿名记录；只观察批次、选择与焦点，不连接数据库。</p>
+      <PhotoLibrary noun="图集" assets={photos} albums={[]} ready truncated={false}
         state="已载入 96 张匿名照片" onReload={async () => {}}
-        onAdd={() => { throw new Error("此探针不允许写入图集。"); }}
-        onView={asset => setViewed(asset.id)} />
-      {viewed && <p role="status">已触发查看匿名照片 {viewed}。此探针只验收图库衔接。</p>}
+        onAdd={() => { throw new Error("此探针不允许写入图集。"); }} />
     </section>
   </main>;
 }

@@ -10,6 +10,7 @@ import { exerciseSiteLibrary } from './site-library-browser.mjs';
 import { provisionAccount } from '../db/accounts/provision.mjs';
 import { chooseOption } from './kit-select-helpers.mjs';
 import { keepManualSave } from './manual-save-browser.mjs';
+import { addToTarget, batchBoxes, pick, pickRange, selectedTileIds, tile, tileIds, tray } from './library-browser-helpers.mjs';
 
 // Fixture writes are restricted to the dedicated integration database and its
 // temporary asset directory. Browser saves use the actual UI and HTTP handlers.
@@ -36,7 +37,7 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
     await runtime.pool.query(`INSERT INTO site_assets(id,site_id,digest,original_type,width,height,variants,created_at)
       VALUES($1,$2,$3,'image/webp',$4,$5,$6::jsonb,$7)`, [randomUUID(), siteId,
       createHash('sha256').update(`anonymous-picker-fixture-${index}`).digest('hex'), group.width, group.height,
-      JSON.stringify(group.variants), new Date(Date.UTC(2026, 0, 1) + Math.floor(index / 3) * 1000)]);
+      JSON.stringify(group.variants), new Date(Date.UTC(2026, 0, 1) + Math.floor(index / 200) * 86_400_000 + Math.floor(index / 3) * 1000)]);
   }
   const output = join(process.cwd(), 'outputs', 'site-editor-browser', 'photo-picker');
   await mkdir(output, { recursive: true });
@@ -52,8 +53,9 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
   signal?.addEventListener('abort', abort, { once: true });
   const endpoint = `/api/sites/${slug}/drafts/premium-polaroid`;
   const picker = page.getByRole('dialog', { name: '从图库选片', exact: true });
-  const checkboxes = () => picker.getByRole('checkbox', { name: /^选择照片 / });
-  const idsOnPage = () => checkboxes().evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label').replace('选择照片 ', '')));
+  // Three upload days, newest first; equal times keep a stable (descending) id order.
+  const newestFirst = list => [...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+  const albumName = 'Anonymous picker collection';
   const open = () => page.getByRole('button', { name: '从图库选片', exact: true }).click();
   const read = async (space = 'premium-polaroid') => {
     const response = await context.request.get(`${origin}/api/sites/${slug}/drafts/${space}`);
@@ -117,72 +119,69 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
       await creation.waitFor({ state: 'hidden' });
       assert.equal(await picker.evaluate(node => node.contains(document.activeElement)), true, 'Named creation moves focus into the photo picker');
       assert.deepEqual(await read(), draftBeforeCreation, 'Named creation stays in memory until explicit save');
-      assert.equal(await checkboxes().count(), 48);
-      await picker.getByText('第 1 / 11 页 · 500 张匹配', { exact: true }).waitFor();
-      const firstId = (await idsOnPage())[0];
-      const enlarge = picker.getByRole('button', { name: `放大照片 ${firstId}`, exact: true });
-      await enlarge.click();
-      await picker.getByRole('button', { name: '关闭放大照片', exact: true }).waitFor();
-      await page.keyboard.press('Tab');
-      assert.equal(await picker.locator('[inert]').evaluateAll(nodes => nodes.some(node => node.contains(document.activeElement))), false, 'Enlarged photo excludes background controls from keyboard focus');
+      assert.equal(await batchBoxes(picker).count(), 3, 'Three upload days are three batches');
+      const ordered = newestFirst(assets);
+      assert.deepEqual(await tileIds(picker), ordered.slice(0, 240).map(asset => asset.id), 'Newest batch first, rendered in steps of 240');
+      const firstId = ordered[0].id;
+      await tile(picker, firstId).dblclick();
+      const viewer = page.getByRole('dialog', { name: '查看照片', exact: true });
+      await viewer.waitFor();
       await page.keyboard.press('Escape');
-      await picker.getByRole('button', { name: '关闭放大照片', exact: true }).waitFor({ state: 'hidden' });
-      await page.waitForFunction(label => document.activeElement?.getAttribute('aria-label') === label, `放大照片 ${firstId}`);
-      assert.equal(await enlarge.evaluate(node => node === document.activeElement), true, 'Escape restores enlargement trigger focus');
-      await page.keyboard.press('Tab');
-      assert.equal(await picker.evaluate(node => node.contains(document.activeElement)), true, 'Keyboard focus stays in picker');
+      await viewer.waitFor({ state: 'hidden' });
+      await page.waitForFunction(id => document.activeElement?.dataset.assetId === id, firstId);
+      assert.deepEqual(await selectedTileIds(picker), [], 'Double-click views a photo without selecting it');
+      await page.keyboard.press('ArrowRight');
+      await page.waitForFunction(id => document.activeElement?.dataset.assetId === id, ordered[1].id);
+      await page.keyboard.press('Space');
+      assert.deepEqual(await selectedTileIds(picker), [ordered[1].id], 'Space selects the focused photo');
+      await page.keyboard.press('Escape');
+      assert.deepEqual(await selectedTileIds(picker), [], 'Escape clears the selection before it closes the picker');
+      assert.equal(await picker.isVisible(), true);
       await shot('picker-desktop');
     });
-    await step('stable sorting, cross-page selections, direction filter and cancel', async () => {
-      const ordered = [...assets].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id));
-      assert.deepEqual(await idsOnPage(), ordered.slice(0, 48).map(asset => asset.id));
-      const first = ordered[0].id;
-      await picker.getByRole('checkbox', { name: `选择照片 ${first}`, exact: true }).check();
-      await picker.getByRole('button', { name: '下一页', exact: true }).click();
-      const second = (await idsOnPage())[0];
-      await picker.getByRole('checkbox', { name: `选择照片 ${second}`, exact: true }).check();
+    await step('pick order, batch selection, direction filter, read failure and cancel', async () => {
+      const ordered = newestFirst(assets);
+      await pickRange(picker, ordered[0].id, ordered[2].id);
+      assert.deepEqual(await selectedTileIds(picker), ordered.slice(0, 3).map(asset => asset.id), 'Shift-click selects the range in display order');
       await chooseOption(picker.getByRole('combobox', { name: '照片方向', exact: true }), 'portrait');
-      assert.ok((await idsOnPage()).every(id => assets.find(asset => asset.id === id).orientation === 'portrait'));
-      await chooseOption(picker.getByRole('combobox', { name: '加入本站时间', exact: true }), 'oldest');
-      await picker.getByRole('button', { name: '查看已选', exact: true }).click();
-      assert.equal(await picker.getByLabel('照片方向', { exact: true }).isDisabled(), true);
-      assert.deepEqual(await idsOnPage(), [first, second]);
+      assert.ok((await tileIds(picker)).every(id => assets.find(asset => asset.id === id).orientation === 'portrait'));
+      await addToTarget(picker, albumName, 3).waitFor();
       page.once('dialog', dialog => dialog.accept());
-      await picker.getByRole('button', { name: '取消选片', exact: true }).click();
+      await tray(picker).getByRole('button', { name: '取消选片', exact: true }).click();
       await picker.waitFor({ state: 'hidden' });
       await page.getByRole('button', { name: '照片排序', exact: true }).click();
       await page.getByRole('region', { name: '图集照片排序', exact: true }).getByText('图集还没有照片，请从图库选片。', { exact: true }).waitFor();
       assert.equal(await page.getByRole('region', { name: '图集照片排序', exact: true }).locator('[data-member-id]').count(), 0);
       await open();
-      assert.equal(await checkboxes().evaluateAll(nodes => nodes.filter(node => node.checked).length), 0);
-      await picker.getByRole('button', { name: '选择本页可加入照片', exact: true }).click();
-      assert.equal(await checkboxes().evaluateAll(nodes => nodes.filter(node => node.checked).length), 48);
-      await picker.getByRole('button', { name: '清空选择', exact: true }).click();
-      assert.equal(await checkboxes().evaluateAll(nodes => nodes.filter(node => node.checked).length), 0);
-      selected = (await idsOnPage()).slice(0, 2);
-      for (const id of selected) await picker.getByRole('checkbox', { name: `选择照片 ${id}`, exact: true }).check();
-      await picker.getByRole('button', { name: '下一页', exact: true }).click();
-      selected.push((await idsOnPage())[0]);
-      await picker.getByRole('checkbox', { name: `选择照片 ${selected[2]}`, exact: true }).check();
+      assert.deepEqual(await selectedTileIds(picker), []);
+      const newestBatch = batchBoxes(picker).first();
+      await newestBatch.click();
+      assert.equal(await newestBatch.getAttribute('aria-checked'), 'true');
+      assert.equal((await selectedTileIds(picker)).length, 100, 'The batch box selects the whole upload batch');
+      await newestBatch.click();
+      assert.deepEqual(await selectedTileIds(picker), []);
+      // Two batches, in a deliberate click order: that order is the album order.
+      selected = [ordered[1].id, ordered[0].id, ordered[100].id];
+      await pick(picker, selected);
+      assert.equal(await newestBatch.getAttribute('aria-checked'), 'mixed');
       // Deliberate transport fault injection; the recovery is a real GET.
       const assetUrl = `${origin}/api/sites/${slug}/assets`;
       await page.route(assetUrl, route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Simulated read failure' }) }), { times: 1 });
       const failure = page.waitForResponse(response => response.url() === assetUrl && response.status() === 503);
-      await picker.getByRole('button', { name: '重新读取素材', exact: true }).click();
+      await picker.getByRole('button', { name: '重新读取图库', exact: true }).click();
       await failure;
       await picker.getByRole('status').filter({ hasText: /失败|不可用|Simulated/ }).waitFor();
-      assert.ok((await checkboxes().evaluateAll(nodes => nodes.map(node => node.disabled))).every(Boolean));
-      assert.equal(await picker.getByRole('button', { name: '加入当前图集（3 张）', exact: true }).isDisabled(), true);
+      assert.ok((await picker.locator('[role="option"]').evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-disabled')))).every(value => value === 'true'));
+      assert.equal(await addToTarget(picker, albumName, 3).isDisabled(), true);
       await page.unroute(assetUrl);
       const recovery = page.waitForResponse(response => response.url() === assetUrl && response.status() === 200);
-      await picker.getByRole('button', { name: '重新读取素材', exact: true }).click();
+      await picker.getByRole('button', { name: '重新读取图库', exact: true }).click();
       await recovery;
-      await picker.getByRole('button', { name: '查看已选', exact: true }).click();
-      assert.deepEqual((await idsOnPage()).sort(), [...selected].sort());
-      await picker.getByRole('button', { name: '加入当前图集（3 张）', exact: true }).click();
+      assert.deepEqual((await selectedTileIds(picker)).sort(), [...selected].sort(), 'A failed read keeps the selection');
+      await addToTarget(picker, albumName, 3).click();
       await picker.waitFor({ state: 'hidden' });
       await page.getByRole('button', { name: '照片排序', exact: true }).click();
-      assert.equal(await page.getByRole('region', { name: '图集照片排序', exact: true }).locator('[data-member-id]').count(), 3);
+      assert.deepEqual(await page.getByRole('region', { name: '图集照片排序', exact: true }).locator('[data-member-id]').evaluateAll(nodes => nodes.map(node => node.dataset.memberId)), selected, 'Photos are appended in click order');
     });
     await step('real drag / keyboard / cancel / live composition / explicit draft save', async () => {
       ({ selected, saved } = await exerciseCollectionOrder({ page, selected, read, save, shot,
@@ -194,23 +193,18 @@ export async function sitePhotoPickerBrowserSmoke({ runtime, origin, password, a
     await step('mobile picker 390 and 320 with no page or dialog overflow', async () => {
       for (const width of [390, 320]) {
         await page.setViewportSize({ width, height: 844 }); await open();
-        await chooseOption(picker.getByRole('combobox', { name: '图集关系', exact: true }), 'all');
-        for (const id of selected) {
-          await picker.getByLabel('按素材 ID 查找', { exact: true }).fill(id);
-          assert.equal(await picker.getByRole('checkbox', { name: `选择照片 ${id}`, exact: true }).isDisabled(), true);
-        }
-        await picker.getByLabel('按素材 ID 查找', { exact: true }).fill('');
+        for (const id of selected) assert.equal(await tile(picker, id).getAttribute('aria-disabled'), 'true', 'Album members stay visible but cannot be picked again');
         await shot('picker');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 2), false, `Page overflow at ${width}`);
         assert.equal(await picker.evaluate(node => node.scrollWidth > node.clientWidth + 2), false, `Dialog overflow at ${width}`);
-        await picker.getByRole('button', { name: '取消选片', exact: true }).click();
+        await tray(picker).getByRole('button', { name: '取消选片', exact: true }).click();
       }
     });
     await step('50 and 100 members: whole-card drag, edge scrolling, touch, keyboard, undo and retained effect mode', async () => {
       await exerciseLargeCollections({ page, read, shot,
         published: async () => (await runtime.pool.query('SELECT * FROM site_publications WHERE site_id=$1', [siteId])).rows });
     });
-    await step('independent Site library browsing, cross-page selection and deduplicated unsaved append', async () => {
+    await step('library batches, membership views, menu and drag add with undo, new album, upload into an album', async () => {
       await exerciseSiteLibrary({ page, read, shot,
         published: async () => (await runtime.pool.query('SELECT * FROM site_publications WHERE site_id=$1', [siteId])).rows });
     });
