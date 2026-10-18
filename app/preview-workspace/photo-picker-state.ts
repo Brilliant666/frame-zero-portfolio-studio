@@ -1,27 +1,5 @@
-import type { SiteAsset } from "../site-editor/assets-client";
 import { parseSitePremiumDocument } from "../site-editor/content-schema";
 import { PREVIEW_LIMITS, type PreviewPortfolioDocumentV1 } from "./document";
-
-export const PICKER_PAGE_SIZE = 48;
-export type PickerFilter = { query: string; orientation: string; membership: string; sort: string; onlySelected: boolean };
-
-export function filterPickerAssets(assets: readonly SiteAsset[], members: readonly string[], picked: readonly string[], filter: PickerFilter) {
-  const memberIds = new Set(members);
-  const query = filter.query.trim().toLowerCase();
-  if (filter.onlySelected) {
-    const byId = new Map(assets.map(asset => [asset.id, asset]));
-    return picked.flatMap(id => byId.has(id) ? [byId.get(id)!] : []);
-  }
-  return assets.filter(asset => (!query || asset.id.toLowerCase().includes(query))
-    && (filter.orientation === "all" || asset.orientation === filter.orientation)
-    && (filter.membership !== "outside" || !memberIds.has(asset.id)))
-    .sort((a, b) => {
-      // Missing dates stay last in either direction. This is Site creation time, not EXIF.
-      if (Boolean(a.createdAt) !== Boolean(b.createdAt)) return a.createdAt ? -1 : 1;
-      const time = (a.createdAt ?? "").localeCompare(b.createdAt ?? "");
-      return (filter.sort === "oldest" ? time : -time) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-    });
-}
 
 export function appendPickedPhotos(document: PreviewPortfolioDocumentV1, collectionId: string, picked: readonly string[], availableIds: ReadonlySet<string>, expectedRevision = 0) {
   const collection = document.collections.find(item => item.id === collectionId);

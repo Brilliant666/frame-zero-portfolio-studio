@@ -5,6 +5,7 @@ import sharp from 'sharp';
 import { chromium } from 'playwright';
 import { chooseOption } from './kit-select-helpers.mjs';
 import { keepManualSave } from './manual-save-browser.mjs';
+import { addToTarget, pick } from './library-browser-helpers.mjs';
 
 // Anonymous fixtures only. Keep all writes in the actual existing editors;
 // API reads below are assertions, not a replacement for the browser save flow.
@@ -133,8 +134,8 @@ export async function siteAssetsBrowserSmoke({ origin, password, restart, signal
       await creation.getByLabel('图集名称', { exact: true }).fill('Anonymous landscape portrait square');
       await creation.getByRole('button', { name: '创建并选片', exact: true }).click();
       const picker = page.getByRole('dialog', { name: '从图库选片', exact: true });
-      for (const asset of assets) await picker.getByRole('checkbox', { name: `选择照片 ${asset.id}`, exact: true }).check();
-      await picker.getByRole('button', { name: '加入当前图集（3 张）', exact: true }).click();
+      await pick(picker, assets.map(asset => asset.id));
+      await addToTarget(picker, 'Anonymous landscape portrait square', 3).click();
       await page.getByRole('navigation', { name: '图集编辑内容', exact: true }).getByRole('button', { name: '图集设置', exact: true }).click();
       await chooseOption(page.getByRole('combobox', { name: '独立封面', exact: true }), assets.find(a => a.orientation === 'landscape').id);
       await chooseOption(page.getByRole('combobox', { name: '星图重点照片', exact: true }), assets.find(a => a.orientation === 'portrait').id);

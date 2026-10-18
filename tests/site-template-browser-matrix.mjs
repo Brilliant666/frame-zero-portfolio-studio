@@ -254,8 +254,8 @@ export async function siteTemplateBrowserMatrix({ page, publicPage, context, ori
         await creation.getByLabel('图集名称', { exact: true }).fill(`Premium browser matrix ${index}`);
         await creation.getByRole('button', { name: '创建并选片', exact: true }).click();
         const picker = page.getByRole('dialog', { name: '从图库选片', exact: true });
-        await picker.getByRole('checkbox', { name: /^选择照片 / }).first().check();
-        await picker.getByRole('button', { name: /加入当前图集/ }).click();
+        await picker.locator('[role="option"][data-asset-id]:not([aria-disabled="true"])').first().click();
+        await picker.getByRole('button', { name: /^加入「.*」（1 张）$/ }).click();
       }
       await publish('premium-polaroid');
       const saved = await draft('premium-polaroid'), pointer = (await publication()).current.id;

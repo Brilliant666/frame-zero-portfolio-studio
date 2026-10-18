@@ -128,6 +128,8 @@ export async function sitePublicationBrowserSmoke({ runtime, origin, password, s
     const response = await pending; assert.equal(response.status(), 200);
     const value = (await bounded(response.json(), `${space} publication JSON`)).publication;
     await publicationRegion().getByRole('status').filter({ hasText: value.outcome === 'unchanged' ? '当前内容已发布' : '发布成功' }).waitFor();
+    // The workbench switcher marks the newly public space at once, without a reload.
+    await page.locator('[data-workbench-bar]').getByText('公开中', { exact: true }).first().waitFor();
     return value;
   }
   async function template(id) {

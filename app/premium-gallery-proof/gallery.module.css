@@ -157,6 +157,15 @@
   .packages article>p:not(.price){margin-bottom:12px;line-height:1.7}
   .packages li{padding:4px 0}
 }
+/* Pricing sits in the space below the floating navigation: at least a clear gap under it, centred
+   vertically when the viewport has room, and scrolling from that gap when it does not. */
+@media(min-width:701px){
+  .root[data-flow-scene="pricing"] .scene{display:flex;flex-direction:column;padding-top:calc(78px + clamp(32px,6vh,56px));padding-bottom:clamp(16px,3vh,40px)}
+  .root[data-flow-scene="pricing"] .pricePanel{flex:none;margin-block:auto}
+}
+@media(min-width:701px) and (max-height:800px){
+  .root[data-flow-scene="pricing"] .scene{padding-top:calc(78px + 32px);padding-bottom:16px}
+}
 /* Scene headings take focus programmatically (tabindex=-1) so screen readers land on them;
    they are not controls, so no visible focus frame around the title. */
 .root [data-flow-scene-heading]:focus{outline:none}

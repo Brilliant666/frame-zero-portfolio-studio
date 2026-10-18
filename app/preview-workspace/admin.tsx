@@ -18,7 +18,6 @@ import { loadSiteAssets, type SiteAsset } from "../site-editor/assets-client";
 import SitePhotoPicker from "./site-photo-picker";
 import { appendPickedPhotos } from "./photo-picker-state";
 import { parseSitePremiumDocument } from "../site-editor/content-schema";
-import SiteAssetUpload from "../site-editor/asset-upload";
 import SiteContactCard from "../site-editor/contact-card";
 import { setContactCardReference } from "../site-editor/contact-card-state";
 import type { SiteEditorScope } from "../site-editor/scope";
@@ -26,7 +25,7 @@ import type { PublicationEditorProps } from "../site-editor/publication-controls
 import { confirmDraftSave, DraftSaveRejected, DraftSaveUncertain, writeSiteDraft, type DraftSaveOptions, type DraftSaveReceipt, type PendingDraftSave } from "../site-editor/draft-save";
 import CollectionMemberEditor from "./collection-member-editor";
 import CollectionLivePreview from "./collection-live-preview";
-import SitePhotoLibrary from "./site-photo-library";
+import PhotoLibrary from "../admin-kit/photo-library";
 import NewCollectionDialog from "./new-collection-dialog";
 import PackagesEditor from "./packages-editor";
 import styles from "./admin.module.css";
@@ -285,13 +284,32 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
     if (!libraryReady || !pickerCollectionId) throw new Error("请先成功读取本站素材。");
     const result = appendPickedPhotos(current.current, pickerCollectionId, ids, new Set(assets.map(asset => asset.id)), revision);
     edit(() => result.document); setRecentAdditions(result.additions); setPickerCollectionId(null);
-    setMessage(`已加入 ${result.additions.length} 张，请确认成员顺序后保存修改；尚未发布。`);
+    setMessage(`已加入 ${result.additions.length} 张，请确认成员顺序；尚未发布。`);
+    return result.additions;
   };
   const addLibraryPhotos = (collectionId: string, ids: readonly string[]) => {
     if (!libraryReady) throw new Error("请先成功读取本站素材。");
     const result = appendPickedPhotos(current.current, collectionId, ids, new Set(assets.map(asset => asset.id)), revision);
     edit(() => result.document); setRecentAdditions(result.additions);
-    setMessage(`已向图集加入 ${result.additions.length} 张；尚未保存或发布。`);
+    return result.additions;
+  };
+  /** Removal and undo from the library; a removed 重点照片 comes back with its photo. */
+  const removedFocus = useRef(new Map<string, string>());
+  const setCollectionMembers = (collectionId: string, ids: readonly string[]) => edit(doc => ({ ...doc, collections: doc.collections.map(item => {
+    if (item.id !== collectionId) return item;
+    let focusAssetId = item.focusAssetId;
+    if (focusAssetId && !ids.includes(focusAssetId)) { removedFocus.current.set(collectionId, focusAssetId); focusAssetId = null; }
+    const kept = removedFocus.current.get(collectionId);
+    if (!focusAssetId && kept && ids.includes(kept)) { focusAssetId = kept; removedFocus.current.delete(collectionId); }
+    return { ...item, assetIds: [...ids], focusAssetId };
+  }) }));
+  /** A library-made album starts hidden, so a half-sorted album never reaches the public page. */
+  const createCollectionWith = (name: string, ids: readonly string[]) => {
+    if (current.current.collections.length >= 30) throw new Error("最多 30 个图集。");
+    const id = crypto.randomUUID();
+    const withAlbum = { ...current.current, collections: [...current.current.collections, { id, name, description: "", visible: false, coverAssetId: null, coverFit: "natural" as const, coverFocusX: 50, coverFocusY: 50, assetIds: [], focusAssetId: null }] };
+    const result = appendPickedPhotos(withAlbum, id, ids, new Set(assets.map(asset => asset.id)), revision);
+    edit(() => result.document); setRecentAdditions(result.additions);
   };
   const openCollection = (id: string) => {
     setSelectedId(id); setCollectionTab("photos"); setOperationMember(null); photoScroll.current = 0;
@@ -380,8 +398,8 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
       <nav className={styles.nav} aria-label="新版编辑分区">{sections.map(([id, label]) => <button key={id} type="button" aria-pressed={section === id} onClick={() => changeSection(id)}>{label}</button>)}</nav></>}
       <fieldset disabled={loadState !== "ready"} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
         {siteScope && <section className={styles.panel} hidden={section !== "library"}>
-          <SitePhotoLibrary assets={assets} collections={draft.collections} ready={libraryReady} truncated={libraryTruncated} state={libraryState} onReload={loadLibrary} onAdd={addLibraryPhotos} onView={setEnlargedMember}
-            upload={<SiteAssetUpload endpoint={siteScope.assetsEndpoint} onUploaded={loadLibrary} compact />} />
+          <PhotoLibrary noun="图集" assets={assets} albums={draft.collections} ready={libraryReady} truncated={libraryTruncated} state={libraryState} onReload={loadLibrary}
+            onAdd={addLibraryPhotos} onSetMembers={setCollectionMembers} onCreate={createCollectionWith} maxAlbums={30} uploadEndpoint={siteScope.assetsEndpoint} editable={loadState === "ready" && !saving && !conflict && !pendingSave} />
         </section>}
         {siteMode && section === "albums" && <section className={styles.panel}>
           <div className={styles.collectionHeading}><div><h2>图集</h2><p>{draft.collections.length} 个图集 · 最多 30 个</p></div><button type="button" disabled={draft.collections.length >= 30 || loadState !== "ready" || saving} onClick={createCollection}>新建图集</button></div>
@@ -475,7 +493,8 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
     </div></div>
     {siteMode && <LivePreviewPane src={`/${siteName}/admin/live/premium-polaroid`} label="星轨" />}
     {enlargedMember && <MemberPhoto asset={enlargedMember} onClose={() => setEnlargedMember(null)} />}
-    {siteMode && pickerTarget && <SitePhotoPicker returnFocus={pickerTrigger} key={pickerTarget.id} collectionName={pickerTarget.name || "未命名图集"} members={pickerTarget.assetIds} assets={assets} ready={libraryReady} truncated={libraryTruncated} state={libraryState} onReload={loadLibrary} onClose={() => setPickerCollectionId(null)} onAdd={addPickedPhotos} />}
+    {siteMode && pickerTarget && <SitePhotoPicker returnFocus={pickerTrigger} key={pickerTarget.id} noun="图集" target={pickerTarget} albums={draft.collections} assets={assets} ready={libraryReady} truncated={libraryTruncated} state={libraryState} onReload={loadLibrary}
+      uploadEndpoint={siteScope?.assetsEndpoint} editable={loadState === "ready" && !saving && !conflict && !pendingSave} onClose={() => setPickerCollectionId(null)} onAdd={addPickedPhotos} />}
     {preview && createPortal(<section ref={previewRef} className={styles.preview} role="dialog" aria-modal="true" aria-label="新版未保存草稿效果"><div className={styles.previewBar}><p>{siteMode ? "当前编辑快照 · 预览不会保存或发布" : "草稿快照 · 尚未保存到主页"}</p><button type="button" onClick={() => setPreview(null)}>关闭草稿效果</button></div><PortfolioView document={preview} embedded initialCollectionId={previewCollectionId} {...(siteMode ? { assets } : {})} /></section>, document.body)}
   {creatingCollection && <NewCollectionDialog onClose={() => setCreatingCollection(false)} onCreate={createNamedCollection} />}
   </main>;

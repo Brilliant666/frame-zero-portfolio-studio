@@ -6,6 +6,7 @@ import { publicationMatches as matches, publicationSynced, type PublicationSumma
 import { templateCatalog } from "../templates/catalog";
 import { useEditorActionVisibility } from "./use-editor-action-visibility";
 import { publicationSuccessDetail } from "./publication-feedback";
+import { announcePublication } from "./publication-events";
 import styles from "./publication-controls.module.css";
 
 export type PublicationEditorProps = {
@@ -71,6 +72,9 @@ export default function PublicationControls({ endpoint, publicHref, space, revis
     const timer = window.setTimeout(() => setMessage(""), 6000);
     return () => window.clearTimeout(timer);
   }, [presentation, feedbackTone, message]);
+  const liveSpace = state ? state.current?.space ?? null : undefined;
+  // The workbench bar marks which space is live; keep it in step with every confirmed read or publish.
+  useEffect(() => { if (liveSpace !== undefined) announcePublication(liveSpace); }, [liveSpace]);
   const read = useCallback(async (signal?: AbortSignal) => {
     const { response, body } = await editorJson(endpoint, { cache: "no-store" }, signal);
     if (!response.ok) throw new Error("发布状态读取失败，请重试。");
