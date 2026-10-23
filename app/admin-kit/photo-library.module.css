@@ -295,3 +295,9 @@
   .viewer[open] { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
   .viewerSide { max-height: 46dvh; }
 }
+
+/* Narrow phones need less space between controls once their labels wrap.
+   Keep the photo size and touch targets unchanged. */
+@media (max-width: 360px) {
+  .root { gap: 6px; }
+}

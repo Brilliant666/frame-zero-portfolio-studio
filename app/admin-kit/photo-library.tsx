@@ -421,7 +421,7 @@ export default function PhotoLibrary(props: PhotoLibraryProps) {
     {viewing && assetMap.has(viewing) && <LibraryViewer asset={assetMap.get(viewing)!} order={order} assetMap={assetMap} noun={noun} albums={picking || !canEdit ? null : albums}
       onMove={id => setViewing(id)} onToggle={(album, on) => { const id = viewing; if (on) add(album, [id], true); else remove(album, [id], true); }}
       onClose={() => { const id = viewing; setViewing(null); focusTile(id, false); }} />}
-    {uploadOpen && uploadEndpoint && <LibraryUploader endpoint={uploadEndpoint} noun={noun} albums={canEdit ? albums : []} initialAlbum={target?.id ?? scopeAlbum?.id ?? ""} onReload={onReload}
+    {uploadOpen && uploadEndpoint && <LibraryUploader endpoint={uploadEndpoint} noun={noun} albums={canEdit ? (target ? [target] : albums) : []} initialAlbum={target?.id ?? scopeAlbum?.id ?? ""} onReload={onReload}
       onFinished={(ids, albumId) => { if (ids.length) setAfterUpload({ ids, albumId }); }} onClose={() => setUploadOpen(false)} />}
   </section>;
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import sharp from 'sharp';
-import { chooseOption } from './kit-select-helpers.mjs';
+import { chooseOption, kitOptionValues } from './kit-select-helpers.mjs';
 import { batchBoxes, pick, tile, tileIds, tray } from './library-browser-helpers.mjs';
 
 // 星轨 library page on the anonymous 500-photo picker fixture. Everything stays an unsaved draft
@@ -95,6 +95,7 @@ export async function exerciseSiteLibrary({ page, read, published, shot }) {
   for (const [name, background] of [['library-upload-1', '#3a5f8a'], ['library-upload-2', '#8a5f3a']]) files.push({ name: `${name}.png`, mimeType: 'image/png', buffer: await sharp({ create: { width: 120, height: 80, channels: 3, background } }).png().toBuffer() });
   await library.getByRole('button', { name: '上传照片', exact: true }).click();
   const uploader = page.getByRole('dialog', { name: '上传照片到本站图库', exact: true });
+  assert.equal((await kitOptionValues(uploader.getByRole('combobox', { name: '上传后加入', exact: true }))).length, before.content.collections.length + 2, 'The full library still offers every album, the newly created album and no automatic add');
   await uploader.getByLabel('选择要上传的照片', { exact: true }).setInputFiles(files);
   await chooseOption(uploader.getByRole('combobox', { name: '上传后加入', exact: true }), collection.id);
   await uploader.getByRole('button', { name: '开始上传（2 张）', exact: true }).click();
@@ -125,6 +126,28 @@ export async function exerciseSiteLibrary({ page, read, published, shot }) {
   await page.getByRole('button', { name: new RegExp(collection.name) }).click();
   const members = page.getByRole('region', { name: '图集照片排序', exact: true }).locator('[data-member-id]');
   assert.deepEqual(await members.evaluateAll(nodes => nodes.map(node => node.dataset.memberId)), [...collection.assetIds, second, first, ...uploaded], 'The album editor sees the library additions');
+
+  // Uploading while picking for A must not offer B then silently append to A.
+  // The other album remains available as a membership filter in the same picker.
+  await page.getByRole('button', { name: '从图库选片', exact: true }).click();
+  const picker = page.getByRole('dialog', { name: '从图库选片', exact: true });
+  await picker.getByRole('group', { name: '按归属查看', exact: true }).getByRole('button', { name: /^Library made album/ }).waitFor();
+  await picker.getByRole('button', { name: '上传照片', exact: true }).click();
+  const pickerUpload = page.getByRole('dialog', { name: '上传照片到本站图库', exact: true });
+  const destination = pickerUpload.getByRole('combobox', { name: '上传后加入', exact: true });
+  assert.deepEqual(await kitOptionValues(destination), ['', collection.id], 'An album picker offers only no automatic add or its current target');
+  await chooseOption(destination, '');
+  await chooseOption(destination, collection.id);
+  const knownBeforePickerUpload = new Set((await (await page.request.get(assetsUrl)).json()).assets.map(asset => asset.id));
+  await pickerUpload.getByLabel('选择要上传的照片', { exact: true }).setInputFiles({ name: 'picker-target-upload.png', mimeType: 'image/png', buffer: await sharp({ create: { width: 96, height: 128, channels: 3, background: '#2c7558' } }).png().toBuffer() });
+  await pickerUpload.getByRole('button', { name: '开始上传（1 张）', exact: true }).click();
+  await picker.waitFor({ state: 'hidden' });
+  const pickerUploaded = (await (await page.request.get(assetsUrl)).json()).assets.filter(asset => !knownBeforePickerUpload.has(asset.id)).map(asset => asset.id);
+  assert.equal(pickerUploaded.length, 1);
+  assert.deepEqual(await members.evaluateAll(nodes => nodes.map(node => node.dataset.memberId)), [...collection.assetIds, second, first, ...uploaded, ...pickerUploaded], 'Picker uploads append to the target album');
+  await page.getByRole('button', { name: '图库', exact: true }).click();
+  await scope('Library made album').click();
+  assert.deepEqual(await tileIds(library), [third], 'Uploading for the current album leaves the other album untouched');
   await shot('independent-library-unsaved-add');
   const discard = dialog => dialog.accept(); page.on('dialog', discard);
   try { await page.reload(); } finally { page.off('dialog', discard); }

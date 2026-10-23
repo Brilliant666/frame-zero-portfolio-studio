@@ -4,7 +4,7 @@
 
 当前已具备本机可用的账号、Site 授权、三类独立内容空间与编辑器、私有作品资源和发布链路。**本机验收不等于公网部署或 V1 上线**。本机账号验收不是真实客户认证证明。`FRAME//ZERO` 是历史代号和技术命名空间，不是正式品牌。
 
-新会话先读 [AGENTS.md](AGENTS.md) → [当前状态](docs/CURRENT_STATUS.md) → [会话交接](docs/SESSION_HANDOFF.md)。当前已交付基线为 [PR #35](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/35) 合并后的 `main` 提交 `57b12c2`；合并验证、已知风险及日常切换记录见 [PR35 收口记录](docs/design/PR35_OCT15_CLOSEOUT.md)。精确启动方式以仓库外本机交接记录为准，不从旧阶段文档推断服务是否正在运行。
+新会话先读 [AGENTS.md](AGENTS.md) → [当前状态](docs/CURRENT_STATUS.md) → [会话交接](docs/SESSION_HANDOFF.md)。截至 2026-10-23，已合并基线为 [PR #43](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/43) 后的 `main` 提交 `a834310`，包含星轨、统一后台、新图库及预览／上传反馈修复；后续上传目标与预览异步恢复修正版已更新本机日常，由独立分支 `codex/admin-library-final-fixes` 维护，尚未合入 main，范围与验证结果见当前状态。PR35 已接受的手机预览返回风险仍见 [收口记录](docs/design/PR35_OCT15_CLOSEOUT.md)。精确启动方式以仓库外本机交接记录为准，不从旧阶段文档推断服务是否正在运行。
 
 ## 1. 已实现的核心能力
 
