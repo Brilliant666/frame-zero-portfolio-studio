@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element -- local photo-library thumbnail variants. */
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { assetToWork, parsePhotoLibraryManifest, type PhotoAsset } from "../../photo-library";
 import type { TemplateProps } from "../types";
@@ -45,6 +45,16 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
   const [entry, setEntry] = useState<{source?:CollectionEntranceSource;exiting:boolean}>();
   const entranceSource=entry?.source,homeExiting=entry?.exiting;
   const entryGeneration = useRef(0);
+  const openingSource = useRef<CollectionEntranceSource | undefined>(undefined);
+  const cancelOpening = useCallback(() => {
+    const source = openingSource.current;
+    if (source) {
+      if (source.cancel) source.cancel();
+      else {source.cancelled=true;source.flight?.cleanup();}
+      openingSource.current=undefined;
+    }
+  }, []);
+  useEffect(() => cancelOpening, [cancelOpening]);
   const cameras = useRef(new Map<string, ViewState>());
   const [lastSelected, setLastSelected] = useState<string | null>(null);
   const [restoredView, setRestoredView] = useState<ViewState | undefined>();
@@ -99,25 +109,29 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
   }, [suppliedAssets]);
 
   const returnHome = useCallback((push = true) => {
+    const returning = selectedId !== null || !!openingSource.current;
     if (ComposerScene) entryGeneration.current++;
+    cancelOpening();
     setEntry(undefined);
-    // pull the sky back as the home returns
-    window.dispatchEvent(new CustomEvent("preview:star-boost", { detail: { phase: "out" } }));
+    // A real album return (including an unfinished entrance) pulls the sky back once.
+    if (returning) window.dispatchEvent(new CustomEvent("preview:star-boost", { detail: { phase: "out" } }));
     const scrollTop = scrollPositions.current.get(cameraKey("home")) ?? 0;
     onBeforeViewChange?.(); setRestoredView(cameras.current.get(cameraKey("home"))); setSelectedId(null);
     if (push && !isPreview) window.history.pushState(null, "", "#polaroid-top");
     restoreScroll(scrollTop);
-  }, [isPreview, onBeforeViewChange, cameraKey, restoreScroll]);
-  useEffect(() => {
+  }, [isPreview, onBeforeViewChange, cameraKey, restoreScroll, selectedId, cancelOpening]);
+  useLayoutEffect(() => {
     if (homeRequest === priorHomeRequest.current) return;
     priorHomeRequest.current = homeRequest;
-    const frame = requestAnimationFrame(() => returnHome(false));
-    return () => cancelAnimationFrame(frame);
+    // Invalidate pending imports before another frame can accept a stale album entrance.
+    // restoreScroll already schedules the DOM-dependent part after the home has returned.
+    returnHome(false);
   }, [homeRequest, returnHome]);
   useEffect(() => {
     if (isPreview) return;
     const sync = () => {
       if (ComposerScene) entryGeneration.current++;
+      cancelOpening();
       setEntry(undefined);
       const id = location.hash.startsWith(hashPrefix) ? location.hash.slice(hashPrefix.length) : null;
       const next = visible.some((item) => item.id === id) ? id : null;
@@ -128,7 +142,7 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
     };
     sync(); addEventListener("popstate", sync); addEventListener("hashchange", sync);
     return () => { removeEventListener("popstate", sync); removeEventListener("hashchange", sync); };
-  }, [isPreview, visible, onBeforeViewChange, cameraKey, restoreScroll]);
+  }, [isPreview, visible, onBeforeViewChange, cameraKey, restoreScroll, cancelOpening]);
   useEffect(() => {
     if (!selectedId || selected) return;
     const frame = requestAnimationFrame(() => returnHome(false));
@@ -154,8 +168,14 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
     } else {
       if (savedCollections && ComposerScene) {
         const generation=++entryGeneration.current;
-        await loadComposer();
-        if (entryGeneration.current!==generation || source?.cancelled) {source?.flight?.cleanup();return;}
+        openingSource.current=source;
+        try { await loadComposer(); }
+        catch (error) { if (openingSource.current===source) cancelOpening(); throw error; }
+        if (entryGeneration.current!==generation || source?.cancelled) {
+          if (source) {source.cancelled=true;source.flight?.cleanup();}
+          if (openingSource.current===source) openingSource.current=undefined;
+          return;
+        }
         if(source){source.accepted=true;source.exited=exit;}
         setEntry({source,exiting:Boolean(exit)});
         void (exit ?? Promise.resolve()).then(() => {
