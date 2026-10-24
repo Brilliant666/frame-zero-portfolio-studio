@@ -7,6 +7,7 @@ import CollectionLivePreview from "../../../app/preview-workspace/collection-liv
 import Prism from "../../../app/templates/prism-liquid/template";
 import PolaroidField from "../../../app/templates/polaroid-field/template";
 import { LibraryContinuityProbe, PackageAdminContinuityProbe } from "./continuity-probes";
+import { MainAdminProbe, MainPreviewProbe, MainPreviewFrameProbe } from "./main-fixes-probes";
 import { PreviewPortfolioExperience } from "../../../app/preview-workspace/portfolio-view";
 import Lightbox from "../../../app/templates/shared/lightbox";
 import { useTemplateInteractions } from "../../../app/templates/shared/use-template-interactions";
@@ -98,6 +99,9 @@ function Fixture() {
   const interactions = useTemplateInteractions(works);
   const closeLightbox = () => interactions.setActiveWork(null);
   useEffect(() => { window.measureDisplayFixes = measure; return () => { delete window.measureDisplayFixes; }; }, []);
+  if (subject === "main-admin") return <MainAdminProbe />;
+  if (subject === "main-preview") return <MainPreviewProbe mode={params.get("mode") ?? "race"} />;
+  if (subject === "main-preview-frame") return <MainPreviewFrameProbe />;
   return <>
     {subject === "library" ? <LibraryContinuityProbe assets={assets} /> : subject === "package-admin" ? <PackageAdminContinuityProbe portfolioDocument={portfolioDocument} assets={assets} /> : subject === "field" ? <PolaroidField templateId="polaroid-field" content={content} works={works} packages={[]} bookingTemplate="测试" copiedKey={interactions.copiedKey} booted onCopy={interactions.copyText} onOpenWork={interactions.openWork} /> : subject === "prism" ? <Prism templateId="prism-liquid" content={content} works={works} packages={[]} bookingTemplate="测试" copiedKey={interactions.copiedKey} booted isPreview onCopy={interactions.copyText} onOpenWork={interactions.openWork} /> : subject === "portfolio" ? previewOpen ? <section className={embedded ? admin.preview : undefined} role={embedded ? "dialog" : undefined} aria-modal={embedded ? "true" : undefined} aria-label={embedded ? "新版未保存草稿效果" : undefined}>
       {embedded && <div className={admin.previewBar}><p>当前编辑快照 · 预览不会保存或发布</p><button type="button" onClick={() => setPreviewOpen(false)}>关闭草稿效果</button></div>}

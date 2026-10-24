@@ -1,6 +1,62 @@
 # 会话交接
 
-## 当前交接（2026-10-18 文档同步）
+## PR44 容器入口契约修复（2026-10-24）
+
+原 Head `0b16468` 的 Container 检查在入口点断言失败；首次失败
+[39950042250 / attempt 1](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/39950042250)
+继续保留。诊断提交 `63e6149` 仅增加实际配置输出、保持原断言，
+[40056300689 / attempt 1](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/40056300689)
+重现失败，取得如下证据：
+
+| 检查对象 | Entrypoint | Cmd | 其他配置 |
+| --- | --- | --- | --- |
+| 固定 digest 的 `node:22.22.3-bookworm-slim` | `["docker-entrypoint.sh"]` | `["node"]` | 基础镜像 |
+| 同一 Dockerfile 的最终 runtime stage | 字段缺省，`entrypointPresent=false` | `["node","server.js"]` | User=`1000:1000`，WorkingDir=`/app`，StopSignal=`SIGTERM` |
+
+诊断环境为 Docker 客户端／服务端 `29.4.2`、API `1.54`、buildx `v0.38.0`；
+Dockerfile SHA256 为 `63d9bf690fbc72d67b2ea1beb7544252a2382778a5aac76813b98e22bfaf1c2f`。
+Docker 29 / API 1.52 起会在 image inspect 响应中省略空的 Entrypoint；
+JavaScript 读取缺省属性得到 `undefined`，原断言仅接受 `null` 或空数组，因而拒绝了正确产物。
+依据见 [Docker 官方变更说明](https://docs.docker.com/engine/deprecated/#emptynil-fields-in-image-config-from-inspect-api)。
+
+修复只调整容器验证器及其小型纯函数与回归：在有效 Config 对象中接受缺省、`null`、`[]`；
+继续拒绝任何非空数组（含 `[""]`、继承脚本及 shell）和错误类型。
+Dockerfile、基础镜像、Node 版本、默认 CMD、Compose 与工作流均不改变。
+验证器补充默认启动的 PID 1 可执行文件、真实 Docker health 状态、无需 entrypoint override 的
+CMD 覆盖检查，并保留原有 10 秒 stop、非 137 退出及 12 秒耗时断言。
+构建上下文、私人文件、只读文件系统、字体和封闭入口检查继续执行。
+
+本机 Docker daemon 不可用，因此实际镜像构建与运行验证在当前 PR 的既有 CI 中执行；
+没有重跑旧失败 run 或调整工作流跳过检查。最终结果按 PR44 最终 Head 的五项检查记录，
+不能用诊断 Head 或其他历史成功替代。PR 保持 Draft，日常应用及业务数据不因本轮切换。
+
+## 当前交接（2026-10-23）
+
+先读 [CURRENT_STATUS](CURRENT_STATUS.md)。已合并 main 为 PR43 `a83431030c18f5777e79bda8e6de0234568bad8b`，五项 main push 检查全部通过；日常已按用户追加授权运行下面的本机修正版，本分支修复尚未合入远端 main。
+
+本轮在 `codex/admin-library-final-fixes` 修复上传目标错配和实时预览异步恢复，并收紧 320px 图库控件间距。只复用闲置开发目录和已有依赖；日常及兼容回退目录不可原地构建或切分支。隔离夹具仅使用匿名内存内容，日常不做上传、保存或发布测试。
+
+### 修复与验证
+
+- 选片窗口的上传目标限定为当前图集／分类或“先不加入”；顶层图库仍提供全部目标，其他图集的归属筛选保留。浏览器基线选 B 却加入 A；候选上传后 A 从 11 增为 12，B / C 保持 13 / 1。
+- 实时预览只接受最新资源请求的结果，关闭后忽略未完成请求。最新读取失败时保留已有照片，显示可键盘操作的“重新读取预览照片”。真实组件的隔离 iframe 证实：基线中旧响应撤掉 B；候选保留 B；503 后可重试恢复，首次失败也可恢复。不会因普通文字编辑自动循环重试。
+- 同内容、同视口、零滚动的 320×844 对照：首图下沿从 781.80px 到 775.80px，固定操作栏上沿 779px，照片仍为 126×126px。390×844 和 1440×900 的首图位置、尺寸与基线一致。
+- `test:admin` 229 项、`test:preview` 14 项通过；TypeScript 与 Next 生产构建通过；公开安全检查、diff 检查通过。全目录 lint 首次误扫本机历史生成文件；排除仅本机 `.frame-zero`、`.vinext`、`.wrangler` 后全源码通过，规则与 CI 未修改。
+- 构建预算检查通过，但继续报告跨路由 CSS 437,910 bytes 超过 307,200 bytes 参考值；不是传输体积或真实业务路由性能结论。
+- `tests/site-library-browser.mjs` 补入真实隔离上传归属回归，尚未执行其完整数据库套件；本轮浏览器通过使用的是匿名内存传输。未做日常写入、物理手机或真实网络故障测试。
+- 夹具沿用 `tests/display-fixes-fixture.mjs`：基线构建用 `--revision=a83431030c18f5777e79bda8e6de0234568bad8b`，候选使用工作区源码；`subject=main-admin` 验收图库，`subject=main-preview&mode=race|failure|initial-failure` 验收预览。端口、证据与启动记录留在本机交接，不提交私人路径或原始截图。
+
+用户随后授权将本轮代码、匿名回归和脱敏文档提交至 PR。PR 保持 Draft；远端五项 CI 以最终 Head 的实际结果为准，main 的历史结果不覆盖此分支。提交产品内容与已部署构建相同，不因提交动作重新构建或更新 3001。
+
+### 更新本机日常（2026-10-23）
+
+用户明确要求更新 3001。沿用已验证构建 `I-wfa8YoiBu0sPe4uQPOR` 和原自定义 Node 启动方式，只切换应用；原日常 `NVRTu0N-r6x47v9b9Yg-3` 作为兼容回退。锁文件、运行依赖、启动器及数据库契约一致，无迁移；数据库进程保持。新日常直接使用本轮工作目录及构建，该目录现在属于运行保护集合，不再用于原地重建或切分支。
+
+独立 HTTP 检查确认健康、首页、登录、公开页均 200，12 项页面静态资源与构建内容一致；已有登录会话只读确认 41 张照片、3 个图集、草稿已保存及实时预览正常。未用日常数据重做上传或故障测试。六业务表摘要、135 资源文件元信息和配置前后全部匹配；没有保存、发布或内容修改。本次仅增加小型启动脚本、校验收据、日志与截图，未新增完整依赖、release、数据库或图库副本。精确运行路径、日志和恢复方法仅记本机私有交接。
+
+已接受的手机内嵌预览返回风险保持 `UNRESOLVED / ACCEPTED_FOR_LOCAL_STAGE`。本次提交授权不包含合并或后续远程部署。
+
+## 2026-10-18 历史交接
 
 先读 [CURRENT_STATUS](CURRENT_STATUS.md)。main 最新为 PR41 合并提交 `3466ffb7c01605ed05bc1e48b1fca993b7e3a68a`；PR36、PR37、PR40、PR41 均已 Squash 合并，PR38、PR39 已并入 PR37 后关闭。
 

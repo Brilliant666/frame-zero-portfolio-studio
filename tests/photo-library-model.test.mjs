@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import vm from 'node:vm';
 import test from 'node:test';
 import ts from 'typescript';
 
@@ -82,4 +83,65 @@ test('upload queue checks each file and reports ids, duplicates, retries while b
   let busy = 0;
   assert.equal((await upload.uploadLibraryFile('/e', file, async () => { busy++; return reply(429, {}); }, () => {})).status, 'rejected', 'Gives up after three retries');
   assert.equal(busy, 4);
+});
+
+// Render the actual library and uploader, exercising their click handlers with deterministic
+// hooks. This checks the options people can choose, without a browser, server or account writes.
+async function libraryComponents() {
+  let slots = [], cursor = 0;
+  const hooks = {
+    useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = typeof initial === 'function' ? initial() : initial; const state = slots; return [state[i], value => { state[i] = typeof value === 'function' ? value(state[i]) : value; }]; },
+    useRef(initial) { const i = cursor++; return slots[i] ??= { current: initial }; },
+    useId() { return 'library-test'; }, useEffect() {}, useLayoutEffect() {},
+    useMemo(factory) { return factory(); }, useCallback(callback) { return callback; },
+  };
+  const Select = () => null, exports = {};
+  const source = await fs.readFile(new URL('../app/admin-kit/photo-library.tsx', import.meta.url), 'utf8');
+  const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+  vm.runInNewContext(compiled, { exports, require(id) {
+    if (id === 'react') return hooks;
+    if (id === 'react-dom') return { createPortal: child => child };
+    if (id === 'react/jsx-runtime') return { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
+    if (id === './select') return { Select };
+    if (id === './photo-library-model') return model;
+    if (id === './library-upload') return upload;
+    if (id.endsWith('.module.css')) return { default: new Proxy({}, { get: (_, key) => key }) };
+    throw Error(`Unexpected import: ${id}`);
+  } });
+  return { Library: exports.default, Select, render(Component, props, state) { slots = state; cursor = 0; return Component(props); } };
+}
+function element(node, predicate) {
+  if (!node || typeof node !== 'object') return null;
+  if (predicate(node)) return node;
+  for (const child of [node.props?.children].flat(Infinity)) { const found = element(child, predicate); if (found) return found; }
+  return null;
+}
+function elementText(node) {
+  if (node == null || node === false) return '';
+  if (typeof node !== 'object') return String(node);
+  return [node.props?.children].flat(Infinity).map(elementText).join('');
+}
+test('picker uploads offer only their target; the full library retains every upload destination and membership filter', async () => {
+  const { Library, Select, render } = await libraryComponents();
+  const albums = [{ id: 'one', name: 'One', assetIds: [], visible: true }, { id: 'two', name: 'Two', assetIds: [], visible: true }];
+  for (const noun of ['图集', '分类']) {
+    for (const target of [undefined, albums[0]]) {
+      const state = [], props = { noun, albums, target, assets: [], ready: true, truncated: false, state: '', onReload: async () => true, onAdd: () => [], uploadEndpoint: '/api/sites/fixture/assets' };
+      let tree = render(Library, props, state);
+      assert.ok(element(tree, node => node.type === 'button' && elementText(node).includes('Two')), 'Other album membership remains browsable inside the picker');
+      element(tree, node => node.type === 'button' && elementText(node) === '上传照片').props.onClick();
+      tree = render(Library, props, state);
+      const uploader = element(tree, node => typeof node.type === 'function' && node.type.name === 'LibraryUploader');
+      assert.ok(uploader, 'The upload action opens the real uploader component');
+      const uploadState = [];
+      const choose = () => element(render(uploader.type, uploader.props, uploadState), node => node.type === Select && node.props.label === '上传后加入');
+      assert.deepEqual(Array.from(choose().props.options, option => option.value), target ? ['', 'one'] : ['', 'one', 'two']);
+      assert.equal(choose().props.value, target ? 'one' : '');
+      choose().props.onChange('');
+      assert.equal(choose().props.value, '', 'Uploading without adding remains available');
+      const destination = target ? 'one' : 'two';
+      choose().props.onChange(destination);
+      assert.equal(choose().props.value, destination, 'The offered destination can be selected');
+    }
+  }
 });

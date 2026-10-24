@@ -12,8 +12,8 @@ import { SiteBasicView } from "./basic-view";
 import { SitePortfolioView } from "./premium-view";
 import { SiteFlowGalleryView } from "./flow-gallery-view";
 
-/** Site asset IDs are UUIDs. Other UUIDs in a draft (album IDs) are simply never found, and asked for once. */
-const UUIDS = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+import { createLivePreviewAssets, type LivePreviewAssetState } from "./live-preview-assets";
+import styles from "./live-preview-frame.module.css";
 
 /**
  * Inside the editor's preview iframe: renders the editor's in-memory draft with the real template.
@@ -21,24 +21,18 @@ const UUIDS = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
  */
 export default function LivePreviewFrame({ space, assetsEndpoint }: { space: WorkbenchSpace; assetsEndpoint: string }) {
   const [content, setContent] = useState<unknown>(null);
-  const [assets, setAssets] = useState<PhotoAsset[] | null>(null);
+  const [assetState, setAssetState] = useState<LivePreviewAssetState<PhotoAsset>>({ assets: null, loading: true, failed: false });
+  const assets = assetState.assets;
   const [detached, setDetached] = useState(false);
-  const mounted = useRef(true);
-  const asked = useRef(new Set<string>());
+  const refresh = useRef<ReturnType<typeof createLivePreviewAssets<PhotoAsset>> | null>(null);
   useEffect(() => {
-    mounted.current = true;
-    void loadSiteAssets(assetsEndpoint).then(manifest => { if (mounted.current) setAssets(manifest.assets); }, () => { if (mounted.current) setAssets([]); });
-    return () => { mounted.current = false; };
+    const controller = createLivePreviewAssets<PhotoAsset>(async () => (await loadSiteAssets(assetsEndpoint)).assets, setAssetState);
+    refresh.current = controller;
+    void controller.start();
+    return () => { controller.dispose(); if (refresh.current === controller) refresh.current = null; };
   }, [assetsEndpoint]);
   useEffect(() => {
-    // A photo uploaded after the preview opened is not in its first asset list: read the list again,
-    // once per newly referenced ID, so the preview shows it instead of silently leaving it out.
-    if (content === null || assets === null) return;
-    const known = new Set(assets.map(asset => asset.id));
-    const fresh = [...new Set(JSON.stringify(content).match(UUIDS) ?? [])].map(id => id.toLowerCase()).filter(id => !known.has(id) && !asked.current.has(id));
-    if (!fresh.length) return;
-    fresh.forEach(id => asked.current.add(id));
-    void loadSiteAssets(assetsEndpoint).then(manifest => { if (mounted.current) setAssets(manifest.assets); }, () => {});
+    refresh.current?.observe(content);
   }, [content, assets, assetsEndpoint]);
   useEffect(() => {
     let parent: Window | null = null;
@@ -52,8 +46,12 @@ export default function LivePreviewFrame({ space, assetsEndpoint }: { space: Wor
     return () => source.removeEventListener(LIVE_PREVIEW_EVENT, read);
   }, [space]);
   if (detached) return <p style={{ padding: 24, font: "14px/1.6 sans-serif" }}>实时预览只在编辑器内显示。</p>;
-  if (content === null || assets === null) return <p style={{ padding: 24, font: "14px/1.6 sans-serif", color: "#777" }}>正在载入预览…</p>;
-  if (space === "premium-flow-gallery") return <SiteFlowGalleryView document={content as FlowGalleryDocumentV1} assets={assets} />;
-  if (space === "premium-polaroid") return <SitePortfolioView document={content as PreviewPortfolioDocumentV1} assets={assets} embedded />;
-  return <SiteBasicView content={content as SiteContent} assets={assets} />;
+  const notice = assetState.failed && <aside className={styles.assetNotice} role="alert">
+    <p>{assets === null ? "预览照片读取失败，请重新读取。" : "预览照片更新失败，暂时显示上次读取的照片。"}</p>
+    <button type="button" disabled={assetState.loading} onClick={() => refresh.current?.retry()}>{assetState.loading ? "正在重新读取…" : "重新读取预览照片"}</button>
+  </aside>;
+  if (content === null || assets === null) return <>{notice}{!assetState.failed && <p style={{ padding: 24, font: "14px/1.6 sans-serif", color: "#777" }}>正在载入预览…</p>}</>;
+  return <>{notice}{space === "premium-flow-gallery" ? <SiteFlowGalleryView document={content as FlowGalleryDocumentV1} assets={assets} />
+    : space === "premium-polaroid" ? <SitePortfolioView document={content as PreviewPortfolioDocumentV1} assets={assets} embedded />
+      : <SiteBasicView content={content as SiteContent} assets={assets} />}</>;
 }
