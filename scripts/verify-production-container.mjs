@@ -120,6 +120,18 @@ console.log(JSON.stringify({ files, gid: process.getgid(), uid: process.getuid()
 `;
 }
 
+function logImageConfig(stage, inspection) {
+  const config = inspection.Config;
+  console.log("CONTAINER_IMAGE_CONFIG " + JSON.stringify({
+    stage,
+    imageId: inspection.Id,
+    entrypointPresent: Object.hasOwn(config, "Entrypoint"),
+    config: Object.fromEntries(["Entrypoint", "Cmd", "User", "WorkingDir", "StopSignal"]
+      .filter((key) => Object.hasOwn(config, key))
+      .map((key) => [key, config[key]])),
+  }));
+}
+
 async function cleanup() {
   const failures = [];
   if (containerCreated) {
@@ -142,6 +154,21 @@ async function cleanup() {
 try {
   const daemonVersion = await docker(["version", "--format", "{{.Server.Version}}"], { timeout: 30_000 });
   assert.match(daemonVersion, /^\d+\.\d+/);
+  console.log("CONTAINER_DOCKER_VERSION " + await docker(["version", "--format", "{{json .}}"]));
+  console.log("CONTAINER_BUILDX_VERSION " + await docker(["buildx", "version"])
+    .catch(() => "unavailable; verification invokes docker build"));
+  const dockerfile = await readFile("Dockerfile", "utf8");
+  const runtimeBase = dockerfile.match(/^FROM (\S+) AS runtime$/m)?.[1];
+  assert.ok(runtimeBase, "the runtime stage must name its base image");
+  console.log("CONTAINER_BUILD_INPUT " + JSON.stringify({
+    dockerfile: "Dockerfile",
+    sha256: createHash("sha256").update(dockerfile).digest("hex"),
+    stages: ["builder", "runtime"],
+    runtimeBase,
+  }));
+  await docker(["pull", runtimeBase]);
+  const [baseInspection] = JSON.parse(await docker(["image", "inspect", runtimeBase]));
+  logImageConfig("base", baseInspection);
 
   // Rebuild the builder without previous layers, then inspect the actual COPY
   // result: directory negations in .dockerignore otherwise admit descendants.
@@ -161,6 +188,7 @@ try {
   await docker(["build", "--pull", "--file", "Dockerfile", "--tag", imageName, "."]);
 
   const [inspection] = JSON.parse(await docker(["image", "inspect", imageName]));
+  logImageConfig("runtime", inspection);
   assert.equal(inspection.Config.User, "1000:1000");
   assert.ok(
     inspection.Config.Entrypoint === null
