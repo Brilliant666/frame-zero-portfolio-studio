@@ -60,10 +60,10 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
     images.forEach(image=>{image.loading="eager";});
     const ready=Promise.all(images.map(image=>prepareEntryPhoto(image.currentSrc||image.src).then(()=>image.decode().catch(()=>{}))));
     const elapsed=performance.now()-(entranceSource?.startedAt ?? performance.now());
-    const wait=Math.max(0,300-elapsed);
+    const wait=Math.max(0,180-elapsed);
     let timer:ReturnType<typeof setTimeout>,exitTimer:ReturnType<typeof setTimeout>|undefined;
-    // Never reveal the album over the homepage's exit; the cap keeps a slow exit from stalling it.
-    const exited=entranceSource?.exited?Promise.race([entranceSource.exited,new Promise(resolve=>{exitTimer=setTimeout(resolve,Math.max(0,700-elapsed));})]):undefined;
+    // Photo preparation and the short home exit share one deadline, never two serial waits.
+    const exited=entranceSource?.exited?Promise.race([entranceSource.exited,new Promise(resolve=>{exitTimer=setTimeout(resolve,Math.max(0,180-elapsed));})]):undefined;
     void Promise.all([Promise.race([entranceSource?.ready ?? ready,new Promise(resolve=>{timer=setTimeout(resolve,wait);})]),exited]).then(()=>{
       clearTimeout(timer);clearTimeout(exitTimer);
       if(generation!==entranceGeneration.current || !world.isConnected)return;
