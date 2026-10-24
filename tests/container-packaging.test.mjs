@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { hasNoContainerEntrypoint } from "../scripts/lib/container-entrypoint.mjs";
 import {
   loadProductionPublicFiles,
   prepareNextStandalone,
@@ -11,6 +12,21 @@ import {
 } from "../scripts/prepare-next-standalone.mjs";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+test("image inspect accepts absent and legacy empty entrypoints", () => {
+  for (const config of [{ Cmd: ["node", "server.js"] }, { Entrypoint: null }, { Entrypoint: [] }]) {
+    assert.equal(hasNoContainerEntrypoint(config), true, JSON.stringify(config));
+  }
+});
+
+test("image inspect rejects nonempty entrypoints and malformed configuration", () => {
+  for (const entrypoint of [["docker-entrypoint.sh"], ["/bin/sh", "-c"], ["node"], [""], "", false, 0, {}]) {
+    assert.equal(hasNoContainerEntrypoint({ Entrypoint: entrypoint }), false, JSON.stringify(entrypoint));
+  }
+  for (const config of [undefined, null, [], "", false, 0]) {
+    assert.equal(hasNoContainerEntrypoint(config), false, JSON.stringify(config));
+  }
+});
 
 async function createFixture(t, manifest = { version: 1, files: ["safe.svg"] }) {
   const root = await mkdtemp(path.join(os.tmpdir(), "frame-zero-container-contract-"));

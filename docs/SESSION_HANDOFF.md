@@ -1,5 +1,35 @@
 # 会话交接
 
+## PR44 容器入口契约修复（2026-10-24）
+
+原 Head `0b16468` 的 Container 检查在入口点断言失败；首次失败
+[39950042250 / attempt 1](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/39950042250)
+继续保留。诊断提交 `63e6149` 仅增加实际配置输出、保持原断言，
+[40056300689 / attempt 1](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/40056300689)
+重现失败，取得如下证据：
+
+| 检查对象 | Entrypoint | Cmd | 其他配置 |
+| --- | --- | --- | --- |
+| 固定 digest 的 `node:22.22.3-bookworm-slim` | `["docker-entrypoint.sh"]` | `["node"]` | 基础镜像 |
+| 同一 Dockerfile 的最终 runtime stage | 字段缺省，`entrypointPresent=false` | `["node","server.js"]` | User=`1000:1000`，WorkingDir=`/app`，StopSignal=`SIGTERM` |
+
+诊断环境为 Docker 客户端／服务端 `29.4.2`、API `1.54`、buildx `v0.38.0`；
+Dockerfile SHA256 为 `63d9bf690fbc72d67b2ea1beb7544252a2382778a5aac76813b98e22bfaf1c2f`。
+Docker 29 / API 1.52 起会在 image inspect 响应中省略空的 Entrypoint；
+JavaScript 读取缺省属性得到 `undefined`，原断言仅接受 `null` 或空数组，因而拒绝了正确产物。
+依据见 [Docker 官方变更说明](https://docs.docker.com/engine/deprecated/#emptynil-fields-in-image-config-from-inspect-api)。
+
+修复只调整容器验证器及其小型纯函数与回归：在有效 Config 对象中接受缺省、`null`、`[]`；
+继续拒绝任何非空数组（含 `[""]`、继承脚本及 shell）和错误类型。
+Dockerfile、基础镜像、Node 版本、默认 CMD、Compose 与工作流均不改变。
+验证器补充默认启动的 PID 1 可执行文件、真实 Docker health 状态、无需 entrypoint override 的
+CMD 覆盖检查，并保留原有 10 秒 stop、非 137 退出及 12 秒耗时断言。
+构建上下文、私人文件、只读文件系统、字体和封闭入口检查继续执行。
+
+本机 Docker daemon 不可用，因此实际镜像构建与运行验证在当前 PR 的既有 CI 中执行；
+没有重跑旧失败 run 或调整工作流跳过检查。最终结果按 PR44 最终 Head 的五项检查记录，
+不能用诊断 Head 或其他历史成功替代。PR 保持 Draft，日常应用及业务数据不因本轮切换。
+
 ## 当前交接（2026-10-23）
 
 先读 [CURRENT_STATUS](CURRENT_STATUS.md)。已合并 main 为 PR43 `a83431030c18f5777e79bda8e6de0234568bad8b`，五项 main push 检查全部通过；日常已按用户追加授权运行下面的本机修正版，本分支修复尚未合入远端 main。

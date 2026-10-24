@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import process from "node:process";
 import { promisify } from "node:util";
+import { hasNoContainerEntrypoint } from "./lib/container-entrypoint.mjs";
 
 const execFileAsync = promisify(execFile);
 const MAX_OUTPUT = 64 * 1024 * 1024;
@@ -157,6 +158,8 @@ try {
   console.log("CONTAINER_DOCKER_VERSION " + await docker(["version", "--format", "{{json .}}"]));
   console.log("CONTAINER_BUILDX_VERSION " + await docker(["buildx", "version"])
     .catch(() => "unavailable; verification invokes docker build"));
+  console.log("CONTAINER_BUILDER " + await docker(["buildx", "inspect"])
+    .catch(() => "unavailable; verification invokes docker build"));
   const dockerfile = await readFile("Dockerfile", "utf8");
   const runtimeBase = dockerfile.match(/^FROM (\S+) AS runtime$/m)?.[1];
   assert.ok(runtimeBase, "the runtime stage must name its base image");
@@ -191,11 +194,11 @@ try {
   logImageConfig("runtime", inspection);
   assert.equal(inspection.Config.User, "1000:1000");
   assert.ok(
-    inspection.Config.Entrypoint === null
-      || (Array.isArray(inspection.Config.Entrypoint) && inspection.Config.Entrypoint.length === 0),
+    hasNoContainerEntrypoint(inspection.Config),
     "the runtime must not inherit a shell entrypoint",
   );
   assert.deepEqual(inspection.Config.Cmd, ["node", "server.js"]);
+  assert.equal(inspection.Config.StopSignal, "SIGTERM");
   assert.equal(inspection.Config.WorkingDir, "/app");
   assert.ok(inspection.Config.ExposedPorts?.["3000/tcp"]);
   assert.equal(inspection.Config.Labels?.["org.opencontainers.image.title"], "Portfolio Platform");
@@ -225,6 +228,14 @@ try {
   assert.equal(runtimeInspection.gid, 1000);
   assert.ok(runtimeInspection.files > 0);
 
+  // Overriding CMD must execute Node directly, without overriding ENTRYPOINT.
+  const commandOverride = JSON.parse(await docker([
+    "run", "--rm", "--read-only", imageName, "node", "-e",
+    'console.log(JSON.stringify({ pid: process.pid, uid: process.getuid(), gid: process.getgid() }))',
+  ]));
+  assert.deepEqual(commandOverride, { pid: 1, uid: 1000, gid: 1000 });
+  console.log("CONTAINER_CMD_OVERRIDE " + JSON.stringify(commandOverride));
+
   containerCreated = true;
   await docker([
     "run", "--detach", "--name", containerName, "--read-only",
@@ -239,6 +250,38 @@ try {
 
   await assertHealth(origin, "/api/health/live", "live");
   await assertHealth(origin, "/api/health/ready", "ready");
+
+  const processTree = JSON.parse(await docker(["exec", containerName, "node", "-e", String.raw`
+    const fs = require("node:fs");
+    const processes = fs.readdirSync("/proc").filter(name => /^\d+$/.test(name)).flatMap(pid => {
+      try {
+        return [{ pid: Number(pid), executable: fs.readlinkSync("/proc/" + pid + "/exe"),
+          command: fs.readFileSync("/proc/" + pid + "/cmdline", "utf8").split("\0").filter(Boolean) }];
+      } catch (error) {
+        if (["ENOENT", "ESRCH"].includes(error.code)) return [];
+        throw error;
+      }
+    });
+    console.log(JSON.stringify(processes));
+  `]));
+  assert.match(processTree.find(entry => entry.pid === 1)?.executable ?? "", /\/node$/,
+    "the default application process must be Node at PID 1, without a shell wrapper");
+  console.log("CONTAINER_PROCESS_TREE " + JSON.stringify(processTree));
+
+  const healthDeadline = Date.now() + 45_000;
+  let containerHealth;
+  do {
+    const [running] = JSON.parse(await docker(["container", "inspect", containerName], {
+      timeout: Math.max(1, Math.min(5_000, healthDeadline - Date.now())),
+    }));
+    assert.equal(running.State.Running, true, "the application must remain running");
+    containerHealth = running.State.Health;
+    if (containerHealth?.Status === "healthy") break;
+    assert.notEqual(containerHealth?.Status, "unhealthy", "the configured Docker healthcheck failed");
+    await new Promise(resolve => setTimeout(resolve, 500));
+  } while (Date.now() < healthDeadline);
+  assert.equal(containerHealth?.Status, "healthy", "the configured Docker healthcheck must pass");
+  console.log("CONTAINER_HEALTH " + JSON.stringify(containerHealth));
 
   const home = await fetch(`${origin}/`, { redirect: "manual" });
   assert.equal(home.status, 200);
@@ -295,6 +338,10 @@ try {
     runtimeGid: runtimeInspection.gid,
     runtimeUid: runtimeInspection.uid,
     stopDurationMs,
+    stopSignal: stopped.Config.StopSignal,
+    pid1: processTree.find(entry => entry.pid === 1),
+    healthStatus: containerHealth.Status,
+    commandOverride,
   }));
 } finally {
   await cleanup();
