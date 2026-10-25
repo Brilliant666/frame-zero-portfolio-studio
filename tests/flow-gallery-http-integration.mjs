@@ -113,7 +113,7 @@ export async function flowGalleryHttpIntegration({ runtime, origin, password, re
   assert.equal(first.space, space); assert.equal(first.templateId, space); assert.equal(first.draftRevision, saved.revision);
   const publishedEntry = await sitePage(`/${slug}/admin`, 200, cookie);
   assert.match(publishedEntry, /data-workspace-public="premium-flow-gallery"/);
-  assert.match(publishedEntry, /当前公开主页：流影视廊/);
+  assert.match(publishedEntry, /<section\b[^>]*data-workspace-public="premium-flow-gallery"[^>]*>(?:(?!<\/section>)[\s\S])*<h2>流影视廊<\/h2>/);
   assert.equal((publishedEntry.match(/data-current-public="true"/g) ?? []).length, 1);
   assert.doesNotMatch(publishedEntry, /FLOW-PUBLISHED-CAPTION|FLOW-PUBLISHED-INTRO/, 'Workbench never renders draft/snapshot business content');
   const snapshot = await readPublished(runtime.pool, slug);
@@ -175,7 +175,7 @@ export async function flowGalleryHttpIntegration({ runtime, origin, password, re
   assert.ok(!('content' in currentWithoutGrant.current)); assert.ok(currentWithoutGrant.history.every(row => row.space !== space));
   assert.equal((await request(draftPath(), { cookie })).status, 403);
   assert.match(await (await request(`/${slug}`)).text(), /FLOW-PUBLISHED-TITLE/, 'Revoking an editor grant does not rewrite the public pointer');
-  assert.match(await sitePage(`/${slug}/admin`, 200, cookie), /当前公开主页：流影视廊/, 'Revoked editing grant still exposes read-only current Published summary');
+  assert.match(await sitePage(`/${slug}/admin`, 200, cookie), /<section\b[^>]*data-workspace-public="premium-flow-gallery"[^>]*>(?:(?!<\/section>)[\s\S])*<h2>流影视廊<\/h2>/, 'Revoked editing grant still exposes read-only current Published summary');
   await grant(owner.siteId);
 
   const unpublished = structuredClone(d); unpublished.profile.title = 'FLOW-NEW-PRIVATE-DRAFT'; unpublished.profile.intro = 'FLOW-NEW-PRIVATE-INTRO';
@@ -183,7 +183,7 @@ export async function flowGalleryHttpIntegration({ runtime, origin, password, re
   const nextDraft = await nextResponse.json(); assert.equal(nextDraft.revision, 2);
   assert.equal((await readPublished(runtime.pool, slug)).id, first.id);
   const afterDraftEntry = await sitePage(`/${slug}/admin`, 200, cookie);
-  assert.match(afterDraftEntry, /当前公开主页：流影视廊/); assert.match(afterDraftEntry, /公开版本对应草稿 v1/);
+  assert.match(afterDraftEntry, /<section\b[^>]*data-workspace-public="premium-flow-gallery"[^>]*>(?:(?!<\/section>)[\s\S])*<h2>流影视廊<\/h2>/); assert.match(afterDraftEntry, /发布快照只读，来自草稿 v1，不代表当前草稿版本/);
   assert.doesNotMatch(afterDraftEntry, /FLOW-NEW-PRIVATE-DRAFT|FLOW-NEW-PRIVATE-INTRO/);
   assert.doesNotMatch(await (await request(`/${slug}`)).text(), /FLOW-NEW-PRIVATE-DRAFT|FLOW-NEW-PRIVATE-INTRO/);
 

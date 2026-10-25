@@ -56,18 +56,18 @@ main{max-width:1184px;margin:auto;padding:36px 32px 40px}
 .unavailable{display:block;font-size:12px;color:#727c8b;max-width:150px;line-height:1.6}
 .space-visual{position:relative;height:66px;width:66px;background:#edf1f5;border:1px solid #e2e7ed;border-radius:7px;overflow:hidden}
 .space-visual i{position:absolute;display:block;background:#a4b7cb}
-.visual-basic i:nth-child(1){inset:12px 12px 38px;border-bottom:2px solid #f8fafc;background:#516b89}
-.visual-basic i:nth-child(2){inset:28px 33px 12px 12px}
-.visual-basic i:nth-child(3){inset:28px 12px 12px 36px;background:#c5d1de}
-.visual-premium-polaroid{background:#e8edf3}
-.visual-premium-polaroid i{width:25px;height:33px;border:3px solid #fff;border-bottom-width:8px;box-shadow:0 2px 4px #2b43621a}
-.visual-premium-polaroid i:nth-child(1){left:9px;top:12px;transform:rotate(-13deg);background:#9bafc8}
-.visual-premium-polaroid i:nth-child(2){right:9px;top:22px;transform:rotate(9deg);background:#7a94b4}
-.visual-premium-polaroid i:nth-child(3){width:4px;height:4px;border:0;background:#6e8aaa;border-radius:50%;left:41px;top:11px}
-.visual-premium-flow-gallery{background:#eaf0ec}
-.visual-premium-flow-gallery i:nth-child(1){width:20px;height:42px;left:11px;top:-8px;background:#7e9e94}
-.visual-premium-flow-gallery i:nth-child(2){width:20px;height:34px;left:11px;top:38px;background:#bccdc4}
-.visual-premium-flow-gallery i:nth-child(3){width:20px;height:46px;right:11px;top:11px;background:#a3bbb2}
+.visual-01 i:nth-child(1){inset:12px 12px 38px;border-bottom:2px solid #f8fafc;background:#516b89}
+.visual-01 i:nth-child(2){inset:28px 33px 12px 12px}
+.visual-01 i:nth-child(3){inset:28px 12px 12px 36px;background:#c5d1de}
+.visual-02{background:#e8edf3}
+.visual-02 i{width:25px;height:33px;border:3px solid #fff;border-bottom-width:8px;box-shadow:0 2px 4px #2b43621a}
+.visual-02 i:nth-child(1){left:9px;top:12px;transform:rotate(-13deg);background:#9bafc8}
+.visual-02 i:nth-child(2){right:9px;top:22px;transform:rotate(9deg);background:#7a94b4}
+.visual-02 i:nth-child(3){width:4px;height:4px;border:0;background:#6e8aaa;border-radius:50%;left:41px;top:11px}
+.visual-03{background:#eaf0ec}
+.visual-03 i:nth-child(1){width:20px;height:42px;left:11px;top:-8px;background:#7e9e94}
+.visual-03 i:nth-child(2){width:20px;height:34px;left:11px;top:38px;background:#bccdc4}
+.visual-03 i:nth-child(3){width:20px;height:46px;right:11px;top:11px;background:#a3bbb2}
 .explanation{margin-top:22px;border-bottom:1px solid var(--line);color:var(--muted);font-size:12px}
 .explanation summary{display:flex;align-items:center;justify-content:space-between;gap:20px;list-style:none;cursor:pointer;min-height:48px;font-size:13px;font-weight:600;color:#4c5e75}
 .explanation summary::-webkit-details-marker{display:none}

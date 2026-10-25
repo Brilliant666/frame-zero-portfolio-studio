@@ -44,7 +44,9 @@ export async function workbenchShortcutHttpIntegration({ runtime, password, requ
     const html = await workbench(cookie);
     const target = entryTarget(html);
     assert.equal(target, `/${slug}/admin/${route}`);
-    assert.match(html, /进入该内容空间的当前草稿；历史发布快照保持只读/);
+    assert.match(html, /发布快照只读/);
+    assert.match(html, /不代表当前草稿版本/);
+    assert.match(html, /编辑和保存草稿不会改变当前公开主页/);
     assert.equal((html.match(/data-published-draft-entry=/g) ?? []).length, 1);
     assert.equal((html.match(/class="space(?:"| )/g) ?? []).length, 3);
     assert.doesNotMatch(target, /\?|publications|preview/);

@@ -140,6 +140,14 @@ test('template display names and unexpected published identities are escaped', (
   assert.match(unknown, /&lt;img/); assert.doesNotMatch(unknown, /<img|href=/);
 });
 
+test('public message pages omit workspace product markers including shared CSS', async () => {
+  for (const [title, body, status] of [['作品集尚未发布', '<p>请稍后再来。</p>', 200], ['请先登录', '<p>请先登录。</p>', 401], ['无权访问此后台', '<p>无权访问。</p>', 403]]) {
+    const response = siteEntryPage(title, body, status);
+    assert.equal(response.status, status);
+    assert.doesNotMatch(await response.text(), /data-site-admin=|premium-polaroid|premium-flow-gallery|已授权|<img\b/);
+  }
+});
+
 test('real workspace page response keeps private no-store and noindex boundaries', async () => {
   const response = siteEntryPage('站点工作台', render('published'));
   assert.equal(response.status, 200);
