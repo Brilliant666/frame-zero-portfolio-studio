@@ -109,17 +109,15 @@ export default function CollectionExperience({ content, isPreview, homeRequest, 
   }, [suppliedAssets]);
 
   const returnHome = useCallback((push = true) => {
-    const returning = selectedId !== null || !!openingSource.current;
     if (ComposerScene) entryGeneration.current++;
     cancelOpening();
     setEntry(undefined);
-    // A real album return (including an unfinished entrance) pulls the sky back once.
-    if (returning) window.dispatchEvent(new CustomEvent("preview:star-boost", { detail: { phase: "out" } }));
+    window.dispatchEvent(new CustomEvent("preview:star-boost", { detail: { phase: "out" } }));
     const scrollTop = scrollPositions.current.get(cameraKey("home")) ?? 0;
     onBeforeViewChange?.(); setRestoredView(cameras.current.get(cameraKey("home"))); setSelectedId(null);
     if (push && !isPreview) window.history.pushState(null, "", "#polaroid-top");
     restoreScroll(scrollTop);
-  }, [isPreview, onBeforeViewChange, cameraKey, restoreScroll, selectedId, cancelOpening]);
+  }, [isPreview, onBeforeViewChange, cameraKey, restoreScroll, cancelOpening]);
   useLayoutEffect(() => {
     if (homeRequest === priorHomeRequest.current) return;
     priorHomeRequest.current = homeRequest;

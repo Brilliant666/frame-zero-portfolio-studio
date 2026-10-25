@@ -74,7 +74,6 @@ export default function MotionHome({ cards, content, onOpen, onPrepare, onWarm, 
     if (box) window.dispatchEvent(new CustomEvent("preview:star-boost", { detail: { phase: "in", origin: { x: box.left + box.width / 2, y: box.top + box.height / 2 } } }));
     const exit = playHomeExit(root.current, id);
     exitCleanup.current = exit.cleanup;
-    // All cancellation paths (navigation, history and module failure) release the same home.
     source.cancel=()=>{
       source.cancelled=true;source.flight?.cleanup();exit.cleanup();
       if(pendingSource.current===source){pendingSource.current=undefined;exitCleanup.current=null;leaving.current=false;}
@@ -90,12 +89,12 @@ export default function MotionHome({ cards, content, onOpen, onPrepare, onWarm, 
     if (introClaim.current === null) {
       let storage: Storage | null = null;
       try { storage = window.sessionStorage; } catch { /* Use document fallback. */ }
-      introClaim.current = claimHomeIntro(storage, !active || initialPaused.current || enteredFromCollection.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      introClaim.current = claimHomeIntro(storage, initialPaused.current || enteredFromCollection.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     }
     // The pre-paint script may have started the opening for a visit this tab already had.
-    if (!active || !introClaim.current) delete document.documentElement.dataset.starIntro;
+    if (!introClaim.current) delete document.documentElement.dataset.starIntro;
     else if (root.current) return runHomeIntro(root.current);
-  }, [active]);
+  }, []);
   useEffect(() => {
     if (!restoreFocusId) return;
     exitCleanup.current?.(); exitCleanup.current=null; leaving.current=false;
@@ -117,7 +116,7 @@ export default function MotionHome({ cards, content, onOpen, onPrepare, onWarm, 
       </span><svg className={styles.pin} viewBox="-12 -12 24 24" aria-hidden="true"><path d="M0-11L2.8-2.8 11 0 2.8 2.8 0 11-2.8 2.8-11 0-2.8-2.8Z" /></svg></span>
     </button>;
   };
-  return <section ref={root} className={styles.home} aria-label="摄影图集首页" data-motion-home data-home-intro={active && !restoreFocusId || undefined} data-motion-paused={paused || undefined}>
+  return <section ref={root} className={styles.home} aria-label="摄影图集首页" data-motion-home data-motion-paused={paused || undefined}>
     <div className={styles.sparks} aria-hidden="true">{Array.from({ length: 12 }, (_, index) => <i key={index} data-intro-spark>✦</i>)}</div>
     <div className={styles.opening}>
       <div className={styles.hero}>
