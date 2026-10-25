@@ -86,15 +86,16 @@
 .status[data-tone="error"] { border-left: 3px solid #b42318; background: #fff0ec; color: #8a271e; }
 
 /* Homepage composition is local: the account/login shell keeps its existing layout. */
-.homeShell { --canvas:#f6f7f5; --line:#d8dfdc; --ink:#24332f; --muted:#5d6d66; --accent:#304e44; }
+.homeShell { --canvas:#f3f7fc; --line:#d4e1ef; --ink:#202b3c; --muted:#52677e; --accent:#2a70ac; }
+.homeShell :is(a, button, input, summary):focus-visible { outline-color:var(--accent); }
 .homeShell .header { max-width:1328px; padding:20px 40px; min-height:84px; }
 .homeShell .brand { font-size:15px; }
-.homeShell .brand span { font-size:25px; }
+.homeShell .brand span { font-size:25px; color:#4b9ee7; }
 .homeNav { display:flex; align-items:center; gap:30px; }
 .homeExplore { color:var(--muted); font-size:13px; padding:12px 0; }
 .homeShell .secondaryButton { border-radius:5px; background:transparent; }
-.homeShell .primaryButton { border-radius:5px; padding:14px 23px; min-height:48px; }
-.homeShell .primaryButton:hover { background:#1e3a30; }
+.homeShell .primaryButton { border-radius:5px; padding:14px 23px; min-height:48px; background:linear-gradient(180deg,#e4f2ff,#b9ddfb); border-color:#acd0f0; color:#1e4264; }
+.homeShell .primaryButton:hover { background:linear-gradient(180deg,#d5ebff,#a9d3f7); }
 .homeShell .homeContent { max-width:1328px; padding:0 40px; }
 .homeHero { display:grid; grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr); gap:60px; align-items:center; padding:52px 0 60px; }
 .heroCopy { min-width:0; padding:10px 0 20px; }

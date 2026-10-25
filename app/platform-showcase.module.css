@@ -1,43 +1,57 @@
-.heroStage { position:relative; margin:0; min-width:0; padding:26px 28px 22px; background:#263331; color:#f3f1e9; border-radius:4px; box-shadow:0 24px 48px -32px #1d30285c; }
-.stageLabel { display:flex; justify-content:space-between; gap:12px; font-size:10px; letter-spacing:.12em; color:#c4cec6; margin-bottom:30px; }
-.stageMain { position:relative; margin-right:40px; background:#141c19; border:1px solid #7180796b; transform:rotate(-2deg); }
+.heroStage { position:relative; margin:0; min-width:0; padding:26px 28px 22px; background:linear-gradient(150deg,#edf6ff,#cfe4f8); color:#203e5a; border-radius:4px; box-shadow:0 24px 48px -32px #2b5e9152; }
+.stageLabel { display:flex; justify-content:space-between; gap:12px; font-size:10px; letter-spacing:.12em; color:#486685; margin-bottom:30px; }
+.stageMain { position:relative; margin-right:40px; background:#17222e; border:1px solid #7a99b66b; transform:rotate(-2deg); }
 .stageMain img { display:block; width:100%; height:auto; }
-.stageCompanion { position:absolute; right:18px; top:47%; width:38%; padding:7px 7px 12px; background:#f0eee5; color:#303d39; box-shadow:0 10px 26px #0004; transform:rotate(7deg); }
-.stageCompanion img { display:block; width:100%; height:auto; border:1px solid #d5d3c8; }
+.stageCompanion { position:absolute; right:18px; top:47%; width:38%; padding:7px 7px 12px; background:#fcfdff; color:#304960; box-shadow:0 10px 26px #244b6d40; transform:rotate(7deg); }
+.stageCompanion img { display:block; width:100%; height:auto; border:1px solid #d3dfec; }
 .stageCompanion > span { display:block; margin-top:8px; font-size:9px; letter-spacing:.03em; }
 .stageCaption { display:flex; justify-content:space-between; align-items:end; gap:12px; margin-top:64px; }
-.stageCaption > div > span { font-size:11px; color:#c4cec6; }
+.stageCaption > div > span { font-size:11px; color:#486685; }
 .stageCaption strong { display:block; margin-top:8px; font-size:17px; font-weight:500; letter-spacing:.04em; }
-.diagramTag { padding-bottom:2px; color:#c4cec6; font-size:10px; white-space:nowrap; }
+.diagramTag { padding-bottom:2px; color:#486685; font-size:10px; white-space:nowrap; }
 .showcase { padding:45px 0 48px; border-top:1px solid var(--line); scroll-margin-top:24px; }
 .heading { display:flex; justify-content:space-between; align-items:end; gap:36px; margin-bottom:30px; }
 .heading h2 { margin:0; font-size:clamp(23px,2.6vw,32px); line-height:1.5; letter-spacing:-.035em; font-weight:600; }
 .heading > p { margin:0 0 4px; color:var(--muted); font-size:13px; line-height:1.9; }
 .spaces { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:28px; }
 .space { min-width:0; }
-.spaceVisual { position:relative; height:188px; border:1px solid #d6dedc; background:#e4e9e5; overflow:hidden; }
+.spaceVisual { position:relative; height:188px; border:1px solid #d4e1ef; background:#e3edf8; overflow:hidden; }
 .spaceVisual > img { display:block; width:100%; height:100%; object-fit:contain; background:#e8e5dd; }
 .spaceTitle { position:relative; margin-top:20px; padding-top:12px; border-top:1px solid var(--line); }
 .spaceTitle > span:first-child { display:block; color:var(--muted); font-size:10px; letter-spacing:.1em; }
 .spaceTitle h3 { margin:9px 0 0; font-size:21px; font-weight:600; }
 .spaceTitle > span:last-child { position:absolute; right:0; bottom:2px; color:var(--muted); font-size:11px; }
 .space > p { margin:12px 0 0; color:var(--muted); font-size:14px; line-height:1.85; }
+.layoutControls { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:15px; }
+.layoutControls p { display:grid; gap:5px; margin:0; min-width:0; line-height:1.5; }
+.layoutControls p > span { color:var(--muted); font-size:10px; font-variant-numeric:tabular-nums; }
+.layoutControls strong { color:var(--ink); font-size:13px; font-weight:600; overflow-wrap:anywhere; }
+.layoutControls > div { display:flex; flex-shrink:0; gap:5px; }
+.layoutControls button { width:44px; height:44px; padding:0; border:1px solid var(--line); border-radius:5px; background:#fff; color:var(--ink); font:inherit; cursor:pointer; }
+.layoutControls button:hover:enabled { background:#e0effd; border-color:#8db9df; }
+.layoutControls button:disabled { opacity:.4; cursor:default; }
+.layoutStrip { position:relative; display:flex; gap:8px; min-width:0; overflow-x:auto; overscroll-behavior-x:contain; scrollbar-width:thin; scrollbar-color:#a8bfd5 transparent; margin-top:12px; padding:4px 4px 10px; }
+.layoutStrip button { display:grid; align-content:start; gap:6px; flex:0 0 86px; min-width:0; padding:4px; border:1px solid var(--line); border-radius:4px; background:#fff; color:var(--muted); font:inherit; cursor:pointer; }
+.layoutStrip button[aria-pressed="true"] { background:#e4f2ff; border-color:var(--accent); color:#245f8d; }
+.layoutStrip button:hover { border-color:var(--accent); }
+.layoutStrip img { display:block; width:100%; height:43px; object-fit:contain; background:#f2f4f7; }
+.layoutStrip button > span { font-size:10px; line-height:1.5; overflow-wrap:anywhere; }
 .note { margin:26px 0 0; color:var(--muted); font-size:11px; line-height:1.8; }
-.starDiagram { background:radial-gradient(ellipse at 75% 20%,#d5e2ed,transparent 70%),#eef2f3; }
-.starDiagram svg { position:absolute; inset:0; width:100%; height:100%; fill:#547797; stroke:#91a8b8; stroke-width:1; }
+.starDiagram { background:radial-gradient(ellipse at 75% 20%,#d1e6fa,transparent 70%),#eef5fc; }
+.starDiagram svg { position:absolute; inset:0; width:100%; height:100%; fill:#4b9ee7; stroke:#7fafd5; stroke-width:1; }
 .starDiagram svg path { fill:none; stroke-dasharray:3 5; }
 .starDiagram i { position:absolute; display:block; width:58px; height:77px; padding:6px 6px 17px; background:#fff; box-shadow:0 4px 9px #23354326; }
-.starDiagram i::before { content:""; display:block; height:100%; background:linear-gradient(145deg,#b3c6d0,#718d9b); }
+.starDiagram i::before { content:""; display:block; height:100%; background:linear-gradient(145deg,#b1d5f2,#6e9fc5); }
 .starDiagram .paperOne { left:10%; top:45%; transform:rotate(-11deg); }
 .starDiagram .paperTwo { left:40%; top:11%; transform:rotate(6deg); }
 .starDiagram .paperThree { right:9%; top:38%; transform:rotate(11deg); }
 .spaceVisual > span { position:absolute; left:15px; bottom:11px; font-size:9px; color:#354c5c; letter-spacing:.07em; }
-.flowDiagram { background:#283a33; display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 37px 30px; }
+.flowDiagram { background:#25374b; display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 37px 30px; }
 .flowDiagram > div { display:grid; gap:9px; grid-template-rows:55px 78px 65px; transform:translateY(-21px); }
 .flowDiagram > div:nth-child(2) { transform:translateY(7px); grid-template-rows:71px 55px 78px; }
-.flowDiagram i { display:block; border:1px solid #a0b3a155; background:linear-gradient(155deg,#81928a,#536e62); }
-.flowDiagram i:nth-child(2) { background:linear-gradient(30deg,#b8b2a2,#6f8172); }
-.flowDiagram > span { color:#d2ddd3; }
+.flowDiagram i { display:block; border:1px solid #a0b8cf55; background:linear-gradient(155deg,#849db6,#526d89); }
+.flowDiagram i:nth-child(2) { background:linear-gradient(30deg,#b8c5d2,#718ca7); }
+.flowDiagram > span { color:#d3e2f1; }
 @media(max-width:1000px) {
   .heroStage { padding:20px 20px 18px; }
   .stageLabel { margin-bottom:24px; letter-spacing:.06em; }

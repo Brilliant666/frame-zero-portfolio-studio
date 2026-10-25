@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import styles from "./platform-shell.module.css";
 import showcase from "./platform-showcase.module.css";
+import PlatformTemplateShowcase from "./platform-template-showcase";
+import { templateCatalog } from "./templates/catalog";
+import { getTemplateStructurePreview } from "./templates/structure-previews";
 
 export const metadata: Metadata = {
   title: "摄影作品集平台",
@@ -53,11 +56,7 @@ export default function PlatformHome() {
             <p>内容各自编辑，本站照片可复用。<br />一个主页地址，展示你最后发布的版本。</p>
           </div>
           <div className={showcase.spaces}>
-            <article className={showcase.space}>
-              <div className={showcase.spaceVisual}><StructureImage id="cinematic-light" alt="基础版电影光幕的页面布局示意" /></div>
-              <div className={showcase.spaceTitle}><span>01 / BASIC</span><h3>基础版</h3><span>11 种风格</span></div>
-              <p>从电影光幕到漫画分镜，以不同版式呈现照片、服务与联系信息。</p>
-            </article>
+            <PlatformTemplateShowcase previews={templateCatalog.map(({ id, name }) => ({ id, name, src: getTemplateStructurePreview(id).src }))} />
             <article className={showcase.space}>
               <div className={`${showcase.spaceVisual} ${showcase.starDiagram}`} role="img" aria-label="星轨布局示意：连线串起拍立得图集封面">
                 <svg viewBox="0 0 360 180" aria-hidden="true"><path d="M64 117 165 51 290 107" /><circle cx="64" cy="117" r="3" /><circle cx="165" cy="51" r="3" /><circle cx="290" cy="107" r="3" /></svg>

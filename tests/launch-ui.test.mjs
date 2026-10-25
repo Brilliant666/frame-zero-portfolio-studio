@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -20,14 +22,26 @@ const editLinks = html => links(html).filter(href => href.includes('/admin/'));
 // Execute the actual homepage component and actual Next Link under React SSR.
 // Only CSS module lookups are replaced: Node does not load Next's CSS bundler.
 const require = createRequire(import.meta.url);
-const homeModule = { exports: {} };
-const compiledHome = ts.transpileModule(readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8'), {
-  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
-}).outputText;
-const homeRequire = name => name.endsWith('.module.css')
-  ? { __esModule: true, default: new Proxy({}, { get: (_, key) => `css-${String(key)}` }) }
-  : require(name);
-new Function('require', 'module', 'exports', compiledHome)(homeRequire, homeModule, homeModule.exports);
+const appModules = new Map();
+function loadAppModule(filename) {
+  if (appModules.has(filename)) return appModules.get(filename);
+  const loaded = { exports: {} };
+  const compiled = ts.transpileModule(readFileSync(filename, 'utf8'), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
+  }).outputText;
+  const localRequire = name => {
+    if (name.endsWith('.module.css')) return { __esModule: true, default: new Proxy({}, { get: (_, key) => `css-${String(key)}` }) };
+    if (!name.startsWith('.')) return require(name);
+    const target = resolve(dirname(filename), name);
+    const source = ['.tsx', '.ts'].map(extension => target + extension).find(existsSync);
+    assert.ok(source, `Missing local homepage module: ${name}`);
+    return loadAppModule(source);
+  };
+  new Function('require', 'module', 'exports', compiled)(localRequire, loaded, loaded.exports);
+  appModules.set(filename, loaded.exports);
+  return loaded.exports;
+}
+const homeModule = { exports: loadAppModule(fileURLToPath(new URL('../app/page.tsx', import.meta.url))) };
 const homeHtml = () => renderToStaticMarkup(React.createElement(homeModule.exports.default));
 const attribute = (tag, name) => new RegExp(`\\b${name}="([^"]*)"`, 'i').exec(tag)?.[1];
 
@@ -48,6 +62,22 @@ test('actual homepage SSR keeps login and invited-account actions without promot
   assert.match(html, /受邀账号可登录/); assert.match(html, /暂不开放公众注册/);
   assert.ok(!anchors.some(([, href]) => /^\/(test|preview)(?:[/?#]|$)/.test(href)));
   assert.doesNotMatch(html, /<form|href="\/(register|signup|payment)(?:[/?#"])/);
+});
+
+test('actual homepage offers all eleven catalog layouts with one current selection and public-only thumbnails', () => {
+  const html = homeHtml();
+  const catalog = loadAppModule(fileURLToPath(new URL('../app/templates/catalog.ts', import.meta.url))).templateCatalog;
+  const selectors = (html.match(/<button\b[^>]*aria-pressed="(?:true|false)"[^>]*>/g) ?? []);
+  assert.equal(selectors.length, 11);
+  assert.equal(selectors.filter(tag => attribute(tag, 'aria-pressed') === 'true').length, 1);
+  for (const { id, name } of catalog) {
+    assert.ok(selectors.some(tag => attribute(tag, 'aria-label') === `查看${name}布局示意`));
+    assert.ok(html.includes(`src="/template-structure-previews/${id}.webp"`));
+  }
+  assert.match(html, /aria-label="上一套基础版布局"[^>]*disabled/);
+  assert.match(html, /aria-label="下一套基础版布局"/);
+  assert.match(html, /aria-live="polite"/);
+  assert.doesNotMatch(html, /src="[^" ]*(?:\/photos\/|\/api\/sites\/|\/assets\/)/);
 });
 
 test('actual homepage SSR explains three separate spaces and the single published homepage', () => {
