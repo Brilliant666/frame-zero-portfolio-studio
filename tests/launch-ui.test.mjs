@@ -64,24 +64,38 @@ test('actual homepage SSR keeps login and invited-account actions without promot
   assert.doesNotMatch(html, /<form|href="\/(register|signup|payment)(?:[/?#"])/);
 });
 
-test('actual homepage offers all eleven catalog layouts with one current selection and public-only thumbnails', () => {
+test('actual homepage directly presents nine distinct basic layouts as one named grid', () => {
   const html = homeHtml();
   const catalog = loadAppModule(fileURLToPath(new URL('../app/templates/catalog.ts', import.meta.url))).templateCatalog;
-  const selectors = (html.match(/<button\b[^>]*aria-pressed="(?:true|false)"[^>]*>/g) ?? []);
-  assert.equal(selectors.length, 11);
-  assert.equal(selectors.filter(tag => attribute(tag, 'aria-pressed') === 'true').length, 1);
-  for (const { id, name } of catalog) {
-    assert.ok(selectors.some(tag => attribute(tag, 'aria-label') === `查看${name}布局示意`));
-    assert.ok(html.includes(`src="/template-structure-previews/${id}.webp"`));
+  const grid = /<ol\b[^>]*aria-label="基础版九宫格布局示意"[^>]*>([\s\S]*?)<\/ol>/.exec(html)?.[1];
+  assert.ok(grid, 'Basic layouts must be directly visible in their own grid');
+  const ids = [...grid.matchAll(/data-template-layout="([^"]+)"/g)].map(match => match[1]);
+  assert.equal(ids.length, 9);
+  assert.equal(new Set(ids).size, 9);
+  for (const id of ids) {
+    const item = catalog.find(item => item.id === id);
+    assert.ok(item, 'Only real catalog layouts may be displayed');
+    assert.ok(grid.includes(`src="/template-structure-previews/${id}.webp"`));
+    assert.ok(grid.includes(item.name));
   }
-  assert.match(html, /aria-label="上一套基础版布局"[^>]*disabled/);
-  assert.match(html, /aria-label="下一套基础版布局"/);
-  assert.match(html, /aria-live="polite"/);
+  assert.doesNotMatch(grid, /<button|aria-pressed|\/api\//);
+  assert.match(html.replace(/<[^>]*>/g, ''), /共11种风格.*选展9套布局/);
   assert.doesNotMatch(html, /src="[^" ]*(?:\/photos\/|\/api\/sites\/|\/assets\/)/);
 });
 
+test('the two premium spaces have their own showcase after the basic grid', () => {
+  const html = homeHtml();
+  const premium = /<section\b[^>]*aria-labelledby="premium-showcase-title"[^>]*>([\s\S]*?)<\/section>/.exec(html)?.[1];
+  assert.ok(premium, 'Premium layouts must not share the basic grid');
+  assert.equal((premium.match(/<article\b/g) ?? []).length, 2);
+  assert.match(premium, /<h3[^>]*id="premium-showcase-title"[^>]*>高级版<\/h3>/);
+  for (const name of ['星轨', '流影视廊']) assert.match(premium, new RegExp(`<h4[^>]*>${name}<\\/h4>`));
+  assert.doesNotMatch(premium, /data-template-layout=|href="\/(?:register|payment)/);
+  assert.ok(html.indexOf('基础版九宫格布局示意') < html.indexOf('premium-showcase-title'));
+});
+
 test('actual homepage SSR explains three separate spaces and the single published homepage', () => {
-  const html = homeHtml(), headings = [...html.matchAll(/<h3\b[^>]*>([\s\S]*?)<\/h3>/g)].map(match => match[1].replace(/<[^>]*>/g, ''));
+  const html = homeHtml(), headings = [...html.matchAll(/<h[34]\b[^>]*>([\s\S]*?)<\/h[34]>/g)].map(match => match[1].replace(/<[^>]*>/g, ''));
   for (const name of ['基础版', '星轨', '流影视廊']) assert.ok(headings.includes(name));
   const text = html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ');
   assert.match(text, /内容各自编辑，本站照片可复用/);

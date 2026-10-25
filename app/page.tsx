@@ -55,25 +55,35 @@ export default function PlatformHome() {
             <div><p className={styles.eyebrow}>三种空间，各有表达</p><h2 id="showcase-title">选择适合作品的观看方式。</h2></div>
             <p>内容各自编辑，本站照片可复用。<br />一个主页地址，展示你最后发布的版本。</p>
           </div>
-          <div className={showcase.spaces}>
-            <PlatformTemplateShowcase previews={templateCatalog.map(({ id, name }) => ({ id, name, src: getTemplateStructurePreview(id).src }))} />
+          <div className={showcase.tierHeading}>
+            <div><p className={showcase.tierKicker}>01 / BASIC</p><h3>基础版</h3></div>
+            <p>共11种风格，以下选展9套布局</p>
+          </div>
+          <PlatformTemplateShowcase previews={templateCatalog.slice(0, 9).map(({ id, name }) => ({ id, name, src: getTemplateStructurePreview(id).src }))} />
+          <section className={showcase.premiumShowcase} aria-labelledby="premium-showcase-title">
+            <div className={showcase.tierHeading}>
+              <div><p className={showcase.tierKicker}>02 / PREMIUM</p><h3 id="premium-showcase-title">高级版</h3></div>
+              <p>两个独立内容空间，按账号授权使用</p>
+            </div>
+            <div className={showcase.premiumSpaces}>
             <article className={showcase.space}>
-              <div className={`${showcase.spaceVisual} ${showcase.starDiagram}`} role="img" aria-label="星轨布局示意：连线串起拍立得图集封面">
+              <div className={`${showcase.spaceVisual} ${showcase.premiumVisual} ${showcase.starDiagram}`} role="img" aria-label="星轨布局示意：连线串起拍立得图集封面">
                 <svg viewBox="0 0 360 180" aria-hidden="true"><path d="M64 117 165 51 290 107" /><circle cx="64" cy="117" r="3" /><circle cx="165" cy="51" r="3" /><circle cx="290" cy="107" r="3" /></svg>
                 <i className={showcase.paperOne} /><i className={showcase.paperTwo} /><i className={showcase.paperThree} />
                 <span>图集封面 / 星座构图</span>
               </div>
-              <div className={showcase.spaceTitle}><span>02 / STAR TRAIL</span><h3>星轨</h3><span>独立内容空间</span></div>
+              <div className={showcase.spaceTitle}><span>01 / STAR TRAIL</span><h4>星轨</h4><span>独立内容空间</span></div>
               <p>以拍立得封面进入图集，让照片在星座般的构图中展开。</p>
             </article>
             <article className={showcase.space}>
-              <div className={`${showcase.spaceVisual} ${showcase.flowDiagram}`} role="img" aria-label="流影视廊布局示意：双轨作品速览与分类画廊">
+              <div className={`${showcase.spaceVisual} ${showcase.premiumVisual} ${showcase.flowDiagram}`} role="img" aria-label="流影视廊布局示意：双轨作品速览与分类画廊">
                 <div><i /><i /><i /></div><div><i /><i /><i /></div><span>双轨速览 / 分类画廊</span>
               </div>
-              <div className={showcase.spaceTitle}><span>03 / FLOW GALLERY</span><h3>流影视廊</h3><span>独立内容空间</span></div>
+              <div className={showcase.spaceTitle}><span>02 / FLOW GALLERY</span><h4>流影视廊</h4><span>独立内容空间</span></div>
               <p>以流动双轨速览作品，再按分类进入完整画廊细看。</p>
             </article>
-          </div>
+            </div>
+          </section>
           <p className={showcase.note}>以上为布局示意，不含客户照片。内容空间的可用范围以账号授权为准。</p>
         </section>
         <section className={styles.homeWorkflow} aria-labelledby="workflow-title">
