@@ -6,15 +6,26 @@ const source=await fs.readFile(new URL("../app/templates/polaroid-field/collecti
 const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
 const {playCollectionEntrance,collectionEntranceTiming,collectionLandingGeometry,createCollectionFlight,playHomeExit,prepareCollectionBackground}=await import("data:text/javascript;base64,"+Buffer.from(js).toString("base64"));
 
-function fixture(reduced=false,{cardCount=3,lineCount=1,backdrops=false}={}){
+function fixture(reduced=false,{cardCount=3,lineCount=1,backdrops=false,theme="night"}={}){
   const running=[],ghosts=[],events=[],listeners=new Set();
-  const node=(role)=>({dataset:{role,rotation:"-3"},style:{visibility:"",setProperty(key,value){this[key]=value;}},offsetWidth:240,offsetHeight:350,children:[],setAttribute(){},removeAttribute(key){if(key==="data-card-id")delete this.dataset.cardId;},append(child){this.children.push(child);},remove(){this.removed=true;},
+  const node=(role)=>({dataset:{role,rotation:"-3"},style:{visibility:"",setProperty(key,value){this[key]=value;}},offsetWidth:240,offsetHeight:350,children:[],setAttribute(){},removeAttribute(key){if(key==="data-card-id")delete this.dataset.cardId;},append(child){child.parentElement=this;this.children.push(child);},remove(){this.removed=true;},
     animate(frames,options){let finish;const a={element:this,frames,options,cancelled:false,finished:new Promise(resolve=>{finish=resolve;}),finish:()=>finish(),cancel(){this.cancelled=true;}};running.push(a);return a;},
     querySelectorAll(){return [];},cloneNode(){const n=node(role);n.dataset={...this.dataset};return n;},
     getBoundingClientRect(){return {left:200,top:100,right:440,bottom:450,width:240,height:350};}});
-  const cards=Array.from({length:cardCount},(_,i)=>{const n=node(i===1?"hero":"support"),img=node(),glow=node(),glowImage=node(),pin=node(),tape=node();n.dataset.cardId=`photo-${i}`;n.querySelector=selector=>selector==="[data-collection-glow]"?backdrops?glow:null:selector==="img[data-photo-id]"?img:backdrops?glowImage:img;n.querySelectorAll=selector=>selector===".pin"?[pin]:selector===".tape"?[tape]:selector===".pin,.tape"?[pin,tape]:[];return n;});
+  const cards=Array.from({length:cardCount},(_,i)=>{
+    const n=node(i===1?"hero":"support"),img=node(),photo=node(),glow=node(),glowImage=node(),pin=node(),tape=node();
+    n.dataset.cardId=`photo-${i}`;img.dataset.photoId=n.dataset.cardId;
+    Object.assign(photo,{offsetLeft:14,offsetTop:12,offsetWidth:212,offsetHeight:284});
+    Object.assign(glow,theme==="paper"?{offsetLeft:0,offsetTop:0,offsetWidth:0,offsetHeight:0}:{offsetLeft:14,offsetTop:12,offsetWidth:212,offsetHeight:284});
+    glow.style.display=theme==="paper"?"none":"block";
+    glow.append(glowImage);photo.append(img);
+    if(backdrops)n.append(glow);n.append(photo);n.append(pin);n.append(tape);
+    n.querySelector=selector=>selector==="[data-collection-glow]"?backdrops?glow:null:selector==="img[data-photo-id]"?img:backdrops?glowImage:img;
+    n.querySelectorAll=selector=>selector===".pin"?[pin]:selector===".tape"?[tape]:selector===".pin,.tape"?[pin,tape]:[];
+    return n;
+  });
   const lines=Array.from({length:lineCount},()=>node());
-  const world={dataset:{},style:{visibility:"hidden"},closest:selector=>selector==="[data-star-theme]"?{getAttribute:()=>"night"}:null,querySelectorAll:selector=>selector==="[data-card-id]"?cards:selector===".lines path"?lines:[]};
+  const world={dataset:{},style:{visibility:"hidden"},closest:selector=>selector==="[data-star-theme]"?{getAttribute:()=>theme}:null,querySelectorAll:selector=>selector==="[data-card-id]"?cards:selector===".lines path"?lines:[]};
   const media={matches:reduced,addEventListener:(_type,fn)=>listeners.add(fn),removeEventListener:(_type,fn)=>listeners.delete(fn)};
   globalThis.matchMedia=()=>media;
   globalThis.document={createElement:()=>node(),body:{append(element){ghosts.push(element);}}};
@@ -27,6 +38,10 @@ function fixture(reduced=false,{cardCount=3,lineCount=1,backdrops=false}={}){
 const ghostFlight=f=>f.running.find(a=>a.element===f.ghosts[0]&&a.frames.at(-1).transform?.startsWith("translate("));
 const developing=f=>f.running.filter(a=>a.frames.some(frame=>Object.hasOwn(frame,"filter")));
 const endsAt=a=>Number(a.options.delay??0)+Number(a.options.duration);
+const flightPhotoArea=ghost=>{
+  const [top,right=top,bottom=top,left=right]=ghost.style.padding.split(/\s+/).map(Number.parseFloat);
+  return {width:Number.parseFloat(ghost.style.width)-left-right,height:Number.parseFloat(ghost.style.height)-top-bottom};
+};
 
 test("entrance keeps the original e462891 duration, order and stagger",()=>{
   assert.equal(collectionEntranceTiming(2,true,false).delay,410);
@@ -122,6 +137,47 @@ test("click-frame preparation creates one simple paper and reuses it for uniform
   assert.equal(f.running[0].cancelled,true);
   assert.doesNotMatch(source,/cloneNode|getComputedStyle/);
   cleanup();assert.equal(f.ghosts[0].removed,true);
+});
+
+test("paper flight measures the foreground photo instead of the first hidden spill",()=>{
+  const f=fixture(false,{backdrops:true,theme:"paper"}),card=f.cards[0];
+  const first=card.querySelector("img"),foreground=card.querySelector("img[data-photo-id]");
+  assert.notEqual(first,foreground,"the backdrop precedes the actual photo in the real card markup");
+  assert.equal(first.parentElement.style.display,"none");
+  assert.equal(first.parentElement.offsetWidth,0);assert.equal(first.parentElement.offsetHeight,0);
+  assert.equal(foreground.parentElement.offsetWidth,212);assert.equal(foreground.parentElement.offsetHeight,284);
+  const input={x:5,y:10,width:100,height:140,src:"/anonymous.svg",assetId:"photo-0"};
+  input.flight=createCollectionFlight(input);
+  const cleanup=playCollectionEntrance(f.world,input,{pin:".pin",tape:".tape",lines:".lines"});
+  try{
+    const ghost=f.ghosts[0];
+    assert.equal(ghostFlight(f).options.duration,980,"the photo remains visible throughout the original flight");
+    assert.equal(card.style.visibility,"hidden","the destination still hands off at the original landing time");
+    assert.equal(ghost.children[0].src,input.src);
+    assert.equal(ghost.style.padding,"12px 14px 54px 14px");
+    assert.deepEqual(flightPhotoArea(ghost),{width:212,height:284},"a hidden backdrop must not collapse the flying image to zero area");
+  }finally{cleanup();}
+});
+
+test("flight keeps safe default photo padding when foreground geometry is zero or missing",()=>{
+  for(const kind of ["zero-width","zero-height","missing"]){
+    const f=fixture(false,{backdrops:true,theme:"paper"}),card=f.cards[0];
+    const foreground=card.querySelector("img[data-photo-id]");
+    if(kind==="missing"){
+      const query=card.querySelector;
+      card.querySelector=selector=>selector==="img[data-photo-id]"?null:query(selector);
+    }else foreground.parentElement[kind==="zero-width"?"offsetWidth":"offsetHeight"]=0;
+    const input={x:5,y:10,width:100,height:140,src:"/anonymous.svg",assetId:"photo-0"};
+    input.flight=createCollectionFlight(input);
+    const initialPadding=input.flight.element.style.padding;
+    const cleanup=playCollectionEntrance(f.world,input,{pin:".pin",tape:".tape",lines:".lines"});
+    try{
+      const ghost=f.ghosts[0],area=flightPhotoArea(ghost);
+      assert.equal(ghostFlight(f).options.duration,980,kind);
+      assert.equal(ghost.style.padding,initialPadding,`${kind}: preserve the usable click-frame inset instead of padding away the whole photo`);
+      assert.ok(area.width>0&&area.height>0,`${kind}: the stand-in keeps a nonzero photo content box`);
+    }finally{cleanup();}
+  }
 });
 
 test("visible pin-in order uses top then left and never animates offscreen papers",()=>{

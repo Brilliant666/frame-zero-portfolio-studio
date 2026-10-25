@@ -118,8 +118,10 @@ export function playCollectionEntrance(world: HTMLElement, source: CollectionEnt
   const landingCard=landingSnapshot?.card,target=landingSnapshot?.box;
   const flight=!!(source?.src&&target&&intersectsViewport({left:source.x,top:source.y,width:source.width,height:source.height})&&fullyVisible(target));
   const night=world.closest("[data-star-theme]")?.getAttribute("data-star-theme")==="night";
-  const photo=flight?landingCard?.querySelector("img")?.parentElement:undefined;
-  const insets=photo?{left:photo.offsetLeft,top:photo.offsetTop,width:photo.offsetWidth,height:photo.offsetHeight}:undefined;
+  // The first image may be the hidden glow thumbnail, not the framed photograph.
+  const photo=flight?landingCard?.querySelector("img[data-photo-id]")?.parentElement:undefined;
+  const measuredInsets=photo?{left:photo.offsetLeft,top:photo.offsetTop,width:photo.offsetWidth,height:photo.offsetHeight}:undefined;
+  const insets=measuredInsets&&measuredInsets.width>0&&measuredInsets.height>0?measuredInsets:undefined;
   const preparedBox=flight?session?.element.getBoundingClientRect():undefined;
   background=prepareCollectionBackground(world);
   if(flight&&source&&landingSnapshot&&landingCard&&target){
