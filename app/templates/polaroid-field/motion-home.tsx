@@ -46,7 +46,7 @@ export default function MotionHome({ cards, content, onOpen, onPrepare, onWarm, 
   },[onWarm]);
   useEffect(()=>{
     if(active)return;
-    if(pendingSource.current){pendingSource.current.cancelled=true;pendingSource.current.flight?.cleanup();}
+    pendingSource.current?.cancel?.();
     exitCleanup.current?.();leaving.current=false;
   },[active]);
   useEffect(() => () => {
@@ -74,8 +74,12 @@ export default function MotionHome({ cards, content, onOpen, onPrepare, onWarm, 
     if (box) window.dispatchEvent(new CustomEvent("preview:star-boost", { detail: { phase: "in", origin: { x: box.left + box.width / 2, y: box.top + box.height / 2 } } }));
     const exit = playHomeExit(root.current, id);
     exitCleanup.current = exit.cleanup;
+    source.cancel=()=>{
+      source.cancelled=true;source.flight?.cleanup();exit.cleanup();
+      if(pendingSource.current===source){pendingSource.current=undefined;exitCleanup.current=null;leaving.current=false;}
+    };
     void Promise.resolve(onOpen(id, source, exit.finished)).catch(()=>{
-      source.cancelled=true;source.flight?.cleanup();exit.cleanup();leaving.current=false;
+      source.cancel?.();
     });
   }, [cards, onPrepare, onOpen]);
   const introClaim = useRef<boolean | null>(null);

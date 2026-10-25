@@ -6,6 +6,7 @@ import "../../../app/preview-workspace/preview-theme.css";
 import CollectionLivePreview from "../../../app/preview-workspace/collection-live-preview";
 import Prism from "../../../app/templates/prism-liquid/template";
 import PolaroidField from "../../../app/templates/polaroid-field/template";
+import { HOME_INTRO_BOOTSTRAP } from "../../../app/templates/polaroid-field/home-intro";
 import { LibraryContinuityProbe, PackageAdminContinuityProbe } from "./continuity-probes";
 import { MainAdminProbe, MainPreviewProbe, MainPreviewFrameProbe } from "./main-fixes-probes";
 import { PreviewPortfolioExperience } from "../../../app/preview-workspace/portfolio-view";
@@ -37,6 +38,20 @@ const content = { activeTemplate: "prism-liquid", profile: { mark: "F", brand: "
 const assets = works.map(work => ({ id: work.code, originalName: `${work.code}.svg`, width: work.previewWidth, height: work.previewHeight, aspectRatio: work.previewWidth / work.previewHeight, orientation: work.previewWidth > work.previewHeight ? "landscape" : "portrait", variants: Object.fromEntries(["full", "card", "thumbnail"].map(kind => [kind, { src: work.image, width: work.previewWidth, height: work.previewHeight }])) }));
 const collection = { id: "10000000-0000-4000-8000-000000000001", name: "匿名作品集", description: "只读布局验收", visible: true, assetIds: assets.map(asset => asset.id), coverAssetId: assets[0]?.id ?? null, focusAssetId: null, coverFit: "natural", coverFocusX: 50, coverFocusY: 50 };
 const portfolioDocument = { schemaVersion: 1, ...Object.fromEntries(["profile", "hero", "trustItems", "packages", "contact", "social", "bookingFields", "statement"].map(key => [key, content[key]])), collections: [collection] };
+if (params.get("demo") === "navigation") {
+  portfolioDocument.collections = ["A", "B", "C"].map((name, index) => ({
+    ...collection,
+    id: `10000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+    name: `匿名图集 ${name}`,
+    assetIds: [...collection.assetIds],
+    coverAssetId: assets[index]?.id ?? null,
+  }));
+  // Match the real page's pre-paint decision before React mounts the portfolio.
+  const bootstrap = document.createElement("script");
+  bootstrap.textContent = HOME_INTRO_BOOTSTRAP;
+  document.head.append(bootstrap);
+  bootstrap.remove();
+}
 // Explicit anonymous content for full-page package/theme review; never fetched from a Site.
 if (params.get("demo") === "packages") {
   portfolioDocument.packages = [

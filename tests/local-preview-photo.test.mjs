@@ -38,6 +38,35 @@ test("entry preparation shares relative and absolute URLs and waits for decoding
   } finally {globalThis.Image=oldImage;globalThis.location=oldLocation;}
 });
 
+test("concurrent image reveals share decoding and reveal only once",async()=>{
+  const text=await fs.readFile(new URL("../app/templates/polaroid-field/entry-photos.ts",import.meta.url),"utf8");
+  const js=ts.transpileModule(text,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
+  const {revealEntryImage}=await import(`data:text/javascript;base64,${Buffer.from(js).toString("base64")}`);
+  const old=globalThis.matchMedia;globalThis.matchMedia=()=>({matches:false});
+  let resolve,calls=0,animations=0;
+  const image={src:"/a.webp",currentSrc:"",isConnected:true,style:{opacity:"0"},decode(){calls++;return new Promise(done=>{resolve=done;});},animate(){animations++;}};
+  try{
+    revealEntryImage(image);image.currentSrc=image.src;revealEntryImage(image);
+    assert.equal(calls,1,"one element/source must not decode again when currentSrc becomes available");
+    resolve();await new Promise(setImmediate);
+    assert.equal(image.style.opacity,"1");assert.equal(animations,1);
+  }finally{globalThis.matchMedia=old;}
+});
+
+test("late decode cannot expose an image whose requested source changed",async()=>{
+  const text=await fs.readFile(new URL("../app/templates/polaroid-field/entry-photos.ts",import.meta.url),"utf8");
+  const js=ts.transpileModule(text,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
+  const {revealEntryImage}=await import(`data:text/javascript;base64,${Buffer.from(js).toString("base64")}`);
+  const old=globalThis.matchMedia;globalThis.matchMedia=()=>({matches:false});
+  let resolve,animations=0;
+  const image={src:"/a.webp",currentSrc:"/a.webp",isConnected:true,style:{opacity:"0"},decode:()=>new Promise(done=>{resolve=done;}),animate(){animations++;}};
+  try{
+    revealEntryImage(image);image.src="/b.webp";
+    resolve();await new Promise(setImmediate);
+    assert.equal(image.style.opacity,"0");assert.equal(animations,0);
+  }finally{globalThis.matchMedia=old;}
+});
+
 test("local preview image sizes are generated in memory without changing source",async()=>{
   const root=await fs.mkdtemp(path.join(os.tmpdir(),"preview-photo-test-"));
   try {

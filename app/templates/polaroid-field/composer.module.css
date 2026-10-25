@@ -144,6 +144,14 @@
 :global([data-star-theme="night"]) .spill { display: block; z-index: 0; }
 :global([data-star-theme="night"]) .spill img { filter: blur(34px) saturate(1.5); opacity: .42; mix-blend-mode: screen; transition: opacity .5s; }
 :global([data-star-theme="night"]) .photo { z-index: 1; background: transparent; box-shadow: inset 0 0 0 1px rgba(255,255,255,.16), 0 0 70px 2px rgba(255,236,210,.1); }
+/* Foreground papers retain their stagger; all backdrops share the landing phase. */
+:global([data-star-theme="night"]) .world[data-collection-background] .spill { opacity:1; transition:opacity .5s ease; }
+:global([data-star-theme="night"]) .world[data-collection-background] .photo { transition:box-shadow .5s ease; }
+:global([data-star-theme="night"]) .world[data-collection-background="pending"] .spill { opacity:0; transition:none; }
+:global([data-star-theme="night"]) .world[data-collection-background="pending"] .photo { box-shadow:inset 0 0 0 1px rgba(255,255,255,.16),0 0 70px 2px rgba(255,236,210,0); transition:none; }
+:global([data-star-theme="night"]) .world[data-collection-background="cancelled"] .spill,
+:global([data-star-theme="night"]) .world[data-collection-background="cancelled"] .photo { transition:none; }
+@media(prefers-reduced-motion:reduce) { :global([data-star-theme="night"]) .world[data-collection-background] .spill,:global([data-star-theme="night"]) .world[data-collection-background] .photo { transition:none; } }
 :global([data-star-theme="night"]) .photo::after { content: ""; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); background: linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,0) 30%); }
 :global([data-star-theme="night"]) .photo img { transition: filter .5s; }
 :global([data-star-theme="night"]) .card[data-role="lead"] .photo img { filter: brightness(.9); }

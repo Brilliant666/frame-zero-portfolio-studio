@@ -11,7 +11,7 @@ import {playCollectionEntrance,type CollectionEntranceSource} from "./collection
 import { COMPOSER_MODES, composerSeed, composerView, parseComposerPreference, type ComposerBounds, type ComposerPreference, type ComposerMode, type ComposerView } from "./composer-view";
 import styles from "./composer.module.css";
 import "./motion-fonts.css";
-import { entryPhotoSource, prepareEntryPhoto, revealEntryImage } from "./entry-photos";
+import { decodeEntryImage, entryPhotoSource, revealEntryImage } from "./entry-photos";
 import GlassSegments from "../../preview-workspace/glass-segments";
 import { observePhotoUpgrades, type PhotoUpgrade } from "./photo-upgrade";
 import {createMotionActivity} from "./motion-diagnostic";
@@ -58,7 +58,7 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
     const generation=entranceGeneration.current,world=worldRef.current;
     const images=[...world.querySelectorAll<HTMLImageElement>("img")].filter(image=>{const box=image.getBoundingClientRect();return box.right>0&&box.left<innerWidth&&box.bottom>0&&box.top<innerHeight;});
     images.forEach(image=>{image.loading="eager";});
-    const ready=Promise.all(images.map(image=>prepareEntryPhoto(image.currentSrc||image.src).then(()=>image.decode().catch(()=>{}))));
+    const ready=Promise.all(images.map(image=>decodeEntryImage(image).catch(()=>{})));
     const elapsed=performance.now()-(entranceSource?.startedAt ?? performance.now());
     const wait=Math.max(0,300-elapsed);
     let timer:ReturnType<typeof setTimeout>,exitTimer:ReturnType<typeof setTimeout>|undefined;
@@ -366,7 +366,7 @@ export default function ComposerScene({ cards, sceneId, title, description, acti
           }}
           style={{ left: card.x - card.w / 2, top: card.y - card.h / 2, width: card.w, height: card.h, zIndex: card.z, "--angle": "0deg", "--enter-delay": `${Math.min(card.i,12)*35}ms` } as CSSProperties}>
           <span className={styles.sheet}>
-            {source.asset && <span className={styles.spill} aria-hidden="true" style={{ left: card.f.side, top: card.f.top, width: card.pw, height: card.ph }}><img src={source.asset.variants.thumbnail.src} alt="" draggable={false} loading="lazy" /></span>}
+            {source.asset && <span className={styles.spill} data-collection-glow aria-hidden="true" style={{ left: card.f.side, top: card.f.top, width: card.pw, height: card.ph }}><img src={source.asset.variants.thumbnail.src} alt="" draggable={false} loading="lazy" /></span>}
             <span className={styles.photo} style={{ left: card.f.side, top: card.f.top, width: card.pw, height: card.ph }}>{source.asset ? <img src={upgraded?.src ?? entryPhotoSource(source.asset)} data-photo-id={card.id} data-photo-tier={upgraded?.tier ?? Math.min(600,Math.max(source.asset.variants.card.width,source.asset.variants.full.width))} style={{opacity:card.id===entranceSource?.assetId?1:0}} onLoad={event=>revealEntryImage(event.currentTarget,card.id===entranceSource?.assetId)} alt={`图集照片 ${card.i + 1}`} width={source.asset.variants.card.width} height={source.asset.variants.card.height} loading={card.i < 3 || card.role === "hero" || card.id === coverId || card.id === entranceSource?.assetId ? "eager" : "lazy"} draggable={false} onError={imageFailed} /> : "照片暂不可用"}</span>
             <span className={styles.caption} style={{ height: card.f.bottom, paddingInline: card.f.side, justifyContent: card.cap === "right" ? "flex-end" : undefined, fontSize: Math.max(15, Math.min(34, card.f.bottom * .5)) }}>{card.role === "hero" ? "✦ " : ""}No.{String(card.i + 1).padStart(2, "0")}</span>
           </span>

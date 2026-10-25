@@ -1,6 +1,18 @@
 import type { PhotoAsset } from "../../photo-library";
 
 const prepared = new Map<string, Promise<boolean>>();
+const decoded = new WeakMap<HTMLImageElement, { src: string; current: string; promise: Promise<void> }>();
+
+/** Load, entrance readiness and late reveal can share the same element's decode work. */
+export function decodeEntryImage(image: HTMLImageElement): Promise<void> {
+  const src=image.src,current=image.currentSrc||src;
+  const existing=decoded.get(image);
+  if(existing && existing.src===src && existing.current===current)return existing.promise;
+  const promise=image.decode();
+  const record={src,current,promise};decoded.set(image,record);
+  void promise.catch(()=>{if(decoded.get(image)===record)decoded.delete(image);});
+  return promise;
+}
 export function invalidateEntryPhoto(src:string){prepared.delete(new URL(src,location.href).href);}
 export function entryPhotoSource(asset: PhotoAsset, width = 600) {
   const tier = width > 1100 ? 2200 : width > 600 ? 1100 : 600;
@@ -20,7 +32,7 @@ export function prepareEntryPhoto(src: string): Promise<boolean> {
     let done=false;
     const finish=(ok:boolean)=>{if(done)return;done=true;clearTimeout(timer);if(!ok)prepared.delete(src);resolve(ok);};
     const timer=setTimeout(()=>finish(false),10_000);
-    image.onload = () => { void image.decode().then(() => { performance.mark(`entry:decoded:${src}`); finish(true); }).catch(()=>finish(false)); };
+    image.onload = () => { void decodeEntryImage(image).then(() => { performance.mark(`entry:decoded:${src}`); finish(true); }).catch(()=>finish(false)); };
     image.onerror = () => finish(false);
   });
   prepared.set(src, ready); image.src = src;
@@ -32,9 +44,9 @@ export function prepareEntryPhotos(assets: readonly PhotoAsset[]) {
 
 /** Decode before exposure. A late image reveals softly instead of popping into paper. */
 export function revealEntryImage(image: HTMLImageElement, landing = false) {
-  const src = image.currentSrc || image.src;
-  void image.decode().catch(() => {}).then(() => {
-    if (!image.isConnected || (image.currentSrc || image.src) !== src) return;
+  const src = image.currentSrc || image.src,requested=image.src;
+  void decodeEntryImage(image).catch(() => {}).then(() => {
+    if (!image.isConnected || image.src!==requested || (image.currentSrc || image.src) !== src) return;
     performance.mark(`entry:visible:${src}`);
     const hidden = image.style.opacity === "0";
     image.style.opacity = "1";

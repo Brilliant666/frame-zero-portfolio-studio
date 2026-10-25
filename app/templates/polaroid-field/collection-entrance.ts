@@ -2,6 +2,8 @@ export type CollectionFlight = { element: HTMLElement; stopPreparation: () => vo
 export type CollectionEntranceSource = {
   x: number; y: number; width: number; height: number; src: string; assetId: string;
   flight?: CollectionFlight; ready?: Promise<unknown>; startedAt?: number; paperColor?: string; cancelled?: boolean; accepted?: boolean;
+  /** Releases the original home's exit, stand-in and click lock when navigation interrupts. */
+  cancel?: () => void;
   /** Resolves when the homepage exit has played; the album waits for it so the two never overlap. */
   exited?: Promise<unknown>;
 };
@@ -13,6 +15,30 @@ export function collectionLandingGeometry(box: {left:number;top:number;width:num
 }
 
 const intersectsViewport = (box: {left:number;top:number;width:number;height:number}) => box.width > 0 && box.height > 0 && box.left < innerWidth && box.top < innerHeight && box.left + box.width > 0 && box.top + box.height > 0;
+
+type CollectionBackground = { reveal: () => void; cancel: () => void };
+const backgrounds = new WeakMap<HTMLElement, CollectionBackground>();
+
+/** One scene clock for all photo backdrops; image load events never restart it. */
+export function prepareCollectionBackground(world: HTMLElement): CollectionBackground {
+  backgrounds.get(world)?.cancel();
+  let disposed=false,timer:ReturnType<typeof setTimeout>|undefined;
+  const owns=()=>!disposed&&backgrounds.get(world)===background;
+  const background:CollectionBackground={
+    reveal(){
+      if(!owns()||world.dataset.collectionBackground!=="pending")return;
+      world.dataset.collectionBackground="revealing";
+      timer=setTimeout(()=>{if(owns())world.dataset.collectionBackground="ready";},500);
+    },
+    cancel(){
+      clearTimeout(timer);disposed=true;
+      if(backgrounds.get(world)!==background)return;
+      backgrounds.delete(world);world.dataset.collectionBackground="cancelled";
+    },
+  };
+  backgrounds.set(world,background);world.dataset.collectionBackground="pending";
+  return background;
+}
 
 /** Called in the click frame: only a paper rectangle and the already loaded cover URL. */
 export function createCollectionFlight(source: CollectionEntranceSource): CollectionFlight | undefined {
@@ -69,8 +95,9 @@ export function playCollectionEntrance(world: HTMLElement, source: CollectionEnt
   void _compact;
   const animations=new Set<Animation>(),media=matchMedia("(prefers-reduced-motion: reduce)");
   let session=source?.flight;
+  let background:CollectionBackground|undefined=undefined;
   let restoreLanding=()=>{};
-  const cleanup=()=>{animations.forEach(animation=>animation.cancel());animations.clear();session?.cleanup();session=undefined;restoreLanding();world.style.visibility="visible";media.removeEventListener("change",onChange);};
+  const cleanup=()=>{background?.cancel();animations.forEach(animation=>animation.cancel());animations.clear();session?.cleanup();session=undefined;restoreLanding();world.style.visibility="visible";media.removeEventListener("change",onChange);};
   const onChange=()=>{if(media.matches)cleanup();};
   const track=(element:Element,frames:Keyframe[],options:KeyframeAnimationOptions)=>{
     const animation=element.animate(frames,{...options,fill:"backwards"});animations.add(animation);
@@ -82,24 +109,32 @@ export function playCollectionEntrance(world: HTMLElement, source: CollectionEnt
   const clip=world.closest<HTMLElement>("[data-composer]")?.getBoundingClientRect();
   const visible=(box:DOMRect)=>intersectsViewport(box)&&box.right>Math.max(0,clip?.left??0)&&box.bottom>Math.max(0,clip?.top??0)&&box.left<Math.min(innerWidth,clip?.right??innerWidth)&&box.top<Math.min(innerHeight,clip?.bottom??innerHeight);
   const fullyVisible=(box:DOMRect)=>visible(box)&&box.left>=Math.max(0,clip?.left??0)&&box.top>=Math.max(0,clip?.top??0)&&box.right<=Math.min(innerWidth,clip?.right??innerWidth)&&box.bottom<=Math.min(innerHeight,clip?.bottom??innerHeight);
-  const landingCard=source?cards.find(card=>card.dataset.cardId===source.assetId):undefined;
-  const target=landingCard?.getBoundingClientRect();
+  // Snapshot geometry before animation/style writes. Reading dimensions inside the
+  // animation loop would synchronously flush the previous paper's pending styles.
+  const measured=cards.map(card=>({card,box:card.getBoundingClientRect()}));
+  const visibleCards=measured.filter(item=>visible(item.box)).sort((a,b)=>a.box.top-b.box.top||a.box.left-b.box.left)
+    .map(item=>({...item,width:item.card.offsetWidth,height:item.card.offsetHeight,angle:Number(item.card.dataset.rotation??0)}));
+  const landingSnapshot=source?visibleCards.find(item=>item.card.dataset.cardId===source.assetId):undefined;
+  const landingCard=landingSnapshot?.card,target=landingSnapshot?.box;
   const flight=!!(source?.src&&target&&intersectsViewport({left:source.x,top:source.y,width:source.width,height:source.height})&&fullyVisible(target));
   const night=world.closest("[data-star-theme]")?.getAttribute("data-star-theme")==="night";
-  if(flight&&source&&landingCard&&target){
+  const photo=flight?landingCard?.querySelector("img")?.parentElement:undefined;
+  const insets=photo?{left:photo.offsetLeft,top:photo.offsetTop,width:photo.offsetWidth,height:photo.offsetHeight}:undefined;
+  const preparedBox=flight?session?.element.getBoundingClientRect():undefined;
+  background=prepareCollectionBackground(world);
+  if(flight&&source&&landingSnapshot&&landingCard&&target){
     session??=createCollectionFlight(source);
     if(session){
       const previousVisibility=landingCard.style.visibility;
       restoreLanding=()=>{landingCard.style.visibility=previousVisibility;restoreLanding=()=>{};};
       // Hide the whole destination paper (including its decorations) before revealing the world.
       landingCard.style.visibility="hidden";
-      const ghost=session.element,from=ghost.getBoundingClientRect();session.stopPreparation();
-      const geometry=collectionLandingGeometry(target,landingCard.offsetWidth,landingCard.offsetHeight,Number(landingCard.dataset.rotation??0));
+      const ghost=session.element,from=preparedBox??ghost.getBoundingClientRect();session.stopPreparation();
+      const geometry=collectionLandingGeometry(target,landingSnapshot.width,landingSnapshot.height,landingSnapshot.angle);
       Object.assign(ghost.style,{left:"0px",top:"0px",width:`${geometry.width}px`,height:`${geometry.height}px`});
       // Actual untransformed photo insets, not assumptions about dynamic frame sizes.
-      const photo=landingCard.querySelector("img")?.parentElement;
-      if(photo){
-        const left=photo.offsetLeft,top=photo.offsetTop,width=photo.offsetWidth,height=photo.offsetHeight;
+      if(insets){
+        const {left,top,width,height}=insets;
         ghost.style.padding=`${top}px ${Math.max(0,geometry.width-left-width)}px ${Math.max(0,geometry.height-top-height)}px ${left}px`;
       }
       const start=`translate(${from.left+from.width/2-geometry.width/2}px,${from.top+from.height/2-geometry.height/2}px) rotate(0deg) scale(${from.width/geometry.width})`;
@@ -109,33 +144,39 @@ export function playCollectionEntrance(world: HTMLElement, source: CollectionEnt
       void animation.finished.then(()=>{
         if(!session)return;
         restoreLanding();
+        background?.reveal();
         landingCard.querySelectorAll(selectors.pin).forEach(pin=>track(pin,[{opacity:0,scale:".1"},{opacity:1,scale:"1.3",offset:.65},{opacity:1,scale:"1"}],{duration:560,easing:collectionEntranceTiming(0,false,night).easing}));
         const fade=track(ghost,[{opacity:1},{opacity:0}],{duration:180});
         void fade.finished.then(()=>{session?.cleanup();session=undefined;}).catch(()=>{});
       }).catch(()=>{});
     }
   }else{session?.cleanup();session=undefined;}
-  const visibleCards=cards.map(card=>({card,box:card.getBoundingClientRect()})).filter(item=>visible(item.box)).sort((a,b)=>a.box.top-b.box.top||a.box.left-b.box.left);
   // With a flight, every other paper is born where the visitor clicked (the sky's dolly centre) and develops on the way.
   const origin=session&&source?{x:source.x+source.width/2,y:source.y+source.height/2}:null;
   let order=0;
-  visibleCards.forEach(({card,box})=>{
+  visibleCards.forEach(({card,box,width,height,angle})=>{
     if(flight&&card===landingCard)return;
     const timing=collectionEntranceTiming(order++,Boolean(session),night),delay=timing.delay;
+    // Star scenes put a blurred thumbnail before the actual photo. Do not animate
+    // its filter per paper: that would override CSS blur, then restore it in batches.
     const image=card.querySelector("img");
+    const backdrop=Boolean(card.querySelector("[data-collection-glow]"));
+    let movement:Animation;
     if(origin){
       // the offset is measured on screen but applied inside the composer's scaled world
-      const scale=collectionLandingGeometry(box,card.offsetWidth,card.offsetHeight,Number(card.dataset.rotation??0)).scale||1;
+      const scale=collectionLandingGeometry(box,width,height,angle).scale||1;
       const dx=Math.round((origin.x-(box.left+box.width/2))/scale),dy=Math.round((origin.y-(box.top+box.height/2))/scale);
-      track(card,[{opacity:0,translate:`${dx}px ${dy}px`,rotate:"0deg",scale:".12"},{opacity:1,offset:.28},{opacity:1,translate:"0 0",rotate:"0deg",scale:"1"}],timing);
-      if(image)track(image,[{filter:"brightness(.22) contrast(.7) saturate(0)"},{filter:"brightness(.75) contrast(.9) saturate(.55) sepia(.18)",offset:.5},{filter:"none"}],{duration:1200,delay:delay+120,easing:"ease-out"});
+      movement=track(card,[{opacity:0,translate:`${dx}px ${dy}px`,rotate:"0deg",scale:".12"},{opacity:1,offset:.28},{opacity:1,translate:"0 0",rotate:"0deg",scale:"1"}],timing);
+      if(image&&!backdrop)track(image,[{filter:"brightness(.22) contrast(.7) saturate(0)"},{filter:"brightness(.75) contrast(.9) saturate(.55) sepia(.18)",offset:.5},{filter:"none"}],{duration:1200,delay:delay+120,easing:"ease-out"});
     }else{
-      track(card,[{opacity:0,translate:"0 -46px",rotate:"7deg",scale:".94"},{opacity:1,translate:"0 0",rotate:"0deg",scale:"1"}],timing);
-      if(image)track(image,[{filter:"brightness(1.2) saturate(.6)"},{filter:"none"}],{duration:1200,delay:delay+180,easing:"ease-out"});
+      movement=track(card,[{opacity:0,translate:"0 -46px",rotate:"7deg",scale:".94"},{opacity:1,translate:"0 0",rotate:"0deg",scale:"1"}],timing);
+      if(image&&!backdrop)track(image,[{filter:"brightness(1.2) saturate(.6)"},{filter:"none"}],{duration:1200,delay:delay+180,easing:"ease-out"});
     }
+    if(!session&&order===1)void movement.finished.then(()=>background?.reveal()).catch(()=>{});
     card.querySelectorAll(`${selectors.pin},${selectors.tape}`).forEach(pin=>track(pin,[{opacity:0,scale:".1"},{opacity:1,scale:"1.3",offset:.65},{opacity:1,scale:"1"}],{duration:560,delay:delay+460,easing:timing.easing}));
   });
   world.querySelectorAll(`${selectors.lines} path`).forEach((path,index)=>track(path,[{strokeDashoffset:1,opacity:0},{strokeDashoffset:0,opacity:.55}],{duration:560,delay:(session?980:0)+360+index*60,easing:"ease-out"}));
+  if(!visibleCards.length)background.cancel();
   world.style.visibility="visible";window.dispatchEvent(new CustomEvent("preview:star-boost",{detail:{duration:1100}}));
   return cleanup;
 }
