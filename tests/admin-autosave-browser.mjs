@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import sharp from 'sharp';
+import { waitForDraftResponse } from './manual-save-browser.mjs';
 
 // Auto-save and the live preview, in a real browser against the isolated test database.
 // The other browser suites switch auto-save off (manual-save-browser.mjs); this one keeps the default.
@@ -40,8 +41,8 @@ export async function adminAutosaveBrowser({ origin, password, username, signal 
     await openPolaroidProfile(page);
     const toggle = page.getByRole('switch', { name: '自动保存草稿', exact: true });
     assert.equal(await toggle.getAttribute('aria-checked'), 'true', 'Auto-save is on by default');
-    await field(page, '摄影师名称').fill('Autosaved photographer');
-    await page.waitForResponse(r => r.request().method() === 'PUT' && new URL(r.url()).pathname === draftPath('premium-polaroid'), { timeout: 8000 });
+    await waitForDraftResponse(page, draftPath('premium-polaroid'),
+      () => field(page, '摄影师名称').fill('Autosaved photographer'), { timeout: 8000 });
     await page.locator('[data-workbench-bar]').getByText('草稿已保存').waitFor();
     assert.deepEqual(puts, [200], 'Exactly one save for one pause in typing');
     await page.reload();
@@ -71,8 +72,14 @@ export async function adminAutosaveBrowser({ origin, password, username, signal 
     assert.deepEqual(puts, [], 'The live preview never saves');
     await pane.getByRole('radio', { name: '手机', exact: true }).click();
     await page.waitForFunction(() => document.querySelector('iframe[title="星轨实时预览"]')?.contentWindow?.innerWidth === 390);
-    await page.getByRole('button', { name: '仅保存草稿', exact: true }).click();
-    await page.waitForResponse(r => r.request().method() === 'PUT' && new URL(r.url()).pathname === draftPath('premium-polaroid'));
+    const manualSave = await waitForDraftResponse(page, draftPath('premium-polaroid'),
+      () => page.getByRole('button', { name: '仅保存草稿', exact: true }).click());
+    assert.equal(manualSave.status(), 200, 'The manual save is accepted');
+    await page.locator('[data-workbench-bar]').getByText('草稿已保存').waitFor();
+    assert.deepEqual(puts, [200], 'Manual save sends exactly one successful PUT while auto-save is off');
+    const persistedManual = await context.request.get(`${origin}${draftPath('premium-polaroid')}`);
+    assert.equal(persistedManual.status(), 200);
+    assert.equal((await persistedManual.json()).content.profile.photographer, 'Live preview photographer', 'The previewed draft was actually persisted');
     await page.getByRole('switch', { name: '自动保存草稿', exact: true }).click();
 
     // 3b. A photo uploaded after the preview opened appears in it: the frame reads the asset list again.
@@ -102,19 +109,19 @@ export async function adminAutosaveBrowser({ origin, password, username, signal 
     await page.goto(`${origin}/${username}/admin/basic/profile`);
     await page.waitForFunction(() => document.querySelector('[data-workbench-bar]'));
     await field(page, '摄影师名称').waitFor();
-    await field(page, '摄影师名称').fill('Basic autosaved photographer');
-    await page.waitForResponse(r => r.request().method() === 'PUT' && new URL(r.url()).pathname === draftPath('basic'), { timeout: 8000 });
+    await waitForDraftResponse(page, draftPath('basic'),
+      () => field(page, '摄影师名称').fill('Basic autosaved photographer'), { timeout: 8000 });
     assert.deepEqual(basicPuts, [200]);
 
     // 5. A stale tab's auto-save meets the version check: one refused attempt, a visible conflict, no loop.
     const stale = await context.newPage();
     await openPolaroidProfile(stale);
     await openPolaroidProfile(page);
-    await field(page, '摄影师名称').fill('Newer tab photographer');
-    await page.waitForResponse(r => r.request().method() === 'PUT' && new URL(r.url()).pathname === draftPath('premium-polaroid'), { timeout: 8000 });
+    await waitForDraftResponse(page, draftPath('premium-polaroid'),
+      () => field(page, '摄影师名称').fill('Newer tab photographer'), { timeout: 8000 });
     const stalePuts = recordPuts(stale, 'premium-polaroid');
-    await field(stale, '摄影师名称').fill('Stale tab photographer');
-    await stale.waitForResponse(r => r.request().method() === 'PUT' && new URL(r.url()).pathname === draftPath('premium-polaroid'), { timeout: 8000 });
+    await waitForDraftResponse(stale, draftPath('premium-polaroid'),
+      () => field(stale, '摄影师名称').fill('Stale tab photographer'), { timeout: 8000 });
     await stale.getByText(/版本冲突/).first().waitFor();
     await stale.waitForTimeout(4000);
     assert.deepEqual(stalePuts, [409], 'A refused save is not retried automatically');
