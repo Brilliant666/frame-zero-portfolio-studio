@@ -32,6 +32,12 @@ const templateStructurePreviewDigests = new Map([
   ["polaroid-field.webp", "eaea37e6a50349cee589f0c95e7c12d21e5da4315c8d2fbf51196a11b550866e"],
   ["prism-liquid.webp", "c988b0e1c6a478d115efb7b7b8cc6e0135182bdb43118b0f1aab7793cc06f510"],
 ]);
+// Two reviewed captures of real components using only the SVG artwork authored
+// in tests/fixtures/launch-showcase. No Site assets, credentials or remote photos.
+const premiumShowcasePreviewDigests = new Map([
+  ["public/template-showcase-previews/premium-polaroid.webp", "8a155436b1b11515694395ab820f5015f46260918144d041060d719a30464845"],
+  ["public/template-showcase-previews/premium-flow-gallery.webp", "c770bc07adfdcab8ffdffd01d568d5e1543753632fe6b3fd9f51eef23df8032d"],
+]);
 const forbiddenPhotoDirectory = /^public\/photos(?:\/|$)/i;
 const forbiddenLocalStateDirectory = /^\.frame-zero(?:\/|$)/i;
 const embeddedRasterData = /data\s*:\s*image(?:\/[a-z0-9.+-]+)?\s*;\s*base64\s*,?/i;
@@ -101,6 +107,18 @@ function inspectReviewedTemplateStructurePreview(content, filePath, source) {
   return true;
 }
 
+function inspectReviewedPremiumShowcase(content, filePath, source) {
+  const normalized = normalizeGitPath(filePath);
+  const approvedDigest = premiumShowcasePreviewDigests.get(normalized);
+  if (!approvedDigest) return false;
+  const isWebp = content.length >= 12
+    && content.subarray(0, 4).toString("ascii") === "RIFF"
+    && content.subarray(8, 12).toString("ascii") === "WEBP";
+  if (!isWebp || content.length > 128 * 1024) violations.add(`${source}: invalid premium showcase capture: ${normalized}`);
+  if (createHash("sha256").update(content).digest("hex") !== approvedDigest) violations.add(`${source}: unreviewed premium showcase bytes: ${normalized}`);
+  return true;
+}
+
 const violations = new Set();
 const indexPaths = gitText("ls-files", "--cached", "-z")
   .split("\0")
@@ -125,7 +143,7 @@ function inspectPath(filePath, source) {
 
   const isReviewedTemplateStructurePreview = reviewedTemplateStructurePreviewName(normalized) !== null;
 
-  if (forbiddenRasterExtension.test(normalized) && !isReviewedTemplateStructurePreview) {
+  if (forbiddenRasterExtension.test(normalized) && !isReviewedTemplateStructurePreview && !premiumShowcasePreviewDigests.has(normalized)) {
     violations.add(`${source}: raster asset: ${normalized}`);
   }
 }
@@ -162,7 +180,7 @@ for (const filePath of indexPaths) {
 
   try {
     const content = gitBuffer("show", `:${filePath}`);
-    if (!inspectReviewedTemplateStructurePreview(content, filePath, "index blob") && !content.includes(0)) {
+    if (!inspectReviewedTemplateStructurePreview(content, filePath, "index blob") && !inspectReviewedPremiumShowcase(content, filePath, "index blob") && !content.includes(0)) {
       inspectText(content.toString("utf8"), `index blob ${filePath}`);
     }
   } catch {
@@ -182,7 +200,7 @@ for (const filePath of candidatePaths) {
     continue;
   }
 
-  if (!inspectReviewedTemplateStructurePreview(content, filePath, "worktree/index") && !content.includes(0)) {
+  if (!inspectReviewedTemplateStructurePreview(content, filePath, "worktree/index") && !inspectReviewedPremiumShowcase(content, filePath, "worktree/index") && !content.includes(0)) {
     inspectText(content.toString("utf8"), `tracked candidate ${filePath}`);
   }
 }
@@ -194,9 +212,11 @@ for (const entry of reachableEntries) {
   const filePath = entry.slice(separator + 1);
   inspectPath(filePath, "reachable history");
   const previewName = reviewedTemplateStructurePreviewName(filePath);
-  if (previewName) {
+  if (previewName || premiumShowcasePreviewDigests.has(normalizeGitPath(filePath))) {
     try {
-      inspectReviewedTemplateStructurePreview(gitBuffer("cat-file", "blob", objectId), filePath, "reachable history blob");
+      const blob = gitBuffer("cat-file", "blob", objectId);
+      if (previewName) inspectReviewedTemplateStructurePreview(blob, filePath, "reachable history blob");
+      else inspectReviewedPremiumShowcase(blob, filePath, "reachable history blob");
     } catch {
       violations.add(`reachable history: unable to inspect structure preview blob: ${filePath}`);
     }

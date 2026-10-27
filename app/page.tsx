@@ -20,12 +20,13 @@ function StructureImage({ id, alt, eager = false }: { id: string; alt: string; e
 }
 
 export default function PlatformHome() {
+  const gridTemplates = templateCatalog.slice(0, 9);
+  const [companionTemplate, heroTemplate] = templateCatalog.slice(9);
   return (
     <main className={`${styles.shell} ${styles.homeShell}`}>
       <header className={styles.header}>
         <Link className={styles.brand} href="/"><span aria-hidden="true">✦</span> 摄影作品集平台</Link>
         <nav className={styles.homeNav} aria-label="平台导航">
-          <a className={styles.homeExplore} href="#spaces">展示方式</a>
           <Link className={styles.secondaryButton} href="/login">账号登录 <span aria-hidden="true">↗</span></Link>
         </nav>
       </header>
@@ -40,14 +41,14 @@ export default function PlatformHome() {
           </div>
           <figure className={showcase.heroStage}>
             <div className={showcase.stageLabel}><span>PORTFOLIO / LAYOUT STUDY</span><span>01 — 11</span></div>
-            <div className={showcase.stageMain}>
-              <StructureImage id="film-rail" alt="基础版胶片长廊的布局示意：以胶片帧和不同画幅组织作品" eager />
+            <div className={showcase.stageMain} data-template-layout={heroTemplate.id}>
+              <StructureImage id={heroTemplate.id} alt={`${heroTemplate.name}的页面布局示意`} eager />
             </div>
-            <div className={showcase.stageCompanion} aria-hidden="true">
-              <StructureImage id="editorial-duet" alt="" eager />
-              <span>另一种叙事 / 杂志双人舞</span>
+            <div className={showcase.stageCompanion} data-template-layout={companionTemplate.id}>
+              <StructureImage id={companionTemplate.id} alt={`${companionTemplate.name}的页面布局示意`} eager />
+              <span>{companionTemplate.name}</span>
             </div>
-            <figcaption className={showcase.stageCaption}><div><span>基础版 · 胶片长廊</span><strong>画面之间，也有节奏。</strong></div><span className={showcase.diagramTag}>模板布局示意</span></figcaption>
+            <figcaption className={showcase.stageCaption}><div><span>基础版 · {heroTemplate.name}</span><strong>不同构图，同样出众。</strong></div><span className={showcase.diagramTag}>模板布局示意</span></figcaption>
           </figure>
         </section>
         <section id="spaces" className={showcase.showcase} aria-labelledby="showcase-title">
@@ -57,9 +58,9 @@ export default function PlatformHome() {
           </div>
           <div className={showcase.tierHeading}>
             <div><p className={showcase.tierKicker}>01 / BASIC</p><h3>基础版</h3></div>
-            <p>共11种风格，以下选展9套布局</p>
+            <p>共11种风格 · 首屏2套，以下9套</p>
           </div>
-          <PlatformTemplateShowcase previews={templateCatalog.slice(0, 9).map(({ id, name }) => ({ id, name, src: getTemplateStructurePreview(id).src }))} />
+          <PlatformTemplateShowcase previews={gridTemplates.map(({ id, name }) => ({ id, name, src: getTemplateStructurePreview(id).src }))} />
           <section className={showcase.premiumShowcase} aria-labelledby="premium-showcase-title">
             <div className={showcase.tierHeading}>
               <div><p className={showcase.tierKicker}>02 / PREMIUM</p><h3 id="premium-showcase-title">高级版</h3></div>
@@ -67,24 +68,25 @@ export default function PlatformHome() {
             </div>
             <div className={showcase.premiumSpaces}>
             <article className={showcase.space}>
-              <div className={`${showcase.spaceVisual} ${showcase.premiumVisual} ${showcase.starDiagram}`} role="img" aria-label="星轨布局示意：连线串起拍立得图集封面">
-                <svg viewBox="0 0 360 180" aria-hidden="true"><path d="M64 117 165 51 290 107" /><circle cx="64" cy="117" r="3" /><circle cx="165" cy="51" r="3" /><circle cx="290" cy="107" r="3" /></svg>
-                <i className={showcase.paperOne} /><i className={showcase.paperTwo} /><i className={showcase.paperThree} />
-                <span>图集封面 / 星座构图</span>
+              <div className={`${showcase.spaceVisual} ${showcase.premiumVisual}`}>
+                {/* Actual template rendering with repository-authored anonymous artwork. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/template-showcase-previews/premium-polaroid.webp" width={1440} height={900} loading="lazy" alt="星轨实际模板示意：星图渐变画布、拍立得图集封面与作品导航；画面使用自绘匿名素材" />
               </div>
               <div className={showcase.spaceTitle}><span>01 / STAR TRAIL</span><h4>星轨</h4><span>独立内容空间</span></div>
               <p>以拍立得封面进入图集，让照片在星座般的构图中展开。</p>
             </article>
             <article className={showcase.space}>
-              <div className={`${showcase.spaceVisual} ${showcase.premiumVisual} ${showcase.flowDiagram}`} role="img" aria-label="流影视廊布局示意：双轨作品速览与分类画廊">
-                <div><i /><i /><i /></div><div><i /><i /><i /></div><span>双轨速览 / 分类画廊</span>
+              <div className={`${showcase.spaceVisual} ${showcase.premiumVisual}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/template-showcase-previews/premium-flow-gallery.webp" width={1440} height={900} loading="lazy" alt="流影视廊实际模板示意：全幅背景、透明导航与两条不同宽度的作品轨道；画面使用自绘匿名素材" />
               </div>
               <div className={showcase.spaceTitle}><span>02 / FLOW GALLERY</span><h4>流影视廊</h4><span>独立内容空间</span></div>
               <p>以流动双轨速览作品，再按分类进入完整画廊细看。</p>
             </article>
             </div>
           </section>
-          <p className={showcase.note}>以上为布局示意，不含客户照片。内容空间的可用范围以账号授权为准。</p>
+          <p className={showcase.note}>基础版为布局示意，高级版为真实模板搭配自绘素材的效果示意，不含客户照片。内容空间的可用范围以账号授权为准。</p>
         </section>
         <section className={styles.homeWorkflow} aria-labelledby="workflow-title">
           <div className={styles.sectionHeading}><p className={styles.eyebrow}>从创作到展示</p><h2 id="workflow-title">整理在后台，分享在主页。</h2></div>
@@ -97,7 +99,6 @@ export default function PlatformHome() {
         <footer className={styles.footer}>
           <p>✦ 摄影作品集平台</p>
           <p>封闭测试中 · 暂不开放公众注册</p>
-          <Link className={styles.textLink} href="/login">进入工作台 <span aria-hidden="true">↗</span></Link>
         </footer>
       </div>
     </main>

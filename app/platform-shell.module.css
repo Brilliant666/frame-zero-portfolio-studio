@@ -92,7 +92,6 @@
 .homeShell .brand { font-size:15px; }
 .homeShell .brand span { font-size:25px; color:#4b9ee7; }
 .homeNav { display:flex; align-items:center; gap:30px; }
-.homeExplore { color:var(--muted); font-size:13px; padding:12px 0; }
 .homeShell .secondaryButton { border-radius:5px; background:transparent; }
 .homeShell .primaryButton { border-radius:5px; padding:14px 23px; min-height:48px; background:linear-gradient(180deg,#e4f2ff,#b9ddfb); border-color:#acd0f0; color:#1e4264; }
 .homeShell .primaryButton:hover { background:linear-gradient(180deg,#d5ebff,#a9d3f7); }
@@ -111,7 +110,6 @@
 .homeSteps h3 { margin:0 0 8px; font-size:16px; font-weight:600; }
 .homeSteps p { margin:0; font-size:13px; line-height:1.9; color:var(--muted); }
 .homeShell .footer { align-items:center; padding:24px 0 30px; }
-.homeShell .footer .textLink { min-height:44px; display:inline-flex; align-items:center; gap:9px; }
 @media(max-width:1100px) and (min-width:761px) {
   .homeHero { gap:34px; }
   .homeHero h1 { font-size:clamp(34px,4.1vw,48px); }
@@ -122,7 +120,6 @@
   .homeShell .brand { font-size:13px; gap:6px; }
   .homeShell .brand span { font-size:21px; }
   .homeNav { gap:14px; }
-  .homeExplore { display:none; }
   .homeShell .header .secondaryButton { min-height:44px; padding:9px 12px; font-size:12px; }
   .homeShell .homeContent { padding:0 22px; }
   .homeHero { grid-template-columns:minmax(0,1fr); gap:27px; padding:30px 0 34px; }

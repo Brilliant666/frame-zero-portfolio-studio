@@ -67,7 +67,7 @@ export function nextReviewPathAllowed(rawPath) {
   // Never forward a Site, account, API, preview, image-proxy or private-photo path.
   if (!rawPath.startsWith('/') || rawPath.startsWith('//') || rawPath.includes('\\') || /%2e|%2f|%5c/i.test(rawPath)) return false;
   const pathname = new URL(rawPath, 'http://127.0.0.1').pathname;
-  return pathname === '/' || pathname.startsWith('/_next/static/') || pathname.startsWith('/fonts/') || /^\/template-structure-previews\/[a-z-]+\.webp$/.test(pathname) || pathname === '/favicon.ico';
+  return pathname === '/' || pathname.startsWith('/_next/static/') || pathname.startsWith('/fonts/') || /^\/template-structure-previews\/[a-z-]+\.webp$/.test(pathname) || /^\/template-showcase-previews\/premium-(polaroid|flow-gallery)\.webp$/.test(pathname) || pathname === '/favicon.ico';
 }
 
 export function createReviewRequestHandler(nextHandler) {

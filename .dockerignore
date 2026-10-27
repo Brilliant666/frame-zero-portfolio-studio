@@ -139,6 +139,10 @@ public/fonts/noto-serif-sc-900/**
 !public/fonts/noto-serif-sc-900/subset-099.woff2
 !public/fonts/noto-serif-sc-900/subset-100.woff2
 !public/globe.svg
+!public/template-showcase-previews/
+public/template-showcase-previews/**
+!public/template-showcase-previews/premium-flow-gallery.webp
+!public/template-showcase-previews/premium-polaroid.webp
 !public/template-structure-previews/
 public/template-structure-previews/**
 !public/template-structure-previews/archive-os.webp

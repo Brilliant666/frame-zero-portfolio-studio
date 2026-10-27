@@ -8,6 +8,7 @@ import test from 'node:test';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import ts from 'typescript';
+import sharp from 'sharp';
 import { publishedDraftTarget, publishedWorkspaceSummary, renderSiteWorkspace, siteEntryPage } from '../db/accounts/site-entry.mjs';
 import { createReviewRequestHandler, nextReviewPathAllowed, reviewResponse, reviewStates, workspaceReviewFixture } from './launch-ui-review-server.mjs';
 
@@ -48,6 +49,7 @@ const attribute = (tag, name) => new RegExp(`\\b${name}="([^"]*)"`, 'i').exec(ta
 test('actual homepage SSR uses approved public diagrams and eagerly loads its primary product image', () => {
   const html = homeHtml(), images = html.match(/<img\b[^>]*>/g) ?? [];
   const approved = new Set(['archive-os', 'character-select', 'cinematic-light', 'editorial-duet', 'film-rail', 'manga-panels', 'museum-depth', 'neon-hud', 'orbital-portal', 'polaroid-field', 'prism-liquid'].map(id => `/template-structure-previews/${id}.webp`));
+  for (const id of ['premium-polaroid', 'premium-flow-gallery']) approved.add(`/template-showcase-previews/${id}.webp`);
   assert.ok(images.length >= 2);
   for (const image of images) assert.ok(approved.has(attribute(image, 'src')), `Unreviewed public image: ${attribute(image, 'src')}`);
   assert.equal(attribute(images[0], 'loading'), 'eager');
@@ -79,8 +81,25 @@ test('actual homepage directly presents nine distinct basic layouts as one named
     assert.ok(grid.includes(item.name));
   }
   assert.doesNotMatch(grid, /<button|aria-pressed|\/api\//);
-  assert.match(html.replace(/<[^>]*>/g, ''), /共11种风格.*选展9套布局/);
+  assert.match(html.replace(/<[^>]*>/g, ''), /共11种风格.*首屏2套，以下9套/);
   assert.doesNotMatch(html, /src="[^" ]*(?:\/photos\/|\/api\/sites\/|\/assets\/)/);
+});
+
+test('hero and nine-grid show each of the eleven real basic templates exactly once', () => {
+  const html = homeHtml();
+  const catalog = loadAppModule(fileURLToPath(new URL('../app/templates/catalog.ts', import.meta.url))).templateCatalog;
+  const ids = [...html.matchAll(/data-template-layout="([^"]+)"/g)].map(match => match[1]);
+  assert.equal(ids.length, 11);
+  assert.equal(new Set(ids).size, 11);
+  assert.deepEqual([...ids].sort(), catalog.map(item => item.id).sort());
+  const stage = /<figure\b[^>]*class="css-heroStage"[^>]*>([\s\S]*?)<\/figure>/.exec(html)?.[1];
+  assert.ok(stage);
+  for (const { id, name } of catalog.slice(9)) {
+    assert.ok(stage.includes(`data-template-layout="${id}"`));
+    assert.ok(stage.includes(`src="/template-structure-previews/${id}.webp"`));
+    assert.ok(stage.includes(name));
+  }
+  assert.doesNotMatch(stage, /aria-hidden="true"/);
 });
 
 test('the two premium spaces have their own showcase after the basic grid', () => {
@@ -92,6 +111,15 @@ test('the two premium spaces have their own showcase after the basic grid', () =
   for (const name of ['星轨', '流影视廊']) assert.match(premium, new RegExp(`<h4[^>]*>${name}<\\/h4>`));
   assert.doesNotMatch(premium, /data-template-layout=|href="\/(?:register|payment)/);
   assert.ok(html.indexOf('基础版九宫格布局示意') < html.indexOf('premium-showcase-title'));
+  const images = premium.match(/<img\b[^>]*>/g) ?? [];
+  assert.equal(images.length, 2);
+  assert.deepEqual(images.map(image => attribute(image, 'src')).sort(), ['premium-flow-gallery', 'premium-polaroid'].map(id => `/template-showcase-previews/${id}.webp`));
+  for (const image of images) {
+    assert.equal(attribute(image, 'width'), '1440');
+    assert.equal(attribute(image, 'height'), '900');
+    assert.match(attribute(image, 'alt'), /实际模板示意.*自绘匿名素材/);
+  }
+  assert.match(html, /高级版为真实模板搭配自绘素材的效果示意/);
 });
 
 test('actual homepage SSR explains three separate spaces and the single published homepage', () => {
@@ -101,6 +129,20 @@ test('actual homepage SSR explains three separate spaces and the single publishe
   assert.match(text, /内容各自编辑，本站照片可复用/);
   assert.match(text, /一个主页地址，展示你最后发布的版本/);
   assert.match(text, /草稿只对你可见；保存并发布后，公开主页才会更新/);
+});
+
+test('premium captures are compact public assets included in production packaging', async () => {
+  const manifest = JSON.parse(readFileSync(new URL('../config/production-public-files.json', import.meta.url), 'utf8'));
+  for (const id of ['premium-polaroid', 'premium-flow-gallery']) {
+    const relative = `template-showcase-previews/${id}.webp`;
+    const file = readFileSync(new URL(`../public/${relative}`, import.meta.url));
+    const metadata = await sharp(file).metadata();
+    assert.deepEqual([metadata.format, metadata.width, metadata.height], ['webp', 1440, 900]);
+    assert.ok(file.length < 128 * 1024);
+    assert.ok(manifest.files.includes(relative));
+    assert.equal(nextReviewPathAllowed(`/${relative}`), true);
+  }
+  assert.equal(nextReviewPathAllowed('/template-showcase-previews/private.webp'), false);
 });
 
 test('workspace identifies the published space and keeps all three independent editor destinations', () => {
