@@ -38,6 +38,10 @@ Public Safety 通过。用户后续要求移除顶部“展示方式”和页脚
 11项基础ID各一次。原日常保留为兼容回退，PostgreSQL未重启；六业务表、135个素材文件元信息与原配置摘要
 切换前后匹配，未保存发布或迁移。后台会话过期，本次没有代登录或冒充真实已登录后台验收。
 之后仅按用户要求提交同一产品版本到现有PR46，最终Head五项CI以新提交真实结果为准。
+首次提交 `de1141e` 的 [Quality检查](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/40494134921)
+发现 `admin-v2` 中另一处完整生产静态清单仍缺少这两个新增文件；本机定向集未包含该旧断言。
+已只补齐两个精确文件名，保留整表 deepEqual、原素材隐私/摘要/尺寸和生成一致性断言；
+260项完整后台单元回归通过。产品代码、日常构建和数据不变，保留首次失败，不重跑旧Job。
 不重建、重启或重复部署，不Ready、不合并。既有 `PREVIEW_RETURN = UNRESOLVED` /
 `RISK_DISPOSITION = ACCEPTED_FOR_LOCAL_STAGE` 保持。
 
