@@ -1,4 +1,16 @@
-# 当前检查点：PR46 首页／工作台与星图首图修复，待 PR 验收
+# 当前检查点：PR46 已合并；生产上线差距审计待审阅
+
+## PR46 收尾与独立上线审计（2026-10-27）
+
+- PR46 最终 Head `b8f27e7` 已按授权 Ready、Squash 合并为 main `58a92d2`；
+  合并文件树与批准 Head 一致，实际 Squash SHA 的五项 main push CI 均成功。
+- 从该 main 在闲置开发目录创建 `docs/production-readiness-audit`，仅提交
+  [生产上线差距审计与最小计划](PRODUCTION_READINESS_AUDIT.md)，不追加产品改动。
+  已有本机业务核可复用；主要差距为生产运行／持久化接入、安全依赖基线、迁移恢复和目标 HTTPS 验收。
+- 审计 PR 保持 Draft，不自动实施计划或合并。本轮未升级、启停日常3001／PG，
+  未保存草稿、发布、迁移、修改素材或复制完整环境；精确运行信息只在本机交接。
+- `PREVIEW_RETURN = UNRESOLVED` / `RISK_DISPOSITION = ACCEPTED_FOR_LOCAL_STAGE` 保持，
+  不自动转为生产风险接受。下方“PR46待验收／不合并”为历史阶段记录。
 
 ## 首页展示补充已验收并提交（2026-10-27）
 
