@@ -532,7 +532,7 @@ test("all formal templates have deterministic public-safe neutral structure prev
   const titleFontPaths = ["fonts/noto-serif-sc-900/OFL.txt", ...Array.from({ length: 101 }, (_, index) => `fonts/noto-serif-sc-900/subset-${String(index).padStart(3, "0")}.woff2`)];
   assert.deepEqual(JSON.parse(manifestSource), {
     version: 1,
-    files: ["favicon.svg", "file.svg", ...titleFontPaths, "globe.svg", ...previewPaths, "window.svg"],
+    files: ["favicon.svg", "file.svg", ...titleFontPaths, "globe.svg", "template-showcase-previews/premium-flow-gallery.webp", "template-showcase-previews/premium-polaroid.webp", ...previewPaths, "window.svg"],
   });
   assert.match(safetySource, /const templateStructurePreviewNames = new Set/);
   assert.match(safetySource, /const templateStructurePreviewDigests = new Map/);

@@ -10,3 +10,13 @@ export function keepManualSave(browser) {
   };
   return browser;
 }
+
+// Browser actions can finish after their network response has already arrived.
+export async function waitForDraftResponse(page, draftPath, action, options) {
+  const [response] = await Promise.all([
+    page.waitForResponse(response => response.request().method() === 'PUT'
+      && new URL(response.url()).pathname === draftPath, options),
+    Promise.resolve().then(action),
+  ]);
+  return response;
+}

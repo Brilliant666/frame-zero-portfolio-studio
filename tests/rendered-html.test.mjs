@@ -35,8 +35,10 @@ test("server-renders the platform landing rather than a photographer portfolio",
   const html = await response.text();
   assert.match(html, /<title>摄影作品集平台<\/title>/);
   assert.match(html, /href="\/login"/);
-  assert.match(html, /href="\/test"/);
-  assert.match(html, /href="\/preview"/);
+  assert.doesNotMatch(html, /href="\/(?:test|preview)(?:[/?#]|\")/,
+    "the public platform landing must not promote internal verification routes");
+  assert.match(html, /受邀账号可登录/);
+  assert.match(html, /暂不开放公众注册/);
   assert.doesNotMatch(html, /id="archive"|FRAMEZERO_DEMO/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|Codex is working/i);
   assert.doesNotMatch(html, /data-admin-draft-preview-trigger|data-admin-draft-preview-dialog|data-site-editor-publication|<form\b/i,

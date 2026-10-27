@@ -54,6 +54,8 @@ test("production public manifest exactly names the reviewed repository assets", 
     "fonts/noto-serif-sc-900/OFL.txt",
     ...Array.from({ length: 101 }, (_, index) => `fonts/noto-serif-sc-900/subset-${String(index).padStart(3, "0")}.woff2`),
     "globe.svg",
+    "template-showcase-previews/premium-flow-gallery.webp",
+    "template-showcase-previews/premium-polaroid.webp",
     "template-structure-previews/archive-os.webp",
     "template-structure-previews/character-select.webp",
     "template-structure-previews/cinematic-light.webp",
@@ -161,8 +163,8 @@ test("both standalone variants preserve reviewed font bytes and exclude source r
   for (const dist of [".next", ".next-local-preview"]) {
     await mkdir(path.join(root, dist, "static"), { recursive: true });
     const result = await prepareNextStandalone(root, dist);
-    assert.equal(result.publicFiles, 117);
-    for (const file of files.filter(file => file.startsWith("fonts/"))) {
+    assert.equal(result.publicFiles, 119);
+    for (const file of files) {
       assert.deepEqual(await readFile(path.join(result.standaloneRoot, "public", file)), await readFile(path.join(projectRoot, "public", file)));
     }
     await assert.rejects(readFile(path.join(result.standaloneRoot, "public", "fonts", "noto-serif-sc-900", "sources.json")), { code: "ENOENT" });

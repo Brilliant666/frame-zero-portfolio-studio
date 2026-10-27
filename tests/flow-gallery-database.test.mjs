@@ -123,7 +123,9 @@ test('published draft shortcut maps only known spaces with their independent rig
     assert.equal(publishedDraftTarget(published, account), `/ownedfixture/admin/${route}`);
     const html = publishedWorkspaceSummary(published, {}, account);
     assert.match(html, /编辑此空间草稿/);
-    assert.match(html, /进入该内容空间的当前草稿；历史发布快照保持只读/);
+    assert.match(html, /发布快照只读/);
+    assert.match(html, /不代表当前草稿版本/);
+    assert.match(html, /编辑和保存草稿不会改变当前公开主页/);
     assert.ok(html.includes(`href="/ownedfixture/admin/${route}"`));
     assert.doesNotMatch(html, /returnTo|revisionId|publications\//);
   }
