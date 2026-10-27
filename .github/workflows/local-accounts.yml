@@ -26,16 +26,26 @@ jobs:
           --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Classify complete pull request diff
+        id: scope
+        run: node scripts/ci-change-scope.mjs
       - uses: actions/setup-node@v4
+        if: steps.scope.outputs.run_full != 'false'
         with:
           node-version: 22.13.1
           cache: npm
       - run: npm ci
+        if: steps.scope.outputs.run_full != 'false'
       - name: Install isolated Chromium for editor acceptance
+        if: steps.scope.outputs.run_full != 'false'
         run: npx playwright install --with-deps chromium
       # Build intentionally receives no account configuration or database secrets.
       - run: npm run build
+        if: steps.scope.outputs.run_full != 'false'
       - name: Real PostgreSQL and Standard Next identity tests
+        if: steps.scope.outputs.run_full != 'false'
         run: node --test tests/local-accounts.test.mjs
         env:
           FRAME_ZERO_LOCAL_ACCOUNTS: '1'
@@ -46,7 +56,7 @@ jobs:
           FRAME_ZERO_PUBLICATION_BROWSER_SMOKE: '1'
           FRAME_ZERO_BROWSER_OUTPUT_DIR: ${{ runner.temp }}/site-publication-browser
       - name: Anonymous browser acceptance evidence (no traces or credentials)
-        if: always()
+        if: always() && steps.scope.outputs.run_full != 'false'
         uses: actions/upload-artifact@v4
         with:
           name: site-editor-browser-${{ github.run_id }}-${{ github.run_attempt }}

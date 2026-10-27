@@ -23,14 +23,22 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Classify complete pull request diff
+        id: scope
+        run: node scripts/ci-change-scope.mjs
 
       - name: Use Node.js
+        if: steps.scope.outputs.run_full != 'false'
         uses: actions/setup-node@v4
         with:
           node-version: 22.13.1
           cache: npm
 
       - name: Prepare log-redaction sentinel
+        if: steps.scope.outputs.run_full != 'false'
         shell: bash
         run: |
           set -euo pipefail
@@ -38,4 +46,5 @@ jobs:
           echo "FRAME_ZERO_DEPLOYMENT_LOG_SENTINEL=$sentinel" >> "$GITHUB_ENV"
 
       - name: Verify Linux deployment bootstrap
+        if: steps.scope.outputs.run_full != 'false'
         run: npm run verify:deployment-bootstrap

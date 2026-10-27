@@ -1,7 +1,7 @@
 # Project execution entry
 
-先用五分钟读取 [docs/CURRENT_STATUS.md](docs/CURRENT_STATUS.md) 和
-[docs/SESSION_HANDOFF.md](docs/SESSION_HANDOFF.md)。之后仅按当前任务读取相关
+先读取 [docs/CURRENT_STATUS.md](docs/CURRENT_STATUS.md) 和
+[docs/SESSION_HANDOFF.md](docs/SESSION_HANDOFF.md) 的最新检查点；需要追溯时再读历史。之后仅按当前任务读取相关
 North Star、路线图、Accepted ADR 与模块记录，不重新审计整个历史。
 
 按当前用户明确授权和 CURRENT_STATUS 的检查点继续；交接候选本身不构成实施授权。
@@ -9,6 +9,14 @@ North Star、路线图、Accepted ADR 与模块记录，不重新审计整个历
 
 不需要每个小改动都要求全项目审计。验证应与变更影响相称；改按钮文字不重测整个发布系统。
 完成必要检查后，仅在新增修改、失败或未解决的疑点需要时扩大验证。
+
+## 日常交付节奏
+
+- 每轮只读当前检查点和相关增量，不反复通读历史交接；同一源码／构建已验收的证据可复用，记录适用Head和边界。
+- 修改、构建、日常切换、PR提交与合并验收分段记录状态和主要耗时，依授权在同轮推进，不人为拆成多轮审批。普通提交先完成相关检查并推送；用户未要求等全绿时，可报告PR与尚在运行的CI，不把提交完成说成CI已通过。
+- 更新3001时优先复用与目标产品源码匹配且已验收的构建；只切换应用、核对BUILD和相关页面。没有依赖／产品变更或新疑点，不重复安装、构建、全量数据库测试或备份。保留既有数据保护及有效回退。
+- CI仅对严格白名单内的纯Markdown PR省去重型运行检查，保留公开安全与轻量验证，明确标记DOCS_ONLY。任何代码、测试、依赖、配置、CI、未知路径及无法判定的变更走完整检查；main push和手动运行始终完整。
+- 合并前仍核对最终Head、base、审核规则、线程与该Head对应的适用检查；用户要求五项完整实测时，对文档PR使用手动完整运行，不把DOCS_ONLY当成完整业务验收。Squash后按授权验证实际main push，不重复部署相同产品构建。
 
 保护未提交编辑和私人 `public/photos`（永不暂存），只 `git add` 具体路径。
 合并、破坏性操作、真实迁移和远程部署需要对应授权。
