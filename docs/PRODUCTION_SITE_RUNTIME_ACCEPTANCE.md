@@ -23,7 +23,7 @@
 
 现有PostgreSQL CI增加 `npm run verify:production-site`；脚本在非显式Linux CI环境直接拒绝执行。
 每次生成唯一Compose project／临时目录／数据库／素材卷、随机秘密和两个虚构账号；不接受本机数据库URL或素材路径。
-PG默认无宿主端口，仅CI临时覆盖随机loopback端口用于显式fixture迁移／开户；所有业务请求经过正式应用镜像的HTTPS代理。
+PG始终无宿主端口，Linux CI主机仅通过已核验归属的内部bridge IP执行显式fixture迁移／开户、只读核对与故障注入；所有业务请求经过正式应用镜像的HTTPS代理。
 fixture准备不是正常应用启动步骤，也不是业务链的替代runner。
 
 脚本构建一次正式Dockerfile镜像，记录image ID／Linux CPU架构／源码revision与tree。启动、restart和force-recreate始终核对相同image ID。
@@ -51,6 +51,7 @@ fixture准备不是正常应用启动步骤，也不是业务链的替代runner�
 ## 限制与后续
 
 - 首次生产验收[40669135322／attempt1](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/40669135322)在缺配置启动项失败。Next捕获hook异常后保留listener；仅抛错不足以保证启动退出。已改为显式生产配置失败时输出固定码并自行exit1，保留原20秒／code1／非killed断言，新增真实hook子进程回归；后续容器结果以新Head记录为准，首次失败不重跑覆盖。
+- 后续[40674828708／attempt1](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/40674828708)已证明缺配置自然exit1／signal=null／killed=false，随后在测试夹具PG映射返回`invalid IP:0`处失败。移除仅测试用途的宿主映射，按[Docker内部bridge主机访问语义](https://docs.docker.com/engine/network/port-publishing/#gateway-modes)使用inspect所得且归属核验的内部端点；不增加外网、应用端口或放宽生产网络。
 - 本机相关测试使用已有Node24工具；镜像及CI为Node22.23.4。本机不启动Docker、PG或替换3001，完整HTTPS链只按实际Linux CI结果报告。
 - 本机构建曾发现`path.resolve(process.cwd())`触发整仓tracing，已改用本身绝对的cwd后重新构建，无该警告；仍保留原私有上下文／runtime排除断言。
 - 容器重建用同一镜像，不能据此宣称不同应用版本的schema兼容回退、异机备份或恢复演练已经完成。

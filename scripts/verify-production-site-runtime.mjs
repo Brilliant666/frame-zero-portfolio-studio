@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { createServer } from 'node:net';
+import { createServer, isIP } from 'node:net';
 import https from 'node:https';
 import { mkdtemp, writeFile, mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -40,7 +40,7 @@ async function command(executable, args, options = {}) {
   try { return (await exec(executable, args, { cwd: root, env: environment ?? process.env, encoding: 'utf8', timeout: options.timeout ?? 120_000, maxBuffer: 8 * 1024 * 1024, ...options })).stdout.trim(); }
   catch (error) { throw new Error(redact(`${executable} ${args[0]} failed: ${error.stderr ?? error.message}`).slice(-6000)); }
 }
-const composeArguments = args => ['compose', '--project-name', project, '-f', path.join(root, 'deploy/site.compose.yaml'), '-f', path.join(root, 'deploy/site.ports.yaml'), '-f', path.join(temporary, 'fixture.yaml'), ...args];
+const composeArguments = args => ['compose', '--project-name', project, '-f', path.join(root, 'deploy/site.compose.yaml'), '-f', path.join(root, 'deploy/site.ports.yaml'), ...args];
 const compose = (args, options) => command('docker', composeArguments(args), options);
 const docker = (args, options) => command('docker', args, options);
 async function freePort() {
@@ -108,8 +108,6 @@ try {
     // Parent is private 0700; file bind mounts must also be readable by app1000/PG999.
     await writeFile(path.join(temporary, name), value, { mode: 0o444 });
   }
-  // CI-only loopback access for explicit fixture provisioning, never production ports.
-  await writeFile(path.join(temporary, 'fixture.yaml'), 'services:\n  postgres:\n    ports:\n      - "127.0.0.1:0:5432"\n');
   environment = { ...process.env, PORTFOLIO_SITE_MODE: 'ci', PORTFOLIO_SITE_ORIGIN: origin, PORTFOLIO_SITE_DOMAIN: 'portfolio.test', PORTFOLIO_SITE_HOST: new URL(origin).host, PORTFOLIO_SITE_CADDY_CONFIG: 'site.ci.caddy', PORTFOLIO_SITE_BIND_ADDRESS: '127.0.0.1', PORTFOLIO_SITE_HTTP_PORT: String(httpPort), PORTFOLIO_SITE_HTTPS_PORT: String(httpsPort), PORTFOLIO_RELEASE: release, PORTFOLIO_DATABASE_URL_FILE: path.join(temporary, 'database-url'), PORTFOLIO_ACCOUNT_SECRET_FILE: path.join(temporary, 'account-secret'), PORTFOLIO_POSTGRES_PASSWORD_FILE: path.join(temporary, 'postgres-password') };
   parseSiteDeploymentEnvironment(Object.entries(environment).filter(([key]) => key.startsWith('PORTFOLIO_')).map(([key, value]) => `${key}=${value}`).join('\n'));
   phase = 'build-production-artifact';
@@ -130,10 +128,20 @@ try {
   await compose(['up', '--detach', '--wait', 'postgres']);
   const pg = await container('postgres');
   assert.ok(pg.Mounts.some(m => m.Name === `${project}_site_postgres`));
-  const mapping = await compose(['port', 'postgres', '5432']);
-  assert.match(mapping, /^127\.0\.0\.1:\d+$/);
-  const port = Number(mapping.split(':').at(-1));
-  const config = { mode: 'production', databaseUrl: `postgresql://portfolio:${databasePassword}@127.0.0.1:${port}/frame_zero_site`, origin, secret: accountSecret, isTest: false, assetRoot: '/var/lib/portfolio/assets' };
+  // A native Linux Docker host can reach an internal bridge directly. Docker
+  // does not publish ports for internal-only endpoints; keep the production
+  // topology intact rather than adding a fixture-only public/egress network.
+  const endpoint = pg.NetworkSettings.Networks[`${project}_backend`];
+  assert.equal(isIP(endpoint?.IPAddress ?? ''), 4, 'Fixture must use its own inspected IPv4 endpoint');
+  const [network] = JSON.parse(await docker(['network', 'inspect', endpoint.NetworkID]));
+  assert.equal(network.Labels['com.docker.compose.project'], project);
+  assert.equal(network.Driver, 'bridge'); assert.equal(network.Internal, true);
+  assert.notEqual(network.Options?.['com.docker.network.bridge.gateway_mode_ipv4'], 'isolated');
+  assert.equal(network.Containers[pg.Id].IPv4Address.split('/')[0], endpoint.IPAddress);
+  assert.equal(Object.values(pg.HostConfig.PortBindings ?? {}).flat().length, 0);
+  assert.equal(Object.values(pg.NetworkSettings.Ports ?? {}).flat().filter(Boolean).length, 0);
+  evidence.tests.fixtureDatabase = 'Owned internal bridge endpoint; no PostgreSQL host port or extra network';
+  const config = { mode: 'production', databaseUrl: `postgresql://portfolio:${databasePassword}@${endpoint.IPAddress}:5432/frame_zero_site`, origin, secret: accountSecret, isTest: false, assetRoot: '/var/lib/portfolio/assets' };
   await migrateAccounts(config);
   runtime = createAccountRuntime(config);
   assert.equal((await runtime.pool.query('SELECT current_database() AS name')).rows[0].name, 'frame_zero_site');
