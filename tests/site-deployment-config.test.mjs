@@ -126,7 +126,8 @@ test("Site proxy uses one business contract with bounded bodies and no public le
     assert.ok(proxy.includes(`max_size ${maximum}`));
   }
   assert.match(proxy, /header_up -Forwarded/);
-  assert.match(proxy, /header_up -X-Forwarded-\*/);
+  assert.match(proxy, /request_header -X-Forwarded-\*/);
+  assert.doesNotMatch(proxy, /header_up -X-Forwarded-\*/, 'Caddy applies deletes after sets; canonical upstream headers must survive');
   assert.match(proxy, /header_up -X-Account-\*/);
   assert.match(proxy, /header_up -Oai-Authenticated-User-\*/);
   assert.match(proxy, /header_up X-Forwarded-Proto https/);

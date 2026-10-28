@@ -2,7 +2,9 @@
 	reverse_proxy app:3000 {
 		header_up -Authorization
 		header_up -Forwarded
-		header_up -X-Forwarded-*
+		# HeaderOps deletes after setting: a wildcard deletion here would also
+		# erase the canonical X-Forwarded-Host/Proto set below. Client-supplied
+		# forwarding headers are rejected before this upstream is reached.
 		header_up -X-Real-IP
 		header_up -X-Account-*
 		header_up -Oai-Authenticated-User-*
@@ -36,6 +38,9 @@
 		header({'Forwarded': '*'}) || header({'X-Forwarded-For': '*'}) || header({'X-Forwarded-Host': '*'}) || header({'X-Forwarded-Proto': '*'}) || header({'X-Forwarded-Port': '*'}) || header({'X-Forwarded-Prefix': '*'}) || header({'X-Real-Ip': '*'}) || header({'X-Account-Local-Proof': '*'}) || header({'X-Account-Request-Proof': '*'}) || header({'Oai-Authenticated-User-Id': '*'}) || header({'Oai-Authenticated-User-Email': '*'}) || header({'Oai-Authenticated-User-Name': '*'})
 		CEL
 		respond @forged 403
+		# Clear remaining client forwarding fields in a separate operation,
+		# before reverse_proxy creates the canonical transport headers.
+		request_header -X-Forwarded-*
 
 		# These are never a Site, even if they resemble a slug or static path.
 		@legacy path /test /test/* /preview /preview/* /admin /admin/* /api/site-content /api/preview/* /api/platform-qr/*
