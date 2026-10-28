@@ -116,6 +116,7 @@ test("Site proxy uses one business contract with bounded bodies and no public le
   const productionConfig = await readFile(new URL("../deploy/caddy/site.production.caddy", import.meta.url), "utf8");
   const ciConfig = await readFile(new URL("../deploy/caddy/site.ci.caddy", import.meta.url), "utf8");
   for (const config of [productionConfig, ciConfig]) {
+    assert.match(config, /strict_sni_host on/);
     assert.match(config, /import portfolio_site_contract/);
     assert.match(config, /read_header 10s/);
     assert.match(config, /read_body 30s/);

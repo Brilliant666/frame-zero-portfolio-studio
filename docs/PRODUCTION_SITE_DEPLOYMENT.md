@@ -74,6 +74,7 @@ docker compose --env-file /private/site.env -f deploy/site.compose.yaml -f deplo
 - 匿名私有资源、跨Site、grant及Published-only继续由同一业务核逐次校验。
 - `/test`、全局`/preview`、legacy`/admin`、`/api/site-content`、未知API继续拒绝。
 - 原始Host先与canonical host比较。已知客户端代理头／local proof／身份头拒绝；转发时再次清除代理／身份前缀并重建Host、X-Forwarded-Host及https协议。
+- 两种入口共同启用`strict_sni_host on`，在虚拟主机路由前拒绝TLS SNI／HTTP Host不匹配（421）；同域但非canonical端口仍由Host合同拒绝（403）。
 - Cookie保留供真实会话使用；Authorization、客户端身份头不向后端传递。访问日志不记录请求／响应头和URI查询。
 - JSON登录／发布2048bytes，草稿512000bytes，上传26214400bytes；Caddy在流式读取时限制，应用再次执行原校验。
 - 代理read_header10s／read_body30s，后端响应头90s；不额外完整缓存上传，不降低像素／格式／原图或变体校验。

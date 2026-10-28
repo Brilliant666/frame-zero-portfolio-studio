@@ -1,6 +1,7 @@
 {
 	admin off
 	servers {
+		strict_sni_host on
 		enable_full_duplex
 		timeouts {
 			read_header 10s

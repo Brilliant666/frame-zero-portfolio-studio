@@ -3,6 +3,7 @@
 	local_certs
 	skip_install_trust
 	servers {
+		strict_sni_host on
 		enable_full_duplex
 		timeouts {
 			read_header 10s

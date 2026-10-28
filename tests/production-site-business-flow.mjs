@@ -190,7 +190,8 @@ export async function productionSiteBusinessFlow({ request, pool, password, site
   const spoofedHeaders = { forwarded: 'for=127.0.0.1;proto=https;host=attacker.invalid', 'x-forwarded-for': '127.0.0.1', 'x-forwarded-host': 'attacker.invalid', 'x-forwarded-proto': 'https', 'x-account-local-proof': 'forged', 'x-portfolio-proxy-proof': 'forged', 'x-account-user-id': siteId, 'x-site-id': siteId };
   assert.ok([401, 403].includes((await request('/api/account/site', { headers: spoofedHeaders })).status), 'Client forwarding or proof headers cannot create a session');
   status(await request(draftPath('basic'), { cookie: outsider, headers: spoofedHeaders }), 403, 'Spoofed headers cannot change Site ownership');
-  assert.ok([400, 403, 404, 421].includes((await request('/api/account/site', { cookie, headers: { host: 'attacker.invalid', 'x-forwarded-host': 'localhost:3000' } })).status), 'Raw wrong Host remains rejected');
+  status(await request('/api/account/site', { cookie, headers: { host: 'attacker.invalid', 'x-forwarded-host': 'localhost:3000' } }), 421, 'TLS SNI and raw Host mismatch is rejected before virtual-host routing');
+  status(await request('/api/account/site', { cookie, headers: { host: 'portfolio.test:1' } }), 403, 'Matching SNI with a noncanonical Host port is still rejected');
   for (const path of ['/test', '/test/admin', '/admin', '/preview/admin', '/api/site-content', '/api/preview/site-content', '/photos/library-manifest.json', '/api/auth/sign-up/email']) {
     const response = await request(path, { cookie }); assert.ok(response.status >= 400 && response.status < 500, 'Legacy and internal routes remain closed');
   }
