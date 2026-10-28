@@ -1,4 +1,5 @@
 import { accountJson } from "../../db/accounts/http.mjs";
+import { JSON_BODY_LIMITS, readBoundedText, RequestBodyError } from "../../db/accounts/request-body.mjs";
 import { changePublication, publicationHistory, PublicationError } from "../../db/accounts/publications.mjs";
 import { authorizeEditor } from "./server";
 import { isContentSpace } from "./content-schema";
@@ -14,8 +15,7 @@ export async function handlePublicationRequest(request: Request,slug: string,spa
     if(request.method==="GET")return accountJson(await publicationHistory(auth.runtime.pool,auth.account.site.id,{authorizedSpaces:["basic",...auth.account.templates.premium],prepare:(value:unknown,targetSpace:string)=>{if(!isContentSpace(targetSpace))throw Error("内容空间不合法");return preparePublication(value,targetSpace);}}));
     if(request.method!=="POST")return accountJson({error:"METHOD_NOT_ALLOWED"},405);
     if(!(request.headers.get("content-type")??"").startsWith("application/json"))return accountJson({error:"INVALID_CONTENT_TYPE"},415);
-    const raw=await request.text();
-    if(Buffer.byteLength(raw)>2048)return accountJson({error:"请求过大"},413);
+    const raw=await readBoundedText(request,{maximum:JSON_BODY_LIMITS.publication});
     let payload;
     try {
       payload=JSON.parse(raw);
@@ -30,6 +30,6 @@ export async function handlePublicationRequest(request: Request,slug: string,spa
     const publication=await changePublication(auth.runtime.pool,{siteId:auth.account.site.id,userId:auth.userId,space,payload,prepare:(value:unknown)=>preparePublication(value,space)});
     return accountJson({publication});
   } catch(error) {
-    return accountJson({error:error instanceof PublicationError ? error.message : "发布服务暂不可用，草稿未改变"},error instanceof PublicationError ? error.status : 503);
+    return accountJson({error:error instanceof PublicationError || error instanceof RequestBodyError ? error.message : "发布服务暂不可用，草稿未改变"},error instanceof PublicationError || error instanceof RequestBodyError ? error.status : 503);
   }
 }

@@ -1,0 +1,150 @@
+name: portfolio-site
+
+# Production Site topology. The Stage A2 shell in compose.yaml is unchanged.
+# No host ports are published by this file. Add site.ports.yaml only when needed.
+services:
+  postgres:
+    image: postgres:17.11-bookworm@sha256:839fbb5a4942a7758dd93e18b42ea5649807491a0545b5eeeb8f0b8bb11857a5
+    restart: unless-stopped
+    user: "999:999"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      POSTGRES_DB: frame_zero_site
+      POSTGRES_USER: portfolio
+      POSTGRES_PASSWORD_FILE: /run/secrets/site_postgres_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    secrets: [site_postgres_password]
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=32m
+      - /var/run/postgresql:rw,noexec,nosuid,nodev,size=8m,uid=999,gid=999,mode=0700
+    volumes:
+      - site_postgres:/var/lib/postgresql/data
+    expose: ["5432"]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -h 127.0.0.1 -U portfolio -d frame_zero_site"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    logging: &site_logging
+      driver: json-file
+      options: {max-file: "3", max-size: 10m}
+    networks: [backend]
+
+  app:
+    image: portfolio-platform-app:${PORTFOLIO_RELEASE:?PORTFOLIO_RELEASE is required}
+    build: {context: .., dockerfile: Dockerfile}
+    pull_policy: never
+    restart: unless-stopped
+    read_only: true
+    user: "1000:1000"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m,uid=1000,gid=1000,mode=0700
+    environment:
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      FRAME_ZERO_PRODUCTION_SITE: "1"
+      FRAME_ZERO_ACCOUNT_ORIGIN: ${PORTFOLIO_SITE_ORIGIN:?PORTFOLIO_SITE_ORIGIN is required}
+      FRAME_ZERO_ACCOUNT_DATABASE_URL_FILE: /run/secrets/site_database_url
+      FRAME_ZERO_ACCOUNT_SECRET_FILE: /run/secrets/site_account_secret
+      FRAME_ZERO_SITE_ASSET_ROOT: /var/lib/portfolio/assets
+    secrets: [site_database_url, site_account_secret]
+    volumes:
+      - site_assets:/var/lib/portfolio/assets
+    expose: ["3000"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/api/health/ready',{cache:'no-store'}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 4s
+      start_period: 10s
+      retries: 12
+    logging: *site_logging
+    networks: [backend]
+
+  # Explicit operator step for a newly prepared volume, not an app dependency.
+  # It never migrates, provisions, imports, or recursively changes existing files.
+  assets-init:
+    image: portfolio-platform-app:${PORTFOLIO_RELEASE:?PORTFOLIO_RELEASE is required}
+    pull_policy: never
+    profiles: [tools]
+    user: "0:0"
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER]
+    security_opt: [no-new-privileges:true]
+    command: [node, -e, "const fs=require('node:fs');const p='/var/lib/portfolio/assets';fs.chownSync(p,1000,1000);fs.chmodSync(p,0o700)"]
+    volumes:
+      - site_assets:/var/lib/portfolio/assets
+    network_mode: none
+    logging: *site_logging
+
+  caddy:
+    image: caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=32m,mode=1777
+    environment:
+      PORTFOLIO_SITE_ORIGIN: ${PORTFOLIO_SITE_ORIGIN:?PORTFOLIO_SITE_ORIGIN is required}
+      PORTFOLIO_SITE_DOMAIN: ${PORTFOLIO_SITE_DOMAIN:?PORTFOLIO_SITE_DOMAIN is required}
+      PORTFOLIO_SITE_HOST: ${PORTFOLIO_SITE_HOST:?PORTFOLIO_SITE_HOST is required}
+      PORTFOLIO_SITE_MODE: ${PORTFOLIO_SITE_MODE:?PORTFOLIO_SITE_MODE is required}
+      PORTFOLIO_LOG_LEVEL: ${PORTFOLIO_LOG_LEVEL:-INFO}
+    volumes:
+      - type: bind
+        source: ./caddy/${PORTFOLIO_SITE_CADDY_CONFIG:?PORTFOLIO_SITE_CADDY_CONFIG is required}
+        target: /etc/caddy/Caddyfile
+        read_only: true
+      - type: bind
+        source: ./caddy/site-proxy.caddy
+        target: /etc/caddy/site-proxy.caddy
+        read_only: true
+      - caddy_data:/data
+      - caddy_config:/config
+    expose: ["80", "443"]
+    depends_on:
+      app: {condition: service_healthy}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          if [ "$${PORTFOLIO_SITE_MODE}" = ci ]; then
+          curl --fail --silent --show-error --cacert /data/caddy/pki/authorities/local/root.crt
+          --resolve "$${PORTFOLIO_SITE_DOMAIN}:443:127.0.0.1" -H "Host: $${PORTFOLIO_SITE_HOST}"
+          "https://$${PORTFOLIO_SITE_DOMAIN}/api/health/ready" >/dev/null;
+          else curl --fail --silent --show-error --resolve "$${PORTFOLIO_SITE_DOMAIN}:443:127.0.0.1"
+          -H "Host: $${PORTFOLIO_SITE_HOST}" "https://$${PORTFOLIO_SITE_DOMAIN}/api/health/ready" >/dev/null; fi
+      interval: 5s
+      timeout: 4s
+      start_period: 10s
+      retries: 12
+    logging: *site_logging
+    networks: [ingress, backend]
+
+networks:
+  ingress: {}
+  backend: {internal: true}
+
+volumes:
+  site_postgres: {}
+  site_assets: {}
+  caddy_data: {}
+  caddy_config: {}
+
+secrets:
+  site_database_url:
+    file: ${PORTFOLIO_DATABASE_URL_FILE:?PORTFOLIO_DATABASE_URL_FILE is required}
+  site_account_secret:
+    file: ${PORTFOLIO_ACCOUNT_SECRET_FILE:?PORTFOLIO_ACCOUNT_SECRET_FILE is required}
+  site_postgres_password:
+    file: ${PORTFOLIO_POSTGRES_PASSWORD_FILE:?PORTFOLIO_POSTGRES_PASSWORD_FILE is required}

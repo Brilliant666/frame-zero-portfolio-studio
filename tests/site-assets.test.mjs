@@ -58,3 +58,68 @@ test('photo processing keeps original, matches variants, same-Site deduplicates,
     assert.equal((await readdir(path.join(root, site))).length, 1);
   } finally { if (old === undefined) delete process.env.FRAME_ZERO_SITE_ASSET_ROOT; else process.env.FRAME_ZERO_SITE_ASSET_ROOT = old; await rm(root, { recursive: true, force: true }); }
 });
+
+test('cleanup failure releases every processing slot and exposes only a fixed storage error', async t => {
+  const root = await mkdtemp(path.join(tmpdir(), 'site-assets-cleanup-')); const old = process.env.FRAME_ZERO_SITE_ASSET_ROOT;
+  process.env.FRAME_ZERO_SITE_ASSET_ROOT = root;
+  const errors = [];
+  t.mock.method(console, 'error', value => errors.push(value));
+  const input = await sharp({ create: { width: 24, height: 32, channels: 3, background: '#234567' } }).png().toBuffer();
+  const request = () => new Request('http://fixture', { method: 'POST', headers: { 'content-type': 'image/png', 'x-file-name': 'fixture.png' }, body: input });
+  let inserts = 0;
+  const failing = { async query(sql) { if (sql.startsWith('SELECT')) return { rowCount: 0, rows: [] }; inserts++; throw Error('private insert details'); } };
+  const cleanupDirectory = async () => { throw Error('/private/storage locked'); };
+  try {
+    for (let index = 0; index < 3; index++) {
+      await assert.rejects(uploadAsset(request(), failing, site, { cleanupDirectory }), error => error.message === 'ASSET_STORAGE_UNAVAILABLE' && error.status === 503);
+    }
+    assert.equal(inserts, 3, 'Third request reaches processing instead of remaining stuck at UPLOAD_BUSY');
+    assert.deepEqual(errors, ['ASSET_UPLOAD_CLEANUP_FAILED', 'ASSET_UPLOAD_CLEANUP_FAILED', 'ASSET_UPLOAD_CLEANUP_FAILED']);
+    assert.equal((await readdir(path.join(root, site))).length, 3, 'Failed cleanup is not treated as successful deletion');
+    await assert.rejects(uploadAsset(request(), failing, site), /private insert details/, 'Ordinary subsequent processing and cleanup still work');
+  } finally { if (old === undefined) delete process.env.FRAME_ZERO_SITE_ASSET_ROOT; else process.env.FRAME_ZERO_SITE_ASSET_ROOT = old; await rm(root, { recursive: true, force: true }); }
+});
+
+test('interrupted upload streams return a fixed error without consuming processing capacity', async () => {
+  for (let index = 0; index < 3; index++) {
+    const body = new ReadableStream({ start(controller) { controller.error(Error('/private/upload socket')); } });
+    const request = new Request('http://fixture', { method: 'POST', duplex: 'half', headers: { 'content-type': 'image/png', 'x-file-name': 'fixture.png' }, body });
+    await assert.rejects(uploadAsset(request, { async query() { throw Error('must not query'); } }, site), error => error.message === 'UPLOAD_INTERRUPTED' && error.status === 400);
+  }
+});
+
+test('only two uploads can read concurrently and abort releases both slots', async () => {
+  const controllers = [new AbortController(), new AbortController()];
+  const db = { async query() { return { rowCount: 0, rows: [] }; } };
+  const pending = controllers.map(controller => uploadAsset(new Request('http://fixture', {
+    method: 'POST', duplex: 'half', signal: controller.signal,
+    headers: { 'content-type': 'image/png', 'x-file-name': 'fixture.png' },
+    body: new ReadableStream({ pull() { return new Promise(() => {}); } }),
+  }), db, site));
+  const request = () => new Request('http://fixture', { method: 'POST', headers: { 'content-type': 'image/png', 'x-file-name': 'fixture.png' }, body: 'not an image' });
+  await assert.rejects(uploadAsset(request(), db, site), error => error.status === 429 && error.message === 'UPLOAD_BUSY');
+  controllers.forEach(controller => controller.abort());
+  const results = await Promise.allSettled(pending);
+  assert.ok(results.every(result => result.status === 'rejected' && result.reason.message === 'UPLOAD_INTERRUPTED'));
+  await assert.rejects(uploadAsset(request(), db, site), /INVALID_IMAGE/, 'A new request proceeds after cancellation instead of 429');
+});
+
+test('deduplication race cleanup runs once and returns its processing slot on cleanup failure', async t => {
+  const root = await mkdtemp(path.join(tmpdir(), 'site-assets-dedup-cleanup-')); const old = process.env.FRAME_ZERO_SITE_ASSET_ROOT;
+  process.env.FRAME_ZERO_SITE_ASSET_ROOT = root;
+  t.mock.method(console, 'error', () => {});
+  let reads = 0, cleanups = 0;
+  const db = { async query(sql) {
+    if (sql.startsWith('INSERT')) return { rowCount: 0, rows: [] };
+    reads++;
+    return reads % 2 === 1 ? { rowCount: 0, rows: [] } : { rowCount: 1, rows: [{ id: site }] };
+  } };
+  const input = await sharp({ create: { width: 24, height: 24, channels: 3, background: '#789abc' } }).png().toBuffer();
+  const request = () => new Request('http://fixture', { method: 'POST', headers: { 'content-type': 'image/png', 'x-file-name': 'fixture.png' }, body: input });
+  const cleanupDirectory = async () => { cleanups++; throw Error('private cleanup failure'); };
+  try {
+    for (let index = 0; index < 3; index++) await assert.rejects(uploadAsset(request(), db, site, { cleanupDirectory }), /ASSET_STORAGE_UNAVAILABLE/);
+    assert.equal(cleanups, 3, 'Each duplicate candidate cleanup is attempted once');
+    assert.equal(reads, 6, 'All three candidates reach the deduplication race instead of getting stuck at 429');
+  } finally { if (old === undefined) delete process.env.FRAME_ZERO_SITE_ASSET_ROOT; else process.env.FRAME_ZERO_SITE_ASSET_ROOT = old; await rm(root, { recursive: true, force: true }); }
+});

@@ -1,4 +1,5 @@
-import { accountRequestAllowed, accountJson, getAccountRuntime, readSiteForPrincipal } from "../../db/accounts/http.mjs";
+import { accountRuntimeEnabled, accountRequestAllowed, accountJson, getAccountRuntime, readSiteForPrincipal } from "../../db/accounts/http.mjs";
+import { JSON_BODY_LIMITS, readBoundedText, RequestBodyError } from "../../db/accounts/request-body.mjs";
 import { isSiteSlug } from "../../db/accounts/site-slug.mjs";
 import { createEmptyPreviewDocument } from "../preview-workspace/document";
 import { createEmptyFlowGalleryDocument } from "./flow-gallery-document";
@@ -6,7 +7,7 @@ import { createEmptyBasicContent, isContentSpace, parseSpaceContent, contentAsse
 
 export async function authorizeEditor(request: Request, slug: string, space: string) {
   if (!isSiteSlug(slug) || !isContentSpace(space)) return { denied: 404 as const };
-  if (process.env.FRAME_ZERO_ACCOUNT_NODE_RUNTIME !== "1" || process.env.FRAME_ZERO_LOCAL_ACCOUNTS !== "1") return { denied: 404 as const };
+  if (!accountRuntimeEnabled()) return { denied: 404 as const };
   try {
     const runtime = getAccountRuntime();
     if (!accountRequestAllowed(request, runtime.config) || new URL(request.url).search) return { denied: 403 as const };
@@ -41,8 +42,7 @@ export async function handleDraftRequest(request: Request, slug: string, space: 
     }
     if (request.method !== "PUT") return accountJson({ error: "METHOD_NOT_ALLOWED" }, 405);
     if (!(request.headers.get("content-type") ?? "").startsWith("application/json")) return accountJson({ error: "INVALID_CONTENT_TYPE" }, 415);
-    const raw = await request.text();
-    if (Buffer.byteLength(raw, "utf8") > 512_000) return accountJson({ error: "内容超过限制" }, 413);
+    const raw = await readBoundedText(request, { maximum: JSON_BODY_LIMITS.draft });
     let payload, content;
     try {
       payload = JSON.parse(raw);
@@ -67,5 +67,7 @@ export async function handleDraftRequest(request: Request, slug: string, space: 
     if (!result.rowCount) return accountJson({ error: "版本冲突或授权已变化，当前草稿保留；请导出或核对后重新读取。" }, 409);
     const row = result.rows[0];
     return accountJson({ content: row.content, revision: row.revision, updatedAt: row.updated_at });
-  } catch { return accountJson({ error: "草稿服务暂不可用，当前修改未丢弃" }, 503); }
+  } catch (error) {
+    return accountJson({ error: error instanceof RequestBodyError ? error.message : "草稿服务暂不可用，当前修改未丢弃" }, error instanceof RequestBodyError ? error.status : 503);
+  }
 }

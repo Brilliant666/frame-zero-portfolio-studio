@@ -1,0 +1,125 @@
+(portfolio_site_upstream) {
+	reverse_proxy app:3000 {
+		header_up -Authorization
+		header_up -Forwarded
+		header_up -X-Forwarded-*
+		header_up -X-Real-IP
+		header_up -X-Account-*
+		header_up -Oai-Authenticated-User-*
+		header_up Host {$PORTFOLIO_SITE_HOST}
+		header_up X-Forwarded-Host {$PORTFOLIO_SITE_HOST}
+		header_up X-Forwarded-Proto https
+		transport http {
+			dial_timeout 3s
+			response_header_timeout 90s
+		}
+	}
+}
+
+(portfolio_site_contract) {
+	# Request/response headers and query values are not needed in access logs.
+	log {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request>headers delete
+				request>uri delete
+				resp_headers delete
+			}
+		}
+	}
+	route {
+		@wrong_host not header Host {$PORTFOLIO_SITE_HOST}
+		respond @wrong_host 403
+		@forged <<CEL
+		header({'Forwarded': '*'}) || header({'X-Forwarded-For': '*'}) || header({'X-Forwarded-Host': '*'}) || header({'X-Forwarded-Proto': '*'}) || header({'X-Forwarded-Port': '*'}) || header({'X-Forwarded-Prefix': '*'}) || header({'X-Real-Ip': '*'}) || header({'X-Account-Local-Proof': '*'}) || header({'X-Account-Request-Proof': '*'}) || header({'Oai-Authenticated-User-Id': '*'}) || header({'Oai-Authenticated-User-Email': '*'}) || header({'Oai-Authenticated-User-Name': '*'})
+		CEL
+		respond @forged 403
+
+		# These are never a Site, even if they resemble a slug or static path.
+		@legacy path /test /test/* /preview /preview/* /admin /admin/* /api/site-content /api/preview/* /api/platform-qr/*
+		respond @legacy 404
+
+		@auth {
+			path /api/auth/sign-in/username /api/auth/sign-out /api/auth/revoke-sessions
+			method POST
+		}
+		handle @auth {
+			request_body {
+				max_size 2048
+			}
+			import portfolio_site_upstream
+		}
+		@draft_write {
+			path_regexp draft_write ^/api/sites/[a-z][a-z0-9_-]{2,29}/drafts/(basic|premium-polaroid|premium-flow-gallery)$
+			method PUT
+		}
+		handle @draft_write {
+			request_body {
+				max_size 512000
+			}
+			import portfolio_site_upstream
+		}
+		@publication_write {
+			path_regexp publication_write ^/api/sites/[a-z][a-z0-9_-]{2,29}/publications/(basic|premium-polaroid|premium-flow-gallery)$
+			method POST
+		}
+		handle @publication_write {
+			request_body {
+				max_size 2048
+			}
+			import portfolio_site_upstream
+		}
+		@upload {
+			path_regexp upload ^/api/sites/[a-z][a-z0-9_-]{2,29}/assets$
+			method POST
+		}
+		handle @upload {
+			request_body {
+				max_size 26214400
+			}
+			import portfolio_site_upstream
+		}
+
+		@api_read {
+			method GET HEAD
+			path /api/health/live /api/health/ready /api/account/site
+		}
+		handle @api_read {
+			import portfolio_site_upstream
+		}
+		@site_api_read {
+			method GET HEAD
+			path_regexp site_api_read ^/api/sites/[a-z][a-z0-9_-]{2,29}/(assets(/[a-fA-F0-9-]{36}(/(original|thumbnail|card|full))?)?|drafts/(basic|premium-polaroid|premium-flow-gallery)|publications/(basic|premium-polaroid|premium-flow-gallery))$
+		}
+		handle @site_api_read {
+			import portfolio_site_upstream
+		}
+		@public_media {
+			method GET HEAD
+			path_regexp public_media ^/api/public-sites/[a-z][a-z0-9_-]{2,29}/assets/[a-fA-F0-9-]{36}/(thumbnail|card|full)$
+		}
+		handle @public_media {
+			import portfolio_site_upstream
+		}
+		@unreviewed_api path /api/*
+		respond @unreviewed_api 404
+
+		@pages {
+			method GET HEAD
+			path_regexp pages ^/($|login/?$|[a-z][a-z0-9_-]{2,29}/?$|[a-z][a-z0-9_-]{2,29}/admin(/basic(/(profile|template|layout|packages|contact|advanced))?|/premium-polaroid|/premium-flow-gallery|/preview/(basic|premium-polaroid|premium-flow-gallery)|/live/(basic|premium-polaroid|premium-flow-gallery))?/?$)
+		}
+		handle @pages {
+			import portfolio_site_upstream
+		}
+		@static {
+			method GET HEAD
+			path /_next/static/* /favicon.svg /file.svg /globe.svg /window.svg /fonts/* /template-structure-previews/* /template-showcase-previews/*
+		}
+		handle @static {
+			import portfolio_site_upstream
+		}
+		respond 404
+	}
+}

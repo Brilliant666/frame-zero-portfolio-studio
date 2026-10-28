@@ -13,7 +13,7 @@ RUN npm ci --no-audit --no-fund
 # The default-deny .dockerignore and these explicit copies are both required.
 # In particular, .git, .env*, .frame-zero, .openai, public/photos, and local
 # og.png never enter this build stage.
-COPY next.config.ts tsconfig.json postcss.config.mjs ./
+COPY next.config.ts tsconfig.json postcss.config.mjs instrumentation.ts ./
 COPY app ./app
 COPY db ./db
 COPY types ./types

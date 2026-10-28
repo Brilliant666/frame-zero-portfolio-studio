@@ -1,4 +1,4 @@
-import { accountRequestAllowed, getAccountRuntime, readSiteForPrincipal } from './http.mjs';
+import { accountRuntimeEnabled, accountRequestAllowed, getAccountRuntime, readSiteForPrincipal } from './http.mjs';
 import { isSiteSlug } from './site-slug.mjs';
 import { unpublishedAcceptanceRedirect } from './local-acceptance.mjs';
 import { publicationHistory } from './publications.mjs';
@@ -67,7 +67,7 @@ export { page as siteEntryPage };
 
 export async function handleSiteEntry(request, slug, admin = false, templateNames = {}) {
   if (!isSiteSlug(slug)) return page('页面不存在', '<p>请检查站点地址。</p>', 404);
-  if (admin && (process.env.FRAME_ZERO_ACCOUNT_NODE_RUNTIME !== '1' || process.env.FRAME_ZERO_LOCAL_ACCOUNTS !== '1')) return page('页面不存在', '<p>站点后台尚未启用。</p>', 404);
+  if (admin && !accountRuntimeEnabled()) return page('页面不存在', '<p>站点后台尚未启用。</p>', 404);
   if (new URL(request.url).search) return page('无效请求', '<p>站点归属不能通过查询参数指定。</p>', 400);
   try {
     const runtime = getAccountRuntime();
