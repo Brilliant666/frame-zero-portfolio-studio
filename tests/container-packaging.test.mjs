@@ -196,7 +196,7 @@ test("Docker contract is default-deny, pinned, non-root, and Standard Next only"
     const escapedFile = publicFile.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     assert.match(dockerignore, new RegExp(`^!public/${escapedFile}$`, "m"));
   }
-  assert.equal((dockerfile.match(/node:22\.22\.3-bookworm-slim@sha256:e21fc383b50d5347dc7a9f1cae45b8f4e2f0d39f7ade28e4eef7d2934522b752/g) ?? []).length, 2);
+  assert.equal((dockerfile.match(/node:22\.23\.4-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da/g) ?? []).length, 2);
   assert.match(dockerfile, /^USER 1000:1000$/m);
   assert.match(dockerfile, /^ENTRYPOINT \[\]$/m);
   assert.match(dockerfile, /^CMD \["node", "server\.js"\]$/m);

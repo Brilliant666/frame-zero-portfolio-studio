@@ -80,9 +80,11 @@ entry remains `node server.js`, listening internally on `0.0.0.0:3000`.
 
 - Builder and runtime both use the official Debian 12/glibc Node image for the
   already accepted Node 22 major.
-- The exact `node:22.22.3-bookworm-slim` multi-architecture OCI index is pinned
-  by digest. This takes the current Node 22 security patch without changing the
-  governed runtime major, framework major, package manager, or dependencies.
+- The exact `node:22.23.4-bookworm-slim` multi-architecture OCI index is pinned
+  by digest. The 2026-10-28 dependency security slice refreshes this patch and
+  the related framework/image dependencies; the governed Node major, Debian
+  base, and package manager remain unchanged. See the
+  [dependency baseline record](PRODUCTION_DEPENDENCY_SECURITY_BASELINE.md).
 - The builder installs the locked dependency graph and runs the repository's
   existing `npm run build`; the runtime receives neither the builder tree nor
   the full development `node_modules`.

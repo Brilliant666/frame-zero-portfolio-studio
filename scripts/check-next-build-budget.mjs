@@ -41,6 +41,27 @@ function unique(values) {
   return [...new Set(values)];
 }
 
+function cssModuleTokens(source) {
+  const legacyToken = /^[A-Za-z0-9_-]+-module__[A-Za-z0-9_-]+__[A-Za-z0-9_-]+$/;
+  const compactToken = /^_?[A-Za-z0-9_-]{6}_[A-Za-z0-9_-]+$/;
+  const tokens = source.match(/[A-Za-z0-9_-]+-module__[A-Za-z0-9_-]+__[A-Za-z0-9_-]+/g) ?? [];
+  // Next 16.4.1 emits CSS-module exports as e.v({local:"hash_local"}).
+  // Parse that known export table, not arbitrary underscored application text.
+  for (const match of source.matchAll(/\b[A-Za-z_$][\w$]*\.v\(\s*(\{.*?\})\s*\)/gs)) {
+    const table = JSON.parse(match[1].replace(/([{,])\s*([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":'));
+    const values = Object.values(table);
+    if (values.length === 0 || values.some((value) => typeof value !== "string" || !value.trim())) {
+      throw new Error("CSS module export table has an unknown value shape");
+    }
+    const exportedTokens = values.flatMap((value) => value.trim().split(/\s+/));
+    if (exportedTokens.some((token) => !legacyToken.test(token) && !compactToken.test(token))) {
+      throw new Error("CSS module export table has an unknown token format");
+    }
+    tokens.push(...exportedTokens);
+  }
+  return unique(tokens);
+}
+
 export function inspectNextBuild(projectRoot = process.cwd()) {
   const nextRoot = path.resolve(projectRoot, ".next");
   const violations = [];
@@ -172,7 +193,11 @@ export function inspectNextBuild(projectRoot = process.cwd()) {
   let cssMappingComplete = chunkListing !== null && cssEntries.every(([, text]) => text !== null) && templateSizes.length === TEMPLATE_IDS.length;
   for (const { relativePath, templateId } of templateSizes) {
     const text = source(relativePath);
-    const tokens = unique(text?.match(/[A-Za-z0-9_-]+-module__[A-Za-z0-9_-]+__[A-Za-z0-9_-]+/g) ?? []);
+    const tokens = text === null ? null : attempt(`${templateId} CSS module exports`, () => cssModuleTokens(text));
+    if (tokens === null) {
+      cssMappingComplete = false;
+      continue;
+    }
     if (tokens.length === 0) {
       violations.push(`${templateId} CSS module tokens could not be parsed from its lazy chunk`);
       cssMappingComplete = false;
