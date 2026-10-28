@@ -47,6 +47,11 @@
 
 ### 0.1 文档权威性
 
+> 历史原文说明：下列优先级属于本文旧提案，不再定义当前指令或文档优先级。
+> 当前产品目标见 [PORTFOLIO_PLATFORM_NORTH_STAR](PORTFOLIO_PLATFORM_NORTH_STAR.md)，
+> 当前任务与授权见 [CURRENT_STATUS](CURRENT_STATUS.md)。Accepted ADR 不变量继续有效，
+> 不由本历史计划或普通功能修改静默覆盖。
+
 本文件是项目的长期方向文档，不是某个迭代的临时需求列表。
 
 当以下内容互相冲突时，优先级依次为：

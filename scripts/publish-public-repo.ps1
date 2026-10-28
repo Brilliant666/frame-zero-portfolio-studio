@@ -1,5 +1,10 @@
 $ErrorActionPreference = "Stop"
 
+# Historical one-time bootstrap, retained below for traceability only.
+# It pushes the original template branches and changes the default branch.
+# Current repositories use an ordinary topic-branch push and pull request.
+throw "HISTORICAL_BOOTSTRAP_RETIRED: This one-time repository bootstrap is retired. Use the current branch push and pull-request workflow; this script must not change the existing repository."
+
 $repository = "Brilliant666/frame-zero-portfolio-studio"
 $expectedRemote = "https://github.com/$repository.git"
 $branches = @(

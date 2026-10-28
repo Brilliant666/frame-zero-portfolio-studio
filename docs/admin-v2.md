@@ -1,5 +1,10 @@
 # ADMIN-V2 / DESIGN-01
 
+> **LEGACY_SUBSYSTEM_REFERENCE。** 本文保留早期六分区UI及全局 `SiteContent` 的设计沿革，
+> 不是当前Site账号、授权或保存发布接口规范。六分区设计可复用，旧 `/admin`、D1、全局PUT和
+> 注入身份头的假设不得套到当前Site后台。当前入口与边界见 [README](../README.md) 和
+> [M2 Site编辑记录](M2_SITE_CONTENT_EDITOR.md)，实际任务见 [CURRENT_STATUS](CURRENT_STATUS.md)。
+
 ADMIN-V2 把当前私人站后台从单页长表单拆成六个有明确任务边界的工作区，同时保持
 legacy `SiteContent`、`/api/site-content` 和 `site_settings(id = 1)` 行为不变。
 

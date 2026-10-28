@@ -1,8 +1,9 @@
 # Self-Hosted V1 Launch Roadmap
 
-> 2026-09-26：`PRODUCT_DELIVERY_MISSION_02` 授权下列 M1–M5 产品研发，
+> 历史授权背景（2026-09-26）：`PRODUCT_DELIVERY_MISSION_02` 授权下列 M1–M5 产品研发，
 > 无需等待远程 HTTPS 或 Mission 文档合并。远程部署仍冻结；真实数据正式切换、
 > 破坏性操作和真实开户资料保持独立审批/输入边界。
+> 这段记录不自动恢复已交付任务；当前执行范围以最新用户请求和 [CURRENT_STATUS](CURRENT_STATUS.md) 为准。
 
 > - Status: `CURRENT_SOURCE_OF_TRUTH`
 > - Product authority: [PORTFOLIO_PLATFORM_NORTH_STAR.md](PORTFOLIO_PLATFORM_NORTH_STAR.md)
@@ -10,10 +11,11 @@
 > - V1 status: `NOT_LAUNCHED`
 > - Online status: `NOT_ONLINE_PREVIEW`
 
-M1–M5 determine current product execution. Old Stage numbers below remain a
-technical acceptance and eventual deployment mapping. Their per-Stage scope
-exclusions limit those historical slices, not Mission-authorized work. No real
-server, HTTPS or Docker-repair prerequisite is imposed on local product code.
+M1–M5 describe the local-product milestones; the dated state below records their
+delivery and remaining evidence. Old Stage numbers remain a technical acceptance
+and eventual deployment mapping. Neither map starts work by itself. Within the
+currently authorized task, local code work need not wait for remote HTTPS or
+Docker repair unless that environment is necessary to verify the actual change.
 
 ## 1. Current state
 
@@ -35,7 +37,7 @@ PR35 已 Squash 合并为 main `57b12c2`，实际 main push 五项检查首次�
 冻结的 SiteDocumentV1、严格 legacy adapter、Adaptive Composition 契约继续保留。
 Cloudflare/vinext 是历史兼容路径，不是当前日常账号运行方式。
 完整交接及当前授权以 [CURRENT_STATUS](CURRENT_STATUS.md) 和
-[SESSION_HANDOFF](SESSION_HANDOFF.md) 为准：本轮交接后等待用户选择，不自动继续 M1–M5。
+[SESSION_HANDOFF](SESSION_HANDOFF.md) 为准；仅执行当前用户已授权范围，不从历史 Mission 自动继续 M1–M5。
 
 PR #16 remains `KEEP_DRAFT`. It is Auth research evidence for
 Better Auth + vinext + workerd + D1, not a self-hosted production baseline.
@@ -65,8 +67,9 @@ independently.
 
 PR #28 is merged foundation history, not an active dependency branch. Future topic branches must
 state their actual base/dependency, with at most two pending review layers. Delivery or
-green CI is not an automatic stop; at capacity, stop dependent work and present
-one review list. Merge/approve/auto-merge and remote actions need separate consent.
+green CI is a verification result, not new execution authority. Continue only
+work remaining inside the current request; at capacity, stop dependent work and
+present one review list. Merge/approve/auto-merge and remote actions need separate consent.
 
 ## 2. Online maturity model
 
@@ -109,9 +112,10 @@ flowchart LR
 Stage A2 is an early launch lane, not a new product-capability Stage. It may
 proceed after Stage A while Stages B–D continue. `ONLINE_PREVIEW` is reached
 only when both the deployment bootstrap and Stage D public routes are ready.
-Online deployment is a separate lane. Continue authorized M1–M5 without waiting
-for it; a local Docker failure only blocks local DB/star acceptance. Do not retry
-known environment failures without new evidence or install/reset system services.
+Online deployment is a separate lane. Current local work may continue within its
+explicit scope without waiting for deployment; the historical Docker failure is
+not a current environment diagnosis. Recheck the existing runtime when needed,
+and do not retry old failures or install/reset system services without new evidence.
 
 ## 4. Stage A — Runtime migration
 
@@ -593,17 +597,19 @@ Does it affect templates, Admin, SiteDocument, migration, or real assets?
 After ONLINE_PREVIEW, does it preserve the existing Production Preview Smoke?
 ```
 
-Current work must advance M1–M5 without changing Accepted invariants; Stage
-questions above describe technical impact rather than a new authorization gate.
-Read CURRENT_STATUS for the active slice and checkpoint instead of restarting
-Stage A or Auth research. Safe read-only checks, backup and isolated migration
-rehearsal are allowed; real import/cutover, overwrites, deletes and system/remote
-operations need explicit approval. Missing star credentials block real onboarding,
-not anonymous fixture tests. Do not create fake customers in the real account DB.
+The latest user request defines the current task; CURRENT_STATUS records its
+baseline, permissions, remaining risks and stop point. M1–M5 and Stage questions
+describe technical impact, not a standing instruction to restart completed work.
+Preserve Accepted invariants. Read-only checks and isolated verification must be
+relevant to the request; backup or migration rehearsal is not a default startup
+step. Real import/cutover, overwrites, deletes and system/remote operations need
+explicit approval. Missing credentials block only paths that require them; do
+not create fake customers in the real account DB.
 
 At a session checkpoint report: new capability; branch/head/PR/dependency;
 implemented/CI/local/real-star layers; data and authorization changes; one local
-blocker and its impact; safe next work; minimal user action/review. Stop only the
-affected work for safety, changed product decisions, missing necessary input,
-unauthorized external action, review capacity or exhaustion of safe authorized
-work. Subsequent authorized merges do not require a new Mission-resume message.
+blocker and its impact; safe next work; minimal user action/review. Continue
+authorized dependent steps without repeated approvals for routine details.
+Stop at the current request's boundary, or for safety, changed decisions, missing
+necessary input, unauthorized external action or review capacity. A previous
+Mission, Ready decision or merge does not authorize the next task or deployment.

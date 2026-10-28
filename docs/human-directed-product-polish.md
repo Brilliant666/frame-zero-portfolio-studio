@@ -1,5 +1,10 @@
 # Human-Directed Product Polish
 
+> **HISTORICAL — PR24／PR25 人工验收台账。** 原基线 `main@dc471795139dc47649368bb37c0178fb77188fea`，
+> 本次保留版本来自已合并main `58a92d2`。下方“Current”、冻结、审批和Ready文字均描述当时，
+> 不冻结当前开发，也不授权新的Ready、合并或部署；当前执行见 [CURRENT_STATUS](CURRENT_STATUS.md)。
+> 历史验收与失败证据继续保留。
+
 > - Human-directed polish status: `IN_PROGRESS`
 > - Current phase: `SELF_HOSTED_V1`
 > - Current stage: `STAGE_A2_DEPLOYMENT_BOOTSTRAP`
