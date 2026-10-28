@@ -120,7 +120,10 @@ try {
   assert.equal(built.Os, 'linux');
   const invalidName = `${project}-invalid-config`;
   try {
-    await assert.rejects(exec('docker', ['run', '--name', invalidName, '--network', 'none', '--env', 'FRAME_ZERO_PRODUCTION_SITE=1', image], { encoding: 'utf8', timeout: 20_000 }), error => error.code === 1 && !error.killed);
+    await assert.rejects(exec('docker', ['run', '--name', invalidName, '--network', 'none', '--env', 'FRAME_ZERO_PRODUCTION_SITE=1', image], { encoding: 'utf8', timeout: 20_000 }), error => {
+      evidence.tests.invalidStartupExit = { code: error.code ?? null, signal: error.signal ?? null, killed: error.killed === true };
+      return error.code === 1 && !error.killed;
+    });
     evidence.tests.missingConfiguration = 'Startup exits nonzero without creating a replacement database';
   } finally { await docker(['rm', '--force', invalidName]).catch(() => {}); }
   phase = 'prepare-owned-empty-fixture'; stackCreated = true;

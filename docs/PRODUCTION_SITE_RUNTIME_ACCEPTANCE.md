@@ -50,6 +50,7 @@ fixture准备不是正常应用启动步骤，也不是业务链的替代runner�
 
 ## 限制与后续
 
+- 首次生产验收[40669135322／attempt1](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/40669135322)在缺配置启动项失败。Next捕获hook异常后保留listener；仅抛错不足以保证启动退出。已改为显式生产配置失败时输出固定码并自行exit1，保留原20秒／code1／非killed断言，新增真实hook子进程回归；后续容器结果以新Head记录为准，首次失败不重跑覆盖。
 - 本机相关测试使用已有Node24工具；镜像及CI为Node22.23.4。本机不启动Docker、PG或替换3001，完整HTTPS链只按实际Linux CI结果报告。
 - 本机构建曾发现`path.resolve(process.cwd())`触发整仓tracing，已改用本身绝对的cwd后重新构建，无该警告；仍保留原私有上下文／runtime排除断言。
 - 容器重建用同一镜像，不能据此宣称不同应用版本的schema兼容回退、异机备份或恢复演练已经完成。

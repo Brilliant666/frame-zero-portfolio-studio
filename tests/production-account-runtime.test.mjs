@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -6,6 +7,30 @@ import test from 'node:test';
 import { accountRuntimeEnabled, readAccountConfig } from '../scripts/lib/account-config.mjs';
 import { accountRequestAllowed } from '../db/accounts/http.mjs';
 import { authOptions } from '../db/accounts/auth-options.mjs';
+
+function startupChild(extra = {}) {
+  const env = { ...process.env, NODE_ENV: 'production', NEXT_RUNTIME: 'nodejs' };
+  for (const name of Object.keys(env)) {
+    if (name.startsWith('FRAME_ZERO_') || name.startsWith('NEXT_PUBLIC_FRAME_ZERO_')) delete env[name];
+  }
+  Object.assign(env, extra);
+  // Next 16.4.1 catches prepare/register rejections while its HTTP listener
+  // remains open. A throw or exitCode alone must not pass this regression.
+  const code = `
+    const keepAlive = setInterval(() => {}, 1000);
+    try {
+      const { register } = await import(${JSON.stringify(new URL('../instrumentation.ts', import.meta.url).href)});
+      await register();
+      clearInterval(keepAlive);
+      process.stdout.write('HOOK_REGISTERED');
+    } catch {
+      process.stdout.write('HOOK_REJECTED_BUT_CAUGHT');
+    }
+  `;
+  return spawnSync(process.execPath, ['--experimental-strip-types', '--input-type=module', '-e', code], {
+    env, encoding: 'utf8', timeout: 3000,
+  });
+}
 
 const production = {
   NODE_ENV: 'production',
@@ -41,6 +66,33 @@ test('production mode has a canonical HTTPS origin, dedicated database and exter
   });
   assert.equal(local.mode, 'local');
   assert.equal(authOptions(local).advanced.useSecureCookies, false);
+});
+
+test('production startup validation exits itself even when the framework catches hook errors', () => {
+  const result = startupChild({ FRAME_ZERO_PRODUCTION_SITE: '1' });
+  assert.equal(result.error, undefined, 'Configuration failure must not require the test timeout to kill Node');
+  assert.equal(result.signal, null);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /^PRODUCTION_SITE_CONFIGURATION_INVALID$/m);
+  assert.doesNotMatch(result.stderr, /canonical HTTPS|postgres(?:ql)?:|\/run\/secrets\//);
+  assert.equal(result.stdout.includes('HOOK_REJECTED_BUT_CAUGHT'), false);
+});
+
+test('ordinary standalone startup does not activate Site configuration or fatal shutdown', () => {
+  const result = startupChild();
+  assert.equal(result.error, undefined);
+  assert.equal(result.signal, null);
+  assert.equal(result.status, 0);
+  assert.equal(result.stdout, 'HOOK_REGISTERED');
+  assert.equal(result.stderr.includes('PRODUCTION_SITE_CONFIGURATION_INVALID'), false);
+});
+
+test('valid production configuration registers without connecting or provisioning', () => {
+  const result = startupChild({ ...production, FRAME_ZERO_ACCOUNT_DATABASE_URL: 'postgresql://fixture:synthetic@127.0.0.1:9/frame_zero_site' });
+  assert.equal(result.error, undefined);
+  assert.equal(result.signal, null);
+  assert.equal(result.status, 0, 'Only configuration is checked; no database connection or schema setup');
+  assert.equal(result.stdout, 'HOOK_REGISTERED');
 });
 
 test('production rejects noncanonical origins, arbitrary database options and application asset paths', () => {
