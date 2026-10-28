@@ -84,6 +84,16 @@ for (const entry of forbiddenPaths) {
   if (fs.existsSync(entry)) throw new Error("forbidden runtime path: " + entry);
 }
 const textExtensions = new Set([".cjs", ".css", ".html", ".js", ".json", ".mjs", ".svg", ".txt"]);
+const developmentPackages = new Set([
+  "miniflare", "wrangler", "vinext", "vite", "auth", "drizzle-kit", "esbuild",
+  "@esbuild-kit/core-utils", "@esbuild-kit/esm-loader", "@cloudflare/vite-plugin"
+]);
+function atLeast(version, minimum) {
+  if (!/^\d+\.\d+\.\d+$/.test(version || "")) return false;
+  const floor = minimum.split(".").map(Number);
+  const difference = version.split(".").map(Number).map((part, index) => part - floor[index]).find(Boolean) || 0;
+  return difference >= 0;
+}
 const sentinel = process.argv[1] || "";
 const stack = ["/app"];
 let files = 0;
@@ -102,6 +112,15 @@ while (stack.length > 0) {
     files += 1;
     if (stat.size <= 8 * 1024 * 1024 && textExtensions.has(path.extname(current).toLowerCase())) {
       const source = fs.readFileSync(current, "utf8");
+      if (path.basename(current) === "package.json") {
+        const metadata = JSON.parse(source);
+        if (developmentPackages.has(metadata.name)) {
+          throw new Error("development dependency leaked into runtime: " + metadata.name + " at " + current);
+        }
+        if (metadata.name === "sharp" && !atLeast(metadata.version, "0.35.5")) {
+          throw new Error("unpatched Sharp in runtime: " + current);
+        }
+      }
       if (sentinel && source.includes(sentinel)) {
         throw new Error("build-context sentinel leaked into runtime: " + current);
       }
@@ -117,7 +136,16 @@ while (stack.length > 0) {
     }
   }
 }
-console.log(JSON.stringify({ files, gid: process.getgid(), uid: process.getuid() }));
+const nextRequire = require("node:module").createRequire(require.resolve("next/package.json"));
+const imageDependencies = {};
+for (const [owner, resolve] of [["uploads", require], ["next", nextRequire]]) {
+  const sharp = resolve("sharp");
+  if (!atLeast(sharp.versions.sharp, "0.35.5") || !atLeast(sharp.versions.rsvg, "2.63.2")) {
+    throw new Error("unpatched native image dependency resolved by " + owner);
+  }
+  imageDependencies[owner] = { sharp: sharp.versions.sharp, rsvg: sharp.versions.rsvg, vips: sharp.versions.vips };
+}
+console.log(JSON.stringify({ files, gid: process.getgid(), uid: process.getuid(), node: process.version, imageDependencies }));
 `;
 }
 
@@ -205,7 +233,7 @@ try {
   assert.equal(inspection.Config.Labels?.["io.frame-zero.runtime"], "standard-next-standalone");
   assert.equal(
     inspection.Config.Labels?.["org.opencontainers.image.base.digest"],
-    "sha256:e21fc383b50d5347dc7a9f1cae45b8f4e2f0d39f7ade28e4eef7d2934522b752",
+    "sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da",
   );
   assert.ok(inspection.Config.Healthcheck?.Test?.includes("node"));
   assert.ok(inspection.RootFS.Layers.length > 0);
@@ -225,6 +253,8 @@ try {
     "--entrypoint", "node", imageName, "-e", runtimeInspectionProgram(), expectedSentinel,
   ]));
   assert.equal(runtimeInspection.uid, 1000);
+  assert.equal(runtimeInspection.node, "v22.23.4");
+  console.log("CONTAINER_RUNTIME_DEPENDENCIES " + JSON.stringify(runtimeInspection.imageDependencies));
   assert.equal(runtimeInspection.gid, 1000);
   assert.ok(runtimeInspection.files > 0);
 

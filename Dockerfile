@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.7
 
 # Node 22 remains the accepted runtime major. This Debian/glibc image is pinned
-# to the official multi-architecture OCI index published for 22.22.3.
-FROM node:22.22.3-bookworm-slim@sha256:e21fc383b50d5347dc7a9f1cae45b8f4e2f0d39f7ade28e4eef7d2934522b752 AS builder
+# to the official multi-architecture OCI index published for 22.23.4.
+FROM node:22.23.4-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS builder
 
 WORKDIR /workspace
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -25,11 +25,11 @@ COPY public ./public
 
 RUN npm run build
 
-FROM node:22.22.3-bookworm-slim@sha256:e21fc383b50d5347dc7a9f1cae45b8f4e2f0d39f7ade28e4eef7d2934522b752 AS runtime
+FROM node:22.23.4-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS runtime
 
 LABEL org.opencontainers.image.title="Portfolio Platform" \
-      org.opencontainers.image.base.name="docker.io/library/node:22.22.3-bookworm-slim" \
-      org.opencontainers.image.base.digest="sha256:e21fc383b50d5347dc7a9f1cae45b8f4e2f0d39f7ade28e4eef7d2934522b752" \
+      org.opencontainers.image.base.name="docker.io/library/node:22.23.4-bookworm-slim" \
+      org.opencontainers.image.base.digest="sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da" \
       io.frame-zero.runtime="standard-next-standalone"
 
 ENV NODE_ENV=production \

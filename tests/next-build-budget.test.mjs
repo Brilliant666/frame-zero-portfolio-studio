@@ -54,6 +54,43 @@ test("Next valid artifacts: exact deduplicated raw and route estimates, function
   assert.match(run.stdout, /Published photography content.*NOT_MEASURED/);
 });
 
+// Export-table and class-name shapes taken from the Next 16.4.1 production
+// neon-hud / shared-contact chunks, including the numeric-hash CSS escape.
+const compactCssExports = 'e.v({archive:"_6mI5aW_archive",root:"_6mI5aW_root"})},77540,e=>{e.v({account:"DsAYtG_account",profileLink:"DsAYtG_profileLink"})';
+const compactTokens = ["_6mI5aW_archive", "_6mI5aW_root", "DsAYtG_account", "DsAYtG_profileLink"];
+
+test("Next 16.4.1 compact CSS module exports trace every token and retain legacy support", (t) => {
+  const f = fixture(t);
+  const css = compactTokens.map((name) => `.${name}{}`).join("") + ".IaG2-G_canvas{}";
+  f.put("static/chunks/compact.css", css);
+  for (const id of TEMPLATE_IDS) {
+    f.put(`static/chunks/${id}.js`, `${id};${compactCssExports};e.v({canvas:"IaG2-G_canvas",legacy:"${token}"})`);
+  }
+  const result = enforceNextBuildBudget(f.root);
+  assert.equal(result.publicCssBytes, Buffer.byteLength(commonCss) + Buffer.byteLength(css));
+  assert.deepEqual(result.errors, []);
+  assert.equal(f.run().status, 0);
+});
+
+for (const [label, exports, css] of [
+  ["missing compact CSS", compactCssExports, ""],
+  ["partially traced compact CSS", compactCssExports, ".DsAYtG_account{}"],
+  ["missing compact token alongside legacy CSS", `e.v({root:"_6mI5aW_root",legacy:"${token}"})`, ""],
+  ["unknown compact export value", 'e.v({account:"DsAYtG_account",root:"unknown_shape"})', ".DsAYtG_account{}"],
+  ["non-string compact export", 'e.v({account:"DsAYtG_account",root:42})', ".DsAYtG_account{}"],
+  ["nested unknown export alongside a known table", 'e.v({account:"DsAYtG_account"});e.v({root:{value:"_6mI5aW_root"}})', ".DsAYtG_account{}._6mI5aW_root{}"],
+  ["compact-looking string without a module export", '"DsAYtG_account"', ".DsAYtG_account{}"],
+]) {
+  test(`Next compact CSS integrity error remains blocking: ${label}`, (t) => {
+    const f = fixture(t);
+    f.put(`static/chunks/${TEMPLATE_IDS[0]}.js`, `${TEMPLATE_IDS[0]};${exports}`);
+    f.put("static/chunks/compact.css", css);
+    assert.equal(inspectNextBuild(f.root).publicCssBytes, null);
+    assert.throws(() => enforceNextBuildBudget(f.root));
+    assert.equal(f.run().status, 1);
+  });
+}
+
 test("Next all three aggregate references warn, even for a large artifact, without blocking callers or CLI", (t) => {
   const f = fixture(t);
   f.put("static/chunks/home.js", "x".repeat(2_000_000));

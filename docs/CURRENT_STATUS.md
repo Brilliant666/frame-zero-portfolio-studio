@@ -6,17 +6,17 @@
 
 | 项目 | 当前事实 |
 | --- | --- |
-| 已合并基线 | main `58a92d2fd419af4e1ebaf1b57ad48ba7cab2a406`，PR46 Squash；实际 main push 五项检查成功 |
-| 生产差距审计 | [PR47](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/47)，独立 Draft；报告和计划未自动实施 |
-| 工程流程整理 | [PR48](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/48)，`codex/delivery-workflow-efficiency`；继续同PR整理入口和历史门禁 |
-| 当前PR验证 | 先前 `dfdad7c` 的五项CI成功；新增整理的结果以新Head为准，不沿用旧Head成功 |
+| 已合并基线 | main `d3b172c5658c738fba8d4d19c4b870a12d7f9656`；PR48、PR47依次Squash，各自实际main push五项检查成功 |
+| 生产差距审计 | [PR47](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/47)已合并；原产品审计基线`58a92d2`与技术结论保留，不代表计划已实施 |
+| 工程流程整理 | [PR48](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/48)已合并；短入口、历史追溯和严格CI分流生效 |
+| 当前实施 | `codex/production-dependency-security-baseline`，生产依赖安全基线；[范围与证据](PRODUCTION_DEPENDENCY_SECURITY_BASELINE.md)，最终Head检查见对应Draft PR |
 
 当前产品已有账号／Site授权、三类独立内容空间、Site素材、私人草稿、受保护预览、发布与回退。
 十一套基础模板和两类高级空间的证据范围见README及对应验收记录；不等于真实设备、全部内容组合或生产全链已验收。
 
 ## 本轮允许与禁止
 
-- 用户已授权工程入口、资料和规则整理，普通提交／推送至现有Draft PR；不修改产品业务或Accepted ADR。
+- 用户已授权生产依赖安全基线：最小兼容补丁、相关构建／测试适配、普通提交／推送及新Draft PR；不修改产品业务或Accepted ADR。
 - 保留真实权限、资源归属、CAS／409、Published-only及原失败断言；历史状态词只约束对应历史记录。
 - 不自动Ready、合并、部署、迁移、开户、保存发布或删除文件／回退；审计PR的计划不能替代实施授权。
 - 日常3001与PostgreSQL保持Windows独立管理，不启停或升级；精确目录、BUILD、任务控制及配置位置只在仓库外本机交接。
@@ -36,7 +36,7 @@
 
 ## 下一步与历史
 
-本轮完成后审阅PR48候选，不自动接续生产安全升级、其他UI或环境任务。
+本轮交付安全依赖候选，保持Draft；不自动Ready、合并、部署或接通生产业务。
 用户另行指定目标后再实施；路线图的旧Mission和旧Ready文字不是当前恢复命令。
 
 - [截至2026-10-27的完整检查点历史](CURRENT_STATUS_HISTORY_2026-10-27.md)
