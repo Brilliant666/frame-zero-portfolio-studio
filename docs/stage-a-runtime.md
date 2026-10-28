@@ -1,5 +1,10 @@
 # Stage A Runtime Migration Evidence
 
+> **HISTORICAL — Stage A 运行时迁移证据。** 下方命令和“尚待Stage B”等描述适用于当时，
+> 不表示当前Site业务仍缺数据库，也不是本机Windows日常恢复步骤。证据保留，当前运行入口和
+> 按改动验证方式见 [DEVELOPMENT_WORKFLOW](DEVELOPMENT_WORKFLOW.md) 与 [README](../README.md)。
+> 不为重读本记录重复构建、修复Docker或迁移数据。
+
 > - Phase: `SELF_HOSTED_V1`
 > - Stage: `STAGE_A_RUNTIME`
 > - Milestone: `STANDARD_NEXT_NODE_PARITY`

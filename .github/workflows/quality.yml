@@ -23,18 +23,35 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify change-scope policy
+        run: node --test tests/ci-change-scope.test.mjs
+
+      - name: Classify complete pull request diff
+        id: scope
+        run: node scripts/ci-change-scope.mjs
+
+      - name: Verify documentation and deployment approval contracts
+        if: steps.scope.outputs.run_full == 'false'
+        run: node --test tests/deployment-operations.test.mjs tests/pr24-limited-closure.test.mjs
 
       - name: Use Node.js
+        if: steps.scope.outputs.run_full != 'false'
         uses: actions/setup-node@v4
         with:
           node-version: 22.13.1
           cache: npm
 
       - name: Install dependencies
+        if: steps.scope.outputs.run_full != 'false'
         run: npm ci
 
       - name: Lint
+        if: steps.scope.outputs.run_full != 'false'
         run: npm run lint
 
       - name: Test, build, and enforce bundle budget
+        if: steps.scope.outputs.run_full != 'false'
         run: npm test

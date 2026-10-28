@@ -4,8 +4,8 @@
 > - Effective date: 2026-09-26 / `PRODUCT_DELIVERY_MISSION_02`
 > - Baseline and active head: [CURRENT_STATUS.md](CURRENT_STATUS.md)
 > - Current phase: `SELF_HOSTED_V1`
-> - Execution: product milestones M1–M5; remote deployment remains separately frozen
-> - 2026-10-17 checkpoint: PR35 已合并，基础版、拍立得、流影视廊独立编辑与发布已交付本机；main `57b12c2` 已在单独授权下更新日常。
+> - Execution: latest user request + CURRENT_STATUS; M1–M5 remain the capability/acceptance map
+> - Historical checkpoint (2026-10-17): PR35 已合并，基础版、拍立得、流影视廊独立编辑与发布已交付本机；main `57b12c2` 已在单独授权下更新日常。
 >   手机拍立得内嵌预览返回风险仍为 UNRESOLVED / ACCEPTED_FOR_LOCAL_STAGE。具体证据与剩余范围见 CURRENT_STATUS 与 SESSION_HANDOFF，不将本机交付当成公网上线。
 
 This document is the highest project-level constraint for the current product
@@ -484,11 +484,13 @@ launch without a newly demonstrated V1 blocker.
 
 ## 15. Product delivery governance
 
-Deliver the invited photographer's complete Site workflow. M1–M5 authorize
-routes and identity wiring, independent template content/editor adaptation,
+Deliver the invited photographer's complete Site workflow. The 2026-09-26
+Mission authorized M1–M5 routes/identity, independent content/editor adaptation,
 Site resources, Save/Publish and controlled upload implementation and isolation
-tests. Existing Stage numbers map technical/launch acceptance, not sequential
-permission requests. Remote deployment remains separately frozen.
+tests. This is historical scope, not a standing instruction to resume delivered
+milestones. Execute the latest user-authorized task recorded in CURRENT_STATUS.
+Stage numbers map technical/launch acceptance, not sequential permission requests;
+merge, real data cutover and remote deployment retain their separate approvals.
 
 The real Linux server becomes a continuing validation environment as soon as
 `ONLINE_PREVIEW` is established. From that point onward:
@@ -513,16 +515,17 @@ Each slice answers:
 ```
 
 Work adding neither user capability nor resolving a concrete product blocker
-does not enter the critical path. Known Docker failure stays one local gap;
-no repeated restart or system installation. Real PostgreSQL CI is valid evidence,
+does not enter the critical path. Historical Docker failure is not a current
+runtime diagnosis; no repeated restart or system installation without new evidence.
+Real PostgreSQL CI is valid evidence,
 not local verification or real-star onboarding. Track IMPLEMENTED,
 VERIFIED_IN_CI, VERIFIED_LOCALLY and VERIFIED_WITH_REAL_STAR separately.
 
 Additional rules:
 
-1. A PR focuses on one verifiable product slice. Keep PR #28 account-foundation
-   scoped; reuse it through explicitly based topic/stacked branches, never copy
-   Auth into a second implementation. At most two pending review layers.
+1. A PR focuses on one verifiable slice. PR #28 is completed account-foundation
+   history; reuse the existing Auth implementation through explicitly based
+   topic/stacked branches. At most two pending dependent review layers.
 2. UI and visual improvements may continue only when they resolve a verified
    current-stage or V1 blocker. They do not pre-empt the launch critical path.
 3. Infrastructure requires evidence. Do not introduce systems because they may
@@ -530,9 +533,10 @@ Additional rules:
 4. Preserve the eleven templates, Admin V2, SiteDocumentV1, stable IDs, legacy
    adapter, current photo workflow, and Composition planner unless a concrete
    blocker is demonstrated.
-5. M1–M5 branch work is authorized even before these documents merge. Commits,
-   push and Draft PRs may continue safe work; merge/approve/auto-merge are not
-   authorized. Stop dependent work at the two-layer review limit.
+5. Within the current approved scope, commits, push and Draft PRs may continue
+   safe work. Historical Mission or Ready text does not grant new task authority;
+   merge/approve/auto-merge require corresponding approval. Stop dependent work
+   at the two-layer review limit.
 
 Before a Codex development task begins, it must check:
 
@@ -551,6 +555,8 @@ need explicit authority. Preserve existing usable entries; before migration,
 back up record 1, record 2601 and assets, rehearse against an isolated target,
 retain old sources, and avoid dual writes. Missing historical snapshots remain
 explicit gaps. Do not expose Draft to make an incomplete Site look populated.
+Records 1/2601 apply to the legacy-source migration only; ordinary startup or
+moving an existing PostgreSQL Site must not repeat that import by default.
 
 ## 16. Architecture invariants
 
@@ -650,7 +656,7 @@ The project must not implement a future SaaS stack in advance of evidence.
 | [CURRENT_STATUS.md](CURRENT_STATUS.md) | `CURRENT_SOURCE_OF_TRUTH` | Current phase, Stage, milestone, and research PR status |
 | [NORTH_STAR.md](NORTH_STAR.md) | `SUPERSEDED` for current priority | Historical long-term platform plan; useful context only |
 | [phase-0/README.md](phase-0/README.md) | `HISTORICAL` | Completed/legacy Phase 0 planning and evidence |
-| [admin-v2.md](admin-v2.md) | `CURRENT_SOURCE_OF_TRUTH` for Admin V2 | Existing subsystem behavior until its stage changes it |
+| [admin-v2.md](admin-v2.md) | `LEGACY_SUBSYSTEM_REFERENCE` | Six-section UI history; current Site authorization and persistence use the Site implementation |
 | Accepted ADRs | `CURRENT_SOURCE_OF_TRUTH` for their invariants | Must be explicitly superseded, never silently overwritten |
 
 Known conflicts resolved by this document:
@@ -668,7 +674,7 @@ Known conflicts resolved by this document:
 
 ## 20. Current execution pointer
 
-Read [CURRENT_STATUS.md](CURRENT_STATUS.md) for the sole active slice/head,
-evidence and local blockers, and the roadmap for M1–M5. Historical Stage A and
+Read [CURRENT_STATUS.md](CURRENT_STATUS.md) for the current task/head,
+authorization, evidence and local blockers, and the roadmap for M1–M5. Historical Stage A and
 PR24/25 records are not current resume conditions. Report actual work only;
 long-term authority does not imply unattended execution after a session ends.

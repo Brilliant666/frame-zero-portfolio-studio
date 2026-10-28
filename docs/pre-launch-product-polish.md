@@ -1,5 +1,10 @@
 # Pre-launch Product Polish
 
+> **HISTORICAL — PR24／PR25 上线前局部打磨记录。** 原基线 `main@ced247e5baf19510329c4c3a084a69e6b1ab0c2c`，
+> 本次保留版本来自已合并main `58a92d2`。下方“Active／Current”、等待和冻结状态仅适用于当时，
+> 不恢复旧任务、不替代本轮用户授权；当前范围见 [CURRENT_STATUS](CURRENT_STATUS.md)。
+> 原人工验收边界与未通过项目不因归档而改为通过。
+
 > - Active priority: `PRE_LAUNCH_PRODUCT_POLISH`
 > - Product priority: `LOCAL_PRODUCT_EXPERIENCE`
 > - Engineering launch line: `FROZEN_AT_REPO_SIDE_BOOTSTRAP_READY`

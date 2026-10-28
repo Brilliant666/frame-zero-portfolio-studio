@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import test from "node:test";
 
@@ -10,13 +11,31 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-test("PR24 limited closure keeps its feature freeze, human gate, and deferred buckets explicit", async () => {
-  const [currentStatus, ledger, productPolish] = await Promise.all([
-    source("docs/CURRENT_STATUS.md"),
-    source("docs/human-directed-product-polish.md"),
-    source("docs/pre-launch-product-polish.md"),
+test("archived checkpoint and handoff retain the complete approved historical text", async () => {
+  const separator = "\n---\n\n";
+  for (const [filename, digest] of [
+    ["docs/CURRENT_STATUS_HISTORY_2026-10-27.md", "d3cfb395fbf467f0d8991a99f6aabd7a13e8b34970b6e87a62bca4b727737238"],
+    ["docs/SESSION_HANDOFF_HISTORY_2026-10-27.md", "95d6328ae8520597ad05c11f5c56243d9cf92763faa3b6f1a2288826f883cb73"],
+  ]) {
+    const document = (await source(filename)).replaceAll("\r\n", "\n");
+    const boundary = document.indexOf(separator);
+    assert.notEqual(boundary, -1, `${filename} identifies the archived source boundary`);
+    const archivedSource = document.slice(boundary + separator.length);
+    assert.equal(createHash("sha256").update(archivedSource).digest("hex"), digest, `${filename} retains main 58a92d2 historical evidence`);
+  }
+});
+
+async function historicalClosure(readSource = source) {
+  const [historicalStatus, ledger, productPolish] = await Promise.all([
+    readSource("docs/CURRENT_STATUS_HISTORY_2026-10-27.md"),
+    readSource("docs/human-directed-product-polish.md"),
+    readSource("docs/pre-launch-product-polish.md"),
   ]);
-  const governance = `${currentStatus}\n${ledger}\n${productPolish}`;
+  return { historicalStatus, ledger, productPolish };
+}
+
+function assertHistoricalClosure({ historicalStatus, ledger, productPolish }) {
+  const governance = `${historicalStatus}\n${ledger}\n${productPolish}`;
 
   for (const required of [
     "PR24_LIMITED_BASELINE_READY",
@@ -70,6 +89,31 @@ test("PR24 limited closure keeps its feature freeze, human gate, and deferred bu
     assert.match(ledger, new RegExp("^\\| `" + templateId + "` \\| `READY_FOR_HUMAN_RECHECK` \\|", "m"));
   }
   assert.doesNotMatch(ledger, /ELEVEN_TEMPLATE_HUMAN_VISUAL_APPROVAL\s*=\s*(?:COMPLETE|APPROVED)/);
+}
+
+test("PR24 historical closure preserves its recorded freeze, review gate, and deferred buckets", async () => {
+  assertHistoricalClosure(await historicalClosure());
+});
+
+test("current checkpoint changes cannot rewrite or freeze the historical PR24 acceptance", async () => {
+  const requested = [];
+  const documents = await historicalClosure(async (relativePath) => {
+    requested.push(relativePath);
+    assert.notEqual(relativePath, "docs/CURRENT_STATUS.md", "current execution state is not a historical fixture");
+    return source(relativePath);
+  });
+  assertHistoricalClosure(documents);
+  assert.deepEqual(requested, [
+    "docs/CURRENT_STATUS_HISTORY_2026-10-27.md",
+    "docs/human-directed-product-polish.md",
+    "docs/pre-launch-product-polish.md",
+  ]);
+
+  // Moving the fixture must not silently weaken the old acceptance evidence.
+  const corrupted = Object.fromEntries(Object.entries(documents).map(([key, value]) => [
+    key, value.replaceAll("HUMAN_APPROVED = 0 / 11", "HISTORICAL_APPROVAL_REMOVED"),
+  ]));
+  assert.throws(() => assertHistoricalClosure(corrupted), /HUMAN_APPROVED/);
 });
 
 test("template inspection and selection cannot automatically Apply or save a layout", async () => {

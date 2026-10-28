@@ -4,7 +4,7 @@
 > 以 [CURRENT_STATUS](CURRENT_STATUS.md) 和 [SESSION_HANDOFF](SESSION_HANDOFF.md) 为准。
 > 下文当时的 Draft、环境缺口或“未完成”不自动构成当前阻塞。
 
-## 授权与当前状态
+## 当时授权与阶段状态（历史）
 
 基线 `main@92a81ee274ab9d7df829c7437219f0f42c273390`；分支
 `feat/local-account-site-foundation`。本轮有限解冻本机 PostgreSQL、身份、登录、
@@ -68,27 +68,36 @@ intent 保留。重跑只恢复同组规范化输入；已完成不改邮箱、�
 
 ## 本机操作
 
+> 本节是首次账号基础环境搭建的历史操作记录，**不是当前日常恢复步骤，也不是应整块执行的清单**。
+> 当前Windows日常先按仓库外交接查看既有任务状态；各场景使用 [开发与交付流程](DEVELOPMENT_WORKFLOW.md#先选择运行场景)。
+> 以下初始化／迁移／开户只适用于明确的新目标；测试只适用于真正隔离的一次性测试库。已有日常不重复执行。
+
 使用 Node >=22.13，项目根目录执行。配置 `.env.accounts.local` 与 `.env.accounts.test`
 被 Git 和容器忽略；init 不覆盖已有配置，随机密码不打印。不要将配置内容粘贴进聊天或 PR。
 
 ```sh
+# 以下按场景选用，不从上到下执行：
+# 首次新环境准备（非已有日常）
 npm run accounts:db -- init
 npm run accounts:db -- up development
-npm run accounts:db -- up test
 npm run accounts:migrate
-node --env-file=.env.accounts.test scripts/account-migrate.mjs
 npm run build
 npm run accounts:start
 # http://127.0.0.1:3003/login
+# 仅在获得开户授权并需要新账号时交互执行
 npm run accounts:provision
+# 一次性隔离测试环境
+npm run accounts:db -- up test
+node --env-file=.env.accounts.test scripts/account-migrate.mjs
 npm run test:accounts
+# 既有Compose环境的查询／停止，非Windows日常控制入口
 npm run accounts:db -- status development
 npm run accounts:db -- stop development
 npm run accounts:db -- stop test
 ```
 
-开户 CLI 交互填写 username=star、slug=star、真实邮箱、内部测试授权；密码不回显。
-没有默认邮箱/密码。不在命令行参数传凭据。当前尚未获得这些真实输入，因此不创建 star。
+当时的开户 CLI 交互填写 username=star、slug=star、真实邮箱、内部测试授权；密码不回显。
+没有默认邮箱/密码。不在命令行参数传凭据。该阶段当时尚未获得这些真实输入，因此没有创建 star。
 停止 Node 用启动终端 Ctrl+C。Compose 项目 `frame-zero-accounts`，开发与测试分别
 loopback 55432/55433，命名卷 `frame-zero-accounts_development-data` /
 `frame-zero-accounts_test-data`。stop 保留卷，禁止 down -v。测试清理仅限明确测试库，
@@ -99,7 +108,7 @@ Schema 再生成：
 迁移生成：`node --env-file=.env.accounts.local node_modules/drizzle-kit/bin.cjs generate --config=drizzle.accounts.config.ts`。
 迁移目录与旧 SQLite 的 drizzle 完全分离；没有 GET/启动时建表或 schema push。
 
-## 独立内容与共享作品库（下一轮边界）
+## 独立内容与共享作品库（当时下一轮边界）
 
 同一 Site 的基础版与高级拍立得分别拥有摄影师资料、文案、套餐、联系方式和配置。
 保存范围是 Site + 模板产品/编辑器身份，各自版本冲突互不覆盖。账号邮箱/名称不是
@@ -112,7 +121,7 @@ Schema 再生成：
 记录 1 与 2601、SQLite、本机照片与 manifest 不迁移、不复制、不双写。
 本轮没有公共 profile/packages/contact 业务表或资源迁移表。
 
-下一轮才实施 `/` 平台介绍、`/:siteSlug`、`/:siteSlug/admin` 与 `/test` 对照区。
+当时下一轮计划实施 `/` 平台介绍、`/:siteSlug`、`/:siteSlug/admin` 与 `/test` 对照区。
 本轮仅 `/login` 和必要身份读取；不把全局 2601 同时伪装成多个用户站点。
 
 ## 验证记录

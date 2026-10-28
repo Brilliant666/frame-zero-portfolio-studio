@@ -10,6 +10,25 @@ server. Its presence is not SSH, deployment, DNS, TLS, or traffic-switch
 authorization. `CI_TLS_EVIDENCE` uses Caddy's isolated internal CA and is not
 `REAL_PRODUCTION_HTTPS_EVIDENCE`.
 
+## Applicability
+
+This is the Stage A2 Linux shell contract and its historical acceptance scope.
+It is not the Windows daily recovery procedure, a Site account runner, a database
+migration recipe, or proof that real Site/Auth/Asset services are production-ready.
+The state labels above describe this Stage A2 record, not permanent values for
+the project's current checkpoint. Current authority and readiness are recorded
+in [CURRENT_STATUS](CURRENT_STATUS.md).
+
+For Windows daily tasks, development candidates, isolated write tests and legacy
+regression, first select the appropriate [workflow entry](DEVELOPMENT_WORKFLOW.md#先选择运行场景).
+Use the existing private local handoff for the actual Windows control commands;
+do not replace it by running this bootstrap or a temporary Codex-owned shell.
+Before any authorized server work, inspect the existing ingress and project
+layout. This profile currently requires exclusive 80/443; if they are occupied,
+stop and obtain a reviewed coexistence plan rather than stopping another project
+or bypassing the profile's validation. Its presence still grants no external
+operation or traffic-switch authority.
+
 ## External preconditions
 
 The approved target Linux server will need:
