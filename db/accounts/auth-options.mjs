@@ -3,7 +3,7 @@ import { username } from 'better-auth/plugins/username';
 
 export function authOptions(config) {
   return {
-    appName: 'Portfolio Local Accounts',
+    appName: config.mode === 'production' ? 'Portfolio Platform' : 'Portfolio Local Accounts',
     baseURL: config.origin,
     secret: config.secret,
     trustedOrigins: [config.origin],
@@ -12,8 +12,8 @@ export function authOptions(config) {
     rateLimit: { enabled: true, window: 60, max: 60, customRules: { '/sign-in/username': { window: 60, max: 10 } } },
     advanced: {
       database: { generateId: 'uuid' },
-      cookiePrefix: config.isTest ? 'portfolio-local-test' : 'portfolio-local',
-      useSecureCookies: false,
+      cookiePrefix: config.mode === 'production' ? 'portfolio-site' : config.isTest ? 'portfolio-local-test' : 'portfolio-local',
+      useSecureCookies: config.mode === 'production',
       defaultCookieAttributes: { httpOnly: true, sameSite: 'lax', path: '/' },
       ipAddress: { ipAddressHeaders: [] },
     },

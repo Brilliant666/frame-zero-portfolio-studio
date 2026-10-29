@@ -55,6 +55,19 @@ jobs:
           FRAME_ZERO_EDITOR_BROWSER_SMOKE: '1'
           FRAME_ZERO_PUBLICATION_BROWSER_SMOKE: '1'
           FRAME_ZERO_BROWSER_OUTPUT_DIR: ${{ runner.temp }}/site-publication-browser
+      - name: Production Site HTTPS, persistence, and fault acceptance
+        if: steps.scope.outputs.run_full != 'false'
+        run: npm run verify:production-site
+        env:
+          FRAME_ZERO_PRODUCTION_VERIFY: '1'
+      - name: Isolated production Site evidence (no credentials or private data)
+        if: always() && steps.scope.outputs.run_full != 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-site-${{ github.run_id }}-${{ github.run_attempt }}
+          path: outputs/production-site-runtime/result.json
+          if-no-files-found: warn
+          retention-days: 14
       - name: Anonymous browser acceptance evidence (no traces or credentials)
         if: always() && steps.scope.outputs.run_full != 'false'
         uses: actions/upload-artifact@v4

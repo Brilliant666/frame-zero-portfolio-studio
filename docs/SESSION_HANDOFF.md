@@ -3,18 +3,18 @@
 更新：2026-10-28。当前基线、授权和剩余风险统一见[CURRENT_STATUS](CURRENT_STATUS.md)。
 本文件只保留最近一次续接需要的信息，不重复全部PR历史。
 
-## 本轮生产依赖安全基线
+## 本轮生产Site运行与持久化
 
-PR48工程整理已Squash为`9986786`，PR47审计报告已Squash为`d3b172c`，各自实际main push五项检查成功。
-用户现授权按审计建议开始生产依赖安全基线，分支`codex/production-dependency-security-baseline`基于main `d3b172c`。
-本轮新建Draft PR；不合并、不部署，不更新3001或数据库。
+PR49批准Head`e1b6b98`已Ready并Squash为`e46414b`，树一致，实际main push五项完整检查成功。
+独立分支`feat/production-site-runtime`从该main建立。新PR保持Draft，不自动合并、真实部署或更新3001／数据库。
 
 实施范围：
 
-- 更新Next／React兼容组合、直接及Next解析的Sharp、Better Auth和Node22基础镜像；保留数据库schema与接口契约。
-- 只刷新受影响的传递依赖；保留pg与Drizzle现有修补版本，不接受audit建议的大版本降级。
-- 五项CI使用修补后的同一Node22版本，保留完整检查、公开安全、私有构建上下文、PID1／SIGTERM及原断言。
-- 相关原生图片、SSR／standalone和构建格式适配的证据与开发工具残留见[本轮记录](PRODUCTION_DEPENDENCY_SECURITY_BASELINE.md)。
+- 同一standalone镜像保留`node server.js`；Node instrumentation仅验证严格生产配置，与local／test模式分离，启动不迁移、开户或导入。
+- 生产Secure会话继续使用现有owner／grant、三空间、草稿CAS、Published-only及历史回退；不设新的用户身份或万能proof头。
+- 新Site Compose／代理合同独立于Stage A2：私网app／PG、外置素材卷、精确路由／方法、可信代理规范头及明确配置失败。
+- 流式大小／超时／并发边界、上传清理finally归还、只读有界readiness及依赖故障恢复；不建设GC或监控平台。
+- 同一生产镜像经隔离HTTPS测试CA执行完整链，显式fixture准备与正常应用启动分离；见[验收记录](PRODUCTION_SITE_RUNTIME_ACCEPTANCE.md)。
 
 ## 工作区与数据保护
 
@@ -24,8 +24,8 @@ PR48工程整理已Squash为`9986786`，PR47审计报告已Squash为`d3b172c`，
 
 ## 验证与接续
 
-依赖变更执行相关图片／预览／保存／动效／容器回归、lint、类型和一次正式Next构建，最终Head保留五项完整CI。
-本机使用已有Node24开发工具；目标Linux镜像及CI为Node22.23.4，两者不冒充同环境验证。真实账号／PG写入仅由一次性CI夹具覆盖。
+执行相关运行／配置／图片／请求／健康／授权回归、lint、类型与正式Next构建；最终Head保留五项完整CI及其中新增的生产HTTPS／持久化步骤。
+本机使用已有Node24开发工具，Docker链在一次性Linux CI运行；不把本机runner测试拼接为生产闭环证据，实际结果及产物身份在对应PR记录。
 阅读或验证历史资料不自动授权执行其中的初始化、部署、回退或合并命令。
 
 `PREVIEW_RETURN = UNRESOLVED` / `RISK_DISPOSITION = ACCEPTED_FOR_LOCAL_STAGE` 不变；
@@ -35,6 +35,6 @@ PR48工程整理已Squash为`9986786`，PR47审计报告已Squash为`d3b172c`，
 
 - [检查点原文快照](CURRENT_STATUS_HISTORY_2026-10-27.md)：源main `58a92d2`，完整保留旧阶段与验收。
 - [会话原文快照](SESSION_HANDOFF_HISTORY_2026-10-27.md)：同源完整记录，旧“当前／最新”仅描述当时。
-- PR48与PR47合并结果可按PR时间线和本机交接追溯；审计原技术基线不因本轮补丁而回写。
+- PR48／47／49结果可按PR时间线和本机交接追溯；原生产审计`58a92d2`基线不回写，开发依赖剩余告警保留。
 
 完成后保持Draft，等待人工审阅。后续任务按用户新指令继续，不自动开始生产上线工作。

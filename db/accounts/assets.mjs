@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, open, readFile, rm, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
+import { readBoundedBytes, RequestBodyError } from './request-body.mjs';
 
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 export const MAX_PIXELS = 40_000_000;
@@ -10,8 +11,7 @@ const formats = { jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
 const policy = { thumbnail: [480, 60], card: [1100, 70], full: [2200, 80] };
 export class AssetError extends Error { constructor(message, status = 400) { super(message); this.status = status; } }
 
-export function assetRoot() {
-  const root = process.env.FRAME_ZERO_SITE_ASSET_ROOT;
+export function assetRoot(root = process.env.FRAME_ZERO_SITE_ASSET_ROOT) {
   if (!root || !path.isAbsolute(root) || /(?:^|[\\/])(?:public|dist|\.next|\.next-account)(?:[\\/]|$)/i.test(root)) throw new AssetError('ASSET_STORAGE_UNAVAILABLE', 503);
   return path.resolve(root);
 }
@@ -28,24 +28,14 @@ export function safeFilename(value) {
   return name;
 }
 export async function boundedBody(request, maximum = MAX_UPLOAD_BYTES) {
-  const declared = request.headers.get('content-length');
-  if (declared && (!/^\d+$/.test(declared) || Number(declared) > maximum)) throw new AssetError('UPLOAD_TOO_LARGE', 413);
-  if (!request.body) throw new AssetError('EMPTY_UPLOAD');
-  const reader = request.body.getReader(); const parts = []; let size = 0;
-  let expired = false;
-  const timer = setTimeout(() => { expired = true; void reader.cancel().catch(() => {}); }, 30_000);
   try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (expired) throw new AssetError('UPLOAD_TIMEOUT', 408);
-      if (done) break;
-      size += value.byteLength;
-      if (size > maximum) { await reader.cancel(); throw new AssetError('UPLOAD_TOO_LARGE', 413); }
-      parts.push(Buffer.from(value));
-    }
-  } finally { clearTimeout(timer); reader.releaseLock(); }
-  if (!size) throw new AssetError('EMPTY_UPLOAD');
-  return Buffer.concat(parts, size);
+    return await readBoundedBytes(request, { maximum, timeoutMs: 30_000 });
+  } catch (error) {
+    if (!(error instanceof RequestBodyError)) throw error;
+    const message = error.status === 413 ? 'UPLOAD_TOO_LARGE' : error.status === 408 ? 'UPLOAD_TIMEOUT'
+      : error.message === 'EMPTY_REQUEST_BODY' ? 'EMPTY_UPLOAD' : 'UPLOAD_INTERRUPTED';
+    throw new AssetError(message, error.status);
+  }
 }
 export function assetDto(row, slug) {
   return { id: row.id, aspectRatio: row.width / row.height, orientation: row.width === row.height ? 'square' : row.width > row.height ? 'landscape' : 'portrait', variants: Object.fromEntries(Object.keys(policy).map(name => {
@@ -66,7 +56,7 @@ export async function insertPreparedAsset(db, asset) {
   return { row: existing.rows[0], created: false };
 }
 let processing = 0;
-export async function uploadAsset(request, db, siteId) {
+export async function uploadAsset(request, db, siteId, { cleanupDirectory = rm } = {}) {
   if (processing >= 2) throw new AssetError('UPLOAD_BUSY', 429);
   safeFilename(request.headers.get('x-file-name'));
   const type = request.headers.get('content-type');
@@ -101,12 +91,18 @@ export async function uploadAsset(request, db, siteId) {
       variants[name] = { key, width: output.info.width, height: output.info.height, bytes: output.data.length, type: 'image/webp' };
     }
     const result = await insertPreparedAsset(db, { id, siteId, digest, originalType: type, width: variants.full.width, height: variants.full.height, variants });
-    if (!result.created) await rm(directory, { recursive: true, force: true });
-    directory = null;
+    if (result.created) directory = null;
     return result;
   } finally {
-    if (directory) await rm(directory, { recursive: true, force: true });
-    processing--;
+    try {
+      if (directory) {
+        try { await cleanupDirectory(directory, { recursive: true, force: true }); }
+        catch {
+          console.error('ASSET_UPLOAD_CLEANUP_FAILED');
+          throw new AssetError('ASSET_STORAGE_UNAVAILABLE', 503);
+        }
+      }
+    } finally { processing--; }
   }
 }
 export async function readAssetVariant(row, variant, root = assetRoot()) {

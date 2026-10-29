@@ -1,0 +1,23 @@
+{
+	admin off
+	servers {
+		strict_sni_host on
+		enable_full_duplex
+		timeouts {
+			read_header 10s
+			read_body 30s
+			idle 2m
+		}
+	}
+	log default {
+		output stdout
+		format json
+		level {$PORTFOLIO_LOG_LEVEL:INFO}
+	}
+}
+
+import /etc/caddy/site-proxy.caddy
+
+{$PORTFOLIO_SITE_DOMAIN} {
+	import portfolio_site_contract
+}

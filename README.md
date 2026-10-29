@@ -4,6 +4,9 @@
 
 当前已具备本机可用的账号、Site 授权、三类独立内容空间与编辑器、私有作品资源和发布链路。**本机验收不等于公网部署或 V1 上线**。本机账号验收不是真实客户认证证明。`FRAME//ZERO` 是历史代号和技术命名空间，不是正式品牌。
 
+生产Site接入候选的严格配置与私有持久化方式见[运行合同](docs/PRODUCTION_SITE_DEPLOYMENT.md)，
+同一镜像的隔离HTTPS链见[验收边界](docs/PRODUCTION_SITE_RUNTIME_ACCEPTANCE.md)。这不是日常升级、真实迁入或公网部署记录。
+
 新会话先读 [AGENTS.md](AGENTS.md) → [当前状态](docs/CURRENT_STATUS.md) → [会话交接](docs/SESSION_HANDOFF.md) 的最新检查点；按 [开发与交付流程](docs/DEVELOPMENT_WORKFLOW.md) 选择本次操作。分支、PR、授权和验收进度由当前检查点记录，实际运行目录与构建由仓库外本机交接核实；不从历史记录推断服务是否正在运行。
 
 ## 1. 已实现的核心能力
