@@ -2,7 +2,19 @@
 
 更新：2026-10-30。当前事实与授权统一见[CURRENT_STATUS](CURRENT_STATUS.md)，这里只保留最近续接信息。
 
-## 基线与已完成状态
+## 当前续接：退役发布脚本子进程诊断（2026-10-30）
+
+- PR51已合并，最新核对main为 `6c6eecc6e551172ec7675084b6eb54851d3309f8`；应用更新策略保留。其[首次main Quality失败](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/40999242678)及[收口记录](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/51#issuecomment-6514619490)保留，不以新PR通过改写旧结果。
+- 当前分支 `fix/retired-script-process-check` 只增强退休保护的子进程诊断、隔离执行及无副作用失败夹具，完成后Draft PR；不自动合并或部署。
+- 同文件树的[成功PR Quality](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/40927763789)与首次失败均为Node22.23.4、runner2.338.0、Ubuntu26.04.1／image20261025.179.1；原日志没有PowerShell实际路径版本或signal／killed。测试耗时分别约2.870秒与10.119秒。原始失败原因未确认，不能认定误报或根因已修复。
+- 首次失败停在退休测试退出码断言，后续legacy／node runtime构建与预算未执行。新检查结果仅适用于其实际Head；CI不改分类器、不默认重跑原job、不放宽断言或超时。
+- 先确认源码前置throw，再在无仓库、无发布凭据的临时目录运行完整脚本副本。保留 `pwsh -NoProfile -File`、10秒、退出1、退休标记与禁止历史正文输出；收集code／signal／killed／耗时／限长输出与版本，实际拒绝先于版本探针，避免预热首个启动。
+- 本机Windows x64／Node24.19.0／PowerShell7.6.5的正常启退、普通抛错、原拒绝及原测试上下文均正常；不代替原Ubuntu现场。超时／信号／退出0／缺失标记等受控夹具必须失败，长输出仅截诊断、不截判定。
+- 日常3001／PostgreSQL及真实数据、Published不操作，无完整环境副本。共享登录额度、真实部署恢复缺口及 `PREVIEW_RETURN=UNRESOLVED / ACCEPTED_FOR_LOCAL_STAGE` 不变。具体最终Head、本机检查与CI状态集中见本轮Draft PR，不为状态文字反复提交。
+
+下方是PR51准备阶段的历史交接，不再构成当前分支或执行授权。
+
+## PR51准备阶段基线（历史快照）
 
 最新main为 `68dfd53386f4afb05e6d5c5478e6c58d40b0c139`；PR50已Ready并Squash，树与原Head `ef4b77b` 一致。
 [收口评论](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/50#issuecomment-6499205606)记录实际main push五项完整CI成功、Linux/amd64同镜像HTTPS／重启持久化与限制。
