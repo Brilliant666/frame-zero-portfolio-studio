@@ -4,7 +4,7 @@
 
 当前已具备本机可用的账号、Site 授权、三类独立内容空间与编辑器、私有作品资源和发布链路。**本机验收不等于公网部署或 V1 上线**。本机账号验收不是真实客户认证证明。`FRAME//ZERO` 是历史代号和技术命名空间，不是正式品牌。
 
-生产Site接入候选的严格配置与私有持久化方式见[运行合同](docs/PRODUCTION_SITE_DEPLOYMENT.md)，
+PR50已合并的生产Site入口、严格配置与私有持久化方式见[运行合同](docs/PRODUCTION_SITE_DEPLOYMENT.md)，
 同一镜像的隔离HTTPS链见[验收边界](docs/PRODUCTION_SITE_RUNTIME_ACCEPTANCE.md)。这不是日常升级、真实迁入或公网部署记录。
 
 新会话先读 [AGENTS.md](AGENTS.md) → [当前状态](docs/CURRENT_STATUS.md) → [会话交接](docs/SESSION_HANDOFF.md) 的最新检查点；按 [开发与交付流程](docs/DEVELOPMENT_WORKFLOW.md) 选择本次操作。分支、PR、授权和验收进度由当前检查点记录，实际运行目录与构建由仓库外本机交接核实；不从历史记录推断服务是否正在运行。
@@ -24,7 +24,7 @@
 
 ## 2. 页面与后台入口
 
-以下是 Site Node 本机运行路径。`siteSlug` 由服务器查归属，不直接等同于用户名。
+主要业务路径由Site本机与生产模式复用；/test系列仅属本机受控入口。`siteSlug` 由服务器查归属，不直接等同于用户名。
 
 | 路径 | 职责 |
 | --- | --- |
@@ -88,7 +88,9 @@
 | Site 账号候选 | 独立候选目录已有匹配构建和配置后运行 `npm run accounts:start`（3003）；写入验收必须另用真正隔离的测试库。 |
 | 手工诊断 Site 日常入口 | `npm run platform:start`（runner的`--daily`模式，3001）仅在确认原日常任务未运行且明确选用人工托管时使用，不是当前机器的默认恢复入口。 |
 | Legacy兼容 | `npm run dev` 启动vinext/D1及照片companion，也默认占用3001；仅在明确的legacy环境使用。 |
-| Standard Next／Stage A2 | `npm run start` 启动standalone产物；不自动接入本机账号runner与业务配置。Linux部署另按有界 [Stage A2 runbook](docs/deployment-bootstrap-runbook.md) 和独立授权执行。 |
+| Standard Next／Stage A2封闭壳 | `npm run start`启动standalone；旧[Stage A2 runbook](docs/deployment-bootstrap-runbook.md)仅适用封闭壳，不作为生产Site更新器。 |
+| 生产Site首次部署 | 按[首次环境准备](docs/PRODUCTION_SITE_DEPLOYMENT.md#首次环境准备)选择空站开始或一次性迁入本地业务，准备受控账号与必要数据保护；真实部署另获授权。 |
+| 已有实例普通更新 | 按[应用更新分类](docs/DEVELOPMENT_WORKFLOW.md#应用更新与数据操作)及[生产app更新](docs/PRODUCTION_SITE_DEPLOYMENT.md#普通应用版本更新)准备匹配产物，只切app并保留原PG／照片／配置。Windows继续使用既有控制入口，不强制Docker。 |
 
 机器专属的运行目录、BUILD、外置配置和状态／启动／停止命令只记录在仓库外本机交接，不提交真实路径或密钥。
 **日常恢复不迁移、不重新开户、不初始化已有数据库、不重导图库、不重新发布。** Docker不是现有Windows日常的前提。
@@ -98,6 +100,9 @@
 按 [account-config](scripts/lib/account-config.mjs) 核对配置形状，明确新目标后才显式执行 `accounts:migrate`、按授权交互式 `accounts:provision`，并在闲置目录构建一次。
 隔离测试使用专用测试库；具体场景、依赖与验收见 [开发与交付流程](docs/DEVELOPMENT_WORKFLOW.md)。
 应用回退使用已保留且兼容的应用构建，**不以旧数据库快照覆盖新业务数据**。真实服务器、DNS、TLS、迁移和公网验收均需要对应授权。
+
+普通兼容更新不默认重建数据库、重导照片或重新全量备份图库；常规备份独立维护，schema／批量数据／存储搬迁与故障恢复按实际影响另行处理。提交文档或合并PR不会自动重启应用。
+当前已有Windows控制与生产人工Compose app-only操作，**尚无后台一键更新、专用Site更新脚本或自动镜像发布／回退**。详细策略统一在[开发与交付流程](docs/DEVELOPMENT_WORKFLOW.md#普通应用更新)，不把规则调整当成功能已经实现。
 
 ## 6. 测试与预算政策
 
