@@ -103,3 +103,12 @@ test("confirmed save hydration is network-independent and preserves save reconci
   assert.equal(requests, 0, "An unavailable asset list cannot fail an acknowledged save");
   assert.throws(() => hydrateConfirmedSiteWorks(persisted, "https://example.com/assets"));
 });
+
+test('render hydration normalizes legacy published focus values without mutating snapshots', () => {
+  const content = { works: [{ assetId: id, position: '50% 50%;position:fixed;inset:0' }], templateWorks: { 'cinematic-light': [{ assetId: 'missing', position: 'url(https://tracking.example/image)' }] } };
+  const before = structuredClone(content);
+  const hydrated = hydrateSiteWorks(content, [asset()]);
+  assert.equal(hydrated.works[0].position, '50% 50%');
+  assert.equal(hydrated.templateWorks['cinematic-light'][0].position, '50% 50%');
+  assert.deepEqual(content, before);
+});
