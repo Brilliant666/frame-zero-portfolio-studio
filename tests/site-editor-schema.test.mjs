@@ -180,7 +180,7 @@ test('Site asset structure is strict and every reference channel is collected fo
   assert.deepEqual(m.parseSpaceContent('premium-polaroid', premium), premium);
   assert.deepEqual(m.contentAssetIds('premium-polaroid', premium).sort(), ids);
   const basic = m.createEmptyBasicContent();
-  const work = { assetId: ids[0], code: '', title: '', subtitle: '', image: `/api/sites/fixture/assets/${ids[0]}/full`, preview: '', position: '50% 50%', previewWidth: 100, previewHeight: 100, fullWidth: 100, enabled: true };
+  const work = { assetId: ids[0], code: '', title: '', subtitle: '', image: `/api/sites/fixture_site/assets/${ids[0]}/full`, preview: '', position: '50% 50%', previewWidth: 100, previewHeight: 100, fullWidth: 100, enabled: true };
   basic.works = [work]; basic.templateWorks['cinematic-light'] = [{ ...work, assetId: ids[1], image: '' }]; basic.social = [{ label: 'Card', handle: '', qrAssetId: ids[2] }];
   const parsed = m.parseSpaceContent('basic', basic);
   assert.equal(parsed.works[0].image, '', 'Only stable identity, not resolved URL, persists');

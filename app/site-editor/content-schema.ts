@@ -60,7 +60,7 @@ function parseWork(value: unknown): Work {
   for (const k of ["previewWidth", "previewHeight", "fullWidth"] as const) if (!Number.isSafeInteger(w[k]) || (w[k] as number) < 1 || (w[k] as number) > 100000) throw new Error("作品尺寸不合法");
   if (typeof w.enabled !== "boolean" || (w.locked !== undefined && typeof w.locked !== "boolean") || (w.slotIndex !== undefined && (!Number.isSafeInteger(w.slotIndex) || (w.slotIndex as number) < 0 || (w.slotIndex as number) > 1000))) throw new Error("作品配置不合法");
   for (const k of ["image", "preview"] as const) {
-    if (typeof w[k] !== "string" || (w[k] !== "" && !new RegExp(`^/api/sites/[a-z0-9-]+/assets/${assetId}/(?:thumbnail|card|full)$`).test(w[k] as string))) throw new Error("作品地址不合法");
+    if (typeof w[k] !== "string" || (w[k] !== "" && !new RegExp(`^/api/sites/[a-z][a-z0-9_-]{2,29}/assets/${assetId}/(?:thumbnail|card|full)$`).test(w[k] as string))) throw new Error("作品地址不合法");
   }
   return { assetId, ...(w.slotIndex !== undefined ? { slotIndex: w.slotIndex as number } : {}), ...(w.locked !== undefined ? { locked: w.locked as boolean } : {}),
     code: basicText(w.code), title: basicText(w.title), subtitle: basicText(w.subtitle), position: basicText(w.position, 100),

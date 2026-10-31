@@ -97,3 +97,16 @@ test("published contact cards accept only public display variants and still fail
     assert.equal(await probePlatformCardAvailability(`${base}/full`, { fetchImpl: async () => new Response(null, { headers: { "content-type": type } }) }), false);
   }
 });
+
+
+test("underscore Site slugs accept controlled private and published contact cards", async t => {
+  const { probePlatformCardAvailability } = await loadAvailabilityProbe(t);
+  const id = "12345678-1234-4234-8234-123456789abc";
+  const fetchImpl = async () => new Response(null, { headers: { "content-type": "image/webp" } });
+  for (const kind of ["sites", "public-sites"]) {
+    assert.equal(await probePlatformCardAvailability(`/api/${kind}/owner_a/assets/${id}/card`, { fetchImpl }), true);
+    for (const slug of ["ab", "1owner", "Owner_a", "owner.a", "owner%5fa", "a".repeat(31)]) {
+      assert.equal(await probePlatformCardAvailability(`/api/${kind}/${slug}/assets/${id}/card`, { fetchImpl }), false, slug);
+    }
+  }
+});
