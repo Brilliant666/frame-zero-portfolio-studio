@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 export const dynamic = "force-dynamic";
 
 export default async function InternalTestLayout({ children }: { children: ReactNode }) {
+  if (process.env.FRAME_ZERO_PRODUCTION_SITE === "1") notFound();
   const requestHeaders = await headers();
   const host = requestHeaders.get("host") ?? "";
   const match = /^(127\.0\.0\.1|localhost|\[::1\])(?::([1-9][0-9]{0,4}))?$/i.exec(host);
