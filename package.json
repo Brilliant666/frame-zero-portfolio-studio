@@ -30,7 +30,7 @@
     "start:legacy": "vinext start",
     "test": "npm run check:public && npm run test:dependency-security && npm run test:contracts && npm run test:migrations && npm run test:adapters && npm run test:photos && npm run test:platform-qr && npm run test:layouts && npm run test:materials && npm run test:composition && npm run test:fallback && npm run test:preview && npm run test:admin && npm run test:polish && npm run test:container-contract && npm run test:deployment-config && npm run test:deployment-bootstrap && npm run test:deployment-operations && npm run test:legacy-runtime && npm run test:node-runtime",
     "test:contracts": "node --test tests/site-document.test.mjs",
-    "test:migrations": "node --test tests/stable-id-migration.test.mjs",
+    "test:migrations": "node --test tests/stable-id-migration.test.mjs tests/account-migration-metadata.test.mjs",
     "test:adapters": "node --test tests/legacy-site-content-adapter.test.mjs",
     "test:photos": "node --test tests/photo-import.test.mjs tests/photo-import-service.test.mjs tests/dev-local.test.mjs tests/photo-import-client.test.mjs tests/photo-library-management.test.mjs",
     "test:platform-qr": "node --test tests/platform-qr-assets.test.mjs tests/platform-qr-attachment.test.mjs tests/platform-qr-client.test.mjs tests/platform-qr-route.test.mjs tests/platform-qr-service.test.mjs tests/platform-card-availability.test.mjs tests/platform-qr-rendering.test.mjs",
@@ -62,7 +62,8 @@
     "verify:deployment-bootstrap": "node scripts/verify-deployment-bootstrap.mjs",
     "db:generate": "drizzle-kit generate",
     "test:dependency-security": "node --test tests/production-dependency-baseline.test.mjs",
-    "verify:production-site": "node scripts/verify-production-site-runtime.mjs"
+    "verify:production-site": "node scripts/verify-production-site-runtime.mjs",
+    "check:account-migrations": "node scripts/check-account-migrations.mjs"
   },
   "dependencies": {
     "better-auth": "1.7.7",
