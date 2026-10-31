@@ -1,7 +1,7 @@
 import { accountRuntimeEnabled, readAccountConfig } from '../../scripts/lib/account-config.mjs';
 export { accountRuntimeEnabled } from '../../scripts/lib/account-config.mjs';
 import { createAccountRuntime } from './runtime.mjs';
-import { JSON_BODY_LIMITS, readBoundedText, RequestBodyError } from './request-body.mjs';
+import { AUTH_BODY_TIMEOUT_MS, JSON_BODY_LIMITS, readBoundedText, RequestBodyError } from './request-body.mjs';
 
 let singleton;
 export function getAccountRuntime() {
@@ -73,7 +73,7 @@ export async function handleAuthRequest(request) {
       ['/api/auth/revoke-sessions','POST'],
     ]);
     if (allowed.get(path) !== request.method) return accountJson({ error: 'NOT_AVAILABLE' }, 404);
-    let raw = await readBoundedText(request, { maximum: JSON_BODY_LIMITS.auth, emptyAllowed: true });
+    let raw = await readBoundedText(request, { maximum: JSON_BODY_LIMITS.auth, emptyAllowed: true, bucket: 'auth', timeoutMs: AUTH_BODY_TIMEOUT_MS });
     if (path.endsWith('/sign-in/username')) {
       let body;
       try { body = JSON.parse(raw); } catch { return accountJson({ error: 'INVALID_REQUEST' }, 400); }

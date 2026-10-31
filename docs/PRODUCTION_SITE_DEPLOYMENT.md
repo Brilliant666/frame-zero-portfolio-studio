@@ -133,7 +133,7 @@ JSON批改、素材格式／键／删除语义变化也属于数据影响，不�
 legacy／test／未知API继续拒绝；客户端转发／身份头不作为登录身份，代理先清除再设置canonical Host／XFH／HTTPS，应用仍校验Host／Origin。
 strict_sni_host在路由前拒绝SNI／Host不符421，同域错误端口403。日志不记录Cookie／凭据／请求URI查询。
 
-JSON登录／发布2048bytes、草稿512000bytes，应用逐块限量／10秒／8个JSON读取名额；上传25MiB／30秒／2并发及原图片校验保留。
+JSON登录／发布2048bytes、草稿512000bytes，应用逐块限量／登录2秒、草稿与发布10秒／匿名与认证分别8个JSON读取名额，认证写入每用户最多2个；上传25MiB／30秒／2并发及原图片校验保留。
 代理read_header10s／read_body30s／upstream header90s，正式与CI共同enable_full_duplex，不额外完整缓存上传。
 参考Caddy官方[代理头](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy)、[请求体限制](https://caddyserver.com/docs/caddyfile/directives/request_body)、[超时](https://caddyserver.com/docs/caddyfile/options)。
 
