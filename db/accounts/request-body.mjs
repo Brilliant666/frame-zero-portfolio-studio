@@ -1,7 +1,10 @@
 // Limits apply while streaming, before allocating the complete request body.
 export const JSON_BODY_LIMITS = Object.freeze({ auth: 2048, draft: 512000, publication: 2048 });
 export const MAX_JSON_READERS = 8;
-let activeJsonReaders = 0;
+export const MAX_PRINCIPAL_JSON_READERS = 2;
+export const AUTH_BODY_TIMEOUT_MS = 2_000;
+const activeJsonReaders = { auth: 0, editor: 0 };
+const principalReaders = new Map();
 export class RequestBodyError extends Error {
   constructor(message, status = 400) { super(message); this.status = status; }
 }
@@ -53,12 +56,26 @@ export async function readBoundedBytes(request, { maximum, timeoutMs = 10_000, e
   return Buffer.concat(parts, size);
 }
 
-export async function readBoundedText(request, policy) {
-  if (activeJsonReaders >= MAX_JSON_READERS) throw new RequestBodyError('JSON_REQUEST_BUSY', 429);
-  activeJsonReaders++;
+export async function readBoundedText(request, { bucket = 'auth', principal, ...policy } = {}) {
+  if (!Object.hasOwn(activeJsonReaders, bucket) || bucket === 'editor' && (typeof principal !== 'string' || !principal)) {
+    throw new TypeError('Invalid request body scope.');
+  }
+  const held = bucket === 'editor' ? principalReaders.get(principal) ?? 0 : 0;
+  if (activeJsonReaders[bucket] >= MAX_JSON_READERS || bucket === 'editor' && held >= MAX_PRINCIPAL_JSON_READERS) {
+    throw new RequestBodyError('JSON_REQUEST_BUSY', 429);
+  }
+  activeJsonReaders[bucket]++;
+  if (bucket === 'editor') principalReaders.set(principal, held + 1);
   try {
     const bytes = await readBoundedBytes(request, policy);
     try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); }
     catch { throw new RequestBodyError('INVALID_REQUEST_BODY'); }
-  } finally { activeJsonReaders--; }
+  } finally {
+    activeJsonReaders[bucket]--;
+    if (bucket === 'editor') {
+      const remaining = principalReaders.get(principal) - 1;
+      if (remaining) principalReaders.set(principal, remaining);
+      else principalReaders.delete(principal);
+    }
+  }
 }

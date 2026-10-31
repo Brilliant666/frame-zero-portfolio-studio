@@ -42,7 +42,7 @@ export async function handleDraftRequest(request: Request, slug: string, space: 
     }
     if (request.method !== "PUT") return accountJson({ error: "METHOD_NOT_ALLOWED" }, 405);
     if (!(request.headers.get("content-type") ?? "").startsWith("application/json")) return accountJson({ error: "INVALID_CONTENT_TYPE" }, 415);
-    const raw = await readBoundedText(request, { maximum: JSON_BODY_LIMITS.draft });
+    const raw = await readBoundedText(request, { maximum: JSON_BODY_LIMITS.draft, bucket: "editor", principal: userId });
     let payload, content;
     try {
       payload = JSON.parse(raw);

@@ -15,7 +15,7 @@ export async function handlePublicationRequest(request: Request,slug: string,spa
     if(request.method==="GET")return accountJson(await publicationHistory(auth.runtime.pool,auth.account.site.id,{authorizedSpaces:["basic",...auth.account.templates.premium],prepare:(value:unknown,targetSpace:string)=>{if(!isContentSpace(targetSpace))throw Error("内容空间不合法");return preparePublication(value,targetSpace);}}));
     if(request.method!=="POST")return accountJson({error:"METHOD_NOT_ALLOWED"},405);
     if(!(request.headers.get("content-type")??"").startsWith("application/json"))return accountJson({error:"INVALID_CONTENT_TYPE"},415);
-    const raw=await readBoundedText(request,{maximum:JSON_BODY_LIMITS.publication});
+    const raw=await readBoundedText(request,{maximum:JSON_BODY_LIMITS.publication,bucket:"editor",principal:auth.userId});
     let payload;
     try {
       payload=JSON.parse(raw);
