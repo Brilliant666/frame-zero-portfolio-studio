@@ -54,6 +54,12 @@ export async function basicPublicationDatabaseIntegration({ runtime }) {
     assert.deepEqual(limited.history.map(row => row.id), [basic.id]);
     assert.ok(limited.history.every(row => !('content' in row)));
     await client.query("INSERT INTO site_template_grants(id,site_id,product,source) VALUES($1,$2,'premium-polaroid','operator-test')", [randomUUID(), siteId]);
+    await client.query('UPDATE "user" SET banned=true WHERE id=$1', [userId]);
+    try {
+      await assert.rejects(publish('basic', 1, basic.id), error => error.status === 403);
+      await assert.rejects(rollback('premium-polaroid', old.id, basic.id), error => error.status === 403);
+      assert.equal((await readPublished(pool, 'upgradefixture')).id, basic.id, 'Disable preserves the published pointer');
+    } finally { await client.query('UPDATE "user" SET banned=false WHERE id=$1', [userId]); }
     const premium = await publish('premium-polaroid', 2, basic.id);
     assert.equal(premium.templateId, 'premium-polaroid');
     const hidden = await publicationHistory(pool, siteId, { allowPremium: false });
