@@ -7,6 +7,7 @@ import { type PreviewPortfolioDocumentV1 } from "./document";
 export const PREVIEW_PROOF_HEADER = "x-frame-zero-preview-proof";
 export const PREVIEW_ORIGIN_HEADER = "x-frame-zero-preview-origin";
 export async function requirePreviewWorkspace(request?: Request): Promise<boolean> {
+  if (process.env.FRAME_ZERO_PRODUCTION_SITE === "1") return false;
   const secret = (env as Record<string, unknown>).FRAME_ZERO_PREVIEW_WORKSPACE_SECRET;
   if (typeof secret !== "string" || secret.length < 48) return false;
   const h = request ? request.headers : await headers();

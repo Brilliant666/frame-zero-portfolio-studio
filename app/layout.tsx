@@ -19,7 +19,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
   const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "127.0.0.1:3001";
   const protocol = requestHeaders.get("x-forwarded-proto") ?? (host.startsWith("127.0.0.1") ? "http" : "https");
-  const origin = `${protocol}://${host}`;
+  const origin = process.env.FRAME_ZERO_PRODUCTION_SITE === "1"
+    ? process.env.FRAME_ZERO_ACCOUNT_ORIGIN
+    : `${protocol}://${host}`;
+  if (!origin) throw new Error("Production metadata requires a configured origin.");
   const title = `${siteConfig.profile.brand}｜${siteConfig.profile.city} Cosplay 摄影师`;
   const description = `漫展场照、主题私影与影棚创作，${siteConfig.trustItems[1].value}。${siteConfig.profile.intro}`;
 
