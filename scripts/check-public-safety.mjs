@@ -223,11 +223,12 @@ for (const entry of reachableEntries) {
   }
 }
 
-// Only the exact public attribution trailer in commit metadata is exempt.
+// Only the exact public attribution value in commit metadata is exempt.
+// Git trailer field names are case-insensitive; GitHub rewrites their casing.
 // Files and historical patches retain the complete email and credential checks.
 const historyMetadata = gitBuffer("log", "--all", "--format=fuller", "--no-patch").toString("utf8");
 const reviewedMetadata = historyMetadata.split(/\r?\n/)
-  .filter(line => !/^    Co-Authored-By: Claude Code <noreply@anthropic[.]com>$/.test(line)).join("\n");
+  .filter(line => !/^    [Cc][Oo]-[Aa][Uu][Tt][Hh][Oo][Rr][Ee][Dd]-[Bb][Yy]: Claude Code <noreply@anthropic[.]com>$/.test(line)).join("\n");
 inspectText(reviewedMetadata, "reachable history metadata");
 const historyPatch = gitBuffer(
   "log",
