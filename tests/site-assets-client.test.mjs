@@ -103,3 +103,22 @@ test("confirmed save hydration is network-independent and preserves save reconci
   assert.equal(requests, 0, "An unavailable asset list cannot fail an acknowledged save");
   assert.throws(() => hydrateConfirmedSiteWorks(persisted, "https://example.com/assets"));
 });
+
+
+test("underscore Site slugs preserve private asset parsing and acknowledged draft hydration", () => {
+  const endpoint = "/api/sites/owner_a/assets";
+  const entry = asset();
+  for (const [kind, variant] of Object.entries(entry.variants)) variant.src = `${endpoint}/${id}/${kind}`;
+  assert.deepEqual(parseSiteAssets({ version: 1, assets: [entry] }, endpoint), { version: 1, assets: [entry] });
+  const draft = { works: [{ assetId: id }], templateWorks: {} };
+  assert.equal(hydrateConfirmedSiteWorks(draft, endpoint).works[0].image, `${endpoint}/${id}/full`);
+  assert.equal(entryPhotoSource(entry), `${endpoint}/${id}/card`);
+  for (const slug of ["owner_a", "owner-a"]) {
+    const published = structuredClone(entry);
+    for (const [kind, variant] of Object.entries(published.variants)) variant.src = `/api/public-sites/${slug}/assets/${id}/${kind}`;
+    assert.equal(entryPhotoSource(published), `/api/public-sites/${slug}/assets/${id}/card`);
+  }
+  for (const invalid of ["ab", "1owner", "Owner_a", "owner.a", "owner%5fa", "a".repeat(31)]) {
+    assert.equal(parseSiteAssets({ version: 1, assets: [] }, `/api/sites/${invalid}/assets`), null, invalid);
+  }
+});

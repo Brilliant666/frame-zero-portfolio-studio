@@ -22,8 +22,8 @@ export async function probePlatformCardAvailability(
       ?.split(";", 1)[0]
       .trim()
       .toLowerCase();
-    const siteVariant = /^\/api\/sites\/[a-z0-9-]+\/assets\/[a-f0-9-]+\/(?:card|full|original)$/.test(url)
-      || /^\/api\/public-sites\/[a-z0-9-]+\/assets\/[a-f0-9-]+\/(?:card|full)$/.test(url);
+    const siteVariant = /^\/api\/sites\/[a-z][a-z0-9_-]{2,29}\/assets\/[a-f0-9-]+\/(?:card|full|original)$/.test(url)
+      || /^\/api\/public-sites\/[a-z][a-z0-9_-]{2,29}\/assets\/[a-f0-9-]+\/(?:card|full)$/.test(url);
     return response.ok && (contentType === "image/png" || siteVariant && ["image/jpeg", "image/webp"].includes(contentType ?? ""));
   } catch {
     return false;

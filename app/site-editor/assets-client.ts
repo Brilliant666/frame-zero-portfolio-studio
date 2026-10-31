@@ -6,7 +6,7 @@ export interface SiteAssetManifest extends PhotoLibraryManifest { assets: SiteAs
 
 /** Separate Site transport: never relax the legacy /photos/library validator. */
 export function parseSiteAssets(value: unknown, endpoint: string): SiteAssetManifest | null {
-  if (!/^\/api\/sites\/[a-z0-9-]+\/assets$/.test(endpoint) || !value || typeof value !== "object") return null;
+  if (!/^\/api\/sites\/[a-z][a-z0-9_-]{2,29}\/assets$/.test(endpoint) || !value || typeof value !== "object") return null;
   const raw = value as { version?: unknown; assets?: unknown; truncated?: unknown };
   if (!Array.isArray(raw.assets)) return null;
   if ("truncated" in raw && typeof raw.truncated !== "boolean") return null;
@@ -70,7 +70,7 @@ export function hydrateSiteWorks(content: SiteContent, assets: readonly PhotoAss
  * Image GET/HEAD still independently authorize the actual session and Site.
  */
 export function hydrateConfirmedSiteWorks(content: SiteContent, endpoint: string): SiteContent {
-  if (!/^\/api\/sites\/[a-z0-9-]+\/assets$/.test(endpoint)) throw new Error("Invalid Site asset endpoint");
+  if (!/^\/api\/sites\/[a-z][a-z0-9_-]{2,29}\/assets$/.test(endpoint)) throw new Error("Invalid Site asset endpoint");
   const hydrate = (works: SiteContent["works"]) => works.map(work => {
     const valid = typeof work.assetId === "string" && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(work.assetId);
     return { ...work, image: valid ? `${endpoint}/${work.assetId}/full` : "", preview: valid ? `${endpoint}/${work.assetId}/card` : "" };
