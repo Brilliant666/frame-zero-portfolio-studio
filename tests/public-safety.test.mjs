@@ -25,12 +25,26 @@ function fixture(t) {
   };
 }
 
-test('public automated attribution is accepted in reachable commit history', t => {
-  const f = fixture(t);
-  f.git('commit', '-m', 'fixture', '-m', `Co-Authored-By: Claude Code <${attributionAddress}>`);
-  const result = f.scan();
-  assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /Public repository safety check passed/);
+test('public automated attribution accepts GitHub trailer field casing', async t => {
+  for (const field of ['Co-Authored-By', 'Co-authored-by', 'co-authored-by', 'CO-AUTHORED-BY']) {
+    await t.test(field, t => {
+      const f = fixture(t);
+      f.git('commit', '-m', 'fixture', '-m', `${field}: Claude Code <${attributionAddress}>`);
+      const result = f.scan();
+      assert.equal(result.status, 0, result.stderr);
+      assert.match(result.stdout, /Public repository safety check passed/);
+    });
+  }
+});
+
+test('trailer casing compatibility does not relax the exact public attribution value', async t => {
+  for (const value of [`Other Name <${attributionAddress}>`, `Claude Code <${attributionAddress}> extra`, `Claude Code <${attributionAddress.toUpperCase()}>`]) {
+    await t.test(value, t => {
+      const f = fixture(t);
+      f.git('commit', '-m', 'fixture', '-m', `Co-authored-by: ${value}`);
+      assert.equal(f.scan().status, 1);
+    });
+  }
 });
 
 test('similar private addresses remain rejected in commit messages and candidate files', async t => {
