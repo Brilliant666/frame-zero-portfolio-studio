@@ -6,8 +6,8 @@
 
 | 项目 | 核对结果 |
 | --- | --- |
-| main | `667092b20fa7f2f0d21ee39324f209eb5e74b904`；[PR52](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/52) 已于 2026-10-30 合并 |
-| 对应 main push | [Quality](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41017126576)、[Public repository safety](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41017126595)、[Container](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41017126641)、[Deployment Bootstrap](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41017126559)、[PostgreSQL Integration](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41017126574) 均成功；只证明该 SHA 的 CI |
+| main | `14098a2355cfe813a8f47452a52935559029f9e0`；[PR53](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/53) 已于 2026-10-31 人工合并，修复提交署名扫描误报 |
+| PR52 基线的历史 main push | [Quality](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41017126576)、[Public repository safety](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41017126595)、[Container](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41017126641)、[Deployment Bootstrap](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41017126559)、[PostgreSQL Integration](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41017126574) 均成功；只证明 `667092b` 的 CI，不代表 PR53 合并后的 main push 状态 |
 | 既有实现 | PR50 生产入口与隔离 HTTPS／持久化验收、PR51 应用更新策略、PR52 退役脚本诊断已合并；不等于真实服务器已部署或日常应用已升级 |
 | 历史 Draft | [PR16](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/16)、[PR26](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/26) 保持历史用途，不推进 |
 

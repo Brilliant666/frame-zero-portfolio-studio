@@ -4,7 +4,7 @@
 
 ## 当前续接：审查第 1 批
 
-- 已核对 main 为 `667092b20fa7f2f0d21ee39324f209eb5e74b904`，[PR52](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/52) 已合并，该 main push 五项完整 CI 均成功；证据见当前检查点。
+- 已核对 main 为 `14098a2355cfe813a8f47452a52935559029f9e0`，[PR53](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/53) 已由用户人工合并，解决公开署名扫描误报。PR53 Head 五项完整 CI 已成功；合并后的 main push 结果须另行核对，不与 PR52 历史证据混用。
 - 2026-10-31 只读审查已交付，用户授权第 1 批。先以独立文档 PR 修正文档漂移，随后按检查点的小 PR 顺序推进；外站导航和 pwsh 测试的行为选择仍保留待定。
 - 每个 PR 从实时最新 main 新建分支，记录改动、理由、验证与风险，五项完整 CI 成功后交人工合并；纯文档 DOCS_ONLY 不能替代完整运行，使用既有 workflow_dispatch。
 - 不直接推 main、不合并、不部署；日常应用／PG／真实素材和数据不操作。历史 PR16、PR26 不推进；本机私有交接不提交。
