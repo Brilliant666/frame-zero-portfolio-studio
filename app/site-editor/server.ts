@@ -22,6 +22,7 @@ export async function authorizeEditor(request: Request, slug: string, space: str
 // Ownership and grant are repeated in the database operation itself. Neither a
 // client siteId nor a previously authorized page can select the write scope.
 const ownership = `EXISTS (SELECT 1 FROM sites s JOIN portfolio_users p ON p.id=s.owner_id
+ JOIN "user" u ON u.id=p.auth_user_id AND u.banned IS NOT TRUE
  JOIN account_provisioning op ON op.id=p.provisioning_id AND op.completed_at IS NOT NULL
  WHERE s.id=$1::uuid AND p.auth_user_id=$3::uuid
  AND ($2='basic' OR EXISTS (SELECT 1 FROM site_template_grants g WHERE g.site_id=s.id AND g.product=$2)))`;

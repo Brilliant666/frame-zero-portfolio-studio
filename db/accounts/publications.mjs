@@ -75,8 +75,9 @@ export async function changePublication(pool, {siteId,userId,space,payload,prepa
     if (!publicationSpaces.has(space)) throw new PublicationError('内容空间不可发布',422);
     if (!['publish', 'rollback'].includes(payload.action)) throw new PublicationError('发布操作无效',400);
     const owner = await client.query(`SELECT s.id FROM sites s JOIN portfolio_users u ON u.id=s.owner_id
+      JOIN "user" a ON a.id=u.auth_user_id AND a.banned IS NOT TRUE
       JOIN account_provisioning op ON op.id=u.provisioning_id AND op.completed_at IS NOT NULL
-      WHERE s.id=$1 AND u.auth_user_id=$2 FOR UPDATE OF s FOR SHARE OF u,op`, [siteId,userId]);
+      WHERE s.id=$1 AND u.auth_user_id=$2 FOR UPDATE OF s FOR SHARE OF u,op,a`, [siteId,userId]);
     if (!owner.rowCount) throw new PublicationError('站点授权已变化',403);
     if (space !== 'basic') {
       const grant = await client.query('SELECT id FROM site_template_grants WHERE site_id=$1 AND product=$2 FOR SHARE', [siteId,space]);
