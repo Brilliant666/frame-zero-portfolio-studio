@@ -9,7 +9,7 @@ async function serve(request: Request, context: { params: Promise<{ siteSlug: st
   if (!isSiteSlug(siteSlug) || !UUID.test(assetId) || !["thumbnail", "card", "full"].includes(variant)) return accountJson({ error: "NOT_FOUND" }, 404);
   try {
     const runtime = getAccountRuntime();
-    if (!accountRequestAllowed(request, runtime.config)) return accountJson({ error: "NOT_FOUND" }, 404);
+    if (!accountRequestAllowed(request, runtime.config, { publicRead: true })) return accountJson({ error: "NOT_FOUND" }, 404);
     const snapshot = await readPublished(runtime.pool, siteSlug);
     if (!snapshot?.assetIds.includes(assetId)) return accountJson({ error: "NOT_FOUND" }, 404);
     const rows = await readPublishedAssets(runtime.pool, snapshot);
