@@ -180,9 +180,25 @@ test('Site asset structure is strict and every reference channel is collected fo
   assert.deepEqual(m.parseSpaceContent('premium-polaroid', premium), premium);
   assert.deepEqual(m.contentAssetIds('premium-polaroid', premium).sort(), ids);
   const basic = m.createEmptyBasicContent();
-  const work = { assetId: ids[0], code: '', title: '', subtitle: '', image: `/api/sites/fixture/assets/${ids[0]}/full`, preview: '', position: '50% 50%', previewWidth: 100, previewHeight: 100, fullWidth: 100, enabled: true };
+  const work = { assetId: ids[0], code: '', title: '', subtitle: '', image: `/api/sites/fixture_site/assets/${ids[0]}/full`, preview: '', position: '50% 50%', previewWidth: 100, previewHeight: 100, fullWidth: 100, enabled: true };
   basic.works = [work]; basic.templateWorks['cinematic-light'] = [{ ...work, assetId: ids[1], image: '' }]; basic.social = [{ label: 'Card', handle: '', qrAssetId: ids[2] }];
   const parsed = m.parseSpaceContent('basic', basic);
   assert.equal(parsed.works[0].image, '', 'Only stable identity, not resolved URL, persists');
   assert.deepEqual(m.contentAssetIds('basic', parsed).sort(), ids);
+});
+
+test('basic focus positions normalize unsafe legacy CSS without rejecting or mutating drafts', async t => {
+  const m = await schema(t);
+  const id = '11111111-1111-4111-8111-111111111111';
+  for (const [position, expected] of [
+    ['20% 80%', '20% 80%'], [' -5% 150% ', '0% 100%'], ['22.1234% 80.5555%', '22.12% 80.56%'],
+    ['center', '50% 50%'], ['50% 50%;position:fixed;inset:0', '50% 50%'],
+    ['url(https://tracking.example/image)', '50% 50%'], [null, '50% 50%'],
+  ]) {
+    const content = m.createEmptyBasicContent();
+    content.works = [{ assetId: id, code: '', title: '', subtitle: '', image: '', preview: '', position, previewWidth: 100, previewHeight: 100, fullWidth: 100, enabled: true }];
+    const before = structuredClone(content);
+    assert.equal(m.parseSpaceContent('basic', content).works[0].position, expected);
+    assert.deepEqual(content, before);
+  }
 });

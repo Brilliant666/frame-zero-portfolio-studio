@@ -17,7 +17,7 @@ import type { MouseEvent } from "react";
 type Theme = "paper" | "night";
 const themeEvent="preview:theme-change";
 const subscribeTheme=(notify:()=>void)=>{window.addEventListener(themeEvent,notify);return ()=>window.removeEventListener(themeEvent,notify);};
-const themeRoute=()=>/^\/preview\/?$/.test(location.pathname) || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" && (/^\/[a-z0-9-]+\/admin\/(?:preview\/)?premium-polaroid\/?$/.test(location.pathname) || /^\/[a-z0-9-]+\/?$/.test(location.pathname) && !!document.querySelector("[data-site-premium]"));
+const themeRoute=()=>/^\/preview\/?$/.test(location.pathname) || process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" && (/^\/[a-z][a-z0-9_-]{2,29}\/admin\/(?:preview\/)?premium-polaroid\/?$/.test(location.pathname) || /^\/[a-z][a-z0-9_-]{2,29}\/?$/.test(location.pathname) && !!document.querySelector("[data-site-premium]"));
 const currentTheme=():Theme|"disabled"=>!themeRoute()?"disabled":document.documentElement.dataset.previewTheme==="paper"?"paper":"night";
 const serverTheme=()=>"disabled" as const;
 // Only the stable `change` travels through context. Each consumer reads the theme from the
