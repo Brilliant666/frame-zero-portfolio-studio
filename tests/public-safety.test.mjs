@@ -5,10 +5,14 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { reviewedHistoryMetadata } from '../scripts/lib/public-history-metadata.mjs';
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
 
 const script = fileURLToPath(new URL('../scripts/check-public-safety.mjs', import.meta.url));
 const attributionAddress = ['noreply', 'anthropic.com'].join('@');
+const metadataFunction = readFileSync(script, 'utf8').match(/^function reviewedHistoryMetadata\(text\) \{[\s\S]*?^\}/m)?.[0];
+assert.ok(metadataFunction, 'The standalone metadata normalizer is present');
+const reviewedHistoryMetadata = vm.runInNewContext(`(${metadataFunction})`);
 
 function fixture(t) {
   const dir = mkdtempSync(path.join(tmpdir(), 'frame-zero-public-safety-'));
