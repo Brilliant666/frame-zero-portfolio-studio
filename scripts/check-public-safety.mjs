@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { reviewedHistoryMetadata } from "./lib/public-history-metadata.mjs";
 
 const MAX_GIT_OUTPUT = 64 * 1024 * 1024;
 const forbiddenRasterExtension = /\.(?:jpe?g|png|webp|avif|gif|tiff?|heic|heif|dng|raw|cr2|cr3|nef|arw)$/i;
@@ -227,8 +228,7 @@ for (const entry of reachableEntries) {
 // Git trailer field names are case-insensitive; GitHub rewrites their casing.
 // Files and historical patches retain the complete email and credential checks.
 const historyMetadata = gitBuffer("log", "--all", "--format=fuller", "--no-patch").toString("utf8");
-const reviewedMetadata = historyMetadata.split(/\r?\n/)
-  .filter(line => !/^    [Cc][Oo]-[Aa][Uu][Tt][Hh][Oo][Rr][Ee][Dd]-[Bb][Yy]: Claude Code <noreply@anthropic[.]com>$/.test(line)).join("\n");
+const reviewedMetadata = reviewedHistoryMetadata(historyMetadata);
 inspectText(reviewedMetadata, "reachable history metadata");
 const historyPatch = gitBuffer(
   "log",
