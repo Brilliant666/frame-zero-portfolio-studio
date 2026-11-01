@@ -1,6 +1,6 @@
 # Site生产运行与持久化接口
 
-2026-11-01 核对 main 为 `a204b79`（PR64 已合并）；实时基线和授权见[当前检查点](CURRENT_STATUS.md)。
+2026-11-01 核对 main 为 `bb17b26`（PR64、PR65 已合并）；实时基线和授权见[当前检查点](CURRENT_STATUS.md)。
 生产运行合同在 PR50（`68dfd53`）引入；[收口记录](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/50#issuecomment-6499205606)包含实际main push及同镜像HTTPS证据。
 本文件区分首次环境准备、普通app更新、数据迁移／恢复和应用回退；不是已经部署真实服务器的记录。
 通用分类、备份与授权规则见[开发与交付流程](DEVELOPMENT_WORKFLOW.md#应用更新与数据操作)。

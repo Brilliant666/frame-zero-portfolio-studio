@@ -6,7 +6,7 @@
 
 | 项目 | 核对结果 |
 | --- | --- |
-| main | `a204b7924c230bd7ce22ecc239373fe551422bf4`；[PR64](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/64) 已于 2026-11-01 人工 Squash 合并，安全模块原 Head `82e357b` 的五项完整 CI 均成功；该证据不代替实际 main push 检查 |
+| main | `bb17b260a29f6e0d35275fafd789cfdc6aec237a`；[PR64](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/64) 与 [PR65](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/65) 已于 2026-11-01 人工 Squash 合并；两个模块最终 Head 的五项完整 CI 均成功，PR64 合并后的 main `a204b79` 也已完整通过；这些证据不代替后续实际 main push 检查 |
 | `ff8f55d` 的 main push | [Quality](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41215259889)、[Public repository safety](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41215259947)、[Container](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41215259921)、[Deployment Bootstrap](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41215259887)、[PostgreSQL Integration](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41215259881) 均成功；只证明该 SHA 的 CI |
 | 既有实现 | PR50 生产入口与隔离 HTTPS／持久化验收、PR51 应用更新策略、PR52 退役脚本诊断已合并；不等于真实服务器已部署或日常应用已升级 |
 | 历史 Draft | [PR16](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/16)、[PR26](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/26) 保持历史用途，不推进 |
@@ -16,7 +16,7 @@
 
 ## 2026-10-31 授权与第 1 批
 
-只读审查已交付，用户已授权开始第 1 批。交付方式按用户 2026-11-01 的要求：每个功能一个分支，从实时最新 main 建立；一个模块合并成一个 PR。用户于 2026-11-01 授权继续收口；五项完整 CI 成功并核对最终 Head、base 和审核条件后推进合并。自动审批曾以 Merge Without Review 拒绝 PR64 合并，用户已手动完成。其余合并仍遵守工具审批，不绕过拒绝；不直接推 main，不自动部署。
+只读审查已交付，用户已授权开始第 1 批。交付方式按用户 2026-11-01 的要求：每个功能一个分支，从实时最新 main 建立；一个模块合并成一个 PR。用户于 2026-11-01 授权继续收口；五项完整 CI 成功并核对最终 Head、base 和审核条件后推进合并。自动审批曾以 Merge Without Review 拒绝 PR64、PR65 合并，用户已手动完成。PR66 已同步上述 main；其余合并仍遵守工具审批，不绕过拒绝；不直接推 main，不自动部署。
 
 审查中需要用户决定的两项已有结论：A（外站点进公开页）选择放行，只限已发布的公开页面与入口的 GET/HEAD；C（退役 pwsh 测试）选择删除真实执行，改为静态守卫。
 
