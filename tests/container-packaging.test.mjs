@@ -5,6 +5,9 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { hasNoContainerEntrypoint } from "../scripts/lib/container-entrypoint.mjs";
+import { waitForContainerReady } from "../scripts/lib/container-readiness.mjs";
+import { promisify } from "node:util";
+import { execFile } from "node:child_process";
 import {
   loadProductionPublicFiles,
   prepareNextStandalone,
@@ -26,6 +29,41 @@ test("image inspect rejects nonempty entrypoints and malformed configuration", (
   for (const config of [undefined, null, [], "", false, 0]) {
     assert.equal(hasNoContainerEntrypoint(config), false, JSON.stringify(config));
   }
+});
+
+test("readiness retries startup failures and non-ready responses, cancelling unused bodies", async () => {
+  let calls = 0, cancelled = 0;
+  await waitForContainerReady('http://fixture', {
+    timeoutMs: 1000, intervalMs: 1,
+    fetchImpl: async (url, options) => {
+      assert.equal(url, 'http://fixture/api/health/ready');
+      assert.ok(options.signal);
+      if (++calls === 1) throw Error('connection refused');
+      return { status: calls === 2 ? 503 : 200, body: { async cancel() { cancelled++; } } };
+    },
+  });
+  assert.equal(calls, 3); assert.equal(cancelled, 2);
+});
+
+test("an unresolved readiness probe keeps a child alive until bounded failure and cleanup", async () => {
+  const moduleUrl = new URL('../scripts/lib/container-readiness.mjs', import.meta.url).href;
+  const { stdout, stderr } = await promisify(execFile)(process.execPath, ['--input-type=module', '-e', `
+    import { waitForContainerReady } from ${JSON.stringify(moduleUrl)};
+    let aborted = 0;
+    try {
+      await waitForContainerReady('http://fixture', {
+        timeoutMs: 80, probeTimeoutMs: 20, intervalMs: 1,
+        fetchImpl: (_url, { signal }) => { signal.addEventListener('abort', () => aborted++); return new Promise(() => {}); },
+        readLogs: async () => 'fixture container logs',
+      });
+      throw Error('Unexpected ready');
+    } catch (error) {
+      if (!error.message.includes('fixture container logs') || !aborted) throw error;
+      console.log('BOUNDED_FAILURE');
+    } finally { console.log('CLEANUP_REACHED'); }
+  `], { timeout: 5000 });
+  assert.match(stdout, /BOUNDED_FAILURE/); assert.match(stdout, /CLEANUP_REACHED/);
+  assert.doesNotMatch(stderr, /unsettled top-level await/);
 });
 
 async function createFixture(t, manifest = { version: 1, files: ["safe.svg"] }) {
