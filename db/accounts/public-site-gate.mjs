@@ -7,8 +7,8 @@ import { readPublished } from './publications.mjs';
 export async function publicSiteGate(request, slug) {
   try {
     const runtime = getAccountRuntime();
-    if (new URL(request.url).search || !accountRequestAllowed(request, runtime.config, { publicRead: true })) return handleSiteEntry(request, slug);
-    if (!await readPublished(runtime.pool, slug)) return handleSiteEntry(request, slug);
+    if (new URL(request.url).search || !accountRequestAllowed(request, runtime.config, { publicRead: true })) return handleSiteEntry(request, slug, 'public');
+    if (!await readPublished(runtime.pool, slug)) return handleSiteEntry(request, slug, 'public');
     return null;
-  } catch { return handleSiteEntry(request, slug); }
+  } catch { return handleSiteEntry(request, slug, 'public'); }
 }
