@@ -46,7 +46,7 @@ test("server gate accepts only authenticated configured loopback origin",async()
   const source=(await fs.readFile(new URL("../app/preview-workspace/server.ts",import.meta.url),"utf8")).replace(/^import .*;\r?$/gm,"");
   const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
   const env={FRAME_ZERO_PREVIEW_WORKSPACE_SECRET:secret,FRAME_ZERO_LOCAL_PREVIEW_ORIGIN:origin};
-  const exports={};vm.runInNewContext(js,{exports,env});
+  const exports={};vm.runInNewContext(js,{exports,env,process:{env:{}}});
   const headers=new Headers({[LOCAL_PROOF_HEADER]:secret,[LOCAL_ORIGIN_HEADER]:origin,"sec-fetch-site":"same-origin",origin});
   assert.equal(await exports.requirePreviewWorkspace({headers}),true);
   headers.set(LOCAL_PROOF_HEADER,"forged");assert.equal(await exports.requirePreviewWorkspace({headers}),false);
