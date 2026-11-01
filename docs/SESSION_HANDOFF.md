@@ -1,12 +1,12 @@
 # 会话交接
 
-更新：2026-10-31。基线、授权与风险统一见[CURRENT_STATUS](CURRENT_STATUS.md)。实施前核对 GitHub，不按历史 Draft 状态继续旧任务。
+更新：2026-11-01。基线、授权与风险统一见[CURRENT_STATUS](CURRENT_STATUS.md)。实施前核对 GitHub，不按历史 Draft 状态继续旧任务。
 
 ## 当前续接：审查第 1 批
 
-- 已核对 main 为 `ff8f55d6c564c466982b57bc56be29540866ad5e`，[PR53](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/53)／[PR54](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/54) 已由用户人工合并，解决公开署名扫描误报及 GitHub 字段大小写兼容。两个 PR 的 Head 五项完整 CI 已成功；合并后的 main push 结果须另行核对，不与 PR52 历史证据混用。
-- 2026-10-31 只读审查已交付，用户授权第 1 批。先以独立文档 PR 修正文档漂移，随后按检查点的小 PR 顺序推进；外站导航和 pwsh 测试的行为选择仍保留待定。
-- 每个 PR 从实时最新 main 新建分支，记录改动、理由、验证与风险，五项完整 CI 成功后交人工合并；纯文档 DOCS_ONLY 不能替代完整运行，使用既有 workflow_dispatch。
+- 已核对 main 为 `ff8f55d6c564c466982b57bc56be29540866ad5e`（PR54 的合并提交），[PR53](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/53)／[PR54](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/54) 已由用户人工合并，解决公开署名扫描误报及 GitHub 字段大小写兼容。该 SHA 的 main push 五项完整 CI 均已成功，链接见当前检查点。
+- 2026-10-31 只读审查已交付，用户授权第 1 批。决策 A（外站导航放行）与 C（pwsh 测试改静态守卫）已有结论。按用户要求每个功能一个分支、一个模块一个 PR：[PR64](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/64) 安全边界、[PR65](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/65) 内容与数据、[PR66](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/66) 文档与测试。原单一用途 PR #55–#63 已关闭、未合并。
+- 每个模块 PR 记录改动、理由、验证与风险，五项完整 CI 成功后交人工合并；纯文档改动若走 DOCS_ONLY，不能替代完整运行，需使用既有 workflow_dispatch。
 - 不直接推 main、不合并、不部署；日常应用／PG／真实素材和数据不操作。历史 PR16、PR26 不推进；本机私有交接不提交。
 - 下方保留诊断准备期和 PR51 准备期的观察，只证明当时。PR52 最终合并状态以上方和实时 GitHub 为准，旧分支名及“Draft／本轮”不构成当前停止点。
 
