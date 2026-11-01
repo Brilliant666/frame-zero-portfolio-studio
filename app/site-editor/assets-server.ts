@@ -24,7 +24,7 @@ export async function handleAssetsRequest(request: Request, slug: string, id?: s
       return accountJson({ version: 1, truncated: result.rows.length > 10000, assets: result.rows.slice(0, 10000).map((row: Parameters<typeof assetDto>[0]) => assetDto(row, slug)) });
     }
     if (request.method === "POST") {
-      const result = await uploadAsset(request, runtime.pool, account.site.id);
+      const result = await uploadAsset(request, runtime.pool, account.site.id, { userId: auth.userId });
       return accountJson({ asset: assetDto(result.row, slug), deduplicated: !result.created }, result.created ? 201 : 200);
     }
     return accountJson({ error: "METHOD_NOT_ALLOWED" }, 405);

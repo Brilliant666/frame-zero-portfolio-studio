@@ -157,6 +157,14 @@ export async function productionSiteBusinessFlow({ request, pool, password, site
     status(await request(publicAsset(uploads[2].asset.id)), 404, 'Unused library image is not made public');
     status(await request(publicAsset(uploads[0].asset.id, 'original')), 404, 'Original is never served by the public media API');
   }
+  const crossSite = { 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'navigate', 'sec-fetch-dest': 'document' };
+  const crossSitePage = status(await request(`/${slug}`, { headers: crossSite }), 200, 'Cross-site navigation opens the public page');
+  assert.ok((await crossSitePage.text()).includes(`data-publication-id="${pointer}"`), 'Cross-site visitors see the current publication');
+  // Images on the public page are same-origin requests even for visitors arriving from another site.
+  status(await request(publicAsset(uploads[0].asset.id), { headers: { 'sec-fetch-site': 'same-origin', 'sec-fetch-mode': 'no-cors', 'sec-fetch-dest': 'image' } }), 200, 'Public page images load');
+  status(await request(publicAsset(uploads[0].asset.id), { headers: { 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'no-cors', 'sec-fetch-dest': 'image' } }), 404, 'Other sites cannot embed public images');
+  status(await request(privateAssets, { cookie, headers: crossSite }), 403, 'Private Site API still rejects cross-site');
+  status(await request(`/${slug}/admin`, { cookie, headers: crossSite }), 403, 'Site workbench still rejects cross-site');
   const history = await getJson(publicationPath('basic'), cookie, 'Publication history');
   assert.equal(history.current.id, pointer);
   for (const space of spaces) assert.ok(history.history.some(item => item.id === publications[space].id && item.space === space));

@@ -47,6 +47,8 @@ export function assetDto(row, slug) {
 export function siteAssetDto(row, slug) {
   return { ...assetDto(row, slug), ...(row.created_at == null ? {} : { createdAt: new Date(row.created_at).toISOString() }) };
 }
+// Operator imports call this inside their separately authorized transaction.
+// HTTP uploads must use withAssetOwner for both deduplication and insertion.
 export async function insertPreparedAsset(db, asset) {
   const result = await db.query(`INSERT INTO site_assets(id,site_id,digest,original_type,width,height,variants)
     VALUES($1,$2,$3,$4,$5,$6,$7::jsonb) ON CONFLICT(site_id,digest) DO NOTHING RETURNING *`,
@@ -55,8 +57,42 @@ export async function insertPreparedAsset(db, asset) {
   const existing = await db.query('SELECT * FROM site_assets WHERE site_id=$1 AND digest=$2', [asset.siteId, asset.digest]);
   return { row: existing.rows[0], created: false };
 }
+async function withAssetOwner(pool, siteId, userId, operation) {
+  if (!UUID.test(userId ?? '')) throw new AssetError('ASSET_ACCESS_DENIED', 403);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Hold these locks through the write so a concurrent ban or ownership
+    // change cannot commit between the authorization check and insertion.
+    const owner = await client.query(`SELECT s.id FROM sites s
+      JOIN portfolio_users p ON p.id=s.owner_id
+      JOIN "user" u ON u.id=p.auth_user_id AND u.banned IS NOT TRUE
+      JOIN account_provisioning op ON op.id=p.provisioning_id AND op.completed_at IS NOT NULL
+      WHERE s.id=$1::uuid AND p.auth_user_id=$2::uuid
+      FOR SHARE OF s,p,u,op`, [siteId, userId]);
+    if (!owner.rowCount) throw new AssetError('ASSET_ACCESS_DENIED', 403);
+    const result = await operation(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally { client.release(); }
+}
+
+export async function insertOwnedPreparedAsset(pool, asset, userId) {
+  return withAssetOwner(pool, asset.siteId, userId, client => insertPreparedAsset(client, asset));
+}
+
 let processing = 0;
-export async function uploadAsset(request, db, siteId, { cleanupDirectory = rm } = {}) {
+/**
+ * @param {Request} request
+ * @param {import('pg').Pool} db
+ * @param {string} siteId
+ * @param {{ userId?: string, cleanupDirectory?: typeof rm }} options
+ */
+export async function uploadAsset(request, db, siteId, { userId, cleanupDirectory = rm } = {}) {
+  if (!UUID.test(userId ?? '')) throw new AssetError('ASSET_ACCESS_DENIED', 403);
   if (processing >= 2) throw new AssetError('UPLOAD_BUSY', 429);
   safeFilename(request.headers.get('x-file-name'));
   const type = request.headers.get('content-type');
@@ -66,7 +102,7 @@ export async function uploadAsset(request, db, siteId, { cleanupDirectory = rm }
   try {
     const bytes = await boundedBody(request);
     const digest = createHash('sha256').update(bytes).digest('hex');
-    const existing = await db.query('SELECT * FROM site_assets WHERE site_id=$1 AND digest=$2', [siteId, digest]);
+    const existing = await withAssetOwner(db, siteId, userId, client => client.query('SELECT * FROM site_assets WHERE site_id=$1 AND digest=$2', [siteId, digest]));
     if (existing.rowCount) return { row: existing.rows[0], created: false };
     let metadata;
     try { metadata = await sharp(bytes, { limitInputPixels: MAX_PIXELS, failOn: 'warning' }).metadata(); }
@@ -90,7 +126,7 @@ export async function uploadAsset(request, db, siteId, { cleanupDirectory = rm }
       try { await file.writeFile(output.data); } finally { await file.close(); }
       variants[name] = { key, width: output.info.width, height: output.info.height, bytes: output.data.length, type: 'image/webp' };
     }
-    const result = await insertPreparedAsset(db, { id, siteId, digest, originalType: type, width: variants.full.width, height: variants.full.height, variants });
+    const result = await insertOwnedPreparedAsset(db, { id, siteId, digest, originalType: type, width: variants.full.width, height: variants.full.height, variants }, userId);
     if (result.created) directory = null;
     return result;
   } finally {

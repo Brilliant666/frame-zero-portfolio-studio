@@ -9,6 +9,8 @@ async function serve(request: Request, context: { params: Promise<{ siteSlug: st
   if (!isSiteSlug(siteSlug) || !UUID.test(assetId) || !["thumbnail", "card", "full"].includes(variant)) return accountJson({ error: "NOT_FOUND" }, 404);
   try {
     const runtime = getAccountRuntime();
+    // No publicRead: the public page loads these as same-origin requests, and
+    // Cross-Origin-Resource-Policy: same-origin already blocks embedding elsewhere.
     if (!accountRequestAllowed(request, runtime.config)) return accountJson({ error: "NOT_FOUND" }, 404);
     const snapshot = await readPublished(runtime.pool, siteSlug);
     if (!snapshot?.assetIds.includes(assetId)) return accountJson({ error: "NOT_FOUND" }, 404);
