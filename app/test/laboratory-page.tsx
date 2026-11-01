@@ -5,6 +5,7 @@ import { isTemplateId } from "../templates/catalog";
 import TemplateLaboratory from "./template-laboratory";
 
 export default async function TestHome({ searchParams }: { searchParams: Promise<{ template?: string }> }) {
+  if (process.env.FRAME_ZERO_PRODUCTION_SITE === "1") notFound();
   try {
     const runtime = getAccountRuntime();
     const request = new Request(`${runtime.config.origin}/test`, { headers: await headers() });

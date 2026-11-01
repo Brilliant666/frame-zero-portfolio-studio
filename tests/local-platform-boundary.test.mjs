@@ -36,3 +36,10 @@ test('HEAD reads require socket proof and exact origin just like GET',()=>{
     assert.equal(accountRequestAllowed(make('GET',{...crossSite,'x-account-local-proof':'forged'}),config,{publicRead:true}),false);
   }finally{if(old===undefined)delete process.env.FRAME_ZERO_ACCOUNT_REQUEST_PROOF;else process.env.FRAME_ZERO_ACCOUNT_REQUEST_PROOF=old;}
 });
+test('Site entry requires an explicit public or admin mode and fails closed otherwise', async () => {
+  const { handleSiteEntry } = await import('../db/accounts/site-entry.mjs');
+  const request = new Request('http://127.0.0.1:3001/fixture');
+  for (const mode of [undefined, false, true, 'Public', '']) {
+    await assert.rejects(handleSiteEntry(request, 'fixture', mode), /mode must be/, String(mode));
+  }
+});

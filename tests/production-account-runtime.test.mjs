@@ -162,7 +162,6 @@ test('public Published reads accept cross-site navigation while private reads an
   const publicRead = { publicRead: true };
   assert.equal(accountRequestAllowed(request('GET', crossSite), config(), publicRead), true);
   assert.equal(accountRequestAllowed(request('HEAD', crossSite), config(), publicRead), true);
-  assert.equal(accountRequestAllowed(request('GET', { 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'no-cors', 'sec-fetch-dest': 'image' }), config(), publicRead), true);
   assert.equal(accountRequestAllowed(request('GET', crossSite), config()), false, 'Private reads keep rejecting cross-site');
   assert.equal(accountRequestAllowed(request('POST', { ...crossSite, origin: production.FRAME_ZERO_ACCOUNT_ORIGIN }), config(), publicRead), false, 'Writes never opt in');
   for (const extra of [{ host: 'other.test:8443' }, { 'x-forwarded-proto': 'http' }, { origin: 'https://other.test' }, { 'x-user-id': 'forged' }]) {

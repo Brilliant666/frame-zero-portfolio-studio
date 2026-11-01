@@ -54,6 +54,27 @@ test("server gate accepts only authenticated configured loopback origin",async()
   env.FRAME_ZERO_LOCAL_PREVIEW_ORIGIN="http://127.0.0.1:99999";assert.equal(await exports.requirePreviewWorkspace({headers}),false);
 });
 
+test("production test pages reject before runtime, headers or legacy rendering", async () => {
+  for (const file of ['page.tsx', 'laboratory-page.tsx']) {
+    const source = await fs.readFile(new URL(`../app/test/${file}`, import.meta.url), 'utf8');
+    const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+    for (const nodeRuntime of ['0', '1']) {
+      let reads = 0, renders = 0;
+      const refusal = Error('NOT_FOUND');
+      const exports = {};
+      vm.runInNewContext(js, { exports, process: { env: { FRAME_ZERO_PRODUCTION_SITE: '1', FRAME_ZERO_ACCOUNT_NODE_RUNTIME: nodeRuntime } }, require(name) {
+        if (name === 'next/navigation') return { notFound() { throw refusal; } };
+        if (name === 'next/headers') return { headers() { reads++; throw Error('Must not read headers'); } };
+        if (name.endsWith('/http.mjs')) return { getAccountRuntime() { reads++; throw Error('Must not initialize runtime'); } };
+        if (name === 'react/jsx-runtime') return { jsx() { renders++; } };
+        return { default() { renders++; } };
+      } });
+      await assert.rejects(exports.default({ searchParams: Promise.resolve({}) }), error => error === refusal);
+      assert.equal(reads, 0); assert.equal(renders, 0);
+    }
+  }
+});
+
 test("local artifact preparation is isolated from the normal production artifact",async()=>{
   const root=await fs.mkdtemp(path.join(os.tmpdir(),"frame-zero-local-build-test-"));
   try{
