@@ -7,6 +7,7 @@ import { readFile } from "node:fs/promises";
 import process from "node:process";
 import { promisify } from "node:util";
 import { hasNoContainerEntrypoint } from "./lib/container-entrypoint.mjs";
+import { waitForContainerReady } from "./lib/container-readiness.mjs";
 
 const execFileAsync = promisify(execFile);
 const MAX_OUTPUT = 64 * 1024 * 1024;
@@ -35,18 +36,9 @@ async function docker(args, options = {}) {
 }
 
 async function waitForReady(origin) {
-  const deadline = Date.now() + 45_000;
-  while (Date.now() < deadline) {
-    try {
-      const response = await fetch(`${origin}/api/health/ready`, { cache: "no-store" });
-      if (response.status === 200) return;
-    } catch {
-      // The published loopback socket is expected to reject during startup.
-    }
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
-  const logs = await docker(["logs", containerName], { timeout: 10_000 }).catch(() => "<logs unavailable>");
-  throw new Error(`Container did not become ready.\n${logs}`);
+  return waitForContainerReady(origin, {
+    readLogs: () => docker(["logs", containerName], { timeout: 10_000 }),
+  });
 }
 
 async function assertHealth(origin, pathname, status) {
