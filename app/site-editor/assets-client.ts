@@ -1,8 +1,13 @@
-import { assetToWork, parsePhotoLibraryManifest, type PhotoLibraryManifest, type PhotoAsset } from "../photo-library";
+import { parseFocusPosition, formatFocusPosition, assetToWork, parsePhotoLibraryManifest, type PhotoLibraryManifest, type PhotoAsset } from "../photo-library";
 import type { SiteContent } from "../site-config";
 
 export interface SiteAsset extends PhotoAsset { createdAt?: string }
 export interface SiteAssetManifest extends PhotoLibraryManifest { assets: SiteAsset[]; truncated?: boolean }
+
+function safePosition(value: unknown) {
+  const { x, y } = parseFocusPosition(value);
+  return formatFocusPosition(x, y);
+}
 
 /** Separate Site transport: never relax the legacy /photos/library validator. */
 export function parseSiteAssets(value: unknown, endpoint: string): SiteAssetManifest | null {
@@ -57,9 +62,9 @@ export function hydrateSiteWorks(content: SiteContent, assets: readonly PhotoAss
   const byId = new Map(assets.map(asset => [asset.id, asset]));
   const hydrate = (works: SiteContent["works"]) => works.flatMap((work, index) => {
     const asset = byId.get(work.assetId ?? "");
-    if (!asset) return [{ ...work, image: "", preview: "" }];
+    if (!asset) return [{ ...work, position: safePosition(work.position), image: "", preview: "" }];
     const resolved = assetToWork(asset, work.slotIndex ?? index);
-    return [{ ...work, image: resolved.image, preview: resolved.preview, previewWidth: resolved.previewWidth, previewHeight: resolved.previewHeight, fullWidth: resolved.fullWidth }];
+    return [{ ...work, position: safePosition(work.position), image: resolved.image, preview: resolved.preview, previewWidth: resolved.previewWidth, previewHeight: resolved.previewHeight, fullWidth: resolved.fullWidth }];
   });
   return { ...content, works: hydrate(content.works), templateWorks: Object.fromEntries(Object.entries(content.templateWorks).map(([id, works]) => [id, hydrate(works ?? [])])) };
 }
