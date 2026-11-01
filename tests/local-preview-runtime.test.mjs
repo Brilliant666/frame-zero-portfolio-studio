@@ -46,12 +46,33 @@ test("server gate accepts only authenticated configured loopback origin",async()
   const source=(await fs.readFile(new URL("../app/preview-workspace/server.ts",import.meta.url),"utf8")).replace(/^import .*;\r?$/gm,"");
   const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
   const env={FRAME_ZERO_PREVIEW_WORKSPACE_SECRET:secret,FRAME_ZERO_LOCAL_PREVIEW_ORIGIN:origin};
-  const exports={};vm.runInNewContext(js,{exports,env});
+  const exports={};vm.runInNewContext(js,{exports,env,process:{env:{}}});
   const headers=new Headers({[LOCAL_PROOF_HEADER]:secret,[LOCAL_ORIGIN_HEADER]:origin,"sec-fetch-site":"same-origin",origin});
   assert.equal(await exports.requirePreviewWorkspace({headers}),true);
   headers.set(LOCAL_PROOF_HEADER,"forged");assert.equal(await exports.requirePreviewWorkspace({headers}),false);
   headers.set(LOCAL_PROOF_HEADER,secret);headers.set(LOCAL_ORIGIN_HEADER,"http://127.0.0.1:3001");assert.equal(await exports.requirePreviewWorkspace({headers}),false);
   env.FRAME_ZERO_LOCAL_PREVIEW_ORIGIN="http://127.0.0.1:99999";assert.equal(await exports.requirePreviewWorkspace({headers}),false);
+});
+
+test("production test pages reject before runtime, headers or legacy rendering", async () => {
+  for (const file of ['page.tsx', 'laboratory-page.tsx']) {
+    const source = await fs.readFile(new URL(`../app/test/${file}`, import.meta.url), 'utf8');
+    const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+    for (const nodeRuntime of ['0', '1']) {
+      let reads = 0, renders = 0;
+      const refusal = Error('NOT_FOUND');
+      const exports = {};
+      vm.runInNewContext(js, { exports, process: { env: { FRAME_ZERO_PRODUCTION_SITE: '1', FRAME_ZERO_ACCOUNT_NODE_RUNTIME: nodeRuntime } }, require(name) {
+        if (name === 'next/navigation') return { notFound() { throw refusal; } };
+        if (name === 'next/headers') return { headers() { reads++; throw Error('Must not read headers'); } };
+        if (name.endsWith('/http.mjs')) return { getAccountRuntime() { reads++; throw Error('Must not initialize runtime'); } };
+        if (name === 'react/jsx-runtime') return { jsx() { renders++; } };
+        return { default() { renders++; } };
+      } });
+      await assert.rejects(exports.default({ searchParams: Promise.resolve({}) }), error => error === refusal);
+      assert.equal(reads, 0); assert.equal(renders, 0);
+    }
+  }
 });
 
 test("local artifact preparation is isolated from the normal production artifact",async()=>{

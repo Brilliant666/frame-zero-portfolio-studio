@@ -18,6 +18,7 @@ function errorMessage(error: unknown) {
 }
 
 export async function GET() {
+  if (process.env.FRAME_ZERO_PRODUCTION_SITE === "1") return new Response(null, { status: 404 });
   try {
     await ensureTable();
     const db = getDb();
@@ -32,6 +33,7 @@ export async function GET() {
 }
 
 export async function PUT() {
+  if (process.env.FRAME_ZERO_PRODUCTION_SITE === "1") return new Response(null, { status: 404 });
   // Global D1 content is a read-only legacy source. URL and identity headers
   // cannot authorize a write; current Site editors use their scoped API.
   return Response.json(

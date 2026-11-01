@@ -65,13 +65,17 @@ function page(title, body, status = 200) {
 
 export { page as siteEntryPage };
 
-export async function handleSiteEntry(request, slug, admin = false, templateNames = {}) {
+// `mode` is required: 'public' (anonymous entry page, may be opened from another
+// site) or 'admin' (Site workbench). A missing or unknown mode fails closed.
+export async function handleSiteEntry(request, slug, mode, templateNames = {}) {
+  if (mode !== 'public' && mode !== 'admin') throw new TypeError('Site entry mode must be "public" or "admin".');
+  const admin = mode === 'admin';
   if (!isSiteSlug(slug)) return page('页面不存在', '<p>请检查站点地址。</p>', 404);
   if (admin && !accountRuntimeEnabled()) return page('页面不存在', '<p>站点后台尚未启用。</p>', 404);
   if (new URL(request.url).search) return page('无效请求', '<p>站点归属不能通过查询参数指定。</p>', 400);
   try {
     const runtime = getAccountRuntime();
-    if (!accountRequestAllowed(request, runtime.config)) return page('访问被拒绝', '<p>请求来源不被允许。</p>', 403);
+    if (!accountRequestAllowed(request, runtime.config, { publicRead: !admin })) return page('访问被拒绝', '<p>请求来源不被允许。</p>', 403);
     if (admin) {
       const session = await runtime.auth.api.getSession({ headers: request.headers });
       if (!session) return page('请先登录', '<p>请使用受邀账号登录后，从账号页面进入自己的站点后台。</p><a href="/login">前往登录</a>', 401);

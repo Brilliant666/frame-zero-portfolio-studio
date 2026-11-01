@@ -1,6 +1,7 @@
 import { accountRuntimeEnabled, accountRequestAllowed, accountJson, getAccountRuntime, readSiteForPrincipal } from "../../db/accounts/http.mjs";
 import { JSON_BODY_LIMITS, readBoundedText, RequestBodyError } from "../../db/accounts/request-body.mjs";
 import { isSiteSlug } from "../../db/accounts/site-slug.mjs";
+import { draftOwnership as ownership, writeOwnedDraft } from "../../db/accounts/draft-write.mjs";
 import { createEmptyPreviewDocument } from "../preview-workspace/document";
 import { createEmptyFlowGalleryDocument } from "./flow-gallery-document";
 import { createEmptyBasicContent, isContentSpace, parseSpaceContent, contentAssetIds, UnconnectedAssetError, type ContentSpace } from "./content-schema";
@@ -19,13 +20,6 @@ export async function authorizeEditor(request: Request, slug: string, space: str
   } catch { return { denied: 503 as const }; }
 }
 
-// Ownership and grant are repeated in the database operation itself. Neither a
-// client siteId nor a previously authorized page can select the write scope.
-const ownership = `EXISTS (SELECT 1 FROM sites s JOIN portfolio_users p ON p.id=s.owner_id
- JOIN account_provisioning op ON op.id=p.provisioning_id AND op.completed_at IS NOT NULL
- WHERE s.id=$1::uuid AND p.auth_user_id=$3::uuid
- AND ($2='basic' OR EXISTS (SELECT 1 FROM site_template_grants g WHERE g.site_id=s.id AND g.product=$2)))`;
-
 export async function handleDraftRequest(request: Request, slug: string, space: string) {
   const auth = await authorizeEditor(request, slug, space);
   if ("denied" in auth) return accountJson({ error: "站点或内容空间不可访问" }, auth.denied);
@@ -42,7 +36,7 @@ export async function handleDraftRequest(request: Request, slug: string, space: 
     }
     if (request.method !== "PUT") return accountJson({ error: "METHOD_NOT_ALLOWED" }, 405);
     if (!(request.headers.get("content-type") ?? "").startsWith("application/json")) return accountJson({ error: "INVALID_CONTENT_TYPE" }, 415);
-    const raw = await readBoundedText(request, { maximum: JSON_BODY_LIMITS.draft });
+    const raw = await readBoundedText(request, { maximum: JSON_BODY_LIMITS.draft, bucket: "editor", principal: userId });
     let payload, content;
     try {
       payload = JSON.parse(raw);
@@ -57,13 +51,7 @@ export async function handleDraftRequest(request: Request, slug: string, space: 
       const owned = await runtime.pool.query("SELECT id FROM site_assets WHERE site_id=$1 AND id=ANY($2::uuid[])", [account.site.id, ids]);
       if (owned.rowCount !== ids.length) return accountJson({ error: "资源不存在或不属于当前站点，未保存" }, 422);
     }
-    const result = expected === 0
-      ? await runtime.pool.query(`INSERT INTO site_content_drafts(site_id,space,content,revision)
-          SELECT $1::uuid,$2,$4::jsonb,1 WHERE ${ownership}
-          ON CONFLICT (site_id,space) DO NOTHING RETURNING content,revision,updated_at`, [...scope, JSON.stringify(content)])
-      : await runtime.pool.query(`UPDATE site_content_drafts SET content=$4::jsonb,revision=revision+1,updated_at=now()
-          WHERE site_id=$1::uuid AND space=$2 AND revision=$5 AND ${ownership}
-          RETURNING content,revision,updated_at`, [...scope, JSON.stringify(content), expected]);
+    const result = await writeOwnedDraft(runtime.pool, { siteId: account.site.id, space, userId, content, expectedRevision: expected });
     if (!result.rowCount) return accountJson({ error: "版本冲突或授权已变化，当前草稿保留；请导出或核对后重新读取。" }, 409);
     const row = result.rows[0];
     return accountJson({ content: row.content, revision: row.revision, updatedAt: row.updated_at });

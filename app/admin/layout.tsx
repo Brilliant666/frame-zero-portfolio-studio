@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { chatGPTSignInPath, getChatGPTUser } from "../chatgpt-auth";
@@ -55,6 +56,7 @@ function localPhotoImportOriginFromEnvironment() {
 }
 
 export default async function AdminLayout({ children }: Readonly<{ children: ReactNode }>) {
+  if (process.env.FRAME_ZERO_PRODUCTION_SITE === "1") notFound();
   const requestHeaders = await headers();
   const local = isLocalHost(requestHeaders.get("host"));
   const user = local ? null : await getChatGPTUser();

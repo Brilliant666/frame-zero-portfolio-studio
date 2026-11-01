@@ -157,6 +157,18 @@ test('production cookie transport is Secure, host-only, HttpOnly and independent
   assert.equal(options.emailAndPassword.disableSignUp, true);
 });
 
+test('public Published reads accept cross-site navigation while private reads and writes stay closed', () => {
+  const crossSite = { 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'navigate' };
+  const publicRead = { publicRead: true };
+  assert.equal(accountRequestAllowed(request('GET', crossSite), config(), publicRead), true);
+  assert.equal(accountRequestAllowed(request('HEAD', crossSite), config(), publicRead), true);
+  assert.equal(accountRequestAllowed(request('GET', crossSite), config()), false, 'Private reads keep rejecting cross-site');
+  assert.equal(accountRequestAllowed(request('POST', { ...crossSite, origin: production.FRAME_ZERO_ACCOUNT_ORIGIN }), config(), publicRead), false, 'Writes never opt in');
+  for (const extra of [{ host: 'other.test:8443' }, { 'x-forwarded-proto': 'http' }, { origin: 'https://other.test' }, { 'x-user-id': 'forged' }]) {
+    assert.equal(accountRequestAllowed(request('GET', { ...crossSite, ...extra }), config(), publicRead), false, JSON.stringify(extra));
+  }
+});
+
 test('production transport checks canonical proxy metadata and Origin without treating a header as identity', () => {
   assert.equal(accountRequestAllowed(request(), config()), true);
   assert.equal(accountRequestAllowed(request('HEAD'), config()), true);
