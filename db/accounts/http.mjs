@@ -1,7 +1,7 @@
 import { accountRuntimeEnabled, readAccountConfig } from '../../scripts/lib/account-config.mjs';
 export { accountRuntimeEnabled } from '../../scripts/lib/account-config.mjs';
 import { createAccountRuntime } from './runtime.mjs';
-import { JSON_BODY_LIMITS, readBoundedText, RequestBodyError } from './request-body.mjs';
+import { AUTH_BODY_TIMEOUT_MS, JSON_BODY_LIMITS, readBoundedText, RequestBodyError } from './request-body.mjs';
 
 let singleton;
 export function getAccountRuntime() {
@@ -10,7 +10,12 @@ export function getAccountRuntime() {
   singleton ??= createAccountRuntime(config);
   return singleton;
 }
-export function accountRequestAllowed(request, config) {
+// Public Published pages and their image variants may be opened from other
+// sites (articles, search results). Only anonymous GET/HEAD reads opt in;
+// private Site APIs, admin pages and every write keep rejecting cross-site.
+export function accountRequestAllowed(request, config, { publicRead = false } = {}) {
+  const crossSite = request.headers.get('sec-fetch-site') === 'cross-site'
+    && !(publicRead && ['GET', 'HEAD'].includes(request.method));
   if (config.mode === 'production') {
     // The app has no public listener mapping: only the private HTTPS proxy may
     // dispatch here. Canonical forwarding describes transport, never identity.
@@ -23,7 +28,7 @@ export function accountRequestAllowed(request, config) {
         || name.startsWith('oai-authenticated-user-') || name.startsWith('x-authenticated-')
         || (name.startsWith('x-forwarded-') && !['x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-for', 'x-forwarded-port'].includes(name))) return false;
     }
-    if (request.headers.get('sec-fetch-site') === 'cross-site') return false;
+    if (crossSite) return false;
     const origin = request.headers.get('origin');
     return ['GET', 'HEAD'].includes(request.method) ? !origin || origin === config.origin : origin === config.origin;
   }
@@ -33,7 +38,7 @@ export function accountRequestAllowed(request, config) {
   if (!['http:'].includes(url.protocol) || request.headers.get('host') !== new URL(config.origin).host) return false;
   const proof = process.env.FRAME_ZERO_ACCOUNT_REQUEST_PROOF;
   if (!proof || request.headers.get('x-account-local-proof') !== proof) return false;
-  if (request.headers.get('sec-fetch-site') === 'cross-site') return false;
+  if (crossSite) return false;
   const origin = request.headers.get('origin');
   return ['GET', 'HEAD'].includes(request.method) ? !origin || origin === config.origin : origin === config.origin;
 }
@@ -53,6 +58,7 @@ export async function readSiteForPrincipal(runtime, user, requestedId = null, re
   const result = await runtime.pool.query(`SELECT s.id, s.slug, p.id AS portfolio_user_id,
     COALESCE(array_agg(g.product) FILTER (WHERE g.product IS NOT NULL), '{}') AS premium
     FROM sites s JOIN portfolio_users p ON p.id=s.owner_id
+    JOIN "user" u ON u.id=p.auth_user_id AND u.banned IS NOT TRUE
     JOIN account_provisioning op ON op.id=p.provisioning_id AND op.completed_at IS NOT NULL
     LEFT JOIN site_template_grants g ON g.site_id=s.id
     WHERE p.auth_user_id=$1 AND ($2::uuid IS NULL OR s.id=$2::uuid)
@@ -73,7 +79,7 @@ export async function handleAuthRequest(request) {
       ['/api/auth/revoke-sessions','POST'],
     ]);
     if (allowed.get(path) !== request.method) return accountJson({ error: 'NOT_AVAILABLE' }, 404);
-    let raw = await readBoundedText(request, { maximum: JSON_BODY_LIMITS.auth, emptyAllowed: true });
+    let raw = await readBoundedText(request, { maximum: JSON_BODY_LIMITS.auth, emptyAllowed: true, bucket: 'auth', timeoutMs: AUTH_BODY_TIMEOUT_MS });
     if (path.endsWith('/sign-in/username')) {
       let body;
       try { body = JSON.parse(raw); } catch { return accountJson({ error: 'INVALID_REQUEST' }, 400); }

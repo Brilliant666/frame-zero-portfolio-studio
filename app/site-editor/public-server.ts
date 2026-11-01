@@ -12,7 +12,7 @@ export const publicSite = cache(async (slug: string) => {
   if (!isSiteSlug(slug)) return null;
   const runtime = getAccountRuntime();
   const request = new Request(`http://127.0.0.1/${encodeURIComponent(slug)}`, { headers: new Headers(await headers()) });
-  if (!accountRequestAllowed(request, runtime.config)) return null;
+  if (!accountRequestAllowed(request, runtime.config, { publicRead: true })) return null;
   const known = await runtime.pool.query("SELECT s.id FROM sites s JOIN portfolio_users p ON p.id=s.owner_id JOIN account_provisioning op ON op.id=p.provisioning_id AND op.completed_at IS NOT NULL WHERE s.slug=$1", [slug]);
   if (!known.rowCount) return null;
   const snapshot = await readPublished(runtime.pool, slug);

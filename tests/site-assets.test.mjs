@@ -6,6 +6,15 @@ import path from 'node:path';
 import sharp from 'sharp';
 import { assetPath, assetDto, siteAssetDto, boundedBody, safeFilename, uploadAsset, MAX_UPLOAD_BYTES } from '../db/accounts/assets.mjs';
 const site = '12345678-1234-4234-8234-123456789abc';
+const userId = '22345678-1234-4234-8234-123456789abc';
+// Transaction adapter leaves image/storage assertions focused on their behavior.
+function ownerPool(db) {
+  return { async connect() { return { release() {}, async query(sql, values) {
+    if (['BEGIN', 'COMMIT', 'ROLLBACK'].includes(sql)) return { rows: [], rowCount: 0 };
+    if (sql.startsWith('SELECT s.id')) return { rows: [{ id: site }], rowCount: 1 };
+    return db.query(sql, values);
+  } }; } };
+}
 
 test('Site DTO emits admission time without exposing storage or upload metadata', () => {
   const row = { id: site, width: 900, height: 600, created_at: new Date('2026-09-28T08:10:12.123Z'), digest: 'private-digest', original_type: 'image/jpeg', variants: Object.fromEntries(['thumbnail', 'card', 'full', 'original'].map(kind => [kind, { width: 900, height: 600, bytes: 100, key: '/private/original.jpg' }])) };
@@ -43,18 +52,18 @@ test('photo processing keeps original, matches variants, same-Site deduplicates,
   const input = await sharp({ create: { width: 900, height: 600, channels: 3, background: '#456789' } }).png().toBuffer();
   const request = bytes => new Request('http://localhost', { method: 'POST', headers: { 'content-type': 'image/png', 'x-file-name': 'anonymous.png' }, body: bytes });
   try {
-    const first = await uploadAsset(request(input), db, site); assert.equal(first.created, true);
+    const first = await uploadAsset(request(input), ownerPool(db), site, { userId }); assert.equal(first.created, true);
     assert.deepEqual(await readFile(assetPath(root, first.row.variants.original.key)), input);
     const dto = assetDto(first.row, 'photographer'); assert.equal(dto.orientation, 'landscape'); assert.ok(dto.variants.full.src.startsWith('/api/sites/photographer/assets/')); assert.equal(JSON.stringify(dto).includes(root), false);
-    assert.equal((await uploadAsset(request(input), db, site)).created, false);
+    assert.equal((await uploadAsset(request(input), ownerPool(db), site, { userId })).created, false);
     assert.equal((await readdir(path.join(root, site))).length, 1);
-    await assert.rejects(uploadAsset(request(Buffer.from('corrupt')), db, site), /INVALID_IMAGE/);
+    await assert.rejects(uploadAsset(request(Buffer.from('corrupt')), ownerPool(db), site, { userId }), /INVALID_IMAGE/);
     const strip = await sharp({ create: { width: 1000, height: 20, channels: 3, background: '#456789' } }).png().toBuffer();
-    await assert.rejects(uploadAsset(request(strip), db, site), /UNSUPPORTED_IMAGE_RATIO/);
+    await assert.rejects(uploadAsset(request(strip), ownerPool(db), site, { userId }), /UNSUPPORTED_IMAGE_RATIO/);
     assert.equal((await readdir(path.join(root, site))).length, 1);
     const other = await sharp({ create: { width: 600, height: 900, channels: 3, background: '#789abc' } }).png().toBuffer();
     const failing = { async query(sql) { if (sql.startsWith('SELECT')) return { rowCount: 0, rows: [] }; throw new Error('injected insert failure'); } };
-    await assert.rejects(uploadAsset(request(other), failing, site), /injected/);
+    await assert.rejects(uploadAsset(request(other), ownerPool(failing), site, { userId }), /injected/);
     assert.equal((await readdir(path.join(root, site))).length, 1);
   } finally { if (old === undefined) delete process.env.FRAME_ZERO_SITE_ASSET_ROOT; else process.env.FRAME_ZERO_SITE_ASSET_ROOT = old; await rm(root, { recursive: true, force: true }); }
 });
@@ -71,20 +80,44 @@ test('cleanup failure releases every processing slot and exposes only a fixed st
   const cleanupDirectory = async () => { throw Error('/private/storage locked'); };
   try {
     for (let index = 0; index < 3; index++) {
-      await assert.rejects(uploadAsset(request(), failing, site, { cleanupDirectory }), error => error.message === 'ASSET_STORAGE_UNAVAILABLE' && error.status === 503);
+      await assert.rejects(uploadAsset(request(), ownerPool(failing), site, { userId, cleanupDirectory }), error => error.message === 'ASSET_STORAGE_UNAVAILABLE' && error.status === 503);
     }
     assert.equal(inserts, 3, 'Third request reaches processing instead of remaining stuck at UPLOAD_BUSY');
     assert.deepEqual(errors, ['ASSET_UPLOAD_CLEANUP_FAILED', 'ASSET_UPLOAD_CLEANUP_FAILED', 'ASSET_UPLOAD_CLEANUP_FAILED']);
     assert.equal((await readdir(path.join(root, site))).length, 3, 'Failed cleanup is not treated as successful deletion');
-    await assert.rejects(uploadAsset(request(), failing, site), /private insert details/, 'Ordinary subsequent processing and cleanup still work');
+    await assert.rejects(uploadAsset(request(), ownerPool(failing), site, { userId }), /private insert details/, 'Ordinary subsequent processing and cleanup still work');
   } finally { if (old === undefined) delete process.env.FRAME_ZERO_SITE_ASSET_ROOT; else process.env.FRAME_ZERO_SITE_ASSET_ROOT = old; await rm(root, { recursive: true, force: true }); }
+});
+
+test('a ban during image processing refuses insertion and cleans the candidate directory', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'site-assets-revoked-'));
+  const old = process.env.FRAME_ZERO_SITE_ASSET_ROOT;
+  process.env.FRAME_ZERO_SITE_ASSET_ROOT = root;
+  let checks = 0, inserts = 0;
+  const pool = { async connect() { return { release() {}, async query(sql) {
+    if (['BEGIN', 'COMMIT', 'ROLLBACK'].includes(sql)) return { rows: [], rowCount: 0 };
+    if (sql.startsWith('SELECT s.id')) return { rows: [], rowCount: ++checks === 1 ? 1 : 0 };
+    if (sql.startsWith('INSERT')) inserts++;
+    return { rows: [], rowCount: 0 };
+  } }; } };
+  try {
+    const input = await sharp({ create: { width: 24, height: 24, channels: 3, background: '#123456' } }).png().toBuffer();
+    const request = () => new Request('http://fixture', { method: 'POST', headers: { 'content-type': 'image/png', 'x-file-name': 'fixture.png' }, body: input });
+    await assert.rejects(uploadAsset(request(), pool, site, { userId }), error => error.status === 403);
+    assert.equal(checks, 2); assert.equal(inserts, 0);
+    assert.deepEqual(await readdir(path.join(root, site)), []);
+    await assert.rejects(uploadAsset(request(), pool, site), error => error.status === 403, 'Missing principal fails closed');
+  } finally {
+    if (old === undefined) delete process.env.FRAME_ZERO_SITE_ASSET_ROOT; else process.env.FRAME_ZERO_SITE_ASSET_ROOT = old;
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test('interrupted upload streams return a fixed error without consuming processing capacity', async () => {
   for (let index = 0; index < 3; index++) {
     const body = new ReadableStream({ start(controller) { controller.error(Error('/private/upload socket')); } });
     const request = new Request('http://fixture', { method: 'POST', duplex: 'half', headers: { 'content-type': 'image/png', 'x-file-name': 'fixture.png' }, body });
-    await assert.rejects(uploadAsset(request, { async query() { throw Error('must not query'); } }, site), error => error.message === 'UPLOAD_INTERRUPTED' && error.status === 400);
+    await assert.rejects(uploadAsset(request, { async query() { throw Error('must not query'); } }, site, { userId }), error => error.message === 'UPLOAD_INTERRUPTED' && error.status === 400);
   }
 });
 
@@ -95,13 +128,13 @@ test('only two uploads can read concurrently and abort releases both slots', asy
     method: 'POST', duplex: 'half', signal: controller.signal,
     headers: { 'content-type': 'image/png', 'x-file-name': 'fixture.png' },
     body: new ReadableStream({ pull() { return new Promise(() => {}); } }),
-  }), db, site));
+  }), ownerPool(db), site, { userId }));
   const request = () => new Request('http://fixture', { method: 'POST', headers: { 'content-type': 'image/png', 'x-file-name': 'fixture.png' }, body: 'not an image' });
-  await assert.rejects(uploadAsset(request(), db, site), error => error.status === 429 && error.message === 'UPLOAD_BUSY');
+  await assert.rejects(uploadAsset(request(), ownerPool(db), site, { userId }), error => error.status === 429 && error.message === 'UPLOAD_BUSY');
   controllers.forEach(controller => controller.abort());
   const results = await Promise.allSettled(pending);
   assert.ok(results.every(result => result.status === 'rejected' && result.reason.message === 'UPLOAD_INTERRUPTED'));
-  await assert.rejects(uploadAsset(request(), db, site), /INVALID_IMAGE/, 'A new request proceeds after cancellation instead of 429');
+  await assert.rejects(uploadAsset(request(), ownerPool(db), site, { userId }), /INVALID_IMAGE/, 'A new request proceeds after cancellation instead of 429');
 });
 
 test('deduplication race cleanup runs once and returns its processing slot on cleanup failure', async t => {
@@ -118,7 +151,7 @@ test('deduplication race cleanup runs once and returns its processing slot on cl
   const request = () => new Request('http://fixture', { method: 'POST', headers: { 'content-type': 'image/png', 'x-file-name': 'fixture.png' }, body: input });
   const cleanupDirectory = async () => { cleanups++; throw Error('private cleanup failure'); };
   try {
-    for (let index = 0; index < 3; index++) await assert.rejects(uploadAsset(request(), db, site, { cleanupDirectory }), /ASSET_STORAGE_UNAVAILABLE/);
+    for (let index = 0; index < 3; index++) await assert.rejects(uploadAsset(request(), ownerPool(db), site, { userId, cleanupDirectory }), /ASSET_STORAGE_UNAVAILABLE/);
     assert.equal(cleanups, 3, 'Each duplicate candidate cleanup is attempted once');
     assert.equal(reads, 6, 'All three candidates reach the deduplication race instead of getting stuck at 429');
   } finally { if (old === undefined) delete process.env.FRAME_ZERO_SITE_ASSET_ROOT; else process.env.FRAME_ZERO_SITE_ASSET_ROOT = old; await rm(root, { recursive: true, force: true }); }

@@ -126,6 +126,10 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1800000 },
     const { publicationRetentionDatabaseIntegration } = await import('./publication-retention-database-integration.mjs');
     await publicationRetentionDatabaseIntegration({ runtime });
   });
+  await t.test('write-time authorization rejects bans after editor authorization', async () => {
+    const { siteWriteAuthorizationIntegration } = await import('./site-write-authorization-integration.mjs');
+    await siteWriteAuthorizationIntegration({ runtime });
+  });
   await t.test('concurrent provision is idempotent; conflicts cannot overwrite', async () => {
     const outcomes = await Promise.all([provisionAccount(runtime, input('fixturealpha', true)), provisionAccount(runtime, input('FIXTUREALPHA', true))]);
     assert.deepEqual(outcomes.map(o => o.status).sort(), ['ALREADY_EXISTS', 'CREATED']);
@@ -176,6 +180,18 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1800000 },
     assert.equal((await request(`/api/account/site?siteId=${siteId}`, { cookie: beta })).status, 401);
     assert.equal(await readOwnedSite(runtime, new Headers({ cookie: beta }), siteId), null);
     assert.equal((await request(`/api/account/site?siteId=${siteId}`, { cookie: alpha })).status, 200);
+  });
+  await t.test('banning an account immediately denies its existing session without deleting its Site', async () => {
+    await runtime.pool.query('UPDATE "user" SET banned=true WHERE username=$1', ['fixturealpha']);
+    try {
+      assert.equal((await request('/api/account/site', { cookie: alpha })).status, 401);
+      assert.equal(await readOwnedSite(runtime, new Headers({ cookie: alpha }), siteId), null);
+      assert.equal((await request('/api/sites/fixturealpha/drafts/basic', { cookie: alpha })).status, 403);
+      assert.equal((await request('/api/sites/fixturealpha/assets', { cookie: alpha })).status, 403);
+      assert.equal((await request('/api/account/site', { cookie: beta })).status, 200);
+      assert.equal((await runtime.pool.query('SELECT count(*)::int AS n FROM sites WHERE id=$1', [siteId])).rows[0].n, 1);
+    } finally { await runtime.pool.query('UPDATE "user" SET banned=false WHERE username=$1', ['fixturealpha']); }
+    assert.equal((await request('/api/account/site', { cookie: alpha })).status, 200);
   });
   await t.test('platform landing and explicit internal test area remain separate from Sites', async () => {
     const root = await request('/');
