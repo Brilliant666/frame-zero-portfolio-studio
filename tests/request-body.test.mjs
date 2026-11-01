@@ -72,3 +72,47 @@ test('eight held JSON reads reject the ninth and abort returns every slot withou
   assert.ok(results.every(result => result.status === 'rejected' && result.reason.message === 'REQUEST_INTERRUPTED'));
   assert.equal(await readBoundedText(new Request('http://fixture', { method: 'POST', body: '{}' }), { maximum: JSON_BODY_LIMITS.auth }), '{}', 'All JSON slots become available again');
 });
+
+test('anonymous reads cannot exhaust authenticated writes and one principal cannot block another', async () => {
+  const held = [];
+  function hold(bucket, principal) {
+    const controller = new AbortController();
+    const read = readBoundedText(new Request('http://fixture', {
+      method: 'POST', duplex: 'half', signal: controller.signal,
+      body: new ReadableStream({ pull() { return new Promise(() => {}); } }),
+    }), { maximum: 2048, bucket, principal });
+    held.push(controller); return read;
+  }
+  const reads = Array.from({ length: MAX_JSON_READERS }, () => hold('auth'));
+  const done = Promise.allSettled(reads);
+  try {
+    const request = () => new Request('http://fixture', { method: 'POST', body: '{}' });
+    await assert.rejects(readBoundedText(request(), { maximum: 2048, bucket: 'auth' }), error => error.status === 429);
+    assert.equal(await readBoundedText(request(), { maximum: 2048, bucket: 'editor', principal: 'owner-a' }), '{}');
+    const writes = [hold('editor', 'owner-a'), hold('editor', 'owner-a')];
+    const writesDone = Promise.allSettled(writes);
+    await assert.rejects(readBoundedText(request(), { maximum: 2048, bucket: 'editor', principal: 'owner-a' }), error => error.status === 429);
+    assert.equal(await readBoundedText(request(), { maximum: 2048, bucket: 'editor', principal: 'owner-b' }), '{}');
+    held.forEach(controller => controller.abort());
+    await writesDone;
+    assert.equal(await readBoundedText(request(), { maximum: 2048, bucket: 'editor', principal: 'owner-a' }), '{}');
+    await assert.rejects(readBoundedText(request(), { maximum: 2048, bucket: 'editor' }), TypeError);
+    await assert.rejects(readBoundedText(request(), { maximum: 2048, bucket: 'unknown' }), TypeError);
+  } finally { held.forEach(controller => controller.abort()); await done; }
+});
+
+test('authenticated global capacity and principal slots return after timeout or malformed UTF-8', async () => {
+  const controllers = Array.from({ length: MAX_JSON_READERS }, () => new AbortController());
+  const reads = controllers.map((controller, i) => readBoundedText(new Request('http://fixture', {
+    method: 'POST', duplex: 'half', signal: controller.signal,
+    body: new ReadableStream({ pull() { return new Promise(() => {}); } }),
+  }), { maximum: 10, bucket: 'editor', principal: `owner-${i}` }));
+  const done = Promise.allSettled(reads);
+  try {
+    await assert.rejects(readBoundedText(new Request('http://fixture', { method: 'POST', body: '{}' }), { maximum: 10, bucket: 'editor', principal: 'other' }), e => e.status === 429);
+    assert.equal(await readBoundedText(new Request('http://fixture', { method: 'POST', body: '{}' }), { maximum: 10, bucket: 'auth' }), '{}');
+  } finally { controllers.forEach(c => c.abort()); await done; }
+  await assert.rejects(readBoundedText(new Request('http://fixture', { method: 'POST', body: new Uint8Array([255]) }), { maximum: 10, bucket: 'editor', principal: 'other' }), /INVALID_REQUEST_BODY/);
+  await assert.rejects(readBoundedText(new Request('http://fixture', { method: 'POST', duplex: 'half', body: new ReadableStream({ pull() { return new Promise(() => {}); } }) }), { maximum: 10, timeoutMs: 10, bucket: 'editor', principal: 'other' }), e => e.status === 408);
+  assert.equal(await readBoundedText(new Request('http://fixture', { method: 'POST', body: '{}' }), { maximum: 10, bucket: 'editor', principal: 'other' }), '{}');
+});
