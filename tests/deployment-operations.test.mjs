@@ -110,32 +110,42 @@ test("deployment documentation checks do not bind current state to the Stage A2 
   ]);
 });
 
+// PowerShell behaviour behind these rules, checked by hand on 7.6.5 (CI never
+// runs pwsh): a trap anywhere in the script scope swallows the throw and the
+// historical body runs; "$(...)" inside the message runs before the throw; a
+// later line starting with | (even after comment lines) is piped into the
+// throw operand. Any trap is rejected to keep the rule simple.
 function assertRetiredGuard(source) {
   const lines = source.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#"));
-  // The retained historical body is unreachable only while this unconditional
-  // refusal stays first. PowerShell's Stop + throw semantics need no live run.
   assert.equal(lines[0], '$ErrorActionPreference = "Stop"');
-  assert.match(lines[1], /^throw "HISTORICAL_BOOTSTRAP_RETIRED:[^"]*"$/);
+  // A constant message: no "$" (subexpressions, variables) and no backtick escapes.
+  assert.match(lines[1], /^throw "HISTORICAL_BOOTSTRAP_RETIRED:[^"$`]*"$/);
+  assert.doesNotMatch(lines[2] ?? "", /^(\||&&|\|\|)/, "the next statement must not continue the throw pipeline");
+  assert.ok(!lines.some((line) => /(^|[;{}(\s])trap\b/i.test(line)), "a trap statement would swallow the refusal");
 }
 
 test("the retired one-time publishing script refuses before any GitHub or Git operation", async () => {
-  const source = await readFile(path.join(projectRoot, "scripts", "publish-public-repo.ps1"), "utf8");
-  assertRetiredGuard(source);
-  const refusal = source.indexOf('throw "HISTORICAL_BOOTSTRAP_RETIRED:');
-  for (const operation of [/^\s*gh\s/m, /^\s*git\s/m]) {
-    const first = source.search(operation);
-    assert.ok(first === -1 || refusal < first, String(operation));
-  }
+  // The throw is the first statement after Stop, so no gh/git call can run before it.
+  assertRetiredGuard(await readFile(path.join(projectRoot, "scripts", "publish-public-repo.ps1"), "utf8"));
 });
 
-test("the static retirement guard rejects a moved, weakened or missing refusal", () => {
+test("the static retirement guard rejects a moved, weakened, bypassed or missing refusal", () => {
+  const stop = '$ErrorActionPreference = "Stop"';
   const throwLine = 'throw "HISTORICAL_BOOTSTRAP_RETIRED: retired."';
-  assert.doesNotThrow(() => assertRetiredGuard('$ErrorActionPreference = "Stop"\n# note\n' + throwLine + '\ngh repo view'));
+  assert.doesNotThrow(() => assertRetiredGuard([stop, "# note", throwLine, "", "& $gh repo view"].join("\n")));
   for (const source of [
-    '$ErrorActionPreference = "Stop"\nWrite-Output "HISTORICAL_BOOTSTRAP_RETIRED"',
-    '$ErrorActionPreference = "Stop"\ngh auth status\n' + throwLine,
-    throwLine + '\n$ErrorActionPreference = "Stop"',
-    '$ErrorActionPreference = "Continue"\n' + throwLine,
-    '$ErrorActionPreference = "Stop"\nif ($env:X) { throw "HISTORICAL_BOOTSTRAP_RETIRED: retired." }',
-  ]) assert.throws(() => assertRetiredGuard(source), undefined, source);
+    [stop, 'Write-Output "HISTORICAL_BOOTSTRAP_RETIRED"'],
+    [stop, "& $gh auth status", throwLine],
+    [throwLine, stop],
+    ['$ErrorActionPreference = "Continue"', throwLine],
+    [stop, 'if ($env:X) { throw "HISTORICAL_BOOTSTRAP_RETIRED: retired." }'],
+    [stop, throwLine, "& $gh repo view", "trap { continue }"],
+    [stop, throwLine, "$x = 1; trap { continue }"],
+    [stop, 'throw "HISTORICAL_BOOTSTRAP_RETIRED: $(git push --set-upstream origin main)"'],
+    [stop, 'throw "HISTORICAL_BOOTSTRAP_RETIRED: $env:USERNAME"'],
+    [stop, 'throw "HISTORICAL_BOOTSTRAP_RETIRED: retired.`"'],
+    [stop, throwLine, "# a comment does not end the pipeline", "| ForEach-Object { & gh auth status }"],
+    [stop, throwLine, "&& git push"],
+    [stop],
+  ].map((lines) => lines.join("\n"))) assert.throws(() => assertRetiredGuard(source), undefined, source);
 });
