@@ -30,7 +30,7 @@ fixture准备不是正常应用启动步骤，也不是业务链的替代runner�
 测试域名为`portfolio.test`，宿主映射端口与canonical origin一致；读取当次Caddy内部CA，用Node HTTPS显式CA、正确servername和证书验证。
 没有`rejectUnauthorized:false`，没有公网域名、真实ACME或目标服务器接触。
 
-以下是实际脚本的验收项；**执行结果、最终Head及产物身份以新PR的真实CI和匿名result.json为准**，不以源码存在或本机局部测试替代：
+以下是实际脚本的验收项；**执行结果、最终Head及产物身份以对应 Head 的真实 CI 和匿名 result.json 为准**，不以源码存在或本机局部测试替代：
 
 | 路径 | 断言 |
 | --- | --- |
@@ -50,7 +50,7 @@ fixture准备不是正常应用启动步骤，也不是业务链的替代runner�
 
 ## 限制与后续
 
-- 首次生产验收[40669135322／attempt1](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/40669135322)在缺配置启动项失败。Next捕获hook异常后保留listener；仅抛错不足以保证启动退出。已改为显式生产配置失败时输出固定码并自行exit1，保留原20秒／code1／非killed断言，新增真实hook子进程回归；后续容器结果以新Head记录为准，首次失败不重跑覆盖。
+- 首次生产验收[40669135322／attempt1](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/40669135322)在缺配置启动项失败。Next捕获hook异常后保留listener；仅抛错不足以保证启动退出。已改为显式生产配置失败时输出固定码并自行exit1，保留原20秒／code1／非killed断言，新增真实hook子进程回归；后续容器结果以对应 Head 记录为准，首次失败不重跑覆盖。
 - 后续[40674828708／attempt1](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/40674828708)已证明缺配置自然exit1／signal=null／killed=false，随后在测试夹具PG映射返回`invalid IP:0`处失败。移除仅测试用途的宿主映射，按[Docker内部bridge主机访问语义](https://docs.docker.com/engine/network/port-publishing/#gateway-modes)使用inspect所得且归属核验的内部端点；不增加外网、应用端口或放宽生产网络。
 - [40677207071／attempt1](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/40677207071)已通过上述启动、内部PG、DML角色、TLS与readiness，在真实登录的严格传输校验处403。Caddy同一HeaderOps会先set再delete，通配删除误删刚设置的XFH／XFP，Next随后按后端HTTP补值。改为前置独立`request_header`清除、upstream仅设置固定值；保持客户端伪造拒绝和应用HTTPS／Host／Origin断言，不接受HTTP绕过。根因见[Caddy官方实现](https://github.com/caddyserver/caddy/blob/v2.11.4/modules/caddyhttp/headers/headers.go#L223-L262)。
 - 本机相关测试使用已有Node24工具；镜像及CI为Node22.23.4。本机不启动Docker、PG或替换3001，完整HTTPS链只按实际Linux CI结果报告。
@@ -61,4 +61,4 @@ fixture准备不是正常应用启动步骤，也不是业务链的替代runner�
 - 保留PR49记录的4项moderate开发工具链告警及Miniflare旧Sharp；最终镜像排除证据不代表整个开发环境安全。
 - `PREVIEW_RETURN = UNRESOLVED`／`RISK_DISPOSITION = ACCEPTED_FOR_LOCAL_STAGE`不变，原失败断言与超时保留，不是生产接受。
 
-新PR保持Draft，不自动Ready、合并、部署或继续PR-C。
+PR50 已合并；[合并收口记录](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/50#issuecomment-6499205606)保留实际 main push 与同镜像 HTTPS 证据。准备期的 Draft 停止点不再代表 PR50 的状态；该历史验收不授权部署或继续数据迁入／恢复。
