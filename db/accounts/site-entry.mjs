@@ -71,7 +71,7 @@ export async function handleSiteEntry(request, slug, admin = false, templateName
   if (new URL(request.url).search) return page('无效请求', '<p>站点归属不能通过查询参数指定。</p>', 400);
   try {
     const runtime = getAccountRuntime();
-    if (!accountRequestAllowed(request, runtime.config)) return page('访问被拒绝', '<p>请求来源不被允许。</p>', 403);
+    if (!accountRequestAllowed(request, runtime.config, { publicRead: !admin })) return page('访问被拒绝', '<p>请求来源不被允许。</p>', 403);
     if (admin) {
       const session = await runtime.auth.api.getSession({ headers: request.headers });
       if (!session) return page('请先登录', '<p>请使用受邀账号登录后，从账号页面进入自己的站点后台。</p><a href="/login">前往登录</a>', 401);

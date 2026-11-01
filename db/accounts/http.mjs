@@ -10,7 +10,12 @@ export function getAccountRuntime() {
   singleton ??= createAccountRuntime(config);
   return singleton;
 }
-export function accountRequestAllowed(request, config) {
+// Public Published pages and their image variants may be opened from other
+// sites (articles, search results). Only anonymous GET/HEAD reads opt in;
+// private Site APIs, admin pages and every write keep rejecting cross-site.
+export function accountRequestAllowed(request, config, { publicRead = false } = {}) {
+  const crossSite = request.headers.get('sec-fetch-site') === 'cross-site'
+    && !(publicRead && ['GET', 'HEAD'].includes(request.method));
   if (config.mode === 'production') {
     // The app has no public listener mapping: only the private HTTPS proxy may
     // dispatch here. Canonical forwarding describes transport, never identity.
@@ -23,7 +28,7 @@ export function accountRequestAllowed(request, config) {
         || name.startsWith('oai-authenticated-user-') || name.startsWith('x-authenticated-')
         || (name.startsWith('x-forwarded-') && !['x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-for', 'x-forwarded-port'].includes(name))) return false;
     }
-    if (request.headers.get('sec-fetch-site') === 'cross-site') return false;
+    if (crossSite) return false;
     const origin = request.headers.get('origin');
     return ['GET', 'HEAD'].includes(request.method) ? !origin || origin === config.origin : origin === config.origin;
   }
@@ -33,7 +38,7 @@ export function accountRequestAllowed(request, config) {
   if (!['http:'].includes(url.protocol) || request.headers.get('host') !== new URL(config.origin).host) return false;
   const proof = process.env.FRAME_ZERO_ACCOUNT_REQUEST_PROOF;
   if (!proof || request.headers.get('x-account-local-proof') !== proof) return false;
-  if (request.headers.get('sec-fetch-site') === 'cross-site') return false;
+  if (crossSite) return false;
   const origin = request.headers.get('origin');
   return ['GET', 'HEAD'].includes(request.method) ? !origin || origin === config.origin : origin === config.origin;
 }
