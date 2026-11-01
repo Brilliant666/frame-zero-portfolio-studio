@@ -1,8 +1,18 @@
 # 会话交接
 
-更新：2026-10-30。当前事实与授权统一见[CURRENT_STATUS](CURRENT_STATUS.md)，这里只保留最近续接信息。
+更新：2026-11-01。基线、授权与风险统一见[CURRENT_STATUS](CURRENT_STATUS.md)。实施前核对 GitHub，不按历史 Draft 状态继续旧任务。
 
-## 当前续接：退役发布脚本子进程诊断（2026-10-30）
+## 当前续接：审查第 1 批
+
+- 前置基线为 `ff8f55d6c564c466982b57bc56be29540866ad5e`（PR54 的合并提交），[PR53](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/53)／[PR54](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/54) 已由用户人工合并，解决公开署名扫描误报及 GitHub 字段大小写兼容。该 SHA 的 main push 五项完整 CI 均已成功，链接见当前检查点。
+- 2026-10-31 只读审查已交付，用户授权第 1 批。决策 A（外站导航放行）与 C（pwsh 测试改静态守卫）已有结论。按用户要求每个功能一个分支、一个模块一个 PR：[PR64](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/64) 安全边界、[PR65](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/65) 内容与数据、[PR66](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/66) 文档与测试。原单一用途 PR #55–#63 已关闭、未合并。
+- 每个模块 PR 记录改动、理由、验证与风险，五项完整 CI 成功后交人工合并；纯文档改动若走 DOCS_ONLY，不能替代完整运行，需使用既有 workflow_dispatch。
+- 用户已授权继续收口，PR64、PR65 已于 2026-11-01 人工 Squash 合并，实际 main 为 `bb17b260a29f6e0d35275fafd789cfdc6aec237a`。两个模块最终 Head 及 PR64 合并后的 main `a204b79` 五项完整 CI 均已通过。PR65 此前同步安全基线时只冲突 `test:admin` 清单，已保留两侧测试；PR66 同步当前 main 无冲突，共享扫描器修复不再出现在剩余差异中。继续按 PR66 最终 Head 和实际合并后的 main 分别验收，不以旧检查替代。
+- PR66 原 Container run 41269583545 在就绪等待处 exit 13；修复为单次2秒、总45秒有界探测并保持事件循环，失败保留日志与 cleanup。修复前后证据留在 PR66，不认定原应用故障。Git SHA 手机号误报和扫描器单文件契约也已修复。
+- 不直接推 main；后续模块合并须先满足最终检查且不绕过工具拒绝。不部署，日常应用／PG／真实素材和数据不操作。历史 PR16、PR26 不推进；本机私有交接不提交。
+- 下方保留诊断准备期和 PR51 准备期的观察，只证明当时。PR52 最终合并状态以上方和实时 GitHub 为准，旧分支名及“Draft／本轮”不构成当前停止点。
+
+## PR52 准备阶段：退役发布脚本子进程诊断（历史快照，2026-10-30）
 
 - PR51已合并，最新核对main为 `6c6eecc6e551172ec7675084b6eb54851d3309f8`；应用更新策略保留。其[首次main Quality失败](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/40999242678)及[收口记录](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/51#issuecomment-6514619490)保留，不以新PR通过改写旧结果。
 - 当前分支 `fix/retired-script-process-check` 只增强退休保护的子进程诊断、隔离执行及无副作用失败夹具，完成后Draft PR；不自动合并或部署。
