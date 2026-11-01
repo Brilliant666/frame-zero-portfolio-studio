@@ -2,7 +2,13 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { reviewedHistoryMetadata } from "./lib/public-history-metadata.mjs";
+function reviewedHistoryMetadata(text) {
+  return text.split(/\r?\n/)
+    // Git object IDs are structural; indented commit messages stay scanned.
+    .filter(line => !/^commit (?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(line))
+    .filter(line => !/^    [Cc][Oo]-[Aa][Uu][Tt][Hh][Oo][Rr][Ee][Dd]-[Bb][Yy]: Claude Code <noreply@anthropic[.]com>$/.test(line))
+    .join('\n');
+}
 
 const MAX_GIT_OUTPUT = 64 * 1024 * 1024;
 const forbiddenRasterExtension = /\.(?:jpe?g|png|webp|avif|gif|tiff?|heic|heif|dng|raw|cr2|cr3|nef|arw)$/i;
