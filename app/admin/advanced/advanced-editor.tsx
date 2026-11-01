@@ -8,6 +8,7 @@ import { AdminField, AdminSection, AdminToggle } from "../admin-form";
 import { useAdmin } from "../admin-provider";
 import styles from "../admin-v2.module.css";
 import ResetExampleDialog from "./reset-example-dialog";
+import FocusPositionField from "./focus-position-field";
 
 export default function AdvancedEditor() {
   const { content, setContent, siteScope } = useAdmin();
@@ -73,7 +74,7 @@ export default function AdvancedEditor() {
                     <AdminField label="作品代码" value={work.code} onChange={(value) => updateWork(index, { code: value })} />
                     <AdminField label="作品标题" value={work.title} onChange={(value) => updateWork(index, { title: value })} />
                     <AdminField label="作品描述" value={work.subtitle} onChange={(value) => updateWork(index, { subtitle: value })} />
-                    <AdminField label="画面焦点" value={work.position} help="沿用 CSS object-position，例如 50% 50%。" onChange={(value) => updateWork(index, { position: value })} />
+                    <FocusPositionField value={work.position} onCommit={(value) => updateWork(index, { position: value })} />
                     <dl className={styles.legacyMeta}>
                       <div><dt>图片引用</dt><dd>{work.image}</dd></div>
                       <div><dt>预览引用</dt><dd>{work.preview}</dd></div>

@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, boolean, check, uniqueIndex, index, integer, jsonb, primaryKey, foreignKey } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, boolean, check, unique, uniqueIndex, index, integer, jsonb, primaryKey, foreignKey } from 'drizzle-orm/pg-core';
 import { user } from './auth-schema.mjs';
 export * from './auth-schema.mjs';
 
@@ -43,31 +43,35 @@ export const contentDrafts = pgTable('site_content_drafts', {
   check('positive_draft_revision', sql`${table.revision} > 0`)]);
 
 export const siteAssets = pgTable('site_assets', {
-  id: uuid('id').primaryKey(), siteId: uuid('site_id').notNull().references(() => sites.id),
+  id: uuid('id').primaryKey(), siteId: uuid('site_id').notNull(),
   digest: text('digest').notNull(), originalType: text('original_type').notNull(),
   width: integer('width').notNull(), height: integer('height').notNull(),
   variants: jsonb('variants').notNull(), createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-}, table => [uniqueIndex('site_assets_site_digest_unique').on(table.siteId, table.digest),
-  check('asset_digest_sha256', sql`${table.digest} ~ '^[a-f0-9]{64}$'`),
-  check('asset_width_positive', sql`${table.width} > 0`), check('asset_height_positive', sql`${table.height} > 0`)]);
+}, table => [foreignKey({ name: 'site_assets_site_id_fkey', columns: [table.siteId], foreignColumns: [sites.id] }),
+  unique('site_assets_site_id_digest_key').on(table.siteId, table.digest),
+  check('site_assets_digest_check', sql`${table.digest} ~ '^[a-f0-9]{64}$'`),
+  check('site_assets_width_check', sql`${table.width} > 0`), check('site_assets_height_check', sql`${table.height} > 0`)]);
 
 export const siteLegacyImports = pgTable('site_legacy_imports', {
-  id: uuid('id').primaryKey(), siteId: uuid('site_id').notNull().references(() => sites.id),
+  id: uuid('id').primaryKey(), siteId: uuid('site_id').notNull(),
   fingerprint: text('fingerprint').notNull(), evidence: jsonb('evidence').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-}, table => [uniqueIndex('site_legacy_import_unique').on(table.siteId, table.fingerprint)]);
+}, table => [foreignKey({ name: 'site_legacy_imports_site_id_fkey', columns: [table.siteId], foreignColumns: [sites.id] }),
+  unique('site_legacy_imports_site_id_fingerprint_key').on(table.siteId, table.fingerprint)]);
 
 // SQL also enforces immutable content, bounded history cleanup and the Site/revision FK.
 export const publicationRevisions = pgTable('site_publication_revisions', {
-  id: uuid('id').defaultRandom().primaryKey(), siteId: uuid('site_id').notNull().references(() => sites.id),
+  id: uuid('id').defaultRandom().primaryKey(), siteId: uuid('site_id').notNull(),
   space: text('space').notNull(), draftRevision: integer('draft_revision').notNull(),
   content: jsonb('content').notNull(), assetIds: uuid('asset_ids').array().notNull(),
   publishedAt: timestamp('published_at', {withTimezone:true}).defaultNow().notNull(),
-}, table => [uniqueIndex('publication_site_revision_unique').on(table.siteId,table.id),
-  index('publication_history_site_order').on(table.siteId,table.space,table.publishedAt.desc(),table.id.desc()),
+}, table => [foreignKey({ name: 'site_publication_revisions_site_id_fkey', columns: [table.siteId], foreignColumns: [sites.id] }),
+  unique('site_publication_revisions_site_id_id_key').on(table.siteId,table.id),
+  index('publication_history_site_order').on(table.siteId,table.space,table.publishedAt.desc().nullsFirst(),table.id.desc().nullsFirst()),
   check('publication_known_space',sql`${table.space} IN ('basic', 'premium-polaroid', 'premium-flow-gallery')`),
-  check('publication_positive_revision',sql`${table.draftRevision} > 0`)]);
+  check('site_publication_revisions_draft_revision_check',sql`${table.draftRevision} > 0`)]);
 export const publications = pgTable('site_publications', {
-  siteId: uuid('site_id').primaryKey().references(() => sites.id),
+  siteId: uuid('site_id').primaryKey(),
   revisionId: uuid('revision_id').notNull(),
-}, table => [foreignKey({columns:[table.siteId,table.revisionId],foreignColumns:[publicationRevisions.siteId,publicationRevisions.id]})]);
+}, table => [foreignKey({ name: 'site_publications_site_id_fkey', columns: [table.siteId], foreignColumns: [sites.id] }),
+  foreignKey({name:'site_publications_site_id_revision_id_fkey',columns:[table.siteId,table.revisionId],foreignColumns:[publicationRevisions.siteId,publicationRevisions.id]})]);
