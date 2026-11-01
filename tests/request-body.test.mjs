@@ -15,10 +15,10 @@ test('chunked JSON is bounded by bytes before the entire stream is buffered', as
   let reads = 0, cancelled = false;
   const body = new ReadableStream({ pull(controller) { reads++; controller.enqueue(new Uint8Array(8)); }, cancel() { cancelled = true; } });
   const request = new Request('http://fixture', { method: 'POST', body, duplex: 'half' });
-  await assert.rejects(readBoundedText(request, { maximum: 10 }), error => error.status === 413);
+  await assert.rejects(readBoundedText(request, { maximum: 10, bucket: 'auth' }), error => error.status === 413);
   assert.ok(reads <= 3);
   assert.equal(cancelled, true);
-  await assert.rejects(readBoundedText(new Request('http://fixture', { method: 'POST', body: '星空' }), { maximum: 5 }), error => error.status === 413, 'UTF-8 bytes, not JS character count');
+  await assert.rejects(readBoundedText(new Request('http://fixture', { method: 'POST', body: '星空' }), { maximum: 5, bucket: 'auth' }), error => error.status === 413, 'UTF-8 bytes, not JS character count');
 });
 
 test('cancellation failure cannot replace oversize error or stall the request', async () => {
@@ -32,7 +32,7 @@ test('cancellation failure cannot replace oversize error or stall the request', 
 test('slow body timeout remains a timeout even when cancelling resolves the pending read', async () => {
   let cancelled = false;
   const request = new Request('http://fixture', { method: 'POST', duplex: 'half', body: new ReadableStream({ pull() { return new Promise(() => {}); }, cancel() { cancelled = true; } }) });
-  await assert.rejects(readBoundedText(request, { maximum: 10, timeoutMs: 10 }), error => error.status === 408 && error.message === 'REQUEST_TIMEOUT');
+  await assert.rejects(readBoundedText(request, { maximum: 10, timeoutMs: 10, bucket: 'auth' }), error => error.status === 408 && error.message === 'REQUEST_TIMEOUT');
   assert.equal(cancelled, true);
 });
 
@@ -47,11 +47,11 @@ test('abort and reader errors have fixed responses without internal details', as
 });
 
 test('valid UTF-8, binary, allowed empty auth and invalid UTF-8 stay distinct', async () => {
-  assert.equal(await readBoundedText(new Request('http://fixture', { method: 'POST', body: '星空' }), { maximum: 6 }), '星空');
+  assert.equal(await readBoundedText(new Request('http://fixture', { method: 'POST', body: '星空' }), { maximum: 6, bucket: 'auth' }), '星空');
   const binary = new Uint8Array([255, 0, 1]);
   assert.deepEqual(await readBoundedBytes(new Request('http://fixture', { method: 'POST', body: binary }), { maximum: 3 }), Buffer.from(binary));
-  await assert.rejects(readBoundedText(new Request('http://fixture', { method: 'POST', body: binary }), { maximum: 3 }), /INVALID_REQUEST_BODY/);
-  assert.equal(await readBoundedText(new Request('http://fixture', { method: 'POST' }), { maximum: 10, emptyAllowed: true }), '');
+  await assert.rejects(readBoundedText(new Request('http://fixture', { method: 'POST', body: binary }), { maximum: 3, bucket: 'auth' }), /INVALID_REQUEST_BODY/);
+  assert.equal(await readBoundedText(new Request('http://fixture', { method: 'POST' }), { maximum: 10, emptyAllowed: true, bucket: 'auth' }), '');
   await assert.rejects(readBoundedBytes(new Request('http://fixture', { method: 'POST' }), { maximum: 10 }), /EMPTY_REQUEST_BODY/);
 });
 
@@ -61,16 +61,16 @@ test('eight held JSON reads reject the ninth and abort returns every slot withou
   const reads = controllers.map(controller => readBoundedText(new Request('http://fixture', {
     method: 'POST', duplex: 'half', signal: controller.signal,
     body: new ReadableStream({ pull() { return new Promise(() => {}); } }),
-  }), { maximum: JSON_BODY_LIMITS.draft }));
+  }), { maximum: JSON_BODY_LIMITS.draft, bucket: 'auth' }));
   const completed = Promise.allSettled(reads);
   try {
-    await assert.rejects(readBoundedText(new Request('http://fixture', { method: 'POST', body: '{}' }), { maximum: JSON_BODY_LIMITS.auth }),
+    await assert.rejects(readBoundedText(new Request('http://fixture', { method: 'POST', body: '{}' }), { maximum: JSON_BODY_LIMITS.auth, bucket: 'auth' }),
       error => error instanceof RequestBodyError && error.status === 429 && error.message === 'JSON_REQUEST_BUSY');
     assert.deepEqual(await readBoundedBytes(new Request('http://fixture', { method: 'POST', body: new Uint8Array([1, 2]) }), { maximum: 2 }), Buffer.from([1, 2]), 'Binary upload reader does not share the JSON limit');
   } finally { controllers.forEach(controller => controller.abort()); }
   const results = await completed;
   assert.ok(results.every(result => result.status === 'rejected' && result.reason.message === 'REQUEST_INTERRUPTED'));
-  assert.equal(await readBoundedText(new Request('http://fixture', { method: 'POST', body: '{}' }), { maximum: JSON_BODY_LIMITS.auth }), '{}', 'All JSON slots become available again');
+  assert.equal(await readBoundedText(new Request('http://fixture', { method: 'POST', body: '{}' }), { maximum: JSON_BODY_LIMITS.auth, bucket: 'auth' }), '{}', 'All JSON slots become available again');
 });
 
 test('anonymous reads cannot exhaust authenticated writes and one principal cannot block another', async () => {
@@ -98,6 +98,7 @@ test('anonymous reads cannot exhaust authenticated writes and one principal cann
     assert.equal(await readBoundedText(request(), { maximum: 2048, bucket: 'editor', principal: 'owner-a' }), '{}');
     await assert.rejects(readBoundedText(request(), { maximum: 2048, bucket: 'editor' }), TypeError);
     await assert.rejects(readBoundedText(request(), { maximum: 2048, bucket: 'unknown' }), TypeError);
+    await assert.rejects(readBoundedText(request(), { maximum: 2048 }), TypeError, 'A missing bucket fails closed');
   } finally { held.forEach(controller => controller.abort()); await done; }
 });
 

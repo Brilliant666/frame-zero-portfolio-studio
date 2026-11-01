@@ -58,9 +58,10 @@ export async function readBoundedBytes(request, { maximum, timeoutMs = 10_000, e
 
 /**
  * @param {Request} request
- * @param {{ bucket?: 'auth' | 'editor', principal?: string, maximum: number, timeoutMs?: number, emptyAllowed?: boolean }} options
+ * @param {{ bucket: 'auth' | 'editor', principal?: string, maximum: number, timeoutMs?: number, emptyAllowed?: boolean }} options
+ * `bucket` is required so a new caller cannot silently share the anonymous auth capacity.
  */
-export async function readBoundedText(request, { bucket = 'auth', principal, ...policy } = {}) {
+export async function readBoundedText(request, { bucket, principal, ...policy } = {}) {
   if (!Object.hasOwn(activeJsonReaders, bucket) || bucket === 'editor' && (typeof principal !== 'string' || !principal)) {
     throw new TypeError('Invalid request body scope.');
   }
