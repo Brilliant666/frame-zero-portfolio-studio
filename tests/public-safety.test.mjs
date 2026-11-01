@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { reviewedHistoryMetadata } from '../scripts/lib/public-history-metadata.mjs';
 
 const script = fileURLToPath(new URL('../scripts/check-public-safety.mjs', import.meta.url));
 const attributionAddress = ['noreply', 'anthropic.com'].join('@');
@@ -24,6 +25,20 @@ function fixture(t) {
     scan: () => spawnSync(process.execPath, [script], { cwd: dir, encoding: 'utf8', timeout: 15_000 }),
   };
 }
+
+test('Git object IDs containing phone-shaped digits are structural, while message text is retained', t => {
+  const digits = ['13', '800', '123', '456'].join('');
+  for (const length of [40, 64]) {
+    const hash = 'a'.repeat(10) + digits + 'b'.repeat(length - 10 - digits.length);
+    const message = `    commit ${hash}`;
+    assert.equal(reviewedHistoryMetadata(`commit ${hash}\nAuthor: Safety fixture <safety@example.invalid>\n${message}`), `Author: Safety fixture <safety@example.invalid>\n${message}`);
+    const f = fixture(t);
+    f.git('commit', '-m', `commit ${hash}`);
+    const result = f.scan();
+    assert.equal(result.status, 1, 'A hash-shaped message is still inspected');
+    assert.match(result.stderr, /possible Chinese mobile number/);
+  }
+});
 
 test('public automated attribution accepts GitHub trailer field casing', async t => {
   for (const field of ['Co-Authored-By', 'Co-authored-by', 'co-authored-by', 'CO-AUTHORED-BY']) {
