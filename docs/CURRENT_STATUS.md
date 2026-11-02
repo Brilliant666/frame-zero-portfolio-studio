@@ -1,12 +1,12 @@
 # 当前检查点
 
-更新：2026-11-01。这里记录核对时的基线、明确授权与停止点；历史验收不构成新授权。实施前仍须核对 GitHub 实时状态。
+更新：2026-11-02。这里记录核对时的基线、明确授权与停止点；历史验收不构成新授权。实施前仍须核对 GitHub 实时状态。
 
 ## 已合并基线
 
 | 项目 | 核对结果 |
 | --- | --- |
-| main | `bb17b260a29f6e0d35275fafd789cfdc6aec237a`；[PR64](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/64) 与 [PR65](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/65) 已于 2026-11-01 人工 Squash 合并；两个模块最终 Head 的五项完整 CI 均成功，PR64 合并后的 main `a204b79` 也已完整通过；这些证据不代替后续实际 main push 检查 |
+| main | `ec5b9b3daf18c913f38766c10f4f3546ad34f96d`（2026-11-02再次核对GitHub）；[PR64](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/64)、[PR65](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/65)、[PR66](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/66) 均已人工合并，第1批收口；模块与实际main的五项完整CI已通过，这些证据不代替后续模块检查 |
 | `ff8f55d` 的 main push | [Quality](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41215259889)、[Public repository safety](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41215259947)、[Container](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41215259921)、[Deployment Bootstrap](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41215259887)、[PostgreSQL Integration](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41215259881) 均成功；只证明该 SHA 的 CI |
 | 既有实现 | PR50 生产入口与隔离 HTTPS／持久化验收、PR51 应用更新策略、PR52 退役脚本诊断已合并；不等于真实服务器已部署或日常应用已升级 |
 | 历史 Draft | [PR16](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/16)、[PR26](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/26) 保持历史用途，不推进 |
@@ -14,7 +14,13 @@
 账号／Site／owner 和 grant、三类独立内容空间、AssetId／素材、草稿 CAS、Published-only 与历史回退继续保留。
 日常实际目录、BUILD、Windows 任务和配置只按仓库外本机交接及现场核对，不由 main SHA 推断已升级。
 
-## 2026-10-31 授权与第 1 批
+## 当前：第4、5批模块1
+
+用户已批准第4、5批交错方案，当前仅实施并交付基础模板宿主与首屏样式模块，分支 `refactor/basic-host-public-loading`。四处宿主已统一，服务端冷样式路径和公开入口预算已补齐；首次失败、资源比较、本机验证与限制见[模块验收](BASIC_HOST_PUBLIC_LOADING_2026-11-02.md)。后续模块尚未实施，仍须逐模块细化并集成。
+
+下一步核对本模块最终PR Head的五项完整CI，不以本机测试或旧main检查替代。没有合并、日常应用切换或远程部署授权。临时预览app已停止；停止本轮合成PG被自动审批拒绝，未绕过，需用户后续明确允许停止。日常运行角色继续仅以仓库外现场交接为准。
+
+## 2026-10-31 授权与第1批（已收口）
 
 只读审查已交付，用户已授权开始第 1 批。交付方式按用户 2026-11-01 的要求：每个功能一个分支，从实时最新 main 建立；一个模块合并成一个 PR。用户于 2026-11-01 授权继续收口；五项完整 CI 成功并核对最终 Head、base 和审核条件后推进合并。自动审批曾以 Merge Without Review 拒绝 PR64、PR65 合并，用户已手动完成。PR66 已同步上述 main；其余合并仍遵守工具审批，不绕过拒绝；不直接推 main，不自动部署。
 

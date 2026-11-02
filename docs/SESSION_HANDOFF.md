@@ -1,8 +1,16 @@
 # 会话交接
 
-更新：2026-11-01。基线、授权与风险统一见[CURRENT_STATUS](CURRENT_STATUS.md)。实施前核对 GitHub，不按历史 Draft 状态继续旧任务。
+更新：2026-11-02。基线、授权与风险统一见[CURRENT_STATUS](CURRENT_STATUS.md)。实施前核对 GitHub，不按历史 Draft 状态继续旧任务。
 
-## 当前续接：审查第 1 批
+## 当前续接：第4、5批模块1
+
+- 用户批准交错实施方案，本次仅交付基础模板宿主与首屏样式模块，分支 `refactor/basic-host-public-loading`，从 main `ec5b9b3` 建立。PR64、PR65、PR66均已人工合并；不再按下方旧状态推进。
+- 四宿主抽取、cinematic CSS拆分、三个服务端入口首屏样式、公开入口预算与未知loader拒绝已完成。本机检查、首次冷HTML失败及审查修正见[模块验收](BASIC_HOST_PUBLIC_LOADING_2026-11-02.md)。公开路由CSS最终+67字节，不能沿用中间构建的下降结论。
+- 下一步只验收本模块最终PR Head的五项完整CI；通过前不称可合并。未授权合并、日常切换或远程部署。后续共享规则、草稿、弹层与媒体模块尚未实施。
+- 临时预览app已停止，两处本轮预览配置精确移除；停止合成PG被自动审批拒绝，未换方式重试，仍需用户明确允许停止。隔离数据和构建保留至模块PR验收结束，清理按精确清单及对应授权。
+- 日常应用及其PG、真实内容与Published未操作；`PREVIEW_RETURN = UNRESOLVED` 保留。
+
+## 第1批收口时的历史检查点（2026-11-01）
 
 - 前置基线为 `ff8f55d6c564c466982b57bc56be29540866ad5e`（PR54 的合并提交），[PR53](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/53)／[PR54](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/54) 已由用户人工合并，解决公开署名扫描误报及 GitHub 字段大小写兼容。该 SHA 的 main push 五项完整 CI 均已成功，链接见当前检查点。
 - 2026-10-31 只读审查已交付，用户授权第 1 批。决策 A（外站导航放行）与 C（pwsh 测试改静态守卫）已有结论。按用户要求每个功能一个分支、一个模块一个 PR：[PR64](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/64) 安全边界、[PR65](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/65) 内容与数据、[PR66](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/66) 文档与测试。原单一用途 PR #55–#63 已关闭、未合并。

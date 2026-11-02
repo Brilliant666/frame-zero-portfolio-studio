@@ -61,7 +61,7 @@ async function rendererSources() {
 async function cinematicSources() {
   return Promise.all([
     fs.readFile(new URL("../app/templates/cinematic-light/template.tsx", import.meta.url), "utf8"),
-    fs.readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    fs.readFile(new URL("../app/templates/cinematic-light/cinematic.css", import.meta.url), "utf8"),
   ]);
 }
 

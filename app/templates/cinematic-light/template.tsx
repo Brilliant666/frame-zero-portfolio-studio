@@ -11,6 +11,7 @@ import { useTemplateSectionNavigation } from "../shared/use-template-section-nav
 import type { TemplateProps } from "../types";
 import { hasCjkText } from "../shared/display-text";
 import { splitCinematicLightSlots } from "./slot-plan";
+import "./cinematic.css";
 
 const cinematicRatios = getTemplateSlotRatios("cinematic-light");
 const cinematicViewHashes = {

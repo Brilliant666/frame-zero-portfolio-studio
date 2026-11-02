@@ -1,11 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import type { TemplateId, Work } from "../site-config";
-import TemplateRenderer from "../templates/template-renderer";
-import Lightbox from "../templates/shared/lightbox";
-import { templateAppearances } from "../templates/appearance";
+import BasicTemplateHost from "../templates/shared/basic-template-host";
 import { useTemplateInteractions } from "../templates/shared/use-template-interactions";
 import { useAdmin } from "./admin-provider";
 import { PlatformAssetContext } from "../templates/shared/asset-context";
@@ -56,18 +54,8 @@ export default function TemplatePreviewDialog({
   const platformAssets = useMemo(() => siteScope ? new Map(content.social.flatMap(s => s.qrAssetId
     ? [[s.qrAssetId, `${siteScope.assetsEndpoint}/${s.qrAssetId}/full`] as const] : [])) : null, [content.social, siteScope]);
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const {
-    activeWork,
-    closeButtonRef,
-    copiedKey,
-    copyText,
-    lightboxRef,
-    lightboxWorks,
-    moveActiveWork,
-    openWork,
-    setActiveWork,
-  } = useTemplateInteractions(works);
-  const closeActiveWork = useCallback(() => setActiveWork(null), [setActiveWork]);
+  const interactions = useTemplateInteractions(works);
+  const { activeWork, setActiveWork } = interactions;
   const previewContent = useMemo(() => ({
     ...content,
     activeTemplate: templateId,
@@ -130,33 +118,18 @@ export default function TemplatePreviewDialog({
       <div className={styles.surface}>
         <div className={styles.scrollport} data-preview-scrollport>
         <PlatformAssetContext.Provider value={platformAssets}>
-        <TemplateRenderer
-          key={`${templateId}-${mappingSignature(works)}`}
+        <BasicTemplateHost
+          rendererKey={`${templateId}-${mappingSignature(works)}`}
           templateId={templateId}
           content={previewContent}
           works={[...works]}
           packages={enabledPackages}
           bookingTemplate={bookingTemplate}
           booted
-          copiedKey={copiedKey}
           isPreview
-          onCopy={copyText}
-          onBeforeViewChange={closeActiveWork}
-          onOpenWork={openWork}
+          interactions={interactions}
+          lightboxTemplate={templateId}
         />
-        {activeWork ? (
-          <Lightbox
-            work={activeWork}
-            works={[...lightboxWorks]}
-            theme={templateId === "polaroid-field" ? "light" : "dark"}
-            appearance={templateAppearances[templateId].tone}
-            basicTemplate={templateId}
-            frameRef={lightboxRef}
-            closeButtonRef={closeButtonRef}
-            onMove={moveActiveWork}
-            onClose={() => setActiveWork(null)}
-          />
-        ) : null}
         </PlatformAssetContext.Provider>
         </div>
       </div>

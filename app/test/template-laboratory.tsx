@@ -1,7 +1,7 @@
 "use client";
 import { createEmptyBasicContent } from "../site-editor/content-schema";
 import { templateCatalog, type TemplateId } from "../templates/catalog";
-import TemplateRenderer from "../templates/template-renderer";
+import BasicTemplateHost from "../templates/shared/basic-template-host";
 
 export default function TemplateLaboratory({ templateId }: { templateId: TemplateId }) {
   const content = createEmptyBasicContent();
@@ -21,6 +21,6 @@ export default function TemplateLaboratory({ templateId }: { templateId: Templat
       </form>
       <a href="/test/admin" style={{ display: "inline-block", marginTop: 8, fontSize: 12 }}>进入本人基础后台</a>
     </aside>
-    <TemplateRenderer key={templateId} templateId={templateId} content={content} works={[]} packages={[]} bookingTemplate="" booted copiedKey={null} isPreview onCopy={async () => {}} onOpenWork={() => {}} />
+    <BasicTemplateHost rendererKey={templateId} templateId={templateId} content={content} works={[]} packages={[]} bookingTemplate="" booted isPreview />
   </>;
 }
