@@ -49,4 +49,10 @@ Next 16.4.1把该服务端CSS并入整个公开路由，其他模板也会收到
 
 复用已有闲置开发工作区，没有复制日常数据库、照片或共享可变依赖。构建目录约177 MiB（Next）和9.8 MiB（legacy）；隔离合成PG／素材约48.5 MiB，临时脚本约12 KiB。保留至本模块PR验收结束，再按精确清单与对应授权决定清理，不自动删除已有目录。
 
-临时预览应用已停止；两处本轮预览配置精确核对后移除。停止合成PG的请求被自动审批以可能干扰负载拒绝，未绕过，隔离PG仍保留运行，需用户后续明确允许停止。该情况不代表日常PG被操作。
+临时预览应用已停止；两处本轮预览配置精确核对后移除。停止合成PG的请求最初被自动审批以可能干扰负载拒绝，未绕过；用户随后明确允许，隔离PG已正常停止并确认进程退出、测试端口无响应，日常PG仍正常接受连接。数据与素材保留，未删除文件。
+
+## 首次CI及增量修正
+
+[PR67](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/67) 的首个Head `414f9fe` 四项完整检查成功，[Quality](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41465791764) 在 `tests/admin-v2.test.mjs` 失败：两条旧源码形状断言仍要求预览dialog直接包含TemplateRenderer／Lightbox。移除这两条已被宿主行为测试覆盖的断言，保留dialog语义、无写入约束及其余断言；没有修改产品代码、CI门槛或运行配置。
+
+针对这次失败，完整Admin套件301项通过，1项Linux非root目录权限测试在Windows按原条件跳过；polish套件212项通过，包含宿主传参、复制／开图／切图、关闭回焦相关状态、mapping key与dialog取消行为。本次仅测试与记录变更，复用先前产品构建和浏览器证据，不重建或重启应用。最终Head仍须重新完成五项完整CI，不以旧Head四项成功替代。
