@@ -43,7 +43,17 @@ export async function publicationIntegration({runtime,origin,password,restart}) 
   const secondResponse=await req(path,a,{action:'publish',expectedDraftRevision:2,expectedPublicationId:first.id});assert.equal(secondResponse.status,200);const second=(await secondResponse.json()).publication;
   assert.equal((await req(path,a,{action:'publish',expectedDraftRevision:2,expectedPublicationId:first.id})).status,409);
   assert.equal((await req(path,a,{action:'rollback',revisionId:first.id,expectedPublicationId:first.id})).status,409);
-  assert.equal((await req(path,a,{action:'rollback',revisionId:randomUUID(),expectedPublicationId:second.id})).status,404);
+  for(const [version,uppercase] of [[1,false],[4,true],[8,true]]) {
+    const generated=randomUUID();
+    const id=generated.slice(0,14)+version+generated.slice(15);
+    const missing=uppercase?id.toUpperCase():id;
+    assert.equal((await req(path,a,{action:'rollback',revisionId:missing,expectedPublicationId:second.id})).status,404,`valid v${version} revision reaches repository`);
+    assert.equal((await req(path,a,{action:'publish',expectedDraftRevision:2,expectedPublicationId:missing})).status,409,`valid v${version} pointer reaches CAS`);
+  }
+  for(const revisionId of [null,42,{},'malformed','00000000-0000-0000-8000-000000000000','00000000-0000-4000-7000-000000000000']) {
+    assert.equal((await req(path,a,{action:'rollback',revisionId,expectedPublicationId:second.id})).status,400,'invalid revision is rejected before repository');
+  }
+  assert.equal((await readPublished(runtime.pool,'publishfixturea')).id,second.id,'rejected requests preserve Published');
   assert.equal((await req(path,a,{action:'rollback',revisionId:first.id,expectedPublicationId:second.id})).status,200);
   await restart();a=await login('publishfixturea');
   assert.equal((await readPublished(runtime.pool,'publishfixturea')).id,first.id);

@@ -1,14 +1,14 @@
 # 会话交接
 
-更新：2026-11-02。基线、授权与风险统一见[CURRENT_STATUS](CURRENT_STATUS.md)。实施前核对 GitHub，不按历史 Draft 状态继续旧任务。
+更新：2026-11-03。基线、授权与风险统一见[CURRENT_STATUS](CURRENT_STATUS.md)。实施前核对 GitHub，不按历史 Draft 状态继续旧任务。
 
-## 当前续接：第4、5批模块1
+## 当前续接：第4、5批模块2
 
-- 用户批准交错实施方案，本次仅交付基础模板宿主与首屏样式模块，分支 `refactor/basic-host-public-loading`，从 main `ec5b9b3` 建立。PR64、PR65、PR66均已人工合并；不再按下方旧状态推进。
-- 四宿主抽取、cinematic CSS拆分、三个服务端入口首屏样式、公开入口预算与未知loader拒绝已完成。本机检查、首次冷HTML失败及审查修正见[模块验收](BASIC_HOST_PUBLIC_LOADING_2026-11-02.md)。公开路由CSS最终+67字节，不能沿用中间构建的下降结论。
-- 下一步只验收本模块最终PR Head的五项完整CI；通过前不称可合并。未授权合并、日常切换或远程部署。后续共享规则、草稿、弹层与媒体模块尚未实施。
-- 临时预览app已停止，两处本轮预览配置精确移除；停止合成PG曾被自动审批拒绝，用户随后明确允许，现已正常停止并确认退出，日常PG仍可连接。隔离数据和构建保留至模块PR验收结束，清理按精确清单及对应授权。
-- 日常应用及其PG、真实内容与Published未操作；`PREVIEW_RETURN = UNRESOLVED` 保留。
+- [PR67](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/67)已由用户人工合并，实际main为`fad6e020897247aa9c87491e8946d27df6a75f06`；最终PR与main五项完整CI均成功。模块1首次失败与限制保留在[模块1验收](BASIC_HOST_PUBLIC_LOADING_2026-11-02.md)。用户授权的日常3001更新也已完成，具体现场信息见仓库外交接。
+- 用户批准模块2方案后，在核对闲置的既有工作区保留原分支和独有产物，从实时main建立`refactor/shared-validation-reads`。四个产品文件仅收敛通用UUID与完成开户站点存在性查询；账号Site v4规则、owner/grant、写入锁/CAS与Published读取不变。
+- 本机行为、后台回归、真实隔离PG/HTTP和标准Node/legacy运行检查已完成，首次隔离端口失败及最终证据见[模块2验收](SHARED_VALIDATION_READS_2026-11-03.md)。测试只使用合成账号与素材，未操作日常服务或真实数据。
+- 下一步同一模块PR收口，并按最终Head验收五项完整CI，不用旧Head或本机通过代替。Auto-fix保持关闭；模块2合并、日常切换、真实迁移、远程部署和既有目录清理均需对应授权。
+- 模块3草稿、模块4弹层、模块5媒体、模块6动效/字体仍未实施；`PREVIEW_RETURN = UNRESOLVED / ACCEPTED_FOR_LOCAL_STAGE`保留。
 
 ## 第1批收口时的历史检查点（2026-11-01）
 

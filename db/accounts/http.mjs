@@ -47,6 +47,15 @@ export function accountJson(body, status = 200) {
 }
 export const BASIC_TEMPLATES = Object.freeze(['cinematic-light','neon-hud','film-rail','manga-panels','prism-liquid','orbital-portal','archive-os','editorial-duet','polaroid-field','character-select','museum-depth']);
 
+// Existence after provisioning is not owner authorization or a Published lookup.
+export async function completedSiteExists(pool, slug) {
+  const result = await pool.query(`SELECT s.id FROM sites s
+    JOIN portfolio_users p ON p.id=s.owner_id
+    JOIN account_provisioning op ON op.id=p.provisioning_id AND op.completed_at IS NOT NULL
+    WHERE s.slug=$1`, [slug]);
+  return Boolean(result.rowCount);
+}
+
 export async function readOwnedSite(runtime, headers, requestedId = null, requestedSlug = null) {
   const session = await runtime.auth.api.getSession({ headers });
   if (!session) return null;

@@ -1,4 +1,4 @@
-import { accountRuntimeEnabled, accountRequestAllowed, getAccountRuntime, readSiteForPrincipal } from './http.mjs';
+import { accountRuntimeEnabled, accountRequestAllowed, completedSiteExists, getAccountRuntime, readSiteForPrincipal } from './http.mjs';
 import { isSiteSlug } from './site-slug.mjs';
 import { unpublishedAcceptanceRedirect } from './local-acceptance.mjs';
 import { publicationHistory } from './publications.mjs';
@@ -93,11 +93,7 @@ export async function handleSiteEntry(request, slug, mode, templateNames = {}) {
       } catch { /* Unknown is not an unpublished state. */ }
       return page('站点工作台', renderSiteWorkspace(account, slug, published, templateNames, grantConfirmed));
     }
-    const result = await runtime.pool.query(`SELECT s.slug FROM sites s
-      JOIN portfolio_users p ON p.id=s.owner_id
-      JOIN account_provisioning op ON op.id=p.provisioning_id AND op.completed_at IS NOT NULL
-      WHERE s.slug=$1`, [slug]);
-    if (!result.rowCount) return page('站点不存在', '<p>请检查摄影师主页地址。</p>', 404);
+    if (!await completedSiteExists(runtime.pool, slug)) return page('站点不存在', '<p>请检查摄影师主页地址。</p>', 404);
     // M1 has no Published repository yet. In particular, do not fall back to
     // site_settings 1/2601, profile defaults, or any draft to fill this page.
     const acceptance = await unpublishedAcceptanceRedirect(request, runtime, slug);

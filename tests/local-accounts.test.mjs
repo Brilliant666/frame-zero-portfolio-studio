@@ -6,7 +6,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { readAccountConfig } from '../scripts/lib/account-config.mjs';
 import { createAccountRuntime } from '../db/accounts/runtime.mjs';
 import { provisionAccount } from '../db/accounts/provision.mjs';
-import { readOwnedSite } from '../db/accounts/http.mjs';
+import { completedSiteExists, readOwnedSite } from '../db/accounts/http.mjs';
 import { migrateAccounts } from '../db/accounts/migrate.mjs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -180,6 +180,10 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1800000 },
     assert.equal((await request(`/api/account/site?siteId=${siteId}`, { cookie: beta })).status, 401);
     assert.equal(await readOwnedSite(runtime, new Headers({ cookie: beta }), siteId), null);
     assert.equal((await request(`/api/account/site?siteId=${siteId}`, { cookie: alpha })).status, 200);
+    for (const version of [1, 8]) {
+      const nonV4 = siteId.slice(0, 14) + version + siteId.slice(15);
+      assert.equal((await request(`/api/account/site?siteId=${nonV4}`, { cookie: alpha })).status, 403, 'Account Site IDs remain v4-only');
+    }
   });
   await t.test('banning an account immediately denies its existing session without deleting its Site', async () => {
     await runtime.pool.query('UPDATE "user" SET banned=true WHERE username=$1', ['fixturealpha']);
@@ -216,6 +220,7 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1800000 },
       p.provisioning_id,u.email FROM sites s JOIN portfolio_users p ON p.id=s.owner_id
       JOIN "user" u ON u.id=p.auth_user_id`);
     for (const slug of ['fixturealpha', 'fixturebeta']) {
+      assert.equal(await completedSiteExists(runtime.pool, slug), true, 'Completed Site exists without Published');
       const html = await sitePage(`/${slug}`, 200);
       assert.match(html, /data-site-state="unpublished"/);
       assert.doesNotMatch(html, /data-site-admin=|premium-polaroid|已授权|<img\b/);
@@ -223,6 +228,7 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1800000 },
         for (const value of Object.values(row)) assert.ok(!html.includes(value), 'Public HTML omits private identity fields');
       }
     }
+    assert.equal(await completedSiteExists(runtime.pool, 'unknownfixture'), false);
     await sitePage('/unknownfixture', 404);
     for (const slug of ['ab', 'InvalidSlug', 'invalid%3Ctag%3E', 'assets']) {
       await sitePage(`/${slug}`, 404);
@@ -231,8 +237,11 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1800000 },
     // Even a structurally valid Site must not become public before the
     // provisioning operation is complete.
     await runtime.pool.query("UPDATE account_provisioning SET completed_at=NULL WHERE username='fixturegamma'");
-    try { await sitePage('/fixturegamma', 404); }
-    finally { await runtime.pool.query("UPDATE account_provisioning SET completed_at=now() WHERE username='fixturegamma'"); }
+    try {
+      assert.equal(await completedSiteExists(runtime.pool, 'fixturegamma'), false, 'Incomplete provisioning hides an existing Site');
+      await sitePage('/fixturegamma', 404);
+    } finally { await runtime.pool.query("UPDATE account_provisioning SET completed_at=now() WHERE username='fixturegamma'"); }
+    assert.equal(await completedSiteExists(runtime.pool, 'fixturegamma'), true);
   });
   await t.test('slug admin is an owner-only editor entry and grant-aware without administrator escalation', async () => {
     const a = await sitePage('/fixturealpha/admin', 200, alpha);

@@ -1,4 +1,5 @@
 import { accountJson } from "../../db/accounts/http.mjs";
+import { UUID } from "../../db/accounts/assets.mjs";
 import { JSON_BODY_LIMITS, readBoundedText, RequestBodyError } from "../../db/accounts/request-body.mjs";
 import { changePublication, publicationHistory, PublicationError } from "../../db/accounts/publications.mjs";
 import { authorizeEditor } from "./server";
@@ -6,7 +7,6 @@ import { isContentSpace } from "./content-schema";
 import { preparePublication } from "./publication-projection";
 export { preparePublication } from "./publication-projection";
 
-const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export async function handlePublicationRequest(request: Request,slug: string,space: string) {
   const auth=await authorizeEditor(request,slug,space);
   if("denied" in auth)return accountJson({error:"站点或内容空间不可访问"},auth.denied);
