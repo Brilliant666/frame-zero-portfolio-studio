@@ -1,12 +1,12 @@
 # 当前检查点
 
-更新：2026-11-02。这里记录核对时的基线、明确授权与停止点；历史验收不构成新授权。实施前仍须核对 GitHub 实时状态。
+更新：2026-11-03。这里记录核对时的基线、明确授权与停止点；历史验收不构成新授权。实施前仍须核对 GitHub 实时状态。
 
 ## 已合并基线
 
 | 项目 | 核对结果 |
 | --- | --- |
-| main | `ec5b9b3daf18c913f38766c10f4f3546ad34f96d`（2026-11-02再次核对GitHub）；[PR64](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/64)、[PR65](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/65)、[PR66](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/66) 均已人工合并，第1批收口；模块与实际main的五项完整CI已通过，这些证据不代替后续模块检查 |
+| main | `fad6e020897247aa9c87491e8946d27df6a75f06`（2026-11-03核对GitHub）；[PR67](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/67)已人工合并，第4、5批模块1收口；最终PR与实际main五项完整CI均成功，不代替后续模块检查 |
 | `ff8f55d` 的 main push | [Quality](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41215259889)、[Public repository safety](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41215259947)、[Container](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41215259921)、[Deployment Bootstrap](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41215259887)、[PostgreSQL Integration](https://github.com/Brilliant666/frame-zero-portfolio-studio/actions/runs/41215259881) 均成功；只证明该 SHA 的 CI |
 | 既有实现 | PR50 生产入口与隔离 HTTPS／持久化验收、PR51 应用更新策略、PR52 退役脚本诊断已合并；不等于真实服务器已部署或日常应用已升级 |
 | 历史 Draft | [PR16](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/16)、[PR26](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/26) 保持历史用途，不推进 |
@@ -14,11 +14,13 @@
 账号／Site／owner 和 grant、三类独立内容空间、AssetId／素材、草稿 CAS、Published-only 与历史回退继续保留。
 日常实际目录、BUILD、Windows 任务和配置只按仓库外本机交接及现场核对，不由 main SHA 推断已升级。
 
-## 当前：第4、5批模块1
+## 当前：第4、5批模块2
 
-用户已批准第4、5批交错方案，当前仅实施并交付基础模板宿主与首屏样式模块，分支 `refactor/basic-host-public-loading`。四处宿主已统一，服务端冷样式路径和公开入口预算已补齐；首次失败、资源比较、本机验证与限制见[模块验收](BASIC_HOST_PUBLIC_LOADING_2026-11-02.md)。后续模块尚未实施，仍须逐模块细化并集成。
+模块1已交付，首次失败、资源比较和限制见[模块1验收](BASIC_HOST_PUBLIC_LOADING_2026-11-02.md)。用户随后明确授权日常3001更新，已完成兼容app-only切换和只读验收；具体目录、BUILD及证据仅在仓库外本机交接，不由本次文档推断运行角色。
 
-下一步核对本模块最终PR Head的五项完整CI，不以本机测试或旧main检查替代。没有合并、日常应用切换或远程部署授权。临时预览app已停止；用户明确允许后，本轮隔离合成PG已正常停止并确认退出，日常PG仍可连接。日常运行角色继续仅以仓库外现场交接为准。
+用户已批准模块2具体方案，分支`refactor/shared-validation-reads`从上述main建立。仅复用现有通用UUID并抽取完成开户站点的存在性读取，四个产品文件保持原授权、Published-only和错误语义。定向行为、完整后台回归、隔离PG/HTTP及两种构建通道检查见[模块2验收](SHARED_VALIDATION_READS_2026-11-03.md)。
+
+下一步收口同一模块PR并核对最终Head五项完整CI；本机通过不代替CI。Auto-fix按用户选择关闭。本轮没有模块2合并、再次切换日常、真实迁移或远程部署授权；模块3–6尚未实施。
 
 ## 2026-10-31 授权与第1批（已收口）
 
