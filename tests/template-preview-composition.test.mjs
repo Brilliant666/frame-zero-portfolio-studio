@@ -369,7 +369,6 @@ test("preview modules separate photo-free template structures from layout-only d
   assert.doesNotMatch(draftPreviewDialog, /setContent|applyTemplateCompositionPreview|method:\s*"PUT"/);
   assert.doesNotMatch(draftPreviewDialog, /TemplateRenderer|Lightbox|admin-v2\.module\.css/);
   assert.match(templatePreviewDialog, /data-preview-source=\{previewSource\}/);
-  assert.match(templatePreviewDialog, /<TemplateRenderer/);
   assert.match(templatePreviewDialog, /template-preview-dialog\.module\.css/);
   assert.doesNotMatch(templatePreviewDialog, /admin-v2\.module\.css/);
   assert.doesNotMatch(`${draftPreview}\n${draftPreviewDialog}\n${templatePreviewDialog}`, /fetch\(|method:\s*"PUT"|setContent|planTemplateCompositionPreview/);

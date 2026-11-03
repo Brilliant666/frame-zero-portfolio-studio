@@ -6,6 +6,26 @@ import sharp from 'sharp';
 import { provisionAccount } from '../db/accounts/provision.mjs';
 import { readPublished } from '../db/accounts/publications.mjs';
 
+export async function assertCinematicServerStyles(html, request) {
+  const links = [...html.matchAll(/<link\b[^>]*>/g)]
+    .filter(match => /\brel="stylesheet"/.test(match[0]));
+  assert.ok(links.length, 'The cold HTML includes stylesheet links');
+  const hero = html.indexOf('class="hero"');
+  assert.ok(hero >= 0, 'The cold HTML renders the cinematic hero');
+  let cinematic = false;
+  for (const link of links) {
+    const href = link[0].match(/\bhref="([^"]+)"/)?.[1];
+    assert.ok(href?.startsWith('/_next/static/'), 'Stylesheets come from the application build');
+    const response = await request(href);
+    assert.equal(response.status, 200, `Server stylesheet ${href} is available`);
+    if ((await response.text()).includes('.hero-vignette')) {
+      cinematic = true;
+      assert.ok(link.index < hero, 'Cinematic CSS precedes the server-rendered hero without hydration');
+    }
+  }
+  assert.ok(cinematic, 'Cinematic CSS arrives in the cold HTML, without a client loader');
+}
+
 export async function basicPublicationHttpIntegration({ runtime, origin, password }) {
   const source = await readFile(new URL('../app/templates/catalog.ts', import.meta.url), 'utf8');
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext } }).outputText;
@@ -46,6 +66,14 @@ export async function basicPublicationHttpIntegration({ runtime, origin, passwor
     const response = await request(`/${slug}`); assert.equal(response.status, 200);
     const html = await response.text(); assert.ok(html.includes(`Published fixture ${template.id}`), `${template.id} renders its published profile`);
     assert.doesNotMatch(html, /DISABLED-PRIVATE|OVERFLOW-PRIVATE|OTHER-TEMPLATE-PRIVATE|LEGACY-FALLBACK-PRIVATE|DISABLED-PACKAGE-PRIVATE/);
+    if (template.id === 'cinematic-light') {
+      await assertCinematicServerStyles(html, request);
+      for (const route of [`/${slug}/admin/preview/basic`, '/test?template=cinematic-light']) {
+        const preview = await request(route, cookie);
+        assert.equal(preview.status, 200);
+        await assertCinematicServerStyles(await preview.text(), request);
+      }
+    }
     assert.equal((await request(`/api/public-sites/${slug}/assets/${assets[0]}/full`)).status, 200);
     for (const id of assets.slice(1)) assert.equal((await request(`/api/public-sites/${slug}/assets/${id}/full`)).status, 404);
   }

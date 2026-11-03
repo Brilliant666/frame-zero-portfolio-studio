@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getClientVisiblePortfolioTitle } from "../client-visible-title";
 import { isTemplateId, normalizeSiteContent, siteConfig, type SiteContent, type TemplateId } from "../site-config";
-import Lightbox from "../templates/shared/lightbox";
-import { templateAppearances } from "../templates/appearance";
 import { useTemplateWorks } from "../templates/shared/use-template-works";
 import { useTemplateInteractions } from "../templates/shared/use-template-interactions";
-import TemplateRenderer from "../templates/template-renderer";
+import BasicTemplateHost from "../templates/shared/basic-template-host";
 
 export default function Home() {
   const [content, setContent] = useState<SiteContent>(siteConfig);
@@ -15,18 +13,8 @@ export default function Home() {
   const [booted, setBooted] = useState(false);
   const templateId = previewTemplate ?? content.activeTemplate;
   const { works } = useTemplateWorks(content, templateId);
-  const {
-    activeWork,
-    closeButtonRef,
-    copiedKey,
-    copyText,
-    lightboxRef,
-    lightboxWorks,
-    moveActiveWork,
-    openWork,
-    setActiveWork,
-  } = useTemplateInteractions(works);
-  const closeActiveWork = useCallback(() => setActiveWork(null), [setActiveWork]);
+  const interactions = useTemplateInteractions(works);
+  const { setActiveWork } = interactions;
   const packages = useMemo(() => content.packages.filter((item) => item.enabled), [content.packages]);
   const bookingTemplate = useMemo(
     () => ["【约拍任务申请】", ...content.bookingFields].join("\n"),
@@ -93,32 +81,17 @@ export default function Home() {
           <a href="/test">退出预览 ×</a>
         </div>
       )}
-      <TemplateRenderer
-        key={templateId}
+      <BasicTemplateHost
+        rendererKey={templateId}
         templateId={templateId}
         content={content}
         works={works}
         packages={packages}
         bookingTemplate={bookingTemplate}
         booted={booted}
-        copiedKey={copiedKey}
         isPreview={previewTemplate !== null}
-        onCopy={copyText}
-        onBeforeViewChange={closeActiveWork}
-        onOpenWork={openWork}
+        interactions={interactions}
       />
-      {activeWork && (
-        <Lightbox
-          work={activeWork}
-          works={[...lightboxWorks]}
-          theme={templateId === "polaroid-field" ? "light" : "dark"}
-          appearance={templateAppearances[templateId].tone}
-          frameRef={lightboxRef}
-          closeButtonRef={closeButtonRef}
-          onMove={moveActiveWork}
-          onClose={() => setActiveWork(null)}
-        />
-      )}
     </>
   );
 }

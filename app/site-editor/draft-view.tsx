@@ -3,6 +3,7 @@ import type { SiteContent } from "../site-config";
 import type { PreviewPortfolioDocumentV1 } from "../preview-workspace/document";
 import { SitePortfolioView } from "./premium-view";
 import { SiteBasicView } from "./basic-view";
+import BasicTemplateStyles from "../templates/shared/basic-template-styles";
 import type { ContentSpace, SpaceContent } from "./content-schema";
 import type { FlowGalleryDocumentV1 } from "./flow-gallery-document";
 
@@ -14,5 +15,6 @@ export default async function DraftView({ space, content, assets }: { space: Con
     return <SiteFlowGalleryView document={content as FlowGalleryDocumentV1} assets={assets} />;
   }
   if (space === "premium-polaroid") return <SitePortfolioView document={content as PreviewPortfolioDocumentV1} assets={assets} />;
-  return <SiteBasicView content={content as SiteContent} assets={assets} />;
+  const basic = content as SiteContent;
+  return <><BasicTemplateStyles templateId={basic.activeTemplate} /><SiteBasicView content={basic} assets={assets} /></>;
 }

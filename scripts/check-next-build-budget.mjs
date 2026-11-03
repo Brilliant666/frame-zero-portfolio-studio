@@ -121,18 +121,35 @@ export function inspectNextBuild(projectRoot = process.cwd()) {
   const buildManifest = attempt("build-manifest.json", () => readJson(resolveArtifact("build-manifest.json")));
   const pageManifest = attempt("/ client manifest", () => readPageClientManifest(resolveArtifact("server/app/page_client-reference-manifest.js")));
   const testManifest = attempt("/test client manifest", () => readPageClientManifest(resolveArtifact("server/app/test/page_client-reference-manifest.js")));
+  const publicRoute = attempt("/:siteSlug client manifest", () => {
+    const appPaths = readJson(resolveArtifact("server/app-paths-manifest.json"));
+    const entry = appPaths["/[siteSlug]/page"];
+    if (typeof entry !== "string" || !entry.startsWith("app/") || !entry.endsWith("/page.js")) {
+      throw new Error("public Site page is missing or invalid in app-paths-manifest.json");
+    }
+    const manifest = readPageClientManifest(resolveArtifact(`server/${entry.replace(/\.js$/, "_client-reference-manifest.js")}`));
+    const pageKey = `[project]/${entry.replace(/\.js$/, "")}`;
+    // The Node runtime build uses page.node; ordinary page entries remain supported.
+    const keys = [pageKey, `${pageKey}.node`].filter((key) =>
+      Object.hasOwn(manifest.entryJSFiles ?? {}, key) || Object.hasOwn(manifest.entryCSSFiles ?? {}, key));
+    if (keys.length !== 1) throw new Error(`expected one public Site page entry, found ${keys.length}`);
+    return { manifest, key: keys[0] };
+  });
   source("standalone/server.js");
   const shared = [paths(buildManifest?.polyfillFiles, "polyfillFiles"), paths(buildManifest?.rootMainFiles, "rootMainFiles")];
   const join = (sets) => sets.some((set) => set === null) ? null : unique(sets.flat());
-  const routeEntries = [["/", pageManifest, "[project]/app/page"], ["/test", testManifest, "[project]/app/test/page"]].map(([route, manifest, key]) => {
+  const measureRoute = ([route, manifest, key]) => {
     let jsFiles = paths(manifest?.entryJSFiles?.[key], `${route} entry JS`);
     let cssFiles = paths(manifest?.entryCSSFiles?.[key], `${route} entry CSS`, true);
     if (jsFiles?.length === 0) { violations.push(`${route} has no client JS entry`); jsFiles = null; }
     if (cssFiles?.length === 0) { violations.push(`${route} has no CSS entry`); cssFiles = null; }
     return { route, jsFiles, cssFiles, staticEntryJsBytes: totalBytes(join([...shared, jsFiles])), staticEntryCssBytes: totalBytes(cssFiles) };
-  });
+  };
+  const routeEntries = [["/", pageManifest, "[project]/app/page"], ["/test", testManifest, "[project]/app/test/page"]].map(measureRoute);
   const combinedJs = join(routeEntries.map((route) => route.jsFiles));
   const combinedCss = join(routeEntries.map((route) => route.cssFiles));
+  // Keep the / + /test aggregate and its eager/lazy template classification unchanged.
+  routeEntries.push(measureRoute(["/:siteSlug", publicRoute?.manifest, publicRoute?.key]));
   const pageEntryJs = combinedJs ?? [];
   const pageEntryCss = combinedCss ?? [];
   const chunkListing = attempt("static/chunks", () => readdirSync(resolveArtifact("static/chunks")));
@@ -191,6 +208,44 @@ export function inspectNextBuild(projectRoot = process.cwd()) {
   const cssSources = new Map(cssEntries.filter(([, text]) => text !== null));
   const publicCssFiles = new Set(pageEntryCss);
   let cssMappingComplete = chunkListing !== null && cssEntries.every(([, text]) => text !== null) && templateSizes.length === TEMPLATE_IDS.length;
+  const lazyTemplateCss = [];
+  // Next's dynamic loader groups JS and CSS in Promise.all([...].map(x => e.l(x))).
+  // Only follow groups loading a measured template, or originating in its chunk.
+  // This traces global CSS without pulling in unrelated route/import stylesheets.
+  for (const sourcePath of unique([...pageEntryJs, ...templateChunks])) {
+    const text = jsSources.get(sourcePath) ?? source(sourcePath);
+    if (text === null) { cssMappingComplete = false; continue; }
+    const recognizedLoaders = [];
+    for (const match of text.matchAll(/Promise\.all\(\s*(\[[^\]]*\])\s*\.map\(\s*([A-Za-z_$][\w$]*)\s*=>\s*[A-Za-z_$][\w$]*\.l\(\s*\2\s*\)\s*\)\s*\)/g)) {
+      recognizedLoaders.push([match.index, match.index + match[0].length]);
+      const jsFiles = match[1].match(/static\/chunks\/[^"']+\.js/g) ?? [];
+      if (!templateChunks.includes(sourcePath) && !jsFiles.some((file) => templateChunks.includes(file))) continue;
+      const resources = attempt(`${sourcePath} lazy CSS dependencies`, () => {
+        const files = JSON.parse(match[1]);
+        if (files.some((file) => typeof file !== "string" || !/^static\/chunks\/.+\.(?:js|css)$/.test(file))) {
+          throw new Error("dynamic loader resource array has an unknown shape");
+        }
+        return unique(files);
+      });
+      if (resources === null) { cssMappingComplete = false; continue; }
+      const cssFiles = resources.filter((file) => file.endsWith(".css"));
+      if (cssFiles.length) {
+        lazyTemplateCss.push({ sourcePath, jsFiles: resources.filter((file) => file.endsWith(".js")), cssFiles });
+        cssFiles.forEach((file) => publicCssFiles.add(file));
+      }
+    }
+    for (const match of text.matchAll(/(?<![\w$])[A-Za-z_$][\w$]*\.l\(\s*"(static\/chunks\/[^"\\]+\.css)"\s*\)/g)) {
+      recognizedLoaders.push([match.index, match.index + match[0].length]);
+      const cssFiles = [match[1]];
+      lazyTemplateCss.push({ sourcePath, jsFiles: [], cssFiles });
+      publicCssFiles.add(match[1]);
+    }
+    for (const reference of text.matchAll(/["']static\/chunks\/[^"']+\.css["']/g)) {
+      if (recognizedLoaders.some(([start, end]) => reference.index >= start && reference.index < end)) continue;
+      violations.push(`${sourcePath} contains an unsupported lazy CSS loader: ${reference[0]}`);
+      cssMappingComplete = false;
+    }
+  }
   for (const { relativePath, templateId } of templateSizes) {
     const text = source(relativePath);
     const tokens = text === null ? null : attempt(`${templateId} CSS module exports`, () => cssModuleTokens(text));
@@ -226,6 +281,7 @@ export function inspectNextBuild(projectRoot = process.cwd()) {
     bootstrapJsBytes,
     publicCssBytes,
     templateChunks: templateSizes,
+    lazyTemplateCss,
     routeEntries,
     unmeasuredRoutes: ["/login", "/:siteSlug/admin", "/:siteSlug (Published photography content)"],
     warnings,
@@ -257,6 +313,7 @@ if (isMain) {
     for (const route of result.routeEntries) console.log(`Route ${route.route} static entry estimate (deduplicated shared bootstrap + route entries; excludes lazy templates): JS ${bytes(route.staticEntryJsBytes)}, CSS ${bytes(route.staticEntryCssBytes)}.`);
     for (const route of result.unmeasuredRoutes) console.log(`Route ${route}: NOT_MEASURED`);
     for (const template of result.templateChunks) console.log(`Template ${template.templateId}: ${bytes(template.bytes)}; hard limit ${NEXT_BUILD_BUDGETS.templateJs} bytes.`);
+    for (const dependency of result.lazyTemplateCss) console.log(`Lazy template CSS via ${dependency.sourcePath} (${dependency.jsFiles.join(", ")}): ${dependency.cssFiles.join(", ")}.`);
     for (const warning of result.warnings) console.warn(`WARNING: ${warning}`);
     for (const error of result.errors) console.error(`ERROR: ${error}`);
     if (result.errors.length) process.exitCode = 1;

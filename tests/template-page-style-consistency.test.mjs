@@ -99,6 +99,7 @@ test("public basic viewer and current-edit preview carry the selected template i
   vm.runInNewContext(ts.transpileModule(appearanceSource, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { module: appearanceModule, exports: appearanceModule.exports });
   const appearances = appearanceModule.exports;
   const lightbox = (props) => createElement("div", { "data-viewer-template": props.basicTemplate, "data-viewer-tone": props.appearance });
+  let host;
   async function load(relativePath) {
     const source = await fs.readFile(new URL(relativePath, import.meta.url), "utf8");
     const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
@@ -109,6 +110,7 @@ test("public basic viewer and current-edit preview carry the selected template i
       if (id.endsWith("/appearance")) return appearances;
       if (id.endsWith("/lightbox")) return { default: lightbox };
       if (id.endsWith("/template-renderer")) return { default: () => null };
+      if (id.endsWith("/basic-template-host")) return { default: host };
       if (id.endsWith("/assets-client")) return { hydrateSiteWorks: (value) => value };
       if (id.endsWith("/asset-context")) return { PlatformAssetContext: { Provider: ({ children }) => children } };
       if (id.endsWith("/use-template-works")) return { useTemplateWorks: () => ({ works: [work] }) };
@@ -119,6 +121,7 @@ test("public basic viewer and current-edit preview carry the selected template i
     vm.runInNewContext(output, { module: loaded, exports: loaded.exports, require: mocks, document: { body: {} } });
     return loaded.exports;
   }
+  host = (await load("../app/templates/shared/basic-template-host.tsx")).default;
   const basic = (await load("../app/site-editor/basic-view.tsx")).SiteBasicView;
   const preview = (await load("../app/admin/template-preview-dialog.tsx")).default;
   for (const [templateId, appearance] of Object.entries(appearances.templateAppearances)) {

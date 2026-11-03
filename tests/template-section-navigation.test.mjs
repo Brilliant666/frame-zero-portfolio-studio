@@ -10,7 +10,7 @@ const PRIMARY_LABELS = ["作品", "拍摄套餐", "联系约拍"];
 const TOP_NAVIGATION_TEMPLATES = [
   {
     id: "cinematic-light",
-    cssPath: "app/globals.css",
+    cssPath: "app/templates/cinematic-light/cinematic.css",
     navSelector: ".topbar nav",
     linkSelector: ".topbar nav a",
     mobileBreakpoint: 900,
@@ -562,8 +562,7 @@ test("delegated secondary works anchors unhide, focus, and update only the publi
 test("public and Admin renderers pass a stable lightbox closer through the optional template callback", async () => {
   const [typesText, ...ownerTexts] = await Promise.all([
     source("app/templates/types.ts"),
-    source("app/test/legacy-home.tsx"),
-    source("app/admin/template-preview-dialog.tsx"),
+    source("app/templates/shared/basic-template-host.tsx"),
   ]);
   const types = parseSource(typesText, "types.ts", ts.ScriptKind.TS);
   let callbackProperty = null;
@@ -576,8 +575,8 @@ test("public and Admin renderers pass a stable lightbox closer through the optio
   assert.ok(callbackProperty?.questionToken, "TemplateProps keeps the close callback optional for navigation exceptions");
   assert.equal(callbackProperty.type.getText(types).replace(/\s+/g, ""), "()=>void");
 
-  for (const [index, text] of ownerTexts.entries()) {
-    const fileName = index === 0 ? "page.tsx" : "template-preview-dialog.tsx";
+  for (const text of ownerTexts) {
+    const fileName = "basic-template-host.tsx";
     const parsed = parseSource(text, fileName);
     let renderer = null;
     visit(parsed, (node) => {
@@ -683,8 +682,17 @@ test("Admin preview separates its toolbar from the contained artwork scrollport 
   assert.ok(mobileDescription.some((rule) => rule.display === "none"), "mobile preview hides toolbar help text");
 });
 
+test("cinematic reduced-motion keeps the boot overlay hidden after lazy CSS arrives", async () => {
+  const css = await source("app/templates/cinematic-light/cinematic.css");
+  const reducedMotion = /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{/.exec(css);
+  assert.ok(reducedMotion, "The template owns its reduced-motion override alongside its boot styles");
+  const block = extractBraceBlock(css, css.indexOf("{", reducedMotion.index));
+  assert.equal(cssDeclarations(cssRuleBlocks(block, ".boot-screen")[0]).display, "none");
+  assert.ok(reducedMotion.index > css.indexOf(".boot-screen {"), "The override follows the default display rule regardless of global stylesheet arrival order");
+});
+
 test("cinematic mobile services clear the expanded two-row primary navigation", async () => {
-  const css = await source("app/globals.css");
+  const css = await source("app/templates/cinematic-light/cinematic.css");
   const mobileServices = mediaBlocks(css, 560)
     .flatMap((block) => cssRuleBlocks(block, ".services").map(cssDeclarations));
   const paddingRule = mobileServices.find((rule) => rule["padding-top"]);

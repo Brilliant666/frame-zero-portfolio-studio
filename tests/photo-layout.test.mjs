@@ -530,7 +530,7 @@ test("all formal renderers opt into the shared slot-level orientation policy and
     "character-select", "museum-depth",
   ];
   const cssByTemplate = {
-    "cinematic-light": "../app/globals.css",
+    "cinematic-light": "../app/templates/cinematic-light/cinematic.css",
     "neon-hud": "../app/templates/neon-hud/template.module.css",
     "film-rail": "../app/templates/film-rail/film-rail.module.css",
     "manga-panels": "../app/templates/manga-panels/manga-panels.module.css",

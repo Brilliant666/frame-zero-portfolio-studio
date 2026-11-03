@@ -211,8 +211,6 @@ test("template browsing, package disclosures, layout tools, and legacy controls 
   assert.match(templatePreviewDialog, /data-admin-draft-preview-dialog=\{draftScope === "admin" \? "true" : undefined\}/);
   assert.match(templatePreviewDialog, /data-template-candidate-preview-dialog=\{draftScope === "candidate" \? templateId : undefined\}/);
   assert.match(templatePreviewDialog, /data-preview-source=\{previewSource\}/);
-  assert.match(templatePreviewDialog, /<TemplateRenderer/);
-  assert.match(templatePreviewDialog, /<Lightbox/);
   assert.match(templatePreviewDialog, /dialog\.showModal\(\)/);
   assert.match(templatePreviewDialog, /template-preview-dialog\.module\.css/);
   assert.doesNotMatch(templatePreviewDialog, /admin-v2\.module\.css/);
