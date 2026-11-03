@@ -18,9 +18,9 @@ async function expandControl(page, control) {
 
 // A single bounded acceptance scenario, not a new E2E framework. All edits use
 // the real forms and real API. Never capture traces, cookies, headers or bodies.
-export async function siteEditorBrowserSmoke({ origin, password, restart, expire, signal }) {
+export async function siteEditorBrowserSmoke({ origin, password, restart, expire, signal, outputDir }) {
   assert.equal(origin, 'http://127.0.0.1:3004');
-  const output = join(process.cwd(), 'outputs', 'site-editor-browser');
+  const output = outputDir ?? join(process.cwd(), 'outputs', 'site-editor-browser');
   await mkdir(output, { recursive: true });
   const browser = await chromium.launch({ headless: true, channel: process.env.FRAME_ZERO_BROWSER_CHANNEL || undefined }); keepManualSave(browser);
   let stopped = false, activeStage = '';

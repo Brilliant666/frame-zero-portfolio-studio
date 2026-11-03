@@ -8,21 +8,21 @@ import { getPlatformQrAssetPath } from "../platform-qr";
 import type { SiteContent } from "../site-config";
 import { collectionCover, moveItem, type Collection } from "../templates/polaroid-field/collection-model";
 import { isAdminSaveShortcut } from "../admin/admin-state";
-import { createEmptyPreviewDocument, copyLegacyBasics, parsePreviewDocument, type PreviewPortfolioDocumentV1 } from "./document";
+import { copyLegacyBasics, parsePreviewDocument, type PreviewPortfolioDocumentV1 } from "./document";
 import { POLAROID_SOCIAL_LIMIT, readPolaroidSocial, writePolaroidSocial } from "./contact-channels";
 import { restorePreviewFocus } from "./preview-focus";
 import { focusPhotoResults as focusEditorRegion } from "./use-photo-page-focus";
-import { importPrototypeCollections, previewIsDirty, reconcilePreviewSave } from "./admin-state";
+import { importPrototypeCollections } from "./admin-state";
+import { usePreviewDraftSession, useSitePolaroidSession, type PolaroidDraftSession } from "./draft-session";
 import { PreviewPortfolioView } from "./portfolio-view";
 import { loadSiteAssets, type SiteAsset } from "../site-editor/assets-client";
 import SitePhotoPicker from "./site-photo-picker";
 import { appendPickedPhotos } from "./photo-picker-state";
-import { parseSitePremiumDocument } from "../site-editor/content-schema";
 import SiteContactCard from "../site-editor/contact-card";
 import { setContactCardReference } from "../site-editor/contact-card-state";
 import type { SiteEditorScope } from "../site-editor/scope";
 import type { PublicationEditorProps } from "../site-editor/publication-controls";
-import { confirmDraftSave, DraftSaveRejected, DraftSaveUncertain, writeSiteDraft, type DraftSaveOptions, type DraftSaveReceipt, type PendingDraftSave } from "../site-editor/draft-save";
+import { type DraftSaveOptions } from "../site-editor/draft-save";
 import CollectionMemberEditor from "./collection-member-editor";
 import CollectionLivePreview from "./collection-live-preview";
 import PhotoLibrary from "../admin-kit/photo-library";
@@ -36,19 +36,12 @@ import { WorkbenchBar, WorkbenchNav, workbenchStyle, type WorkbenchIcon, type Wo
 
 const COVER_FITS = [{ value: "natural", label: "完整原比例" }, { value: "fill", label: "填充裁切" }] as const satisfies readonly { value: Collection["coverFit"]; label: string }[];
 
-type Envelope = { content: PreviewPortfolioDocumentV1 | null; revision: number; updatedAt: string | null };
 const names: Record<string, string> = { brand: "品牌名称", mark: "简写标识", photographer: "摄影师名称", role: "身份介绍", city: "服务城市", availability: "可约时间", intro: "个人简介", eyebrow: "上方短文案", title: "首页标题", services: "拍摄服务", wechat: "微信号", email: "邮箱", note: "联系区说明", lineOne: "第一行", lineTwo: "第二行", label: "名称", value: "内容", number: "编号", english: "英文标题", name: "名称", description: "介绍", price: "价格", duration: "拍摄时长", handle: "账号或主页链接" };
 function Field({ label, value, onChange, multiline = false, maxLength = 2000, disabled = false }: { label: string; value: string; onChange: (value: string) => void; multiline?: boolean; maxLength?: number; disabled?: boolean }) {
   return <label className={styles.field}><span>{label}</span>{multiline ? <textarea value={value} maxLength={maxLength} disabled={disabled} onChange={(event) => onChange(event.target.value)} /> : <input value={value} maxLength={maxLength} disabled={disabled} onChange={(event) => onChange(event.target.value)} />}</label>;
 }
 function TextFields<T extends Record<string, string>>({ value, onChange, prefix }: { value: T; onChange: (value: T) => void; prefix: string }) {
   return <div className={styles.grid}>{Object.entries(value).map(([key, text]) => <Field key={key} label={`${prefix}${names[key] ?? key}`} value={text} onChange={(next) => onChange({ ...value, [key]: next })} multiline={["intro", "note", "description"].includes(key)} />)}</div>;
-}
-function readEnvelope(value: unknown, siteMode = false): Envelope {
-  if (!value || typeof value !== "object") throw new Error("新版数据响应格式错误，草稿未改变。");
-  const raw = value as Record<string, unknown>;
-  if (!Number.isSafeInteger(raw.revision) || (raw.revision as number) < 0 || !(raw.updatedAt === null || typeof raw.updatedAt === "string")) throw new Error("新版版本信息无效，草稿未改变。");
-  return { content: raw.content === null ? null : siteMode ? parseSitePremiumDocument(raw.content) : parsePreviewDocument(raw.content), revision: raw.revision as number, updatedAt: raw.updatedAt };
 }
 
 function MemberPhoto({ asset, onClose }: { asset: SiteAsset; onClose: () => void }) {
@@ -66,20 +59,26 @@ function CoverSettings({ siteMode, children }: { siteMode: boolean; children: Re
   return siteMode ? <section className={styles.coverSettings}><h3>封面与重点照片</h3><p className={styles.hint}>封面用于首页图集入口；重点照片影响星座展示。切换“展示效果”可查看当前编辑。</p><div>{children}</div></section> : <>{children}</>;
 }
 
-export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorScope; PublicationControls?: ComponentType<PublicationEditorProps>; SitePreview?: ComponentType<{ document: PreviewPortfolioDocumentV1; embedded?: boolean; initialCollectionId?: string; assets?: readonly PhotoAsset[] }> }) {
+type PreviewAdminProps = { siteScope?: SiteEditorScope; PublicationControls?: ComponentType<PublicationEditorProps>; SitePreview?: ComponentType<{ document: PreviewPortfolioDocumentV1; embedded?: boolean; initialCollectionId?: string; assets?: readonly PhotoAsset[] }> };
+export default function PreviewPortfolioAdmin(props: PreviewAdminProps = {}) {
   // Site routes exist only in Standard Next Node; omit their adapter from rollback builds.
-  const siteScope = process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? props?.siteScope : undefined;
-  const endpoint = siteScope?.endpoint ?? "/api/preview/site-content";
+  const siteScope = process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? props.siteScope : undefined;
+  return siteScope ? <SiteSession key={siteScope.endpoint} {...props} siteScope={siteScope} /> : <PreviewSession />;
+}
+function SiteSession(props: PreviewAdminProps & { siteScope: SiteEditorScope }) {
+  const session = useSitePolaroidSession(props.siteScope.endpoint);
+  return <PortfolioEditor {...props} session={session} />;
+}
+function PreviewSession() {
+  const session = usePreviewDraftSession();
+  return <PortfolioEditor session={session} />;
+}
+function PortfolioEditor(props: PreviewAdminProps & { session: PolaroidDraftSession }) {
+  const { siteScope, session } = props;
   const siteMode = Boolean(siteScope);
-  const PortfolioView = process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? props?.SitePreview ?? PreviewPortfolioView : PreviewPortfolioView;
-  const [draft, setDraft] = useState(createEmptyPreviewDocument);
-  const [saved, setSaved] = useState<PreviewPortfolioDocumentV1 | null>(null);
-  const [revision, setRevision] = useState(0);
-  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
-  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
-  const [saving, setSaving] = useState(false);
-  const [conflict, setConflict] = useState(false);
-  const [message, setMessage] = useState("正在读取新版工作区…");
+  const PortfolioView = process.env.NEXT_PUBLIC_FRAME_ZERO_SITE_EDITOR === "1" ? props.SitePreview ?? PreviewPortfolioView : PreviewPortfolioView;
+  const { draft, saved, revision, updatedAt, loadState, saving, conflict, message, setMessage,
+    current, lifetime, pendingSave, dirty, edit, reload, save, checkSave } = session;
   const [section, setSection] = useState(siteMode ? "library" : "profile");
   const sectionScroll = useRef<Record<string, number>>({});
   const sectionFrame = useRef(0);
@@ -135,43 +134,8 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
   const libraryRequest = useRef(0);
   const [libraryState, setLibraryState] = useState("素材库读取中…");
   const [libraryReady, setLibraryReady] = useState(false);
-  const current = useRef(draft);
-  const savingLock = useRef(false);
-  const readingLock = useRef(false);
-  const draftVersion = useRef(0);
-  const requestNumber = useRef(0);
-  const lifetime = useRef(new AbortController());
-  const pendingRef = useRef<PendingDraftSave | null>(null);
-  const [pendingSave, setPendingSave] = useState(false);
-  useEffect(() => { const controller = new AbortController(); lifetime.current = controller; return () => controller.abort(); }, [endpoint]);
-  const dirty = saved === null ? previewIsDirty(draft, createEmptyPreviewDocument()) : previewIsDirty(draft, saved);
   const assetMap = useMemo(() => new Map(assets.map((asset) => [asset.id, asset])), [assets]);
   const selected = draft.collections.find((collection) => collection.id === selectedId) ?? draft.collections[0] ?? null;
-  const edit = useCallback((transform: (value: PreviewPortfolioDocumentV1) => PreviewPortfolioDocumentV1) => {
-    const next = transform(current.current);
-    current.current = next; draftVersion.current += 1; setDraft(next);
-  }, []);
-
-  const reload = useCallback(async () => {
-    if (savingLock.current || readingLock.current) return;
-    readingLock.current = true;
-    const request = ++requestNumber.current;
-    const startVersion = draftVersion.current;
-    setLoadState("loading"); setMessage("正在读取新版保存内容…");
-    try {
-      const response = await fetch(endpoint, { cache: "no-store" });
-      if (!response.ok) throw new Error("新版内容读取失败；没有载入默认数据，也不会覆盖草稿。");
-      const result = readEnvelope(await response.json(), siteMode);
-      if (request !== requestNumber.current) return;
-      if (draftVersion.current !== startVersion) throw new Error("读取期间草稿发生变化，未覆盖。请再次明确重新读取。");
-      const next = result.content ?? createEmptyPreviewDocument();
-      current.current = next; draftVersion.current += 1; setDraft(next); setSaved(result.content); setRevision(result.revision); setUpdatedAt(result.updatedAt);
-      pendingRef.current = null; setPendingSave(false);
-      setConflict(false); setLoadState("ready"); setMessage(siteMode ? "" : result.content ? "新版内容已读取。保存只影响 /preview。" : "尚未配置新版。请填写资料、新建图集后保存；不会自动复制旧站。");
-    } catch (error) { if (request === requestNumber.current) { setLoadState("error"); setMessage(error instanceof Error ? error.message : "读取失败；草稿保留。"); } }
-    finally { readingLock.current = false; }
-  }, [endpoint, siteMode]);
-  useEffect(() => { const timer = setTimeout(() => void reload(), 0); return () => { clearTimeout(timer); requestNumber.current += 1; }; }, [reload]);
   /** Resolves false when the read failed; a read superseded by a newer one resolves undefined. */
   const loadLibrary = useCallback(async (): Promise<boolean | undefined> => {
     const request = ++libraryRequest.current;
@@ -198,35 +162,6 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
   }, [siteScope]);
   useEffect(() => { const timer = setTimeout(() => void loadLibrary(), 0); return () => clearTimeout(timer); }, [loadLibrary]);
 
-  const save = useCallback(async (options?: DraftSaveOptions, forPublication = false): Promise<DraftSaveReceipt | null> => {
-    const signal = options?.signal ? AbortSignal.any([options.signal, lifetime.current.signal]) : lifetime.current.signal;
-    if (savingLock.current || loadState !== "ready" || conflict || pendingRef.current || signal.aborted) return null;
-    if (!dirty) return saved && revision > 0 ? { content: saved, revision, updatedAt } : null;
-    let submitted: PreviewPortfolioDocumentV1;
-    try { submitted = siteMode ? parseSitePremiumDocument(current.current) : parsePreviewDocument(current.current); }
-    catch (error) { setMessage(error instanceof Error ? error.message : "内容校验失败，草稿保留。"); return null; }
-    savingLock.current = true; setSaving(true); setMessage(forPublication ? "" : "正在保存新版修改…");
-    try {
-      const receipt = siteMode ? await writeSiteDraft(endpoint, "premium-polaroid", { content: submitted, expectedRevision: revision }, signal) : null;
-      const response = receipt ? null : await fetch(endpoint, { method: "PUT", signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: submitted, expectedRevision: revision }) });
-      if (response?.status === 409) { setConflict(true); throw new Error("版本冲突：其他标签页已保存新版本。当前草稿已保留；请先导出草稿，再重新读取并人工合并。不会自动覆盖。"); }
-      const body: unknown = receipt ?? await response!.json();
-      if (signal.aborted) return null;
-      if (response && !response.ok) throw new Error(body && typeof body === "object" && "error" in body && typeof body.error === "string" ? body.error : "保存失败；草稿保留。");
-      const result = readEnvelope(body, siteMode);
-      if (!result.content || result.revision <= revision) throw new Error("未收到有效保存确认，草稿保留；请核对重新读取。");
-      const reconciled = reconcilePreviewSave(submitted, current.current, result.content);
-      current.current = reconciled.draft; draftVersion.current += 1; setDraft(reconciled.draft); setSaved(reconciled.saved); setRevision(result.revision); setUpdatedAt(result.updatedAt);
-      setMessage(forPublication ? "" : reconciled.changedWhileSaving ? "提交的版本已保存；保存期间的新编辑仍保留为未保存修改。" : siteMode ? "本站星轨草稿已保存。基础版内容和公开页面未改变。" : "新版保存成功。/preview 刷新后读取此版本；旧站内容未改变。");
-      return { content: result.content, revision: result.revision, updatedAt: result.updatedAt };
-    } catch (error) {
-      if (signal.aborted) return null;
-      if (error instanceof DraftSaveRejected && error.status === 409) setConflict(true);
-      if (error instanceof DraftSaveUncertain) { pendingRef.current = error.pending; setPendingSave(true); }
-      setMessage(error instanceof Error ? error.message : "保存失败；草稿保留。"); return null;
-    }
-    finally { savingLock.current = false; if (!signal.aborted) setSaving(false); }
-  }, [conflict, dirty, endpoint, loadState, revision, saved, siteMode, updatedAt]);
   const autosave = useAutosavePreference() && siteMode;
   useDraftAutosave({ enabled: autosave, dirty, version: draft, save: () => save(),
     blocked: loadState !== "ready" || saving || conflict || pendingSave || Boolean(pickerCollectionId) || creatingCollection || Boolean(preview) || Boolean(enlargedMember) });
@@ -242,20 +177,7 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
     if (!siteMode || message !== "本站星轨草稿已保存。基础版内容和公开页面未改变。") return;
     const timer = setTimeout(() => setMessage(""), 6000);
     return () => clearTimeout(timer);
-  }, [message, siteMode]);
-  const checkSave = async () => {
-    const pending = pendingRef.current;
-    if (!pending || savingLock.current) return;
-    savingLock.current = true;
-    try {
-      const receipt = await confirmDraftSave(endpoint, "premium-polaroid", pending, lifetime.current.signal);
-      if (lifetime.current.signal.aborted) return;
-      const reconciled = reconcilePreviewSave(pending.content as PreviewPortfolioDocumentV1, current.current, receipt.content as PreviewPortfolioDocumentV1);
-      current.current = reconciled.draft; draftVersion.current += 1; setDraft(reconciled.draft); setSaved(reconciled.saved); setRevision(receipt.revision); setUpdatedAt(receipt.updatedAt);
-      pendingRef.current = null; setPendingSave(false); setMessage("已确认原提交的草稿保存成功；未自动发布。后续编辑仍保留。");
-    } catch { if (!lifetime.current.signal.aborted) setMessage("保存结果仍待确认，未再次写入。请保留当前编辑，检查其他标签页；必要时导出后明确重新读取。"); }
-    finally { savingLock.current = false; }
-  };
+  }, [message, siteMode, setMessage]);
   useEffect(() => {
     const shortcut = (event: KeyboardEvent) => { if (!isAdminSaveShortcut(event)) return; event.preventDefault(); if (!creatingCollection && !pickerCollectionId && !enlargedMember && !preview) void save(); };
     const leave = (event: BeforeUnloadEvent) => { if (!dirty && !saving && !pickerCollectionId) return; event.preventDefault(); event.returnValue = ""; };
@@ -336,13 +258,13 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
   const copyBasics = async () => {
     if (siteMode) return;
     if (!confirm("仅将原站基础资料、套餐与联系信息复制到当前新版草稿；会替换草稿中的这些字段，图集不变。仍需手动保存。继续？")) return;
-    const version = draftVersion.current;
+    const version = current.current;
     try {
       const response = await fetch("/api/site-content", { cache: "no-store" });
       const body = await response.json() as { content?: SiteContent; warning?: string };
       if (!response.ok || !body.content || body.warning) throw new Error("旧站读取失败或正在使用降级数据，未复制。");
       const copied = copyLegacyBasics(body.content);
-      if (draftVersion.current !== version) throw new Error("读取期间你继续编辑了草稿，未覆盖；请重新执行复制。");
+      if (current.current !== version) throw new Error("读取期间你继续编辑了草稿，未覆盖；请重新执行复制。");
       edit((doc) => ({ ...copied, collections: doc.collections })); setMessage("原站白名单基础资料已复制到新版草稿，尚未保存；之后不会自动同步。");
     } catch (error) { setMessage(error instanceof Error ? error.message : "复制失败，原草稿未改变。"); }
   };
@@ -355,10 +277,10 @@ export default function PreviewPortfolioAdmin(props?: { siteScope?: SiteEditorSc
     if (!file) return;
     if (file.size > 512 * 1024) { setMessage("导入文件不得超过 512 KB。"); return; }
     if (!confirm("导入将替换当前草稿的图集列表（不改资料），并为图集生成新的稳定 ID。不会自动保存。继续？")) return;
-    const version = draftVersion.current;
+    const version = current.current;
     try {
       const value: unknown = JSON.parse(await file.text());
-      if (version !== draftVersion.current) throw new Error("导入期间草稿已修改，取消导入以保护新编辑。");
+      if (version !== current.current) throw new Error("导入期间草稿已修改，取消导入以保护新编辑。");
       const next = parsePreviewDocument(importPrototypeCollections(value, current.current, () => crypto.randomUUID()));
       edit(() => next); setSelectedId(next.collections[0]?.id ?? null); setMessage("图集已导入新版草稿。请检查封面与成员后手动保存。无法恢复已经丢失的浏览器内存。");
     } catch (error) { setMessage(error instanceof Error ? error.message : "导入格式无效，草稿未改变。"); }

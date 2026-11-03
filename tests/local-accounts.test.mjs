@@ -431,6 +431,10 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1800000 },
     assert.match(publicHtml, /data-site-state="unpublished"/);
     assert.doesNotMatch(publicHtml, /Alpha basic photographer|Alpha premium photographer/);
   });
+  const draftLifecycleBrowser = process.env.FRAME_ZERO_DRAFT_LIFECYCLE_BROWSER === '1';
+  const draftLifecycleOutput = draftLifecycleBrowser
+    ? path.join(process.cwd(), 'outputs', 'module3-site-draft', `${new Date().toISOString().replace(/[:.]/g, '-')}-${randomUUID().slice(0, 8)}`)
+    : undefined;
   if (process.env.FRAME_ZERO_EDITOR_BROWSER_SMOKE === '1') {
     await t.test('real browser editor acceptance on isolated PostgreSQL', { timeout: 540000 }, async browserTest => {
       await provisionAccount(runtime, input('smokefixturea', true));
@@ -438,6 +442,7 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1800000 },
       const { siteEditorBrowserSmoke } = await import('./site-editor-browser-smoke.mjs');
       await siteEditorBrowserSmoke({
         origin: config.origin, password, signal: browserTest.signal,
+        outputDir: draftLifecycleOutput && path.join(draftLifecycleOutput, 'basic-polaroid'),
         restart: async () => { await stopServer(); await startServer(); },
         expire: async username => {
           assert.ok(['smokefixturea', 'smokefixtureb'].includes(username));
@@ -457,6 +462,44 @@ test('real PostgreSQL and Standard Next account boundary', { timeout: 1800000 },
       await provisionAccount(runtime, input('autosavefixture', true));
       const { adminAutosaveBrowser } = await import('./admin-autosave-browser.mjs');
       await adminAutosaveBrowser({ origin: config.origin, password, username: 'autosavefixture', signal: browserTest.signal });
+    });
+  }
+  if (draftLifecycleBrowser) {
+    // Reuse the original bounded basic/Polaroid acceptance, including delayed real
+    // CAS, newer edits, two-tab 409 and identity switching. When both flags are on,
+    // the editor branch above already ran it with this run's unique evidence path.
+    if (process.env.FRAME_ZERO_EDITOR_BROWSER_SMOKE !== '1') {
+      await t.test('module3 basic and Polaroid draft lifecycle browser acceptance', { timeout: 540000 }, async browserTest => {
+        await provisionAccount(runtime, input('smokefixturea', true));
+        await provisionAccount(runtime, input('smokefixtureb'));
+        const { siteEditorBrowserSmoke } = await import('./site-editor-browser-smoke.mjs');
+        await siteEditorBrowserSmoke({
+          origin: config.origin, password, signal: browserTest.signal,
+          outputDir: path.join(draftLifecycleOutput, 'basic-polaroid'),
+          restart: async () => { await stopServer(); await startServer(); },
+          expire: async username => {
+            assert.ok(['smokefixturea', 'smokefixtureb'].includes(username));
+            await runtime.pool.query('UPDATE "session" SET expires_at=timezone(\'UTC\',now())-interval \'1 minute\' WHERE user_id=(SELECT id FROM "user" WHERE username=$1)', [username]);
+          },
+        });
+      });
+      await t.test('module3 existing autosave and conflict browser acceptance', { timeout: 180000 }, async browserTest => {
+        const username = `draftauto${randomUUID().slice(0, 8)}`;
+        assert.equal((await provisionAccount(runtime, input(username, true))).status, 'CREATED');
+        const { adminAutosaveBrowser } = await import('./admin-autosave-browser.mjs');
+        await adminAutosaveBrowser({ origin: config.origin, password, username, signal: browserTest.signal });
+      });
+    }
+    await t.test('module3 Flow draft lifecycle and publication ordering browser acceptance', { timeout: 300000 }, async browserTest => {
+      const username = `draftlife${randomUUID().slice(0, 8)}`;
+      const owner = await provisionAccount(runtime, input(username, true));
+      assert.equal(owner.status, 'CREATED', 'Flow lifecycle only edits a newly provisioned synthetic fixture');
+      const granted = await runtime.pool.query(`INSERT INTO site_template_grants(id,site_id,product,source)
+        SELECT $1,id,'premium-flow-gallery','operator-test' FROM sites WHERE id=$2 AND slug=$3 RETURNING id`, [randomUUID(), owner.siteId, username]);
+      assert.equal(granted.rowCount, 1);
+      const { module3DraftBrowser } = await import('./module3-draft-browser.mjs');
+      await module3DraftBrowser({ origin: config.origin, password, username, signal: browserTest.signal,
+        outputDir: path.join(draftLifecycleOutput, 'flow-lifecycle') });
     });
   }
   if (process.env.FRAME_ZERO_PICKER_BROWSER_SMOKE === '1' || process.env.FRAME_ZERO_EDITOR_BROWSER_SMOKE === '1') {
