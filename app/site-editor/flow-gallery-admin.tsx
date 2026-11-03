@@ -5,7 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { SiteEditorScope } from "./scope";
 import { createEmptyFlowGalleryDocument, parseFlowGalleryDocument, FLOW_GALLERY_LIMITS, type FlowGalleryDocumentV1 } from "./flow-gallery-document";
 import { loadSiteAssets, SiteAssetRequestError, type SiteAsset, type SiteAssetManifest } from "./assets-client";
-import { confirmDraftSave, DraftSaveRejected, DraftSaveUncertain, editorJson, readSaveReceipt, writeSiteDraft, type DraftSaveOptions, type DraftSaveReceipt, type PendingDraftSave } from "./draft-save";
+import { DraftSaveRejected, readSaveReceipt, type DraftSaveOptions, type DraftSaveReceipt } from "./draft-save";
+import { DraftLoadChanged, DraftLoadRejected, useSiteDraft, type SiteDraftAdapter } from "./use-site-draft";
 import PublicationControls from "./publication-controls";
 import PhotoLibrary from "../admin-kit/photo-library";
 import { additionsFor } from "../admin-kit/photo-library-model";
@@ -28,6 +29,23 @@ import { WorkbenchBar, WorkbenchNav, workbenchStyle, type WorkbenchIcon, type Wo
 
 const SPACE = "premium-flow-gallery";
 const emptyManifest: SiteAssetManifest = { version: 1, assets: [] };
+const flowDraftAdapter: SiteDraftAdapter<FlowGalleryDocumentV1, string> = {
+  decodeLoad(body) {
+    const receipt = readSaveReceipt(body, SPACE);
+    const draft = parseFlowGalleryDocument(receipt.content);
+    return { ...receipt, draft, baseline: flowGalleryFingerprint(draft) };
+  },
+  prepare: parseFlowGalleryDocument,
+  accept(submitted, current, receipt) {
+    return { draft: current, baseline: flowGalleryFingerprint(receipt.content as FlowGalleryDocumentV1),
+      changedWhileSaving: flowGalleryFingerprint(submitted) !== flowGalleryFingerprint(current) };
+  },
+  dirty: (draft, baseline) => flowGalleryFingerprint(draft) !== baseline,
+};
+const initialFlowDraft = () => {
+  const draft = createEmptyFlowGalleryDocument();
+  return { draft, baseline: flowGalleryFingerprint(draft) };
+};
 
 // The shared sorter needs a Collection shape. None of its Polaroid fields are persisted here.
 function sortableGroup(group: FlowGroup): Collection {
@@ -87,18 +105,11 @@ export default function FlowGalleryAdmin({ siteScope }: { siteScope: SiteEditorS
 }
 
 function FlowGallerySession({ siteScope }: { siteScope: SiteEditorScope }) {
-  const [draft, setDraft] = useState<FlowGalleryDocumentV1>(createEmptyFlowGalleryDocument);
-  const current = useRef(draft);
-  const [saved, setSaved] = useState(flowGalleryFingerprint(draft));
-  const [revision, setRevision] = useState(0);
-  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
-  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
-  const [saving, setSaving] = useState(false);
-  const lock = useRef(false);
-  const lifetime = useRef(new AbortController());
+  const { draft, current, baseline: saved, revision, updatedAt, loadState, saving, lifetime, pending, conflict,
+    setDraft: update, reload: reloadDraft, save: saveDraft, checkSave: confirmSave, getSnapshot, getSignal } = useSiteDraft({
+    endpoint: siteScope.endpoint, space: SPACE, initial: initialFlowDraft, adapter: flowDraftAdapter,
+  });
   const [message, setMessage] = useState("");
-  const [pending, setPending] = useState<PendingDraftSave | null>(null);
-  const [conflict, setConflict] = useState(false);
   const [manifest, setManifest] = useState(emptyManifest);
   const [assetsReady, setAssetsReady] = useState(false);
   const [assetState, setAssetState] = useState("正在读取本站素材…");
@@ -151,7 +162,6 @@ function FlowGallerySession({ siteScope }: { siteScope: SiteEditorScope }) {
   const dirty = flowGalleryFingerprint(draft) !== saved;
   const group = draft.groups.find(item => item.id === activeGroup) ?? draft.groups[0] ?? null;
 
-  const update = (next: FlowGalleryDocumentV1) => { current.current = next; setDraft(next); };
   const changeGroup = (id: string, change: (group: FlowGroup) => FlowGroup) => update({ ...current.current, groups: current.current.groups.map(item => item.id === id ? change(item) : item) });
   const clearPrivateLookup = useCallback(() => {
     ++assetToken.current;
@@ -161,59 +171,52 @@ function FlowGallerySession({ siteScope }: { siteScope: SiteEditorScope }) {
   /** Resolves false when the read failed; a superseded or abandoned read resolves undefined. */
   const reloadAssets = useCallback(async (): Promise<boolean | undefined> => {
     const token = ++assetToken.current;
+    const signal = getSignal();
     setAssetsReady(false); setAssetState("正在读取本站素材…");
     try {
-      const next = await loadSiteAssets(siteScope.assetsEndpoint);
-      if (lifetime.current.signal.aborted || token !== assetToken.current) return undefined;
+      const next = await loadSiteAssets(siteScope.assetsEndpoint, signal);
+      if (signal.aborted || token !== assetToken.current) return undefined;
       setManifest(next); setAssetsReady(true); setAssetState(`本站图库 ${next.assets.length} 张`);
       return true;
-    } catch (cause) { if (!lifetime.current.signal.aborted && token === assetToken.current) {
+    } catch (cause) { if (!signal.aborted && token === assetToken.current) {
       if (cause instanceof SiteAssetRequestError && (cause.status === 401 || cause.status === 403)) clearPrivateLookup();
       setAssetState(cause instanceof Error ? cause.message : "素材读取失败，请重试。");
       return false;
     } return undefined; }
-  }, [siteScope.assetsEndpoint, clearPrivateLookup]);
+  }, [siteScope.assetsEndpoint, clearPrivateLookup, getSignal]);
   const reload = useCallback(async (signal?: AbortSignal) => {
-    setLoadState("loading");
-    try {
-      const { response, body } = await editorJson(siteScope.endpoint, { cache: "no-store" }, signal);
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) clearPrivateLookup();
-        throw new Error(`草稿读取失败（${response.status}），请确认权限后重试。`);
-      }
-      const receipt = readSaveReceipt(body, SPACE);
-      const content = parseFlowGalleryDocument(receipt.content);
-      if (signal?.aborted) return;
-      current.current = content; setDraft(content); setSaved(flowGalleryFingerprint(content)); setRevision(receipt.revision); setUpdatedAt(receipt.updatedAt);
-      setPending(null); setConflict(false); setUndoRemoval(null); setLoadState("ready"); setMessage("");
-    } catch (cause) { if (!signal?.aborted) { setLoadState("error"); setMessage(cause instanceof Error ? cause.message : "草稿读取失败，请重试。"); } }
-  }, [siteScope.endpoint, setUndoRemoval, clearPrivateLookup]);
+    const result = await reloadDraft(signal);
+    if (result.status === "loaded") { setUndoRemoval(null); setMessage(""); }
+    if (result.status === "error") {
+      const cause = result.error;
+      if (cause instanceof DraftLoadRejected) {
+        if (cause.status === 401 || cause.status === 403) clearPrivateLookup();
+        setMessage(`草稿读取失败（${cause.status}），请确认权限后重试。`);
+      } else setMessage(cause instanceof DraftLoadChanged ? "读取期间草稿发生变化，未覆盖。请再次明确重新读取。" : cause instanceof Error ? cause.message : "草稿读取失败，请重试。");
+    }
+  }, [reloadDraft, clearPrivateLookup]);
   useEffect(() => {
-    const controller = new AbortController(); lifetime.current = controller;
-    void Promise.resolve().then(() => { if (!controller.signal.aborted) { void reload(controller.signal); void reloadAssets(); } });
-    return () => controller.abort();
+    let cancelled = false;
+    void Promise.resolve().then(() => { if (!cancelled) { void reload(); void reloadAssets(); } });
+    return () => { cancelled = true; };
   }, [reload, reloadAssets]);
 
   async function save(options: DraftSaveOptions = {}): Promise<DraftSaveReceipt | null> {
-    if (lock.current || loadState !== "ready" || conflict || pending || picker || preview || enlarged || creatingGroup) return null;
-    let snapshot: FlowGalleryDocumentV1;
-    try { snapshot = parseFlowGalleryDocument(current.current); }
-    catch (cause) { setMessage(cause instanceof Error ? cause.message : "请核对内容。"); return null; }
-    lock.current = true; setSaving(true); setMessage("正在保存本次草稿…");
-    const signal = options.signal ?? lifetime.current.signal;
-    try {
-      const receipt = await writeSiteDraft(siteScope.endpoint, SPACE, { content: snapshot, expectedRevision: revision }, signal);
-      if (signal.aborted || lifetime.current.signal.aborted) return null;
-      setSaved(flowGalleryFingerprint(receipt.content)); setRevision(receipt.revision); setUpdatedAt(receipt.updatedAt);
+    const state = getSnapshot();
+    if (state.saving || state.loadState !== "ready" || state.conflict || state.pending || picker || preview || enlarged || creatingGroup || options.signal?.aborted) return null;
+    setMessage("正在保存本次草稿…");
+    const result = await saveDraft(options);
+    if (result.status === "saved") {
+      const receipt = result.receipt;
       setMessage(`已保存流影视廊草稿 v${receipt.revision}。${receipt.confirmedAfterLoss ? "保存结果已通过只读核对确认。" : ""}`);
       return receipt;
-    } catch (cause) {
-      if (signal.aborted || lifetime.current.signal.aborted) return null;
-      if (cause instanceof DraftSaveUncertain) setPending(cause.pending);
-      if (cause instanceof DraftSaveRejected && cause.status === 409) setConflict(true);
+    }
+    if (result.status === "error") {
+      const cause = result.error;
       if (cause instanceof DraftSaveRejected && (cause.status === 401 || cause.status === 403)) clearPrivateLookup();
-      setMessage(cause instanceof Error ? cause.message : "保存失败，当前编辑保留。"); return null;
-    } finally { lock.current = false; if (!lifetime.current.signal.aborted) setSaving(false); }
+      setMessage(cause instanceof Error ? cause.message : "保存失败，当前编辑保留。");
+    }
+    return null;
   }
   const autosave = useAutosavePreference();
   useDraftAutosave({ enabled: autosave, dirty, version: draft, save: () => save(),
@@ -221,14 +224,9 @@ function FlowGallerySession({ siteScope }: { siteScope: SiteEditorScope }) {
   const livePreviewOpen = useLivePreviewOpen();
   useLivePreviewSource("premium-flow-gallery", draft, livePreviewOpen);
   async function checkSave() {
-    if (!pending || lock.current) return;
-    lock.current = true; setSaving(true);
-    try {
-      const receipt = await confirmDraftSave(siteScope.endpoint, SPACE, pending, lifetime.current.signal);
-      if (lifetime.current.signal.aborted) return;
-      setSaved(flowGalleryFingerprint(receipt.content)); setRevision(receipt.revision); setUpdatedAt(receipt.updatedAt); setPending(null); setMessage("已确认草稿保存结果；没有重新写入或发布。");
-    } catch { if (!lifetime.current.signal.aborted) setMessage("结果仍待确认。请先导出当前编辑，再重新读取核对；不会自动重试保存。"); }
-    finally { lock.current = false; if (!lifetime.current.signal.aborted) setSaving(false); }
+    const result = await confirmSave();
+    if (result.status === "saved") setMessage("已确认草稿保存结果；没有重新写入或发布。");
+    if (result.status === "error") setMessage("结果仍待确认。请先导出当前编辑，再重新读取核对；不会自动重试保存。");
   }
   useEffect(() => {
     const leave = (event: BeforeUnloadEvent) => { if (dirty || pending || saving) { event.preventDefault(); event.returnValue = ""; } };

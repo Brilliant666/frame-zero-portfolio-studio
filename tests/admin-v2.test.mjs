@@ -597,10 +597,12 @@ test("Admin V2 keeps one shared save action on the unchanged site-content endpoi
     source("app/admin/layout/layout-workspace.tsx"),
     source("app/admin/template/template-composition-preview.tsx"),
   ]);
-  assert.match(provider, /const endpoint = siteScope\?\.endpoint \?\? "\/api\/site-content"/);
+  assert.match(provider, /const endpoint = "\/api\/site-content"/);
+  assert.match(provider, /return <SiteAdminProvider key=\{props\.siteScope\.endpoint\}/);
+  assert.match(provider, /useBasicSiteSession\(siteScope, initialContent\)/);
   assert.match(provider, /fetch\(endpoint, \{ cache: "no-store" \}\)/);
   assert.match(provider, /method: "PUT"/);
-  assert.match(provider, /JSON\.stringify\(\{ content: submitted, \.\.\.\(siteScope \? \{ expectedRevision: revision \} : \{\}\) \}\)/);
+  assert.match(provider, /JSON\.stringify\(\{ content: submitted \}\)/, "Legacy saves keep their original payload");
   assert.match(provider, /beforeunload/);
   assert.match(provider, /isAdminSaveShortcut/);
   assert.match(provider, /saveState !== "success"/);

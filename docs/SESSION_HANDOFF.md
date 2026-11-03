@@ -2,13 +2,13 @@
 
 更新：2026-11-03。基线、授权与风险统一见[CURRENT_STATUS](CURRENT_STATUS.md)。实施前核对 GitHub，不按历史 Draft 状态继续旧任务。
 
-## 当前续接：第4、5批模块2
+## 当前续接：第4、5批模块3
 
-- [PR67](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/67)已由用户人工合并，实际main为`fad6e020897247aa9c87491e8946d27df6a75f06`；最终PR与main五项完整CI均成功。模块1首次失败与限制保留在[模块1验收](BASIC_HOST_PUBLIC_LOADING_2026-11-02.md)。用户授权的日常3001更新也已完成，具体现场信息见仓库外交接。
-- 用户批准模块2方案后，在核对闲置的既有工作区保留原分支和独有产物，从实时main建立`refactor/shared-validation-reads`。四个产品文件仅收敛通用UUID与完成开户站点存在性查询；账号Site v4规则、owner/grant、写入锁/CAS与Published读取不变。
-- 本机行为、后台回归、真实隔离PG/HTTP和标准Node/legacy运行检查已完成，首次隔离端口失败及最终证据见[模块2验收](SHARED_VALIDATION_READS_2026-11-03.md)。测试只使用合成账号与素材，未操作日常服务或真实数据。
-- 下一步同一模块PR收口，并按最终Head验收五项完整CI，不用旧Head或本机通过代替。Auto-fix保持关闭；模块2合并、日常切换、真实迁移、远程部署和既有目录清理均需对应授权。
-- 模块3草稿、模块4弹层、模块5媒体、模块6动效/字体仍未实施；`PREVIEW_RETURN = UNRESOLVED / ACCEPTED_FOR_LOCAL_STAGE`保留。
+- [PR68](https://github.com/Brilliant666/frame-zero-portfolio-studio/pull/68)已由用户人工合并，实际main为`2ded21353ed2bdfb06b0092df257179d54c047fc`；产品树与验收Head一致，PR及该main五项完整CI成功。模块2范围和首次失败见[模块2验收](SHARED_VALIDATION_READS_2026-11-03.md)。日常3001仍运行已授权更新的模块1，未随模块2合并切换。
+- 用户要求开始模块3并批准方案，在既有闲置候选从上述main建立`refactor/site-draft-lifecycle`。新增Site共享草稿会话，按流影、星轨、基础版接入；独立preview和legacy继续原请求payload、manual-only及degraded边界，共用原界面／Context。
+- 受控异步测试、后台回归、类型和标准Node／legacy运行检查已执行。独立审查复现待确认保存遇到失败重读后无法GET核对，已修复并扩展测试；401/403不会被并发编辑错误掩盖。最终隔离PG／HTTP及浏览器套件36通过，标准Node66项和legacy45项通过，详见[模块3验收](SITE_DRAFT_LIFECYCLE_2026-11-03.md)。测试服务已停止，日常监听身份保持；未以本机结果代替最终CI。
+- 下一步收口一个模块PR；最终Head五项完整CI单独核对。Auto-fix保持关闭，不自动合并、切日常、部署或清理既有目录。
+- 模块4弹层、模块5媒体、模块6动效/字体尚未实施；`PREVIEW_RETURN = UNRESOLVED / ACCEPTED_FOR_LOCAL_STAGE`保留。
 
 ## 第1批收口时的历史检查点（2026-11-01）
 
